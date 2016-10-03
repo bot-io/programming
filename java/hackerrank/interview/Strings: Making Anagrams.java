@@ -6,19 +6,33 @@ import java.util.regex.*;
 public class Solution {
     
     public static int numberNeeded(String first, String second) {
+        int result = 0;
         HashMap<String,Integer> firstMap = new HashMap<>();
         HashMap<String,Integer> secondMap = new HashMap<>();
         for(int i = 0; i < first.length(); i++){
-            String char = new String(first.charAt(i));
-            if (!firstMap.containsKey(char)){
-                firstMap.put(char, 1);
+            String _char = String.valueOf(first.charAt(i));
+            if (!firstMap.containsKey(_char)){
+                firstMap.put(_char, 1);
             }
             else{
-                map.put(char, map.get(char) + 1);
+                firstMap.put(_char, firstMap.get(_char) + 1);
             }
-                
         }
-        return 0;
+        
+        for(int i = 0; i < second.length(); i++){
+            String _char = String.valueOf(second.charAt(i));
+            Integer val = firstMap.get(_char);
+            if(val==null || val == 0){
+                result++;
+            } else {
+                firstMap.put(_char, firstMap.get(_char) - 1);
+            }
+        }
+        Collection<Integer> values = firstMap.values();
+        for (Integer val : values){
+            result+=val;
+        }
+        return result;
     }
   
     public static void main(String[] args) {
