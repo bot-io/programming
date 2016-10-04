@@ -10,13 +10,29 @@ public class Solution {
         Scanner in = new Scanner(System.in);
         int m = in.nextInt();
         int n = in.nextInt();
-        String magazine[] = new String[m];
-        for(int magazine_i=0; magazine_i < m; magazine_i++){
-            magazine[magazine_i] = in.next();
+        
+        HashMap<String,Integer> magazineMap = new HashMap<>();
+        for(int i = 0; i < m; i++){
+            String word = in.next();
+            if (!magazineMap.containsKey(word)){
+                magazineMap.put(word, 1);
+            }
+            else{
+                magazineMap.put(word, magazineMap.get(word) + 1);
+            }
         }
-        String ransom[] = new String[n];
-        for(int ransom_i=0; ransom_i < n; ransom_i++){
-            ransom[ransom_i] = in.next();
+        
+        for(int i = 0; i < n; i++){
+            String word = in.next();
+            Integer val = magazineMap.get(word);
+            if(val==null || val == 0){
+                System.out.print("No");
+                return;
+            } else{
+                magazineMap.put(word, magazineMap.get(word) - 1);
+            }
         }
+        
+        System.out.print("Yes");
     }
 }
