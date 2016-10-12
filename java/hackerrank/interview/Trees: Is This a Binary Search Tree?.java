@@ -7,6 +7,43 @@ The Node class is defined as follows:
         Node right;
      }
 */
+
+    boolean _checkBST(Node root, int max, int min) {
+        if(root == null){
+            return true;
+        }
+
+        if(root.left != null){
+            if (!(root.left.data < root.data))
+                return false;
+        }
+
+        if(root.right != null){
+            if (!(root.right.data > root.data))
+                return false;
+        }
+
+        return checkBST(root.left) && checkBST(root.right); 
+    }
+    
+    boolean _checkLess(Node root, int max, int min) {
+        if(root == null){
+            return true;
+        }
+
+        if(root.left != null){
+            if (!(root.left.data < root.data))
+                return false;
+        }
+
+        if(root.right != null){
+            if (!(root.right.data > root.data))
+                return false;
+        }
+
+        return checkBST(root.left) && checkBST(root.right); 
+    }
+
     boolean checkBST(Node root) {
         if(root == null){
             return true;
