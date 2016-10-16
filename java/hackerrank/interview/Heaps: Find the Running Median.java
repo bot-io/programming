@@ -256,16 +256,18 @@ public class Solution {
             
             maxHeap.add(next);
             
-            if((minHeap.isEmpty() || minHeap.peek() < maxHeap.peek())){
+            if((!minHeap.isEmpty() && minHeap.peek() > maxHeap.peek())){
                 int temp = minHeap.poll();
                 minHeap.add(maxHeap.poll());
                 maxHeap.add(temp);
+            } else {
+                minHeap.add(maxHeap.poll());
             }
             
             minHeap.print();
             maxHeap.print();
             if(a_i % 2 == 0){
-                System.out.println(maxHeap.peek() / 1.0);
+                System.out.println(minHeap.peek() / 1.0);
             } else {
                 System.out.println((maxHeap.peek() + minHeap.peek()) / 2.0);
             }
