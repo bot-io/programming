@@ -108,12 +108,21 @@ abstract class Heap {
     }
     
     /** @throws IllegalStateException if Heap is empty. **/
-    public void isEmpty(String methodName) {
-        if(size == 0) {
+    public boolean isEmpty(String methodName) {
+        if(isEmpty()) {
             throw new IllegalStateException(
                 "You cannot perform '" + methodName + "' on an empty Heap."
             );
         }
+        return false;
+    }
+    
+    /** @throws IllegalStateException if Heap is empty. **/
+    public boolean isEmpty() {
+        if(size == 0) {
+            return true;
+        }
+        return false;
     }
     
     /** Extracts root element from Heap.
@@ -142,6 +151,15 @@ abstract class Heap {
         
         // Correct order property
         heapifyUp();
+    }
+    
+    /** Prints heap **/
+    public void print(){
+        System.out.print("{");
+        for(int i = 0; i < size ; i++){
+            System.out.print(items[i]+" ");
+        }
+        System.out.println("}");
     }
     
     /** Swap values down the Heap. **/
@@ -217,42 +235,6 @@ class MinHeap extends Heap {
             ) {
             swap(getParentIndex(index), index);
             index = getParentIndex(index);
-        }
-    }
-    
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        int range = scanner.nextInt();
-        scanner.close();
-        
-        // Insert random values into heaps:
-        Heap minHeap = new MinHeap();
-        Heap maxHeap = new MaxHeap();
-        System.out.println("Insert Number Sequence:");
-        for(int i = 0; i < range; i++) {
-            int value = (int) (Math.random() * 100);
-            minHeap.add(value);
-            maxHeap.add(value);
-            System.out.print(+ value + " ");
-        }
-        
-        // Remove values from heaps:
-        System.out.println("\n\nPoll Values:\n------------\nMinHeap MaxHeap");
-        for(int i = 0; i < range; i++) {
-            System.out.format("  %-12d", minHeap.poll());
-            System.out.format("%-6d\n", maxHeap.poll());
-        }
-        try {
-            minHeap.peek();
-        }
-        catch(IllegalStateException e) {
-            System.out.println(e.getMessage());
-        }
-        try {
-            maxHeap.poll();
-        }
-        catch(IllegalStateException e) {
-            System.out.println(e.getMessage());
         }
     }
 }
