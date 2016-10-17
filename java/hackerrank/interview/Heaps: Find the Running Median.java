@@ -244,30 +244,33 @@ class MinHeap extends Heap {
 }
 
 public class Solution {
+    private static MinHeap minHeap = new MinHeap();
+    private static MaxHeap maxHeap = new MaxHeap();
+    
+    private static void add(int next, int i){
+        if(i % 2 == 0){
+            maxHeap.add(next);
+        } else {
+            minHeap.add(next);
+        }
+        
+        if((!minHeap.isEmpty() && minHeap.peek() < maxHeap.peek())){
+            int temp = minHeap.poll();
+            minHeap.add(maxHeap.poll());
+            maxHeap.add(temp);
+        }
+    }
 
     public static void main(String[] args) {
-        MinHeap minHeap = new MinHeap();
-        MaxHeap maxHeap = new MaxHeap();
         Scanner in = new Scanner(System.in);
         int n = in.nextInt();
-        //int a[] = new int[n];
         for(int a_i=0; a_i < n; a_i++){
             int next = in.nextInt();
-            
-            maxHeap.add(next);
-            
-            if((!minHeap.isEmpty() && minHeap.peek() > maxHeap.peek())){
-                int temp = minHeap.poll();
-                minHeap.add(maxHeap.poll());
-                maxHeap.add(temp);
-            } else {
-                minHeap.add(maxHeap.poll());
-            }
-            
-            minHeap.print();
-            maxHeap.print();
+            add(next, a_i);
+            //minHeap.print();
+            //maxHeap.print();
             if(a_i % 2 == 0){
-                System.out.println(minHeap.peek() / 1.0);
+                System.out.println(maxHeap.peek() / 1.0);
             } else {
                 System.out.println((maxHeap.peek() + minHeap.peek()) / 2.0);
             }
