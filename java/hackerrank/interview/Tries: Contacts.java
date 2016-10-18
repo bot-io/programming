@@ -93,23 +93,24 @@ public class Solution {
     }
     
     private static int countWords(TrieNode node){
-        Integer result = new Integer(0);
-        _countWords(node, result);
+        int result = _countWords(node);
         return result;
     }
     
-    private static void _countWords(TrieNode node, Integer result){
-        result += node.isWord ? 0 : 1;
+    private static int _countWords(TrieNode node){
+        int result = (node.isWord ? 1 : 0);
         
         if(node.childen == null){
-            return;
+            return result;
         }
         
         Set<Character> keySet = node.childen.keySet();
         for(Character cc : keySet){
             TrieNode child = node.childen.get(cc);
-            _countWords(child, result);
+            result += _countWords(child);
         }
+        
+        return result;
     }
     
     public static void main(String[] args) {
