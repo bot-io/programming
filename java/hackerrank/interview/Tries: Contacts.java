@@ -7,30 +7,35 @@ import java.util.regex.*;
 class TrieNode {
     public HashMap <Character, TrieNode> childen;
     public boolean isWord;
+    public Character c;
     
-    public void print(){
-        printNode(this, '+', 0);
+    public TrieNode(Character c){
+        this.c = c;
     }
     
-    private void printNode(TrieNode node, Character c, int level){
+    public void print(){
+        printNode(this, 0);
+    }
+    
+    private void printNode(TrieNode node, int level){
+        for(int i = 0; i < level; i++){
+            System.out.print("====");
+        }
+        System.out.print(node.c+(node.isWord?"*\n":"\n"));
+        
         if (node.childen != null){
             Set<Character> keySet = node.childen.keySet();
             for(Character cc : keySet){
                 TrieNode child = node.childen.get(cc);
-                printNode(child, cc, level+1);
+                printNode(child, level+1);
             }
         }
-        
-        for(int i = 0; i < level; i++){
-            System.out.print("====");
-        }
-        System.out.print(c+(node.isWord?"*\n":"\n"));
     }
 }
 
 public class Solution {
     
-    private static TrieNode trie = new TrieNode();
+    private static TrieNode trie = new TrieNode('+');
     
     private static void addWord(String word){
         char[] chars = word.toCharArray();
@@ -56,7 +61,7 @@ public class Solution {
         
         TrieNode child = node.childen.get(c);
         if (child == null){
-            child = new TrieNode();
+            child = new TrieNode(c);
             node.childen.put(c, child);
         }
         
@@ -76,16 +81,21 @@ public class Solution {
     
     private static int searchWord(ArrayDeque<Character> arrayC, TrieNode node){
         if (arrayC.isEmpty()){
+            //System.out.println("Match found at :");
+            //node.print();
             return countWords(node);
         }
         
         Character c = arrayC.pollFirst();
+        System.out.println("Searching for : "+c);
         if(node.childen == null){
+            //System.out.println("No Match found for : "+c+", empty children.");
             return 0;
         }
         
         TrieNode child = node.childen.get(c);
         if (child == null){
+            //System.out.println("No Match found for : "+c+", no matching children.");
             return 0;
         }
         
@@ -93,12 +103,20 @@ public class Solution {
     }
     
     private static int countWords(TrieNode node){
+        System.out.println("Counting children for : ");
+        node.print();
         int result = _countWords(node);
         return result;
     }
     
     private static int _countWords(TrieNode node){
-        int result = (node.isWord ? 1 : 0);
+        int result = 0;
+        
+        if (node.isWord){
+            System.out.println("Word found for : ");
+            node.print();
+            result = 1;
+        }
         
         if(node.childen == null){
             return result;
@@ -126,5 +144,7 @@ public class Solution {
                 System.out.println(searchWord(word));
             }
         }
+        System.out.println("Final trie is : ");
+        trie.print();
     }
 }
