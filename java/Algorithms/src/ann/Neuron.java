@@ -2,66 +2,94 @@ package ann;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import util.Util;
 
 public class Neuron {
 
-	public Neuron(double output) {
-		this.output = output;
-	}
+    public Neuron(double output) {
+        this.cachedOutput = output;
+        this.name = UUID.randomUUID().toString();
+    }
 
-	public double weight;
-	public double bias;
-	public double output;
+    public Neuron(double output, String name) {
+        this(output);
+        this.name = name;
+    }
 
-	public double target;
+    public String name = "";
+    public double bias;
+    public double cachedOutput;
 
-	public Map<Neuron, Double> weights = new HashMap<>();
+    private double correctionDelta;
 
-	public double activate() {
-		// Put the input sum through the decided activation function
-		output = Util.sigmoid(getInputsSum());
+    public Map<Neuron, Double> weights = new HashMap<>();
 
-		return output;
-	}
+    public double activate() {
+        // Put the input sum through the decided activation function
+        cachedOutput = Util.sigmoid(getInputsSum());
 
-	private double getInputsSum() {
-		double result = 0;
-		// Sum all incoming neurons outputs multiplied by the
-		// connection weight
-		for (Neuron n : weights.keySet()) {
-			result += weights.get(n) * n.output;
-		}
+        return cachedOutput;
+    }
 
-		return result;
-	}
+    private double getInputsSum() {
+        double result = 0;
+        // Sum all incoming neurons outputs multiplied by the
+        // connection weight
+        for (Neuron n : weights.keySet()) {
+            result += weights.get(n) * n.cachedOutput;
+        }
 
-	public double getCorrectionDelta(double target) {
-		double error = output - target;
-		double correctionDelta = Util.sigmoidDerivative(getInputsSum()) * error;
-		return correctionDelta;
-	}
+        return result;
+    }
 
-	public void adjustWeights(double target) {
-		getCorrectionDelta(target);
+    /*
+     * Get the global correction delta for the specific neuron
+     */
+    public void calculateCorrectionDelta(double target) {
+        double error = target - cachedOutput;
+        System.out.println();
+        this.correctionDelta = Util.sigmoidDerivative(getInputsSum()) * error;
+        System.out.println(name + ": Delta output sum: " + correctionDelta);
+    }
 
-	}
+    public void adjustWeights() {
+        // Use the global correction delta, to calculate the specific correction delta for each weight
+        for (Neuron n : weights.keySet()) {
+            double weightCorrectionDelta = weights.get(n) * correctionDelta;
+            double newWeight = weights.get(n) + weightCorrectionDelta;
+            weights.put(n, newWeight);
+            n.adjustWeights(weightCorrectionDelta);
+        }
+    }
 
-	@Override
-	public String toString() {
-		String result = "";
+    public void adjustWeights(double correctionDelta) {
+        // Use the global correction delta, to calculate the specific correction delta for each weight
+        for (Neuron n : weights.keySet()) {
+            double weightCorrectionDelta = n.cachedOutput * correctionDelta;
+            System.out.println(name + ": Adjusting weight " + weights.get(n) + ", with " + n.cachedOutput + "*"
+                    + correctionDelta);
+            double newWeight = weights.get(n) + weightCorrectionDelta;
+            System.out.println(name + ": Old weight " + weights.get(n) + ", new weight " + newWeight);
+            weights.put(n, newWeight);
+        }
+    }
 
-		if (!weights.isEmpty()) {
-			result += "Weights: ";
-			for (Neuron n : weights.keySet()) {
-				result += weights.get(n) + ", ";
-			}
-		}
+    @Override
+    public String toString() {
+        String result = name + ": ";
 
-		result += "output: " + output;
+        if (!weights.isEmpty()) {
+            result += "Weights: ";
+            for (Neuron n : weights.keySet()) {
+                result += weights.get(n) + ", ";
+            }
+        }
 
-		return result;
-	}
+        result += "output: " + cachedOutput;
+
+        return result;
+    }
 
 }
