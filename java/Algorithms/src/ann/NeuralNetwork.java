@@ -4,12 +4,15 @@ import java.util.ArrayList;
 
 public class NeuralNetwork {
 
+	double learningRate = 0.1;
 	ArrayList<Neuron> neurons = new ArrayList<>();
 
 	public NeuralNetwork() {
+		// Input neurons
 		Neuron n0 = new Neuron(1);
 		Neuron n1 = new Neuron(1);
 
+		// Middle layer neurons
 		Neuron n2 = new Neuron(1);
 		n2.weights.put(n0, 0.8);
 		n2.weights.put(n1, 0.2);
@@ -20,11 +23,13 @@ public class NeuralNetwork {
 		n4.weights.put(n0, 0.3);
 		n4.weights.put(n1, 0.5);
 
+		// Output neuron
 		Neuron n5 = new Neuron(1);
 		n5.weights.put(n2, 0.3);
 		n5.weights.put(n3, 0.5);
 		n5.weights.put(n4, 0.9);
 
+		// Add all neurons to the network
 		neurons.add(n0);
 		neurons.add(n1);
 		neurons.add(n2);
@@ -32,10 +37,15 @@ public class NeuralNetwork {
 		neurons.add(n4);
 		neurons.add(n5);
 
+		// Activate middle layer
 		n2.activate();
 		n3.activate();
 		n4.activate();
+
+		// Activate output
 		n5.activate();
+
+		n5.target = 0;
 
 		print();
 	}
