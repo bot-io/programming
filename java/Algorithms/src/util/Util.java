@@ -1,5 +1,8 @@
 package util;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 public class Util {
 	public static void printArray(int[] array) {
 		System.out.print("[");
@@ -41,5 +44,9 @@ public class Util {
 
 	public static double sigmoidDerivative(double x) {
 		return Math.exp(-x) / Math.pow((1 + Math.exp(-x)), 2);
+	}
+
+	public static double toPrecision(int precision, double input) {
+		return BigDecimal.valueOf(input).setScale(precision, RoundingMode.HALF_UP).doubleValue();
 	}
 }
