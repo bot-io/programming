@@ -2,8 +2,11 @@ package ann;
 
 import java.util.ArrayList;
 
+import logger.Logger;
+
 public class NeuralNetwork {
 
+	private Logger logger = new Logger();
 	double learningRate = 0.1;
 	ArrayList<Neuron> neurons = new ArrayList<>();
 
@@ -14,20 +17,20 @@ public class NeuralNetwork {
 
 		// Middle layer neurons
 		Neuron n2 = new Neuron(1, "hidden1");
-		n2.weights.put(n0, 0.8);
-		n2.weights.put(n1, 0.2);
+		n2.inputs.put(n0, 0.8);
+		n2.inputs.put(n1, 0.2);
 		Neuron n3 = new Neuron(1, "hidden2");
-		n3.weights.put(n0, 0.4);
-		n3.weights.put(n1, 0.9);
+		n3.inputs.put(n0, 0.4);
+		n3.inputs.put(n1, 0.9);
 		Neuron n4 = new Neuron(1, "hidden3");
-		n4.weights.put(n0, 0.3);
-		n4.weights.put(n1, 0.5);
+		n4.inputs.put(n0, 0.3);
+		n4.inputs.put(n1, 0.5);
 
 		// Output neuron
 		Neuron n5 = new Neuron(1, "output");
-		n5.weights.put(n2, 0.3);
-		n5.weights.put(n3, 0.5);
-		n5.weights.put(n4, 0.9);
+		n5.inputs.put(n2, 0.3);
+		n5.inputs.put(n3, 0.5);
+		n5.inputs.put(n4, 0.9);
 
 		// Add all neurons to the network
 		neurons.add(n0);
@@ -37,7 +40,7 @@ public class NeuralNetwork {
 		neurons.add(n4);
 		neurons.add(n5);
 
-		for (int i = 0; i < 10000; i++) {
+		for (int i = 0; i < 1000; i++) {
 			pulse();
 		}
 
@@ -64,10 +67,10 @@ public class NeuralNetwork {
 	}
 
 	public void print() {
-		System.out.println();
+		logger.log("\n");
 		for (int i = 0; i < neurons.size(); i++) {
 			Neuron n = neurons.get(i);
-			System.out.println(n.toString());
+			logger.log(n.toString());
 		}
 	}
 }

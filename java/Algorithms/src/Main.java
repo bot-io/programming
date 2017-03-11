@@ -1,10 +1,16 @@
+import java.util.Date;
+
 import ann.NeuralNetwork;
 import parsing.ExpressionParser;
 
 public class Main {
 
 	public static void main(String[] args) {
+		Date start = new Date();
 		nnTest();
+		Date end = new Date();
+		long diffInMillies = end.getTime() - start.getTime();
+		System.out.println("Computation duration: " + diffInMillies + " milliseconds.");
 	}
 
 	private static void parserTest() {

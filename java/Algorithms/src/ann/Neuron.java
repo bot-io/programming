@@ -4,13 +4,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import ann.activation.IActivationFunction;
+import ann.activation.SigmoidActivationFunction;
+import logger.Logger;
 import util.Util;
 
 public class Neuron {
 
+	private Logger logger = new Logger();
+
 	public Neuron(double input) {
-		this.cachedInput = input;
-		this.cachedOutput = input;
+		this.inputSum = input;
+		this.output = input;
 		this.name = UUID.randomUUID().toString();
 	}
 
@@ -20,28 +25,28 @@ public class Neuron {
 	}
 
 	public String name = "";
-	public double bias;
-	public double cachedOutput;
-	public double cachedInput;
+	public double output;
+	public double inputSum;
+	public IActivationFunction activationFunction = new SigmoidActivationFunction();
 
 	private double globalCorrectionDelta;
 
-	public Map<Neuron, Double> weights = new HashMap<>();
+	public Map<Neuron, Double> inputs = new HashMap<>();
 
 	public double activate() {
-		cachedInput = getInputsSum();
+		inputSum = getInputsSum();
 		// Put the input sum through the decided activation function
-		cachedOutput = Util.sigmoid(cachedInput);
+		output = activationFunction.activate(inputSum);
 
-		return cachedOutput;
+		return output;
 	}
 
 	private double getInputsSum() {
 		double result = 0;
 		// Sum all incoming neurons outputs multiplied by the
 		// connection weight
-		for (Neuron n : weights.keySet()) {
-			result += weights.get(n) * n.cachedOutput;
+		for (Neuron n : inputs.keySet()) {
+			result += inputs.get(n) * n.output;
 		}
 
 		return result;
@@ -51,41 +56,39 @@ public class Neuron {
 	 * Get the global correction delta for the specific neuron
 	 */
 	public void calculateCorrectionDelta(double target) {
-		double error = target - cachedOutput;
-		System.out.println("Error: " + error);
+		double error = target - output;
+		logger.log("Error: " + error);
 		this.globalCorrectionDelta = Util.sigmoidDerivative(getInputsSum()) * error;
-		System.out.println(name + ": Delta output sum: " + globalCorrectionDelta);
+		logger.log(name + ": Delta output sum: " + globalCorrectionDelta);
 	}
 
 	public void adjustWeights() {
-		System.out.println("\nAdjusting weights for neuron " + name + ": ");
-		System.out.println(name + ": Global correction delta is " + globalCorrectionDelta);
+		logger.log("\nAdjusting weights for neuron " + name + ": ");
+		logger.log(name + ": Global correction delta is " + globalCorrectionDelta);
 		// Use the global correction delta, to calculate the specific correction
 		// delta for each weight
-		for (Neuron n : weights.keySet()) {
-			double weightCorrectionDelta = n.cachedOutput * globalCorrectionDelta;
-			System.out.println("\n" + name + ": Calculating weight correction delta for weight " + weights.get(n)
-					+ ", with " + n.name + "'s output " + n.cachedOutput + "*" + globalCorrectionDelta + " = "
-					+ weightCorrectionDelta);
-			double newWeight = weights.get(n) + weightCorrectionDelta;
-			System.out.println(name + ": Old weight " + weights.get(n) + ", new weight " + newWeight);
-			weights.put(n, newWeight);
-			double correctionDelta = globalCorrectionDelta*weights.get(n)*Util.sigmoidDerivative(n.cachedInput);
+		for (Neuron n : inputs.keySet()) {
+			double weightCorrectionDelta = n.output * globalCorrectionDelta;
+			logger.log("\n" + name + ": Calculating weight correction delta for weight " + inputs.get(n) + ", with "
+					+ n.name + "'s output " + n.output + "*" + globalCorrectionDelta + " = " + weightCorrectionDelta);
+			double newWeight = inputs.get(n) + weightCorrectionDelta;
+			logger.log(name + ": Old weight " + inputs.get(n) + ", new weight " + newWeight);
+			inputs.put(n, newWeight);
+			double correctionDelta = globalCorrectionDelta * inputs.get(n) * Util.sigmoidDerivative(n.inputSum);
 			n.adjustWeights(correctionDelta);
 		}
 	}
 
 	public void adjustWeights(double correctionDelta) {
-		System.out.println("\nAdjusting weights for neuron " + name + ": ");
+		logger.log("\nAdjusting weights for neuron " + name + ": ");
 		// Use the global correction delta, to calculate the specific correction
 		// delta for each weight
-		for (Neuron n : weights.keySet()) {
-			double weightCorrectionDelta = n.cachedOutput * correctionDelta;
-			System.out.println(
-					name + ": Adjusting weight " + weights.get(n) + ", with " + n.cachedOutput + "*" + correctionDelta);
-			double newWeight = weights.get(n) + weightCorrectionDelta;
-			System.out.println(name + ": Old weight " + weights.get(n) + ", new weight " + newWeight);
-			weights.put(n, newWeight);
+		for (Neuron n : inputs.keySet()) {
+			double weightCorrectionDelta = n.output * correctionDelta;
+			logger.log(name + ": Adjusting weight " + inputs.get(n) + ", with " + n.output + "*" + correctionDelta);
+			double newWeight = inputs.get(n) + weightCorrectionDelta;
+			logger.log(name + ": Old weight " + inputs.get(n) + ", new weight " + newWeight);
+			inputs.put(n, newWeight);
 		}
 	}
 
@@ -93,14 +96,14 @@ public class Neuron {
 	public String toString() {
 		String result = name + ": ";
 
-		if (!weights.isEmpty()) {
+		if (!inputs.isEmpty()) {
 			result += "Weights: ";
-			for (Neuron n : weights.keySet()) {
-				result += weights.get(n) + ", ";
+			for (Neuron n : inputs.keySet()) {
+				result += inputs.get(n) + ", ";
 			}
 		}
 
-		result += "output: " + cachedOutput;
+		result += "output: " + output;
 		return result;
 	}
 
