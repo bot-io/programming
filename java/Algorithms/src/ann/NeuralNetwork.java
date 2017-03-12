@@ -40,13 +40,14 @@ public class NeuralNetwork {
 		neurons.add(n4);
 		neurons.add(n5);
 
-		for (int i = 0; i < 1000; i++) {
-			pulse();
+		for (int i = 0; i < 100; i++) {
+			pulse(i);
 		}
 
 	}
 
-	public void pulse() {
+	public void pulse(int count) {
+		logger.log("Pulse: "+count);
 		activate();
 		print();
 		adjustWeights();
