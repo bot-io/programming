@@ -9,29 +9,25 @@ import ann.activation.SigmoidActivationFunction;
 import logger.Logger;
 import util.Util;
 
-public class Neuron {
+public class OutputNeuron extends AbstractNeuron{
 
 	private Logger logger = new Logger();
 
-	public Neuron(double input) {
+	public OutputNeuron(double input) {
 		this.inputSum = input;
 		this.output = input;
 		this.name = UUID.randomUUID().toString();
 	}
 
-	public Neuron(double input, String name) {
+	public OutputNeuron(double input, String name) {
 		this(input);
 		this.name = name;
 	}
 
-	public String name = "";
-	public double output;
-	public double inputSum;
-	public IActivationFunction activationFunction = new SigmoidActivationFunction();
-
+	
 	private double globalCorrectionDelta;
 
-	public Map<Neuron, Double> inputs = new HashMap<>();
+	public Map<OutputNeuron, Double> inputs = new HashMap<>();
 
 	public double activate() {
 		inputSum = getInputsSum();
@@ -45,7 +41,7 @@ public class Neuron {
 		double result = 0;
 		// Sum all incoming neurons outputs multiplied by the
 		// connection weight
-		for (Neuron n : inputs.keySet()) {
+		for (OutputNeuron n : inputs.keySet()) {
 			result += inputs.get(n) * n.output;
 		}
 
@@ -67,7 +63,7 @@ public class Neuron {
 		logger.log(name + ": Global correction delta is " + globalCorrectionDelta);
 		// Use the global correction delta, to calculate the specific correction
 		// delta for each weight
-		for (Neuron n : inputs.keySet()) {
+		for (OutputNeuron n : inputs.keySet()) {
 			double weightCorrectionDelta = n.output * globalCorrectionDelta;
 			logger.log("\n" + name + ": Calculating weight correction delta for weight " + inputs.get(n) + ", with "
 					+ n.name + "'s output " + n.output + "*" + globalCorrectionDelta + " = " + weightCorrectionDelta);
@@ -83,7 +79,7 @@ public class Neuron {
 		logger.log("\nAdjusting weights for neuron " + name + ": ");
 		// Use the global correction delta, to calculate the specific correction
 		// delta for each weight
-		for (Neuron n : inputs.keySet()) {
+		for (OutputNeuron n : inputs.keySet()) {
 			double weightCorrectionDelta = n.output * correctionDelta;
 			logger.log(name + ": Adjusting weight " + inputs.get(n) + ", with " + n.output + "*" + correctionDelta);
 			double newWeight = inputs.get(n) + weightCorrectionDelta;
@@ -98,7 +94,7 @@ public class Neuron {
 
 		if (!inputs.isEmpty()) {
 			result += "Weights: ";
-			for (Neuron n : inputs.keySet()) {
+			for (OutputNeuron n : inputs.keySet()) {
 				result += inputs.get(n) + ", ";
 			}
 		}
