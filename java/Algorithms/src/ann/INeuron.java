@@ -6,6 +6,4 @@ public interface INeuron {
     double activate();
 
     public String getName();
-
-    void adjustWeights(double correctionDelta);
 }

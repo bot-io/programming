@@ -1,6 +1,7 @@
 package ann;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import logger.Logger;
@@ -13,8 +14,6 @@ public class HiddenNeuron extends AbstractNeuron {
 
     private Logger logger = new Logger();
 
-    private double globalCorrectionDelta;
-
     public Map<INeuron, Double> inputs = new HashMap<>();
 
     public double activate() {
@@ -23,6 +22,20 @@ public class HiddenNeuron extends AbstractNeuron {
         output = activationFunction.activate(output);
 
         return output;
+    }
+
+    public void addInput(INeuron n, double weight) {
+        inputs.put(n, weight);
+    }
+
+    public void addInput(INeuron n) {
+        this.addInput(n, Math.random());
+    }
+
+    public void addInputs(List<INeuron> ns) {
+        for (INeuron n : ns) {
+            this.addInput(n);
+        }
     }
 
     protected double getWeightedInput() {
@@ -34,34 +47,6 @@ public class HiddenNeuron extends AbstractNeuron {
         }
 
         return result;
-    }
-
-    /*
-     * Get the global correction delta for the specific neuron
-     */
-    public void calculateCorrectionDelta(double target) {
-        double error = target - output;
-        logger.log("Error: " + error);
-        this.globalCorrectionDelta = activationFunction.activate(getWeightedInput()) * error;
-        logger.log(name + ": Delta output sum: " + globalCorrectionDelta);
-    }
-
-    public void adjustWeights() {
-        logger.log("\nAdjusting weights for neuron " + name + ": ");
-        logger.log(name + ": Global correction delta is " + globalCorrectionDelta);
-        // Use the global correction delta, to calculate the specific correction
-        // delta for each weight
-        for (INeuron n : inputs.keySet()) {
-            double weightCorrectionDelta = n.getOutput() * globalCorrectionDelta;
-            logger.log("\n" + name + ": Calculating weight correction delta for weight " + inputs.get(n) + ", with "
-                    + n.getName() + "'s output " + n.getOutput() + "*" + globalCorrectionDelta + " = "
-                    + weightCorrectionDelta);
-            double newWeight = inputs.get(n) + weightCorrectionDelta;
-            logger.log(name + ": Old weight " + inputs.get(n) + ", new weight " + newWeight);
-            inputs.put(n, newWeight);
-            double correctionDelta = globalCorrectionDelta * inputs.get(n);
-            n.adjustWeights(correctionDelta);
-        }
     }
 
     public void adjustWeights(double correctionDelta) {
@@ -89,7 +74,7 @@ public class HiddenNeuron extends AbstractNeuron {
             }
         }
 
-        result += "output: " + output;
+        result += "output: " + getOutput();
         return result;
     }
 

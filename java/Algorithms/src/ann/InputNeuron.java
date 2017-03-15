@@ -23,7 +23,7 @@ public class InputNeuron extends AbstractNeuron {
         return input;
     }
 
-    @Override
-    public void adjustWeights(double correctionDelta) {
+    public void setInput(double input) {
+        this.input = input;
     }
 }

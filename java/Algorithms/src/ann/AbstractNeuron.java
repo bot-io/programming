@@ -20,12 +20,10 @@ public abstract class AbstractNeuron implements INeuron {
         return name;
     }
 
-    abstract public void adjustWeights(double correctionDelta);
-
     @Override
     public String toString() {
         String result = name + ": ";
-        result += "output: " + output;
+        result += "output: " + getOutput();
         return result;
     }
 
