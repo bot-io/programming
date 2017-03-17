@@ -14,6 +14,19 @@ public class HiddenNeuron extends AbstractNeuron {
 
     private Logger logger = new Logger();
     protected double weightedInput;
+	protected double globalCorrectionDelta;
+	
+	/*
+     * Get the global correction delta for the specific neuron
+     */
+    public double getGlobalCorrectionDelta() {
+		return globalCorrectionDelta;
+	}
+	
+	public void setGlobalCorrectionDelta(double value){
+		globalCorrectionDelta = value;
+	}
+	
 
     public Map<INeuron, Double> inputs = new HashMap<>();
 
@@ -50,7 +63,8 @@ public class HiddenNeuron extends AbstractNeuron {
         return weightedInput;
     }
 
-    public void adjustWeights(double correctionDelta) {
+    public void adjustWeights() {
+		double correctionDelta = getGlobalCorrectionDelta();
         correctionDelta = correctionDelta * activationFunction.derivative(getWeightedInput());
         logger.log("\nAdjusting weights for neuron " + name + ": ");
         // Use the global correction delta, to calculate the specific correction

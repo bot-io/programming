@@ -10,8 +10,6 @@ public class OutputNeuron extends HiddenNeuron {
         super(name);
     }
 
-    protected double globalCorrectionDelta;
-
     double target;
 
     public void setTarget(double target) {
@@ -21,6 +19,7 @@ public class OutputNeuron extends HiddenNeuron {
     /*
      * Get the global correction delta for the specific neuron
      */
+	 @Override
     public double getGlobalCorrectionDelta() {
         double error = target - output;
         logger.log("Error: " + error);
@@ -45,7 +44,8 @@ public class OutputNeuron extends HiddenNeuron {
             inputs.put(n, newWeight);
             if (n instanceof HiddenNeuron) {
                 double correctionDelta = globalCorrectionDelta * inputs.get(n);
-                ((HiddenNeuron) n).adjustWeights(correctionDelta);
+				((HiddenNeuron) n).setGlobalCorrectionDelta(correctionDelta);
+                ((HiddenNeuron) n).adjustWeights();
             }
         }
     }

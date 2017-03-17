@@ -44,13 +44,14 @@ public class NeuralNetwork {
 
         i0.setInput(0);
         i1.setInput(1);
+		o0.setTarget(0.66);
 
         print();
-
-        // i0.setInput(0);
-        // i1.setInput(0);
-        //
-        // print();
+//
+//         i0.setInput(0);
+//         i1.setInput(0);
+//        //
+//         print();
     }
 
     public void train() {
@@ -59,10 +60,10 @@ public class NeuralNetwork {
             i1.setInput(1);
             o0.setTarget(0.66);
             pulse(i);
-            // i0.setInput(0);
-            // i1.setInput(0);
-            // o0.setTarget(1);
-            // pulse(i + 1);
+//             i0.setInput(0);
+//             i1.setInput(0);
+//             o0.setTarget(1);
+//             pulse(i + 1);
         }
     }
 
@@ -84,7 +85,6 @@ public class NeuralNetwork {
 
     public void adjustWeights() {
         OutputNeuron n = (OutputNeuron) neurons.get(neurons.size() - 1);
-        n.getGlobalCorrectionDelta();
         n.adjustWeights();
     }
 
