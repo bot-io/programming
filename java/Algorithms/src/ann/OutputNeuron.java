@@ -21,14 +21,16 @@ public class OutputNeuron extends HiddenNeuron {
     /*
      * Get the global correction delta for the specific neuron
      */
-    public void calculateCorrectionDelta() {
+    public double getGlobalCorrectionDelta() {
         double error = target - output;
         logger.log("Error: " + error);
-        this.globalCorrectionDelta = activationFunction.activate(getWeightedInput()) * error;
+        double globalCorrectionDelta = activationFunction.derivative(weightedInput) * error * 0.3;
         logger.log(name + ": Delta output sum: " + globalCorrectionDelta);
+        return globalCorrectionDelta;
     }
 
     public void adjustWeights() {
+        double globalCorrectionDelta = getGlobalCorrectionDelta();
         logger.log("\nAdjusting weights for neuron " + name + ": ");
         logger.log(name + ": Global correction delta is " + globalCorrectionDelta);
         // Use the global correction delta, to calculate the specific correction

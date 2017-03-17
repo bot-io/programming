@@ -84,7 +84,7 @@ public class NeuralNetwork {
 
     public void adjustWeights() {
         OutputNeuron n = (OutputNeuron) neurons.get(neurons.size() - 1);
-        n.calculateCorrectionDelta();
+        n.getGlobalCorrectionDelta();
         n.adjustWeights();
     }
 

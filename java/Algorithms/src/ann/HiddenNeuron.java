@@ -13,6 +13,7 @@ public class HiddenNeuron extends AbstractNeuron {
     }
 
     private Logger logger = new Logger();
+    protected double weightedInput;
 
     public Map<INeuron, Double> inputs = new HashMap<>();
 
@@ -39,14 +40,14 @@ public class HiddenNeuron extends AbstractNeuron {
     }
 
     protected double getWeightedInput() {
-        double result = 0;
+        weightedInput = 0;
         // Sum all incoming neurons outputs multiplied by the
         // connection weight
         for (INeuron n : inputs.keySet()) {
-            result += inputs.get(n) * n.getOutput();
+            weightedInput += inputs.get(n) * n.getOutput();
         }
 
-        return result;
+        return weightedInput;
     }
 
     public void adjustWeights(double correctionDelta) {
