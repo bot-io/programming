@@ -2,7 +2,7 @@ package nn;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.Locale;
 
 public class NeuralNetwork {
@@ -10,7 +10,7 @@ public class NeuralNetwork {
 		Locale.setDefault(Locale.ENGLISH);
 	}
 
-	final boolean isTrained = false;
+	// final boolean isTrained = false;
 	final DecimalFormat df;
 	final ArrayList<Neuron> inputLayer = new ArrayList<Neuron>();
 	final ArrayList<Neuron> hiddenLayer = new ArrayList<Neuron>();
@@ -22,7 +22,7 @@ public class NeuralNetwork {
 	final double epsilon = 0.00000000001;
 
 	final double learningRate = 0.9f;
-	final double momentum = 0.7f;
+	final double momentum = 0.1f;
 
 	// Inputs for xor problem
 	final double inputs[][] = { { 1, 1 }, { 1, 0 }, { 0, 1 }, { 0, 0 }, { 0.5, 0.5 } };
@@ -30,11 +30,12 @@ public class NeuralNetwork {
 	// Corresponding outputs, xor training data
 	final double expectedOutputs[][] = { { 1 }, { 0.5 }, { 0.5 }, { 0 }, { 0.5 } };
 	// dummy init
-	double resultOutputs[][] = { { -1 }, { -1 }, { -1 }, { -1 }, { -1 } };
+	double resultOutputs[][] = Arrays.copyOf(expectedOutputs, expectedOutputs.length);
 	double output[];
 
 	// for weight update all
-	final HashMap<String, Double> weightUpdate = new HashMap<String, Double>();
+	// final HashMap<String, Double> weightUpdate = new HashMap<String,
+	// Double>();
 
 	public static void main(String[] args) {
 		NeuralNetwork nn = new NeuralNetwork(2, 2, 1);
@@ -85,10 +86,10 @@ public class NeuralNetwork {
 		Neuron.counter = 0;
 		Connection.counter = 0;
 
-		if (isTrained) {
-			trainedWeights();
-			updateAllWeights();
-		}
+		// if (isTrained) {
+		// trainedWeights();
+		// updateAllWeights();
+		// }
 	}
 
 	void run(int maxSteps, double minError) {
@@ -168,8 +169,9 @@ public class NeuralNetwork {
 	 */
 	public void applyBackpropagation(double expectedOutput[]) {
 
+		int outputNumber = 0;
 		// error check, normalize value ]0;1[
-		for (int outputNumber = 0; outputNumber < expectedOutput.length; outputNumber++) {
+		for (outputNumber = 0; outputNumber < expectedOutput.length; outputNumber++) {
 			double d = expectedOutput[outputNumber];
 			if (d < 0 || d > 1) {
 				if (d < 0)
@@ -179,40 +181,44 @@ public class NeuralNetwork {
 			}
 		}
 
-		int i = 0;
+		// Reset ouptutNumber
+		outputNumber = 0;
+		// Update weights for the output layer
 		for (Neuron n : outputLayer) {
 			ArrayList<Connection> connections = n.getAllInConnections();
 			for (Connection con : connections) {
-				double ak = n.getOutput();
-				double ai = con.fromNeuron.getOutput();
-				double desiredOutput = expectedOutput[i];
+				double outputNeuronOutput = n.getOutput();
+				double fromOutput = con.fromNeuron.getOutput();
+				double desiredOutput = expectedOutput[outputNumber];
 
-				double partialDerivative = -ak * (1 - ak) * ai * (desiredOutput - ak);
+				double partialDerivative = -outputNeuronOutput * (1 - outputNeuronOutput) * fromOutput
+						* (desiredOutput - outputNeuronOutput);
 				double deltaWeight = -learningRate * partialDerivative;
 				double newWeight = con.getWeight() + deltaWeight;
 				con.setDeltaWeight(deltaWeight);
 				con.setWeight(newWeight + momentum * con.getPrevDeltaWeight());
 			}
-			i++;
+			outputNumber++;
 		}
 
-		// update weights for the hidden layer
+		// Update weights for the hidden layer
 		for (Neuron n : hiddenLayer) {
 			ArrayList<Connection> connections = n.getAllInConnections();
 			for (Connection con : connections) {
-				double aj = n.getOutput();
-				double ai = con.fromNeuron.getOutput();
-				double sumKoutputs = 0;
+				double hiddenOutput = n.getOutput();
+				double fromOutput = con.fromNeuron.getOutput();
+				double sumWeightCorrection = 0;
 				int j = 0;
-				for (Neuron out_neu : outputLayer) {
-					double wjk = out_neu.getConnection(n.id).getWeight();
+				for (Neuron outputNeuroun : outputLayer) {
+					double outputNeuronWeight = outputNeuroun.getConnection(n.id).getWeight();
 					double desiredOutput = (double) expectedOutput[j];
-					double ak = out_neu.getOutput();
+					double outputNeuronOutput = outputNeuroun.getOutput();
 					j++;
-					sumKoutputs = sumKoutputs + (-(desiredOutput - ak) * ak * (1 - ak) * wjk);
+					sumWeightCorrection = sumWeightCorrection + (-(desiredOutput - outputNeuronOutput)
+							* outputNeuronOutput * (1 - outputNeuronOutput) * outputNeuronWeight);
 				}
 
-				double partialDerivative = aj * (1 - aj) * ai * sumKoutputs;
+				double partialDerivative = hiddenOutput * (1 - hiddenOutput) * fromOutput * sumWeightCorrection;
 				double deltaWeight = -learningRate * partialDerivative;
 				double newWeight = con.getWeight() + deltaWeight;
 				con.setDeltaWeight(deltaWeight);
@@ -250,49 +256,49 @@ public class NeuralNetwork {
 	/**
 	 * Take from hash table and put into all weights
 	 */
-	public void updateAllWeights() {
-		// update weights for the output layer
-		for (Neuron n : outputLayer) {
-			ArrayList<Connection> connections = n.getAllInConnections();
-			for (Connection con : connections) {
-				String key = weightKey(n.id, con.id);
-				double newWeight = weightUpdate.get(key);
-				con.setWeight(newWeight);
-			}
-		}
-		// update weights for the hidden layer
-		for (Neuron n : hiddenLayer) {
-			ArrayList<Connection> connections = n.getAllInConnections();
-			for (Connection con : connections) {
-				String key = weightKey(n.id, con.id);
-				double newWeight = weightUpdate.get(key);
-				con.setWeight(newWeight);
-			}
-		}
-	}
+	// public void updateAllWeights() {
+	// // update weights for the output layer
+	// for (Neuron n : outputLayer) {
+	// ArrayList<Connection> connections = n.getAllInConnections();
+	// for (Connection con : connections) {
+	// String key = weightKey(n.id, con.id);
+	// double newWeight = weightUpdate.get(key);
+	// con.setWeight(newWeight);
+	// }
+	// }
+	// // update weights for the hidden layer
+	// for (Neuron n : hiddenLayer) {
+	// ArrayList<Connection> connections = n.getAllInConnections();
+	// for (Connection con : connections) {
+	// String key = weightKey(n.id, con.id);
+	// double newWeight = weightUpdate.get(key);
+	// con.setWeight(newWeight);
+	// }
+	// }
+	// }
 
 	// trained data
-	void trainedWeights() {
-		weightUpdate.clear();
-
-		weightUpdate.put(weightKey(3, 0), 1.03);
-		weightUpdate.put(weightKey(3, 1), 1.13);
-		weightUpdate.put(weightKey(3, 2), -.97);
-		weightUpdate.put(weightKey(4, 3), 7.24);
-		weightUpdate.put(weightKey(4, 4), -3.71);
-		weightUpdate.put(weightKey(4, 5), -.51);
-		weightUpdate.put(weightKey(5, 6), -3.28);
-		weightUpdate.put(weightKey(5, 7), 7.29);
-		weightUpdate.put(weightKey(5, 8), -.05);
-		weightUpdate.put(weightKey(6, 9), 5.86);
-		weightUpdate.put(weightKey(6, 10), 6.03);
-		weightUpdate.put(weightKey(6, 11), .71);
-		weightUpdate.put(weightKey(7, 12), 2.19);
-		weightUpdate.put(weightKey(7, 13), -8.82);
-		weightUpdate.put(weightKey(7, 14), -8.84);
-		weightUpdate.put(weightKey(7, 15), 11.81);
-		weightUpdate.put(weightKey(7, 16), .44);
-	}
+	// void trainedWeights() {
+	// weightUpdate.clear();
+	//
+	// weightUpdate.put(weightKey(3, 0), 1.03);
+	// weightUpdate.put(weightKey(3, 1), 1.13);
+	// weightUpdate.put(weightKey(3, 2), -.97);
+	// weightUpdate.put(weightKey(4, 3), 7.24);
+	// weightUpdate.put(weightKey(4, 4), -3.71);
+	// weightUpdate.put(weightKey(4, 5), -.51);
+	// weightUpdate.put(weightKey(5, 6), -3.28);
+	// weightUpdate.put(weightKey(5, 7), 7.29);
+	// weightUpdate.put(weightKey(5, 8), -.05);
+	// weightUpdate.put(weightKey(6, 9), 5.86);
+	// weightUpdate.put(weightKey(6, 10), 6.03);
+	// weightUpdate.put(weightKey(6, 11), .71);
+	// weightUpdate.put(weightKey(7, 12), 2.19);
+	// weightUpdate.put(weightKey(7, 13), -8.82);
+	// weightUpdate.put(weightKey(7, 14), -8.84);
+	// weightUpdate.put(weightKey(7, 15), 11.81);
+	// weightUpdate.put(weightKey(7, 16), .44);
+	// }
 
 	public void printWeightUpdate() {
 		System.out.println("printWeightUpdate, put this i trainedWeights() and set isTrained to true");
