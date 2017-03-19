@@ -1,76 +1,102 @@
 package ann;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import logger.Logger;
 
 public class NeuralNetwork {
 
-	private Logger logger = new Logger();
-	double learningRate = 0.1;
-	ArrayList<Neuron> neurons = new ArrayList<>();
+    private Logger logger = new Logger();
+    double learningRate = 0.1;
+    List<INeuron> neurons = new ArrayList<>();
 
-	public NeuralNetwork() {
-		// Input neurons
-		Neuron n0 = new Neuron(1, "input1");
-		Neuron n1 = new Neuron(1, "input2");
+    // Input neurons
+    InputNeuron i0 = new InputNeuron("input0");
+    InputNeuron i1 = new InputNeuron("input1");
 
-		// Middle layer neurons
-		Neuron n2 = new Neuron(1, "hidden1");
-		n2.inputs.put(n0, 0.8);
-		n2.inputs.put(n1, 0.2);
-		Neuron n3 = new Neuron(1, "hidden2");
-		n3.inputs.put(n0, 0.4);
-		n3.inputs.put(n1, 0.9);
-		Neuron n4 = new Neuron(1, "hidden3");
-		n4.inputs.put(n0, 0.3);
-		n4.inputs.put(n1, 0.5);
+    // Middle layer neurons
+    HiddenNeuron h0 = new HiddenNeuron("hidden0");
+    HiddenNeuron h1 = new HiddenNeuron("hidden1");
+    HiddenNeuron h2 = new HiddenNeuron("hidden2");
+    HiddenNeuron h3 = new HiddenNeuron("hidden3");
+	
+	//Bias neurons
+	BiasNeuron b1 = new BiasNeuron("bias1");
+	BiasNeuron b2 = new BiasNeuron("bias2");
 
-		// Output neuron
-		Neuron n5 = new Neuron(1, "output");
-		n5.inputs.put(n2, 0.3);
-		n5.inputs.put(n3, 0.5);
-		n5.inputs.put(n4, 0.9);
+    // Output neuron
+    OutputNeuron o0 = new OutputNeuron("output");
 
-		// Add all neurons to the network
-		neurons.add(n0);
-		neurons.add(n1);
-		neurons.add(n2);
-		neurons.add(n3);
-		neurons.add(n4);
-		neurons.add(n5);
+    public NeuralNetwork() {
 
-		for (int i = 0; i < 1000; i++) {
-			pulse();
-		}
+        // Middle layer neurons
+        h0.addInputs(Arrays.asList(i0, i1, b1));
+        h1.addInputs(Arrays.asList(i0, i1, b1));
+        h2.addInputs(Arrays.asList(i0, i1, b1));
+        h3.addInputs(Arrays.asList(i0, i1, b1));
 
-	}
+        // Output neuron
+        o0.addInputs(Arrays.asList(h0, h1, h2, h3, b2));
+        o0.setTarget(0);
 
-	public void pulse() {
-		activate();
-		print();
-		adjustWeights();
-		print();
-	}
+        // Add all neurons to the network
+        neurons.addAll(Arrays.asList(i0, i1, h0, h1, h2, h3, o0));
 
-	public void activate() {
-		for (int i = 2; i < neurons.size(); i++) {
-			Neuron n = neurons.get(i);
-			n.activate();
-		}
-	}
+        train();
 
-	public void adjustWeights() {
-		Neuron n = neurons.get(neurons.size() - 1);
-		n.calculateCorrectionDelta(0);
-		n.adjustWeights();
-	}
+        i0.setInput(0);
+        i1.setInput(1);
+		o0.setTarget(0.66);
 
-	public void print() {
-		logger.log("\n");
-		for (int i = 0; i < neurons.size(); i++) {
-			Neuron n = neurons.get(i);
-			logger.log(n.toString());
-		}
-	}
+        print();
+
+         i0.setInput(0);
+         i1.setInput(0);
+        //
+         print();
+    }
+
+    public void train() {
+        for (int i = 0; i < 1000; i += 2) {
+            i0.setInput(0);
+            i1.setInput(1);
+            o0.setTarget(0.66);
+            pulse(i);
+             i0.setInput(0);
+             i1.setInput(0);
+             o0.setTarget(1);
+             pulse(i + 1);
+        }
+    }
+
+    public void pulse(int count) {
+        logger.log("Activating network, count " + count);
+        activate();
+        print();
+        logger.log("Adjusting weights for network: ");
+        adjustWeights();
+        print();
+    }
+
+    public void activate() {
+        for (int i = 2; i < neurons.size(); i++) {
+            INeuron n = neurons.get(i);
+            n.activate();
+        }
+    }
+
+    public void adjustWeights() {
+        OutputNeuron n = (OutputNeuron) neurons.get(neurons.size() - 1);
+        n.adjustWeights();
+    }
+
+    public void print() {
+        logger.log("\nNetwork state: ");
+        for (int i = 0; i < neurons.size(); i++) {
+            INeuron n = neurons.get(i);
+            logger.log(n.toString());
+        }
+    }
 }
