@@ -8,10 +8,6 @@ public class InputNeuron extends AbstractNeuron {
 
     public double input;
 
-    public InputNeuron(double input, String name) {
-        this(name);
-        this.input = input;
-    }
 
     @Override
     public double activate() {

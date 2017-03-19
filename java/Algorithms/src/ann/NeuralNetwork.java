@@ -13,14 +13,18 @@ public class NeuralNetwork {
     List<INeuron> neurons = new ArrayList<>();
 
     // Input neurons
-    InputNeuron i0 = new InputNeuron(0, "input0");
-    InputNeuron i1 = new InputNeuron(0, "input1");
+    InputNeuron i0 = new InputNeuron("input0");
+    InputNeuron i1 = new InputNeuron("input1");
 
     // Middle layer neurons
     HiddenNeuron h0 = new HiddenNeuron("hidden0");
     HiddenNeuron h1 = new HiddenNeuron("hidden1");
     HiddenNeuron h2 = new HiddenNeuron("hidden2");
     HiddenNeuron h3 = new HiddenNeuron("hidden3");
+	
+	//Bias neurons
+	BiasNeuron b1 = new BiasNeuron("bias1");
+	BiasNeuron b2 = new BiasNeuron("bias2");
 
     // Output neuron
     OutputNeuron o0 = new OutputNeuron("output");
@@ -28,13 +32,13 @@ public class NeuralNetwork {
     public NeuralNetwork() {
 
         // Middle layer neurons
-        h0.addInputs(Arrays.asList(i0, i1));
-        h1.addInputs(Arrays.asList(i0, i1));
-        h2.addInputs(Arrays.asList(i0, i1));
-        h3.addInputs(Arrays.asList(i0, i1));
+        h0.addInputs(Arrays.asList(i0, i1, b1));
+        h1.addInputs(Arrays.asList(i0, i1, b1));
+        h2.addInputs(Arrays.asList(i0, i1, b1));
+        h3.addInputs(Arrays.asList(i0, i1, b1));
 
         // Output neuron
-        o0.addInputs(Arrays.asList(h0, h1, h2, h3));
+        o0.addInputs(Arrays.asList(h0, h1, h2, h3, b2));
         o0.setTarget(0);
 
         // Add all neurons to the network
@@ -47,11 +51,11 @@ public class NeuralNetwork {
 		o0.setTarget(0.66);
 
         print();
-//
-//         i0.setInput(0);
-//         i1.setInput(0);
-//        //
-//         print();
+
+         i0.setInput(0);
+         i1.setInput(0);
+        //
+         print();
     }
 
     public void train() {
@@ -60,10 +64,10 @@ public class NeuralNetwork {
             i1.setInput(1);
             o0.setTarget(0.66);
             pulse(i);
-//             i0.setInput(0);
-//             i1.setInput(0);
-//             o0.setTarget(1);
-//             pulse(i + 1);
+             i0.setInput(0);
+             i1.setInput(0);
+             o0.setTarget(1);
+             pulse(i + 1);
         }
     }
 

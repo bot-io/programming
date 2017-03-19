@@ -6,6 +6,7 @@ import java.util.Map;
 
 import logger.Logger;
 
+
 public class HiddenNeuron extends AbstractNeuron {
 
     public HiddenNeuron(String name) {
@@ -65,7 +66,7 @@ public class HiddenNeuron extends AbstractNeuron {
 
     public void adjustWeights() {
 		double correctionDelta = getGlobalCorrectionDelta();
-        correctionDelta = correctionDelta * activationFunction.derivative(getWeightedInput());
+       // correctionDelta = correctionDelta * activationFunction.derivative(getWeightedInput());
         logger.log("\nAdjusting weights for neuron " + name + ": ");
         // Use the global correction delta, to calculate the specific correction
         // delta for each weight
