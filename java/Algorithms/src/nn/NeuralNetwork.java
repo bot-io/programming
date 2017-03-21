@@ -186,13 +186,13 @@ public class NeuralNetwork {
 		// Update weights for the output layer
 		for (Neuron n : outputLayer) {
 			ArrayList<Connection> connections = n.getAllInConnections();
+			double outputNeuronOutput = n.getOutput();
+			double desiredOutput = expectedOutput[outputNumber];
+			double outputPartialDerivative = -outputNeuronOutput * (1 - outputNeuronOutput)
+					* (desiredOutput - outputNeuronOutput);
 			for (Connection con : connections) {
-				double outputNeuronOutput = n.getOutput();
 				double fromOutput = con.fromNeuron.getOutput();
-				double desiredOutput = expectedOutput[outputNumber];
-
-				double partialDerivative = -outputNeuronOutput * (1 - outputNeuronOutput) * fromOutput
-						* (desiredOutput - outputNeuronOutput);
+				double partialDerivative = outputPartialDerivative * fromOutput;
 				double deltaWeight = -learningRate * partialDerivative;
 				double newWeight = con.getWeight() + deltaWeight;
 				con.setDeltaWeight(deltaWeight);
