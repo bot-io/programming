@@ -1,0 +1,248 @@
+{
+  "timestamp": "2025-12-15T22:30:08.434598",
+  "root_page_id": "13655015753",
+  "root_page_title": "Wallets 4.0",
+  "directory_path": "C:\\Users\\svetlin.chobanov\\OneDrive - Paynetics\\Documents\\Cursor\\Project\\Outputs\\Wallets\\Wallets-2.0-Pages",
+  "created_pages": [
+    {
+      "page_id": "13654688254",
+      "title": "Wallets 4.0 - Onboarding and Authentication (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655638440",
+      "title": "Wallets 4.0 - Transfers and Beneficiaries (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655146969",
+      "title": "Wallets 4.0 - History and Payments (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655409176",
+      "title": "Wallets 4.0 - Notifications (3)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655277879",
+      "title": "Wallets 4.0 - App Settings and Profile (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654196469",
+      "title": "Wallets 4.0 - Services (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654196487",
+      "title": "Wallets 4.0 - Loyalty Cards (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654262287",
+      "title": "Wallets 4.0 - Visa (3)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655736629",
+      "title": "Wallets 4.0 - Authentication and Security Management (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655015844",
+      "title": "Wallets 4.0 - Sign In (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655277897",
+      "title": "Wallets 4.0 - Sign Up (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655081461",
+      "title": "Wallets 4.0 - Identity KYC and Account Status (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655277944",
+      "title": "Wallets 4.0 - Top-Up (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655867771",
+      "title": "Wallets 4.0 - Address Book and Beneficiaries Beneficiaries (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654688272",
+      "title": "Wallets 4.0 - IBAN Transfers External Bank Transfers (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654524258",
+      "title": "Wallets 4.0 - P2P and Wallet Transfers (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655867828",
+      "title": "Wallets 4.0 - Payment Cards (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655638461",
+      "title": "Wallets 4.0 - Plans Fees and Limits (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655736666",
+      "title": "Wallets 4.0 - Statements and Reports (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655409196",
+      "title": "Wallets 4.0 - Transaction History and Statements (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655146988",
+      "title": "Wallets 4.0 - Legal Consents (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655343714",
+      "title": "Wallets 4.0 - Notifications (4)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655638495",
+      "title": "Wallets 4.0 - Unified Prompts Framework (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655147015",
+      "title": "Wallets 4.0 - Profile Settings and Security (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655277991",
+      "title": "Wallets 4.0 - Security and Account Management (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655015871",
+      "title": "Wallets 4.0 - Settings (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654786439",
+      "title": "Wallets 4.0 - Support and Help (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654262305",
+      "title": "Wallets 4.0 - Credits (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654884783",
+      "title": "Wallets 4.0 - Crypto (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654884818",
+      "title": "Wallets 4.0 - Utility Bills (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655900465",
+      "title": "Wallets 4.0 - Vignettes (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655147048",
+      "title": "Wallets 4.0 - Expense Management (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654688312",
+      "title": "Wallets 4.0 - User Engagement Features (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655736712",
+      "title": "Wallets 4.0 - Offers (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654688343",
+      "title": "Wallets 4.0 - Referral Program (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654786488",
+      "title": "Wallets 4.0 - Marketing Screens (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655867884",
+      "title": "Wallets 4.0 - Brand Specific Features (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13655638538",
+      "title": "Wallets 4.0 - Configuration and System Management (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654786524",
+      "title": "Wallets 4.0 - Faster Payments (2)",
+      "space": "Product",
+      "version": 1
+    },
+    {
+      "page_id": "13654786547",
+      "title": "Wallets 4.0 - Visa (4)",
+      "space": "Product",
+      "version": 1
+    }
+  ]
+}

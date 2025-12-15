@@ -10,10 +10,13 @@ import os
 import sys
 import json
 import logging
+import hashlib
+import base64
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Set
 from dataclasses import dataclass, field
 from enum import Enum
+from datetime import datetime
 import re
 
 try:
@@ -294,7 +297,17 @@ class ConfluenceSync:
         """
         pages = {}
         
-        def _recursive_get_pages(page_id: str, parent_path: str = "", parent_page_id: str = None):
+        visited_pages = set()  # Track visited pages to prevent infinite recursion
+        
+        def _recursive_get_pages(page_id: str, parent_path: str = "", parent_page_id: str = None, depth: int = 0):
+            # Prevent infinite recursion with depth limit and visited set
+            if depth > 50 or page_id in visited_pages:
+                if page_id in visited_pages:
+                    logger.debug(f"Skipping already visited page {page_id} to prevent recursion")
+                return
+            
+            visited_pages.add(page_id)
+            
             try:
                 children = self.confluence.get_page_child_by_type(
                     page_id,
@@ -325,13 +338,200 @@ class ConfluenceSync:
                             'path': full_path
                         }
                         
-                        # Recursively get children
-                        _recursive_get_pages(child_page_id, full_path, child_page_id)
+                        # Recursively get children with depth tracking
+                        _recursive_get_pages(child_page_id, full_path, child_page_id, depth + 1)
             except Exception as e:
                 logger.warning(f"Error getting subpages for {page_id}: {e}")
         
-        _recursive_get_pages(parent_id, "", parent_id)
+        _recursive_get_pages(parent_id, "", parent_id, 0)
         return pages
+    
+    def _encode_path_for_label(self, file_path: str) -> str:
+        """
+        Encode a file path to be Confluence label-compliant.
+        Confluence labels must be lowercase, no spaces, no special chars like : or /
+        Uses hex encoding which is case-insensitive and label-compliant.
+        """
+        # Encode path to hex (lowercase, only 0-9 and a-f, no special chars)
+        encoded = file_path.encode('utf-8').hex()
+        return encoded
+    
+    def _decode_path_from_label(self, encoded_path: str) -> Optional[str]:
+        """
+        Decode a file path from a Confluence label.
+        Returns None if decoding fails.
+        """
+        try:
+            # Decode from hex (case-insensitive)
+            decoded = bytes.fromhex(encoded_path).decode('utf-8')
+            return decoded
+        except Exception as e:
+            logger.debug(f"Failed to decode path from label '{encoded_path}': {e}")
+            return None
+    
+    def _get_file_path_from_page(self, page_id: str) -> Optional[str]:
+        """
+        Retrieve the file path stored in a page's labels.
+        Returns None if not found or if labels are not available.
+        """
+        try:
+            labels = self.confluence.get_page_labels(page_id)
+            if labels and 'results' in labels:
+                for label in labels['results']:
+                    label_name = label.get('name', '')
+                    # Check for both old format (with colon) and new format (encoded)
+                    if label_name.startswith('syncfilepath'):
+                        # New format: syncfilepath{encoded_path}
+                        encoded_path = label_name.replace('syncfilepath', '', 1)
+                        decoded = self._decode_path_from_label(encoded_path)
+                        if decoded:
+                            return decoded
+                    elif label_name.startswith('sync-file-path:'):
+                        # Old format (for backward compatibility): sync-file-path:path
+                        # Extract path after the prefix
+                        return label_name.replace('sync-file-path:', '', 1)
+        except Exception as e:
+            # Log at debug level - this is expected if labels don't exist or API fails
+            logger.debug(f"Could not get labels for page {page_id}: {e}")
+        return None
+    
+    def _set_file_path_label(self, page_id: str, file_path: str) -> None:
+        """
+        Store the file path in a page's labels for tracking.
+        Uses the atlassian-python-api methods: get_page_labels and set_page_label
+        Encodes the file path to be Confluence label-compliant (lowercase, no special chars).
+        """
+        try:
+            # Encode the path to be label-compliant (no colons, slashes, spaces, etc.)
+            encoded_path = self._encode_path_for_label(file_path)
+            # Use format: syncfilepath{encoded} (no colon, all lowercase, no special chars)
+            label_name = f"syncfilepath{encoded_path}"
+            
+            # Check label length (Confluence limit is 255 chars)
+            if len(label_name) > 255:
+                logger.warning(f"⚠ Label name too long ({len(label_name)} chars, max 255) for path '{file_path}'")
+                logger.warning(f"  File path tracking may not work - matching will rely on title only")
+                return
+            
+            # Check if label already exists
+            try:
+                labels = self.confluence.get_page_labels(page_id)
+                existing_labels = [l.get('name', '') for l in labels.get('results', [])]
+                
+                # Check for both new format and old format
+                label_exists = label_name in existing_labels
+                if not label_exists:
+                    # Also check for old format labels
+                    old_format = f"sync-file-path:{file_path}"
+                    label_exists = old_format in existing_labels
+                
+                if not label_exists:
+                    # Add the label
+                    try:
+                        self.confluence.set_page_label(page_id, label_name)
+                        logger.info(f"✓ Set file path label on page {page_id} (path: '{file_path}')")
+                        logger.debug(f"  Label name: '{label_name}' (encoded)")
+                    except Exception as e:
+                        error_msg = str(e)
+                        logger.warning(f"⚠ Failed to set label on page {page_id} for path '{file_path}': {e}")
+                        # Provide helpful error message
+                        if 'BadRequestException' in error_msg or '400' in error_msg:
+                            logger.warning(f"  This may be due to label format restrictions (lowercase, no special chars)")
+                            logger.warning(f"  Label attempted: '{label_name}' (length: {len(label_name)})")
+                        logger.warning(f"  File path tracking may not work - matching will rely on title only")
+                else:
+                    logger.debug(f"Label already exists on page {page_id} for path '{file_path}'")
+            except Exception as e:
+                logger.warning(f"⚠ Error accessing labels for page {page_id}: {e}")
+                logger.warning(f"  File path tracking may not work - matching will rely on title only")
+        except Exception as e:
+            logger.warning(f"Could not set file path label on page {page_id}: {e}")
+    
+    def _calculate_content_hash(self, content: str) -> str:
+        """Calculate SHA256 hash of content for efficient comparison."""
+        return hashlib.sha256(content.encode('utf-8')).hexdigest()
+    
+    def _normalize_html_content(self, html_content: str) -> str:
+        """
+        Normalize HTML content for comparison by removing whitespace differences.
+        This helps detect actual content changes vs formatting differences.
+        """
+        if not html_content:
+            return ""
+        # Use BeautifulSoup to normalize HTML
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+            # Get text content and normalize whitespace
+            text = soup.get_text()
+            # Normalize whitespace
+            normalized = re.sub(r'\s+', ' ', text).strip()
+            return normalized
+        except Exception as e:
+            logger.debug(f"Error normalizing HTML content: {e}")
+            # Fallback: simple whitespace normalization
+            return re.sub(r'\s+', ' ', html_content).strip()
+    
+    def _find_page_by_path(self, file_path: Path, existing_pages: Dict[str, Dict], file_title: Optional[str] = None) -> Optional[Dict]:
+        """
+        Find a Confluence page that corresponds to a given file path.
+        First tries to match by stored file path label, then falls back to title matching.
+        
+        Args:
+            file_path: The file path to match
+            existing_pages: Dictionary of existing pages from _get_all_subpages
+            file_title: Optional title extracted from file content (for better matching)
+            
+        Returns:
+            Page data dict if found, None otherwise
+        """
+        normalized_path = str(file_path).replace('\\', '/')
+        
+        # First, try to find by file path label (most reliable)
+        logger.debug(f"Searching for page matching path '{normalized_path}' (title: '{file_title}')")
+        for page_path, page_data in existing_pages.items():
+            page_id = page_data.get('id')
+            if page_id:
+                stored_path = self._get_file_path_from_page(page_id)
+                if stored_path and stored_path.replace('\\', '/') == normalized_path:
+                    logger.info(f"✓ Found page by file path label: page_id={page_id}, path='{normalized_path}'")
+                    return page_data
+        
+        # Fallback: try to match by title
+        # Use provided title if available, otherwise extract from filename
+        if file_title is None:
+            file_title = self.converter.extract_title("", file_path.name)  # Use filename as fallback
+        file_title = self.converter.sanitize_title(file_title, strict=False)
+        
+        logger.debug(f"Label matching failed, trying title matching with '{file_title}'")
+        logger.debug(f"Checking {len(existing_pages)} existing pages for title match")
+        
+        # Try exact match first (case-insensitive)
+        for page_path, page_data in existing_pages.items():
+            page_title = page_data.get('title', '')
+            # Case-insensitive comparison for better matching
+            if page_title.lower() == file_title.lower() or page_title == file_title:
+                logger.info(f"✓ Found page by exact title match: page_id={page_data.get('id')}, title='{page_title}' matches '{file_title}'")
+                return page_data
+        
+        # Try partial match for collision resolution titles (e.g., "Root Page - Original Title")
+        # Check if the page title ends with " - {file_title}" or contains it
+        for page_path, page_data in existing_pages.items():
+            page_title = page_data.get('title', '')
+            # Check if page title ends with " - {file_title}" (collision resolution format)
+            if page_title.endswith(f" - {file_title}") or page_title.endswith(f" - {file_title.lower()}"):
+                logger.info(f"✓ Found page by collision-resolved title match: page_id={page_data.get('id')}, title='{page_title}' contains '{file_title}'")
+                return page_data
+            # Also check if file_title is at the end after a dash
+            if f" - {file_title}" in page_title or f" - {file_title.lower()}" in page_title.lower():
+                logger.info(f"✓ Found page by partial title match: page_id={page_data.get('id')}, title='{page_title}' contains '{file_title}'")
+                return page_data
+        
+        logger.warning(f"✗ Could not find existing page for path '{normalized_path}' with title '{file_title}'")
+        logger.debug(f"  Searched {len(existing_pages)} existing pages")
+        if len(existing_pages) <= 10:
+            logger.debug(f"  Existing page titles: {[p.get('title', '') for p in existing_pages.values()]}")
+        
+        return None
     
     def _traverse_directory(self) -> Tuple[Dict[Path, str], Dict[Path, List[Path]]]:
         """
@@ -396,7 +596,11 @@ class ConfluenceSync:
         operations = []
         
         # Get all existing pages under root
+        logger.info(f"Retrieving existing pages from Confluence (root page ID: {self.root_page_id})...")
         existing_pages = self._get_all_subpages(self.root_page_id)
+        logger.info(f"Found {len(existing_pages)} existing pages in Confluence")
+        if len(existing_pages) > 0:
+            logger.debug(f"Existing page titles: {[p.get('title', 'Unknown') for p in list(existing_pages.values())[:10]]}{'...' if len(existing_pages) > 10 else ''}")
         
         # Build a map of what should exist
         expected_pages: Set[str] = set()
@@ -505,35 +709,77 @@ class ConfluenceSync:
                 else:
                     parent_id = None  # Will be resolved during execution
             
-            # Check if page exists - match by title
-            # Note: We match by title only for now. If a page exists with the same title
-            # but in the wrong location, it will be updated (which may not move it).
-            # In a production system, you'd want to use metadata/labels to track file paths.
-            existing_page = None
-            for page_path, page_data in existing_pages.items():
-                if page_data.get('title') == title:
-                    existing_page = page_data
-                    logger.debug(f"Found existing page with title '{title}' at path '{page_path}'")
-                    break
+            # Find existing page using improved path-based matching
+            # Pass the extracted title for better matching
+            existing_page = self._find_page_by_path(file_path, existing_pages, file_title=title)
             
             if existing_page:
-                # Check if content needs updating
+                # Page exists - check what needs updating
                 try:
                     current_page = self.confluence.get_page_by_id(existing_page['id'])
+                    current_title = current_page.get('title', '')
                     current_content = current_page.get('body', {}).get('storage', {}).get('value', '')
+                    current_parent_id = None
+                    ancestors = current_page.get('ancestors', [])
+                    if ancestors:
+                        current_parent_id = ancestors[-1].get('id') if ancestors else None
                     
                     new_content = self.converter.markdown_to_confluence(content)
+                    
+                    # Check for changes: title, content, or parent
+                    title_changed = current_title != title
+                    content_changed = False
+                    parent_changed = False
+                    
+                    # Use normalized comparison for content to avoid false positives from formatting differences
+                    current_normalized = self._normalize_html_content(current_content)
+                    new_normalized = self._normalize_html_content(new_content)
+                    
+                    # Also do exact comparison for more precise detection
                     if current_content != new_content:
+                        content_changed = True
+                        # Log the difference for debugging
+                        if current_normalized != new_normalized:
+                            logger.debug(f"Content changed for '{file_path}': normalized comparison shows difference")
+                        else:
+                            logger.debug(f"Content changed for '{file_path}': exact comparison shows difference (may be formatting only)")
+                    
+                    # Parent change will be determined during execution when parent_id is resolved
+                    # For now, we'll check if parent_id is different (if both are resolved)
+                    if parent_id and current_parent_id and parent_id != current_parent_id:
+                        parent_changed = True
+                    
+                    # Create update operation if anything changed
+                    if title_changed or content_changed or parent_changed:
+                        changes = []
+                        if title_changed:
+                            changes.append("title")
+                        if content_changed:
+                            changes.append("content")
+                        if parent_changed:
+                            changes.append("parent")
+                        
+                        logger.info(f"File '{file_path}' needs update: {', '.join(changes)} changed")
+                        if title_changed:
+                            logger.info(f"  Title: '{current_title}' -> '{title}'")
+                        if content_changed:
+                            logger.info(f"  Content: {len(current_content)} chars -> {len(new_content)} chars")
+                        
                         operations.append(PageOperation(
                             operation=OperationType.UPDATE,
-                            title=title,
+                            title=title,  # Use new title if it changed
                             path=file_path,
                             parent_id=parent_id,
                             content=new_content,
-                            page_id=existing_page['id']
+                            page_id=existing_page['id'],
+                            old_title=current_title if title_changed else None
                         ))
+                    else:
+                        logger.debug(f"File '{file_path}' is up to date (no changes detected)")
+                        
                 except Exception as e:
-                    logger.warning(f"Error checking page {existing_page['id']}: {e}")
+                    logger.warning(f"Error checking page {existing_page['id']} for file '{file_path}': {e}")
+                    # On error, assume update is needed
                     operations.append(PageOperation(
                         operation=OperationType.UPDATE,
                         title=title,
@@ -1093,6 +1339,13 @@ class ConfluenceSync:
                             existing_pages_map[path_key] = page_id
                             self.sync_state.created_pages.append(page_id)
                             
+                            # Set file path label for tracking (only for file pages, not directory pages)
+                            if op.path.suffix in ['.md', '.markdown']:
+                                try:
+                                    self._set_file_path_label(page_id, path_key)
+                                except Exception as e:
+                                    logger.warning(f"Could not set file path label on newly created page {page_id}: {e}")
+                            
                             # Log creation with content info and parent relationship
                             content_info = " (empty)" if not page_content or page_content.strip() == "" else f" ({len(page_content)} chars)"
                             parent_info = f" under parent '{parent_page_title}' (ID: {parent_id})" if parent_id != self.root_page_id else f" under root page (ID: {self.root_page_id})"
@@ -1209,8 +1462,29 @@ class ConfluenceSync:
                     
                     if result:
                         self.sync_state.updated_pages.append((op.page_id, old_version))
+                        
+                        # Update file path label if this is a file page
+                        if op.path.suffix in ['.md', '.markdown']:
+                            path_key = str(op.path).replace('\\', '/')
+                            try:
+                                # Check if label needs updating
+                                stored_path = self._get_file_path_from_page(op.page_id)
+                                if stored_path != path_key:
+                                    self._set_file_path_label(op.page_id, path_key)
+                                    logger.debug(f"Updated file path label on page {op.page_id}: '{stored_path}' -> '{path_key}'")
+                                elif stored_path is None:
+                                    # Label didn't exist, set it now
+                                    self._set_file_path_label(op.page_id, path_key)
+                                    logger.debug(f"Set file path label on page {op.page_id}: '{path_key}'")
+                            except Exception as e:
+                                logger.warning(f"Could not update file path label on page {op.page_id}: {e}")
+                        
+                        # Log update with details
                         content_info = f" ({len(update_content)} chars)" if update_content else " (empty)"
-                        logger.info(f"✓ Updated page: '{op.title}' (page_id: {op.page_id}, path: '{op.path}'){content_info}, version: {old_version} -> {old_version + 1}, parent: '{update_parent_title}' ({update_parent_id})")
+                        title_change_info = ""
+                        if op.old_title and op.old_title != op.title:
+                            title_change_info = f" [Title: '{op.old_title}' -> '{op.title}']"
+                        logger.info(f"✓ Updated page: '{op.title}' (page_id: {op.page_id}, path: '{op.path}'){content_info}{title_change_info}, version: {old_version} -> {old_version + 1}, parent: '{update_parent_title}' ({update_parent_id})")
             
             except Exception as e:
                 logger.error(f"❌ Error executing {op.operation.value} operation")
@@ -1324,6 +1598,58 @@ class ConfluenceSync:
         
         logger.warning("Rollback completed (with possible errors)")
     
+    def _save_created_pages_list(self) -> None:
+        """
+        Save the list of created page IDs to a JSON file.
+        Each run creates a new file with timestamp.
+        """
+        try:
+            # Create filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"created_pages_{timestamp}.json"
+            file_path = Path(filename)
+            
+            # Prepare data to save
+            data = {
+                "timestamp": datetime.now().isoformat(),
+                "root_page_id": self.root_page_id,
+                "root_page_title": self.root_page_title,
+                "directory_path": str(self.directory_path),
+                "created_pages": []
+            }
+            
+            # Get page details for each created page
+            for page_id in self.sync_state.created_pages:
+                try:
+                    page = self.confluence.get_page_by_id(page_id)
+                    page_info = {
+                        "page_id": page_id,
+                        "title": page.get('title', 'Unknown'),
+                        "space": page.get('space', {}).get('key', 'Unknown'),
+                        "version": page.get('version', {}).get('number', 1)
+                    }
+                    data["created_pages"].append(page_info)
+                except Exception as e:
+                    logger.warning(f"Could not get details for page {page_id}: {e}")
+                    # Still save the page ID even if we can't get details
+                    data["created_pages"].append({
+                        "page_id": page_id,
+                        "title": "Unknown",
+                        "space": "Unknown",
+                        "version": 1
+                    })
+            
+            # Save to file
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"✓ Saved list of {len(data['created_pages'])} created pages to: {file_path.absolute()}")
+            print(f"\n📋 Created pages list saved to: {file_path}")
+            
+        except Exception as e:
+            logger.warning(f"Could not save created pages list: {e}")
+            # Don't fail the sync if saving the list fails
+    
     def sync(self, dry_run: bool = False) -> None:
         """
         Perform the synchronization.
@@ -1376,6 +1702,10 @@ class ConfluenceSync:
             print("="*80)
             
             logger.info("Sync completed successfully")
+            
+            # Save list of created page IDs for this run
+            if self.sync_state.created_pages:
+                self._save_created_pages_list()
         
         except Exception as e:
             logger.error(f"❌ Error during sync")

@@ -15,7 +15,7 @@ setlocal enabledelayedexpansion
 SET CONFLUENCE_URL=https://paynetics.atlassian.net
 SET EMAIL=svetlin.chobanov@paynetics.digital
 SET CONFLUENCE_API_TOKEN=ATATT3xFfGF076BgdjR0HrMPcTVlAGtqiCA3zz6NyQUjgPF4kMqpAujJeVLHy58QfEXhvYglYa2AnI-5T-sWUyUYOeQ7zhCRSMsNDqMQqSHu_1C89yuZ5ics2By6YQXabiL_XeCvmP0TnTwgms8Q94zXHn6IaGbOHr-dtOe4pkc3xLhcNzpWLL8=FCB6D0BE
-SET ROOT_PAGE_ID=13653082155
+SET ROOT_PAGE_ID=13655015753
 SET DIRECTORY_PATH=C:\Users\svetlin.chobanov\OneDrive - Paynetics\Documents\Cursor\Project\Outputs\Wallets\Wallets-2.0-Pages
 
 :: -------------------------------------------------------------------

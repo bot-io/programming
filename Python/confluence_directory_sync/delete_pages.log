@@ -1,0 +1,136 @@
+2025-12-15 22:56:53,662 - INFO - Script started with arguments: ['C:\\Users\\svetlin.chobanov\\Documents\\GitHub\\programming\\Python\\confluence_directory_sync\\delete_pages.py', 'created_pages_20251215_223008.json']
+2025-12-15 22:56:53,664 - INFO - Loading pages list from: created_pages_20251215_223008.json
+2025-12-15 22:56:53,665 - INFO - Successfully loaded pages list
+2025-12-15 22:56:53,665 - INFO - Displayed file info. Pages to delete: 40
+2025-12-15 22:56:53,665 - INFO - Found 40 pages in the list
+2025-12-15 22:56:53,666 - INFO - Displayed 40 pages to be deleted
+2025-12-15 22:56:53,666 - INFO - Deletion cancelled - EOF/KeyboardInterrupt during confirmation.
+2025-12-15 22:58:46,758 - INFO - Script started with arguments: ['C:\\Users\\svetlin.chobanov\\Documents\\GitHub\\programming\\Python\\confluence_directory_sync\\delete_pages.py', 'created_pages_20251215_223008.json']
+2025-12-15 22:58:46,759 - INFO - Loading pages list from: created_pages_20251215_223008.json
+2025-12-15 22:58:46,760 - INFO - Successfully loaded pages list
+2025-12-15 22:58:46,761 - INFO - Displayed file info. Pages to delete: 40
+2025-12-15 22:58:46,761 - INFO - Found 40 pages in the list
+2025-12-15 22:58:46,763 - INFO - Displayed 40 pages to be deleted
+2025-12-15 22:58:46,763 - INFO - Deletion cancelled - EOF/KeyboardInterrupt during confirmation.
+2025-12-15 22:59:21,935 - INFO - Script started with arguments: ['delete_pages.py', 'created_pages_20251215_223008.json']
+2025-12-15 22:59:21,936 - INFO - Loading pages list from: created_pages_20251215_223008.json
+2025-12-15 22:59:21,936 - INFO - Successfully loaded pages list
+2025-12-15 22:59:21,936 - INFO - Displayed file info. Pages to delete: 40
+2025-12-15 22:59:21,936 - INFO - Found 40 pages in the list
+2025-12-15 22:59:21,936 - INFO - Displayed 40 pages to be deleted
+2025-12-15 22:59:21,936 - INFO - Deletion cancelled - EOF/KeyboardInterrupt during confirmation.
+2025-12-15 22:59:50,509 - INFO - Script started with arguments: ['C:\\Users\\svetlin.chobanov\\Documents\\GitHub\\programming\\Python\\confluence_directory_sync\\delete_pages.py', 'created_pages_20251215_223008.json']
+2025-12-15 22:59:50,510 - INFO - Loading pages list from: created_pages_20251215_223008.json
+2025-12-15 22:59:50,512 - INFO - Successfully loaded pages list
+2025-12-15 22:59:50,513 - INFO - Displayed file info. Pages to delete: 40
+2025-12-15 22:59:50,513 - INFO - Found 40 pages in the list
+2025-12-15 22:59:50,513 - INFO - Displayed 40 pages to be deleted
+2025-12-15 22:59:50,513 - INFO - Deletion cancelled - EOF/KeyboardInterrupt during confirmation.
+2025-12-15 23:00:08,543 - INFO - Script started with arguments: ['C:\\Users\\svetlin.chobanov\\Documents\\GitHub\\programming\\Python\\confluence_directory_sync\\delete_pages.py', 'created_pages_20251215_223008.json']
+2025-12-15 23:00:08,544 - INFO - Loading pages list from: created_pages_20251215_223008.json
+2025-12-15 23:00:08,544 - INFO - Successfully loaded pages list
+2025-12-15 23:00:08,545 - INFO - Displayed file info. Pages to delete: 40
+2025-12-15 23:00:08,546 - INFO - Found 40 pages in the list
+2025-12-15 23:00:08,548 - INFO - Displayed 40 pages to be deleted
+2025-12-15 23:11:10,698 - INFO - Script started with arguments: ['C:\\Users\\svetlin.chobanov\\Documents\\GitHub\\programming\\Python\\confluence_directory_sync\\delete_pages.py', 'created_pages_20251215_223008.json', '--url', 'https://paynetics.atlassian.net', '--username', 'svetlin.chobanov@paynetics.digital', '--api-token', 'ATATT3xFfGF076BgdjR0HrMPcTVlAGtqiCA3zz6NyQUjgPF4kMqpAujJeVLHy58QfEXhvYglYa2AnI-5T-sWUyUYOeQ7zhCRSMsNDqMQqSHu_1C89yuZ5ics2By6YQXabiL_XeCvmP0TnTwgms8Q94zXHn6IaGbOHr-dtOe4pkc3xLhcNzpWLL8=FCB6D0BE']
+2025-12-15 23:11:10,699 - INFO - Loading pages list from: created_pages_20251215_223008.json
+2025-12-15 23:11:10,699 - INFO - Successfully loaded pages list
+2025-12-15 23:11:10,700 - INFO - Displayed file info. Pages to delete: 40
+2025-12-15 23:11:10,701 - INFO - Found 40 pages in the list
+2025-12-15 23:11:10,703 - INFO - Displayed 40 pages to be deleted
+2025-12-15 23:11:24,413 - INFO - Connecting to Confluence at https://paynetics.atlassian.net...
+2025-12-15 23:11:24,414 - ERROR - Failed to connect to Confluence: 'Confluence' object has no attribute 'get_current_user'
+Traceback (most recent call last):
+  File "C:\Users\svetlin.chobanov\Documents\GitHub\programming\Python\confluence_directory_sync\delete_pages.py", line 255, in main
+    confluence.get_current_user()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Confluence' object has no attribute 'get_current_user'
+2025-12-15 23:24:58,299 - INFO - Script started with arguments: ['C:\\Users\\svetlin.chobanov\\Documents\\GitHub\\programming\\Python\\confluence_directory_sync\\delete_pages.py', 'created_pages_20251215_223008.json', '--url', 'https://paynetics.atlassian.net', '--username', 'svetlin.chobanov@paynetics.digital', '--api-token', 'ATATT3xFfGF076BgdjR0HrMPcTVlAGtqiCA3zz6NyQUjgPF4kMqpAujJeVLHy58QfEXhvYglYa2AnI-5T-sWUyUYOeQ7zhCRSMsNDqMQqSHu_1C89yuZ5ics2By6YQXabiL_XeCvmP0TnTwgms8Q94zXHn6IaGbOHr-dtOe4pkc3xLhcNzpWLL8=FCB6D0BE']
+2025-12-15 23:24:58,299 - INFO - Loading pages list from: created_pages_20251215_223008.json
+2025-12-15 23:24:58,301 - INFO - Successfully loaded pages list
+2025-12-15 23:24:58,301 - INFO - Displayed file info. Pages to delete: 40
+2025-12-15 23:24:58,302 - INFO - Found 40 pages in the list
+2025-12-15 23:24:58,303 - INFO - Displayed 40 pages to be deleted
+2025-12-15 23:25:25,546 - INFO - Connecting to Confluence at https://paynetics.atlassian.net...
+2025-12-15 23:25:26,300 - INFO - [OK] Successfully connected to Confluence
+2025-12-15 23:25:26,477 - INFO - Deleting page 1/40: 'Wallets 4.0 - Onboarding and Authentication (2)' (ID: 13654688254, Space: Product)
+2025-12-15 23:25:27,177 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Onboarding and Authentication (2)' (ID: 13654688254)
+2025-12-15 23:25:27,498 - INFO - Deleting page 2/40: 'Wallets 4.0 - Transfers and Beneficiaries (2)' (ID: 13655638440, Space: Product)
+2025-12-15 23:25:28,094 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Transfers and Beneficiaries (2)' (ID: 13655638440)
+2025-12-15 23:25:28,394 - INFO - Deleting page 3/40: 'Wallets 4.0 - History and Payments (2)' (ID: 13655146969, Space: Product)
+2025-12-15 23:25:28,951 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - History and Payments (2)' (ID: 13655146969)
+2025-12-15 23:25:29,087 - INFO - Deleting page 4/40: 'Wallets 4.0 - Notifications (3)' (ID: 13655409176, Space: Product)
+2025-12-15 23:25:29,906 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Notifications (3)' (ID: 13655409176)
+2025-12-15 23:25:30,093 - INFO - Deleting page 5/40: 'Wallets 4.0 - App Settings and Profile (2)' (ID: 13655277879, Space: Product)
+2025-12-15 23:25:30,734 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - App Settings and Profile (2)' (ID: 13655277879)
+2025-12-15 23:25:31,036 - INFO - Deleting page 6/40: 'Wallets 4.0 - Services (2)' (ID: 13654196469, Space: Product)
+2025-12-15 23:25:31,745 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Services (2)' (ID: 13654196469)
+2025-12-15 23:25:31,883 - INFO - Deleting page 7/40: 'Wallets 4.0 - Loyalty Cards (2)' (ID: 13654196487, Space: Product)
+2025-12-15 23:25:32,586 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Loyalty Cards (2)' (ID: 13654196487)
+2025-12-15 23:25:32,874 - INFO - Deleting page 8/40: 'Wallets 4.0 - Visa (3)' (ID: 13654262287, Space: Product)
+2025-12-15 23:25:33,706 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Visa (3)' (ID: 13654262287)
+2025-12-15 23:25:34,015 - INFO - Deleting page 9/40: 'Wallets 4.0 - Authentication and Security Management (2)' (ID: 13655736629, Space: Product)
+2025-12-15 23:25:34,332 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Authentication and Security Management (2)' (ID: 13655736629)
+2025-12-15 23:25:34,654 - INFO - Deleting page 10/40: 'Wallets 4.0 - Sign In (2)' (ID: 13655015844, Space: Product)
+2025-12-15 23:25:34,975 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Sign In (2)' (ID: 13655015844)
+2025-12-15 23:25:35,107 - INFO - Deleting page 11/40: 'Wallets 4.0 - Sign Up (2)' (ID: 13655277897, Space: Product)
+2025-12-15 23:25:35,413 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Sign Up (2)' (ID: 13655277897)
+2025-12-15 23:25:35,706 - INFO - Deleting page 12/40: 'Wallets 4.0 - Identity KYC and Account Status (2)' (ID: 13655081461, Space: Product)
+2025-12-15 23:25:36,156 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Identity KYC and Account Status (2)' (ID: 13655081461)
+2025-12-15 23:25:36,324 - INFO - Deleting page 13/40: 'Wallets 4.0 - Top-Up (2)' (ID: 13655277944, Space: Product)
+2025-12-15 23:25:36,816 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Top-Up (2)' (ID: 13655277944)
+2025-12-15 23:25:36,975 - INFO - Deleting page 14/40: 'Wallets 4.0 - Address Book and Beneficiaries Beneficiaries (2)' (ID: 13655867771, Space: Product)
+2025-12-15 23:25:37,358 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Address Book and Beneficiaries Beneficiaries (2)' (ID: 13655867771)
+2025-12-15 23:25:37,516 - INFO - Deleting page 15/40: 'Wallets 4.0 - IBAN Transfers External Bank Transfers (2)' (ID: 13654688272, Space: Product)
+2025-12-15 23:25:37,909 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - IBAN Transfers External Bank Transfers (2)' (ID: 13654688272)
+2025-12-15 23:25:38,215 - INFO - Deleting page 16/40: 'Wallets 4.0 - P2P and Wallet Transfers (2)' (ID: 13654524258, Space: Product)
+2025-12-15 23:25:38,669 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - P2P and Wallet Transfers (2)' (ID: 13654524258)
+2025-12-15 23:25:38,985 - INFO - Deleting page 17/40: 'Wallets 4.0 - Payment Cards (2)' (ID: 13655867828, Space: Product)
+2025-12-15 23:25:39,226 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Payment Cards (2)' (ID: 13655867828)
+2025-12-15 23:25:39,385 - INFO - Deleting page 18/40: 'Wallets 4.0 - Plans Fees and Limits (2)' (ID: 13655638461, Space: Product)
+2025-12-15 23:25:39,825 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Plans Fees and Limits (2)' (ID: 13655638461)
+2025-12-15 23:25:39,955 - INFO - Deleting page 19/40: 'Wallets 4.0 - Statements and Reports (2)' (ID: 13655736666, Space: Product)
+2025-12-15 23:25:40,404 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Statements and Reports (2)' (ID: 13655736666)
+2025-12-15 23:25:40,715 - INFO - Deleting page 20/40: 'Wallets 4.0 - Transaction History and Statements (2)' (ID: 13655409196, Space: Product)
+2025-12-15 23:25:41,001 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Transaction History and Statements (2)' (ID: 13655409196)
+2025-12-15 23:25:41,123 - INFO - Deleting page 21/40: 'Wallets 4.0 - Legal Consents (2)' (ID: 13655146988, Space: Product)
+2025-12-15 23:25:41,415 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Legal Consents (2)' (ID: 13655146988)
+2025-12-15 23:25:41,724 - INFO - Deleting page 22/40: 'Wallets 4.0 - Notifications (4)' (ID: 13655343714, Space: Product)
+2025-12-15 23:25:42,158 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Notifications (4)' (ID: 13655343714)
+2025-12-15 23:25:42,312 - INFO - Deleting page 23/40: 'Wallets 4.0 - Unified Prompts Framework (2)' (ID: 13655638495, Space: Product)
+2025-12-15 23:25:42,541 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Unified Prompts Framework (2)' (ID: 13655638495)
+2025-12-15 23:25:42,696 - INFO - Deleting page 24/40: 'Wallets 4.0 - Profile Settings and Security (2)' (ID: 13655147015, Space: Product)
+2025-12-15 23:25:42,961 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Profile Settings and Security (2)' (ID: 13655147015)
+2025-12-15 23:25:43,113 - INFO - Deleting page 25/40: 'Wallets 4.0 - Security and Account Management (2)' (ID: 13655277991, Space: Product)
+2025-12-15 23:25:43,557 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Security and Account Management (2)' (ID: 13655277991)
+2025-12-15 23:25:43,693 - INFO - Deleting page 26/40: 'Wallets 4.0 - Settings (2)' (ID: 13655015871, Space: Product)
+2025-12-15 23:25:43,993 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Settings (2)' (ID: 13655015871)
+2025-12-15 23:25:44,152 - INFO - Deleting page 27/40: 'Wallets 4.0 - Support and Help (2)' (ID: 13654786439, Space: Product)
+2025-12-15 23:25:44,536 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Support and Help (2)' (ID: 13654786439)
+2025-12-15 23:25:44,683 - INFO - Deleting page 28/40: 'Wallets 4.0 - Credits (2)' (ID: 13654262305, Space: Product)
+2025-12-15 23:25:44,894 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Credits (2)' (ID: 13654262305)
+2025-12-15 23:25:45,029 - INFO - Deleting page 29/40: 'Wallets 4.0 - Crypto (2)' (ID: 13654884783, Space: Product)
+2025-12-15 23:25:45,444 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Crypto (2)' (ID: 13654884783)
+2025-12-15 23:25:45,594 - INFO - Deleting page 30/40: 'Wallets 4.0 - Utility Bills (2)' (ID: 13654884818, Space: Product)
+2025-12-15 23:25:46,007 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Utility Bills (2)' (ID: 13654884818)
+2025-12-15 23:25:46,326 - INFO - Deleting page 31/40: 'Wallets 4.0 - Vignettes (2)' (ID: 13655900465, Space: Product)
+2025-12-15 23:25:46,649 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Vignettes (2)' (ID: 13655900465)
+2025-12-15 23:25:46,983 - INFO - Deleting page 32/40: 'Wallets 4.0 - Expense Management (2)' (ID: 13655147048, Space: Product)
+2025-12-15 23:25:47,197 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Expense Management (2)' (ID: 13655147048)
+2025-12-15 23:25:47,359 - INFO - Deleting page 33/40: 'Wallets 4.0 - User Engagement Features (2)' (ID: 13654688312, Space: Product)
+2025-12-15 23:25:47,626 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - User Engagement Features (2)' (ID: 13654688312)
+2025-12-15 23:25:47,949 - INFO - Deleting page 34/40: 'Wallets 4.0 - Offers (2)' (ID: 13655736712, Space: Product)
+2025-12-15 23:25:48,239 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Offers (2)' (ID: 13655736712)
+2025-12-15 23:25:48,384 - INFO - Deleting page 35/40: 'Wallets 4.0 - Referral Program (2)' (ID: 13654688343, Space: Product)
+2025-12-15 23:25:48,693 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Referral Program (2)' (ID: 13654688343)
+2025-12-15 23:25:48,846 - INFO - Deleting page 36/40: 'Wallets 4.0 - Marketing Screens (2)' (ID: 13654786488, Space: Product)
+2025-12-15 23:25:49,292 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Marketing Screens (2)' (ID: 13654786488)
+2025-12-15 23:25:49,458 - INFO - Deleting page 37/40: 'Wallets 4.0 - Brand Specific Features (2)' (ID: 13655867884, Space: Product)
+2025-12-15 23:25:49,705 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Brand Specific Features (2)' (ID: 13655867884)
+2025-12-15 23:25:49,861 - INFO - Deleting page 38/40: 'Wallets 4.0 - Configuration and System Management (2)' (ID: 13655638538, Space: Product)
+2025-12-15 23:25:50,296 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Configuration and System Management (2)' (ID: 13655638538)
+2025-12-15 23:25:50,448 - INFO - Deleting page 39/40: 'Wallets 4.0 - Faster Payments (2)' (ID: 13654786524, Space: Product)
+2025-12-15 23:25:50,680 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Faster Payments (2)' (ID: 13654786524)
+2025-12-15 23:25:50,819 - INFO - Deleting page 40/40: 'Wallets 4.0 - Visa (4)' (ID: 13654786547, Space: Product)
+2025-12-15 23:25:51,288 - INFO - [OK] Successfully deleted page 'Wallets 4.0 - Visa (4)' (ID: 13654786547)
+2025-12-15 23:25:51,290 - INFO - Deletion completed: 40 successful, 0 failed

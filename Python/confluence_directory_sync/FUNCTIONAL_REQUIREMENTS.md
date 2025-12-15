@@ -80,9 +80,29 @@ The program must accept the following command-line arguments:
     - Require user confirmation before proceeding
   - **Override/Update**: All existing pages that correspond to files or folders in the directory must be updated with current content
     - Updates create new versions (preserve version history)
+    - **Change Detection**: The program detects three types of changes:
+      - **Title Changes**: When the first heading (`# Title`) in a Markdown file changes, the Confluence page title is updated
+      - **Content Changes**: When the file content changes, the page content is updated (using normalized comparison to avoid false positives from formatting differences)
+      - **Parent Changes**: When a file is moved to a different directory, the page's parent relationship is updated
+    - **Smart Matching**: Pages are matched to files using:
+      1. File path labels stored in Confluence page labels (most reliable, enables tracking even if titles change)
+      2. Case-insensitive title matching (fallback when labels are not available)
+      3. **Collision-Resolution Title Matching**: When title matching fails, the program also checks for pages with collision-resolution titles (e.g., "Root Page - Original Title" will match "Original Title"). This handles cases where duplicate title resolution modified the page title.
     - Content is always updated to reflect the current Markdown file content
     - Parent relationships are preserved or updated if the page needs to be moved to a different parent
     - If a page is found by title but is in the wrong location, the program attempts to update its parent (subject to API limitations)
+    - **File Path Tracking**: When pages are created or updated, the program stores the file path in Confluence page labels using hex encoding (format: `syncfilepath{hex_encoded_path}`)
+    - File paths are hex-encoded to comply with Confluence label restrictions (lowercase, no colons, no slashes, no spaces)
+    - Labels are set using the `set_page_label` method from atlassian-python-api
+    - If label setting fails, the program logs a warning with details but continues (matching will rely on title only)
+    - Labels are checked before setting to avoid duplicates
+    - Label length is validated (must be under 255 characters) before setting
+- **Change Logging**: The program logs what specifically changed (title, content, parent) for each updated page
+- **Diagnostic Logging**: The program provides detailed diagnostic information:
+    - Logs how many existing pages were found at the start of sync
+    - Logs which matching method succeeded (label vs title) for each page
+    - Logs warnings when pages cannot be matched, including list of existing page titles for debugging
+    - This helps diagnose issues when duplicate pages are created
   - **Delete**: Any Confluence subpages under the root page that do not correspond to existing files or folders in the directory must be deleted
     - Display a list of pages to be deleted
     - Require user confirmation before deletion
@@ -92,10 +112,23 @@ The program must accept the following command-line arguments:
 ### 4.6 Page Identification
 
 - The program must be able to identify which Confluence pages correspond to which files/folders
-- This may be achieved through:
-  - Page titles matching file/folder names
+- **Primary Method - File Path Labels**: 
+  - The program stores file paths in Confluence page labels using hex encoding (format: `syncfilepath{hex_encoded_path}`)
+  - File paths are hex-encoded to comply with Confluence label requirements (lowercase, no colons, no slashes, no spaces)
+  - Example: `syncfilepath30312d4f6e626f617264696e67...` encodes the path `01-Onboarding-and-Authentication/...`
+  - This enables reliable matching even when page titles change or files are moved
+  - Labels are automatically set when pages are created and updated when files are moved
+  - The program also supports reading old label format (`sync-file-path:path`) for backward compatibility
+  - If label methods are not available in the Confluence API, the program gracefully falls back to title matching
+  - **Label Format Requirements**: Labels must be lowercase, contain only alphanumeric characters (hex uses 0-9, a-f), and be under 255 characters
+- **Fallback Method - Title Matching**:
+  - When file path labels are not available, the program matches pages by title
+  - Title matching is case-insensitive for better reliability
+  - Matches the title extracted from the first heading in the Markdown file (or filename if no heading exists)
+  - **Collision-Resolution Handling**: If exact title match fails, the program checks for pages with collision-resolution titles (format: "{prefix} - {original_title}"). This ensures pages can be found even when their titles were modified due to duplicate title conflicts.
+  - **Partial Matching**: The program checks if the file title appears at the end of the page title after a dash separator, enabling matching of collision-resolved titles
+- **Additional Methods** (for reference):
   - Page hierarchy matching directory structure
-  - Metadata or labels stored in Confluence pages
   - A mapping mechanism to track relationships
 - **Path Normalization**: Paths are normalized (backslashes converted to forward slashes) to ensure consistent parent-child relationship resolution across different operating systems
 - **Parent Resolution**: When creating or updating pages, parent page IDs are resolved by:
@@ -202,20 +235,55 @@ The program must accept the following command-line arguments:
 
 ## 8. Technical Requirements
 
-### 8.1 Dependencies
+### 8.1 Created Pages Tracking
+
+- **Automatic List Generation**: After each successful sync run, the program automatically creates a JSON file listing all newly created pages
+- **File Naming**: Each run creates a new file with timestamp format: `created_pages_YYYYMMDD_HHMMSS.json`
+- **File Location**: Files are created in the current working directory where the sync program is executed
+- **File Contents**: The JSON file contains:
+  - `timestamp`: ISO format timestamp of when the sync completed
+  - `root_page_id`: ID of the root Confluence page
+  - `root_page_title`: Title of the root Confluence page
+  - `directory_path`: Path to the source directory that was synced
+  - `created_pages`: Array of page objects, each containing:
+    - `page_id`: Confluence page ID
+    - `title`: Page title
+    - `space`: Confluence space key
+    - `version`: Page version number
+- **Error Handling**: If saving the list fails, the program logs a warning but does not fail the sync operation
+- **Use Case**: These JSON files can be used with the `delete_pages.py` utility to delete all pages created in a specific run
+
+### 8.2 Delete Pages Utility
+
+- **Separate Program**: `delete_pages.py` is a standalone utility for deleting Confluence pages listed in a JSON file
+- **Input**: Path to a JSON file created by `confluence_sync.py` (format: `created_pages_YYYYMMDD_HHMMSS.json`)
+- **Features**:
+  - Displays all pages that will be deleted before proceeding
+  - Requires explicit user confirmation before deletion
+  - Prompts for Confluence credentials (URL, username, API token)
+  - Supports `--dry-run` mode to preview deletions without executing
+  - Logs all operations to `delete_pages.log`
+  - Provides detailed progress and summary of successful/failed deletions
+- **Safety**: 
+  - Always requires confirmation before deletion
+  - Shows page titles and IDs for verification
+  - Handles errors gracefully and continues with remaining pages
+- **Usage**: Can be run directly with Python or via `delete_pages.bat` on Windows
+
+### 8.3 Dependencies
 
 - Use the `atlassian-python-api` library for Confluence API interactions
 - Use standard Python libraries for file operations and Markdown processing
 - Handle dependencies gracefully if not installed
 
-### 8.2 Error Handling
+### 8.4 Error Handling
 
 - Catch and handle API errors gracefully
 - Provide meaningful error messages to the user
 - Log errors for debugging purposes
 - Continue processing other files if one fails (where possible)
 
-### 8.3 State Management
+### 8.5 State Management
 
 - Track which pages have been created/updated in the current run
 - Maintain mappings between file paths and Confluence page IDs
@@ -223,7 +291,7 @@ The program must accept the following command-line arguments:
 - Use empty content for directory pages
 - Normalize paths (backslashes to forward slashes) for consistent lookups
 
-### 8.4 Logging
+### 8.6 Logging
 
 - Use Python's `logging` module for consistent log output
 - Log at appropriate levels (INFO, WARNING, ERROR, DEBUG)
@@ -235,6 +303,15 @@ The program must accept the following command-line arguments:
   - Log file encoding: UTF-8
   - If file logging fails, the program continues with console logging only
   - Log format: `%(asctime)s - %(levelname)s - %(message)s`
+- **Diagnostic Logging**: The program provides comprehensive diagnostic information to help troubleshoot issues:
+  - At the start of sync: Logs how many existing pages were found in Confluence
+  - During page matching: Logs which matching method succeeded (file path label vs title matching)
+  - When matching fails: Logs warnings with details including:
+    - The file path and title that couldn't be matched
+    - The number of existing pages searched
+    - A list of existing page titles (for small sets) to help identify why matching failed
+  - During label operations: Logs success/failure of label setting with clear error messages
+  - This diagnostic information helps identify why duplicate pages might be created
 
 ## 9. Security Considerations
 
@@ -248,3 +325,6 @@ The program must accept the following command-line arguments:
 - Links are not converted to Confluence page links
 - The program does not handle Confluence page moves (only creates/updates/deletes)
 - Parent relationship updates may be limited by Confluence API capabilities
+- **Label Dependencies**: File path tracking via labels requires the atlassian-python-api library to support `get_page_labels` and `set_page_label` methods. If these methods are not available or fail, the program falls back to title matching, which may be less reliable if titles change or collision resolution occurs.
+- **Label Format**: File paths are hex-encoded in labels to comply with Confluence restrictions. The format is `syncfilepath{hex_encoded_path}` where the path is encoded as hexadecimal (lowercase). This ensures labels are Confluence-compliant (lowercase, no special characters, under 255 chars).
+- **Duplicate Prevention**: The program uses multiple matching strategies to prevent duplicate pages, but if all matching methods fail (labels unavailable and title matching fails), duplicate pages may still be created. The enhanced logging helps diagnose these cases.
