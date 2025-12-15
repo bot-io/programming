@@ -9,6 +9,7 @@ echo Running Confluence Sync Test Suite
 echo =====================================================================
 echo.
 
+cd /d "%~dp0"
 python -m pytest test_confluence_sync.py -v --tb=short
 
 IF ERRORLEVEL 1 (
