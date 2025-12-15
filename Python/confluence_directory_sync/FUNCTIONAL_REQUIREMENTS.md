@@ -251,26 +251,9 @@ The program must accept the following command-line arguments:
     - `space`: Confluence space key
     - `version`: Page version number
 - **Error Handling**: If saving the list fails, the program logs a warning but does not fail the sync operation
-- **Use Case**: These JSON files can be used with the `delete_pages.py` utility to delete all pages created in a specific run
+- **Use Case**: These JSON files can be used with the `delete_pages.py` utility (see `DELETE_PAGES_REQUIREMENTS.md` for details)
 
-### 8.2 Delete Pages Utility
-
-- **Separate Program**: `delete_pages.py` is a standalone utility for deleting Confluence pages listed in a JSON file
-- **Input**: Path to a JSON file created by `confluence_sync.py` (format: `created_pages_YYYYMMDD_HHMMSS.json`)
-- **Features**:
-  - Displays all pages that will be deleted before proceeding
-  - Requires explicit user confirmation before deletion
-  - Prompts for Confluence credentials (URL, username, API token)
-  - Supports `--dry-run` mode to preview deletions without executing
-  - Logs all operations to `delete_pages.log`
-  - Provides detailed progress and summary of successful/failed deletions
-- **Safety**: 
-  - Always requires confirmation before deletion
-  - Shows page titles and IDs for verification
-  - Handles errors gracefully and continues with remaining pages
-- **Usage**: Can be run directly with Python or via `delete_pages.bat` on Windows
-
-### 8.3 Dependencies
+### 8.2 Dependencies
 
 - Use the `atlassian-python-api` library for Confluence API interactions
 - Use standard Python libraries for file operations and Markdown processing
