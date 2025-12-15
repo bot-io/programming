@@ -1,0 +1,933 @@
+2025-12-15 08:03:17,741 - INFO - Logging to file: C:\Users\svetlin.chobanov\OneDrive - Paynetics\Documents\Python\Cursor project I\confluence_sync.log
+2025-12-15 08:03:18,630 - INFO - Starting sync from C:\Users\svetlin.chobanov\OneDrive - Paynetics\Documents\Cursor\Project\Outputs\Wallets\Wallets-2.0-Pages to Confluence page 13652099073
+2025-12-15 08:03:18,630 - INFO - Traversing directory structure...
+2025-12-15 08:03:18,677 - INFO - Found 32 Markdown files and 15 directories
+2025-12-15 08:03:18,677 - INFO - Analyzing changes...
+2025-12-15 08:03:18,677 - INFO - rest/api/content/13652099073/child/page
+2025-12-15 08:03:22,784 - INFO - Executing operations...
+2025-12-15 08:03:22,784 - INFO - rest/api/content/13652099073/child/page
+2025-12-15 08:03:22,973 - INFO - Operations to execute (sorted):
+2025-12-15 08:03:22,973 - INFO -   1. [DIR] 01-Onboarding-and-Authentication -> parent: 13652099073, title: Onboarding and Authentication
+2025-12-15 08:03:22,973 - INFO -   2. [DIR] 04-Transfers-and-Beneficiaries -> parent: 13652099073, title: Transfers and Beneficiaries
+2025-12-15 08:03:22,973 - INFO -   3. [DIR] 07-History-and-Payments -> parent: 13652099073, title: History and Payments
+2025-12-15 08:03:22,974 - INFO -   4. [DIR] 08-Notifications -> parent: 13652099073, title: Notifications
+2025-12-15 08:03:22,974 - INFO -   5. [DIR] 09-App-Settings-and-Profile -> parent: 13652099073, title: App Settings and Profile
+2025-12-15 08:03:22,974 - INFO -   6. [DIR] 10-Services -> parent: 13652099073, title: Services
+2025-12-15 08:03:22,974 - INFO -   7. [DIR] 11-Loyalty-Cards -> parent: 13652099073, title: Loyalty Cards
+2025-12-15 08:03:22,975 - INFO -   8. [DIR] 21-Visa -> parent: 13652099073, title: Visa
+2025-12-15 08:03:22,975 - INFO -   9. [FILE] 01-Onboarding-and-Authentication\Authentication-and-Security-Management.md -> parent: None, title: Authentication and Security Management
+2025-12-15 08:03:22,975 - INFO -   10. [FILE] 01-Onboarding-and-Authentication\Sign-in.md -> parent: None, title: Sign In
+2025-12-15 08:03:22,975 - INFO -   ... and 30 more operations
+2025-12-15 08:03:22,975 - INFO - Creating page: Onboarding and Authentication (parent: 13652099073)
+2025-12-15 08:03:23,124 - INFO - Creating page "Product" -> "Onboarding and Authentication"
+2025-12-15 08:03:23,312 - WARNING - Page title 'Onboarding and Authentication' already exists. Retrying with: 'Wallets 3.0 - Onboarding and Authentication'
+2025-12-15 08:03:23,313 - INFO - Creating page "Product" -> "Wallets 3.0 - Onboarding and Authentication"
+2025-12-15 08:03:23,832 - INFO - ✓ Created page: Wallets 3.0 - Onboarding and Authentication (ID: 13652000770) [original title: Onboarding and Authentication] (empty)
+2025-12-15 08:03:23,832 - INFO -   Stored mapping: '01-Onboarding-and-Authentication' -> page_id=13652000770, parent_id=13652099073
+2025-12-15 08:03:23,833 - INFO - Creating page: Transfers and Beneficiaries (parent: 13652099073)
+2025-12-15 08:03:24,020 - INFO - Creating page "Product" -> "Transfers and Beneficiaries"
+2025-12-15 08:03:24,196 - WARNING - Page title 'Transfers and Beneficiaries' already exists. Retrying with: 'Wallets 3.0 - Transfers and Beneficiaries'
+2025-12-15 08:03:24,197 - INFO - Creating page "Product" -> "Wallets 3.0 - Transfers and Beneficiaries"
+2025-12-15 08:03:24,746 - INFO - ✓ Created page: Wallets 3.0 - Transfers and Beneficiaries (ID: 13652099080) [original title: Transfers and Beneficiaries] (empty)
+2025-12-15 08:03:24,747 - INFO -   Stored mapping: '04-Transfers-and-Beneficiaries' -> page_id=13652099080, parent_id=13652099073
+2025-12-15 08:03:24,747 - INFO - Creating page: History and Payments (parent: 13652099073)
+2025-12-15 08:03:24,951 - INFO - Creating page "Product" -> "History and Payments"
+2025-12-15 08:03:25,091 - WARNING - Page title 'History and Payments' already exists. Retrying with: 'Wallets 3.0 - History and Payments'
+2025-12-15 08:03:25,091 - INFO - Creating page "Product" -> "Wallets 3.0 - History and Payments"
+2025-12-15 08:03:25,594 - INFO - ✓ Created page: Wallets 3.0 - History and Payments (ID: 13652099098) [original title: History and Payments] (empty)
+2025-12-15 08:03:25,597 - INFO -   Stored mapping: '07-History-and-Payments' -> page_id=13652099098, parent_id=13652099073
+2025-12-15 08:03:25,597 - INFO - Creating page: Notifications (parent: 13652099073)
+2025-12-15 08:03:25,765 - INFO - Creating page "Product" -> "Notifications"
+2025-12-15 08:03:26,265 - INFO - ✓ Created page: Notifications (ID: 13652099116) (empty)
+2025-12-15 08:03:26,266 - INFO -   Stored mapping: '08-Notifications' -> page_id=13652099116, parent_id=13652099073
+2025-12-15 08:03:26,266 - INFO - Creating page: App Settings and Profile (parent: 13652099073)
+2025-12-15 08:03:26,488 - INFO - Creating page "Product" -> "App Settings and Profile"
+2025-12-15 08:03:26,691 - WARNING - Page title 'App Settings and Profile' already exists. Retrying with: 'Wallets 3.0 - App Settings and Profile'
+2025-12-15 08:03:26,692 - INFO - Creating page "Product" -> "Wallets 3.0 - App Settings and Profile"
+2025-12-15 08:03:27,233 - INFO - ✓ Created page: Wallets 3.0 - App Settings and Profile (ID: 13652197377) [original title: App Settings and Profile] (empty)
+2025-12-15 08:03:27,234 - INFO -   Stored mapping: '09-App-Settings-and-Profile' -> page_id=13652197377, parent_id=13652099073
+2025-12-15 08:03:27,234 - INFO - Creating page: Services (parent: 13652099073)
+2025-12-15 08:03:27,375 - INFO - Creating page "Product" -> "Services"
+2025-12-15 08:03:28,027 - INFO - ✓ Created page: Services (ID: 13652066306) (empty)
+2025-12-15 08:03:28,029 - INFO -   Stored mapping: '10-Services' -> page_id=13652066306, parent_id=13652099073
+2025-12-15 08:03:28,029 - INFO - Creating page: Loyalty Cards (parent: 13652099073)
+2025-12-15 08:03:28,155 - INFO - Creating page "Product" -> "Loyalty Cards"
+2025-12-15 08:03:28,675 - INFO - ✓ Created page: Loyalty Cards (ID: 13652230145) (empty)
+2025-12-15 08:03:28,675 - INFO -   Stored mapping: '11-Loyalty-Cards' -> page_id=13652230145, parent_id=13652099073
+2025-12-15 08:03:28,675 - INFO - Creating page: Visa (parent: 13652099073)
+2025-12-15 08:03:28,831 - INFO - Creating page "Product" -> "Visa"
+2025-12-15 08:03:29,357 - INFO - ✓ Created page: Visa (ID: 13652033540) (empty)
+2025-12-15 08:03:29,358 - INFO -   Stored mapping: '21-Visa' -> page_id=13652033540, parent_id=13652099073
+2025-12-15 08:03:29,358 - WARNING - ⚠ WARNING: Parent resolution for '01-Onboarding-and-Authentication' returned root page ID!
+2025-12-15 08:03:29,358 - WARNING -   This means the directory page was not found. Page 'Authentication and Security Management' will be created under root.
+2025-12-15 08:03:29,359 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa']
+2025-12-15 08:03:29,359 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa']
+2025-12-15 08:03:29,359 - WARNING -   Operation: OperationType.CREATE, Path: 01-Onboarding-and-Authentication\Authentication-and-Security-Management.md, Title: Authentication and Security Management
+2025-12-15 08:03:29,360 - INFO - Resolved parent for '01-Onboarding-and-Authentication\Authentication-and-Security-Management.md': 13652099073 (parent path: '01-Onboarding-and-Authentication')
+2025-12-15 08:03:29,360 - INFO - Creating page: Authentication and Security Management (parent: 13652099073)
+2025-12-15 08:03:29,559 - INFO - Creating page "Product" -> "Authentication and Security Management"
+2025-12-15 08:03:30,104 - INFO - ✓ Created page: Authentication and Security Management (ID: 13652000788) (14170 chars)
+2025-12-15 08:03:30,104 - INFO -   Stored mapping: '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md' -> page_id=13652000788, parent_id=13652099073
+2025-12-15 08:03:30,105 - WARNING - ⚠ WARNING: Parent resolution for '01-Onboarding-and-Authentication' returned root page ID!
+2025-12-15 08:03:30,105 - WARNING -   This means the directory page was not found. Page 'Sign In' will be created under root.
+2025-12-15 08:03:30,105 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md']
+2025-12-15 08:03:30,105 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md']
+2025-12-15 08:03:30,105 - WARNING -   Operation: OperationType.CREATE, Path: 01-Onboarding-and-Authentication\Sign-in.md, Title: Sign In
+2025-12-15 08:03:30,106 - INFO - Resolved parent for '01-Onboarding-and-Authentication\Sign-in.md': 13652099073 (parent path: '01-Onboarding-and-Authentication')
+2025-12-15 08:03:30,106 - INFO - Creating page: Sign In (parent: 13652099073)
+2025-12-15 08:03:30,276 - INFO - Creating page "Product" -> "Sign In"
+2025-12-15 08:03:30,827 - INFO - ✓ Created page: Sign In (ID: 13652000823) (7626 chars)
+2025-12-15 08:03:30,829 - INFO -   Stored mapping: '01-Onboarding-and-Authentication/Sign-in.md' -> page_id=13652000823, parent_id=13652099073
+2025-12-15 08:03:30,830 - WARNING - ⚠ WARNING: Parent resolution for '01-Onboarding-and-Authentication' returned root page ID!
+2025-12-15 08:03:30,830 - WARNING -   This means the directory page was not found. Page 'Sign Up' will be created under root.
+2025-12-15 08:03:30,830 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md']
+2025-12-15 08:03:30,830 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md']
+2025-12-15 08:03:30,830 - WARNING -   Operation: OperationType.CREATE, Path: 01-Onboarding-and-Authentication\Sign-up.md, Title: Sign Up
+2025-12-15 08:03:30,830 - INFO - Resolved parent for '01-Onboarding-and-Authentication\Sign-up.md': 13652099073 (parent path: '01-Onboarding-and-Authentication')
+2025-12-15 08:03:30,830 - INFO - Creating page: Sign Up (parent: 13652099073)
+2025-12-15 08:03:31,006 - INFO - Creating page "Product" -> "Sign Up"
+2025-12-15 08:03:31,551 - INFO - ✓ Created page: Sign Up (ID: 13651379116) (22771 chars)
+2025-12-15 08:03:31,551 - INFO -   Stored mapping: '01-Onboarding-and-Authentication/Sign-up.md' -> page_id=13651379116, parent_id=13652099073
+2025-12-15 08:03:31,551 - INFO - Creating page: Identity KYC and Account Status (parent: 13652099073)
+2025-12-15 08:03:31,679 - INFO - Creating page "Product" -> "Identity KYC and Account Status"
+2025-12-15 08:03:32,363 - INFO - ✓ Created page: Identity KYC and Account Status (ID: 13652131862) (43423 chars)
+2025-12-15 08:03:32,363 - INFO -   Stored mapping: '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md' -> page_id=13652131862, parent_id=13652099073
+2025-12-15 08:03:32,363 - INFO - Creating page: Top-Up (parent: 13652099073)
+2025-12-15 08:03:32,488 - INFO - Creating page "Product" -> "Top-Up"
+2025-12-15 08:03:33,450 - INFO - ✓ Created page: Top-Up (ID: 13652262913) (16648 chars)
+2025-12-15 08:03:33,451 - INFO -   Stored mapping: '03-Payments-and-Top-Up/Top-Up.md' -> page_id=13652262913, parent_id=13652099073
+2025-12-15 08:03:33,453 - WARNING - ⚠ WARNING: Parent resolution for '04-Transfers-and-Beneficiaries' returned root page ID!
+2025-12-15 08:03:33,456 - WARNING -   This means the directory page was not found. Page 'Address Book and Beneficiaries Beneficiaries' will be created under root.
+2025-12-15 08:03:33,456 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md']
+2025-12-15 08:03:33,456 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md']
+2025-12-15 08:03:33,456 - WARNING -   Operation: OperationType.CREATE, Path: 04-Transfers-and-Beneficiaries\Address-Book-Beneficiaries.md, Title: Address Book and Beneficiaries Beneficiaries
+2025-12-15 08:03:33,457 - INFO - Resolved parent for '04-Transfers-and-Beneficiaries\Address-Book-Beneficiaries.md': 13652099073 (parent path: '04-Transfers-and-Beneficiaries')
+2025-12-15 08:03:33,457 - INFO - Creating page: Address Book and Beneficiaries Beneficiaries (parent: 13652099073)
+2025-12-15 08:03:33,622 - INFO - Creating page "Product" -> "Address Book and Beneficiaries Beneficiaries"
+2025-12-15 08:03:34,168 - INFO - ✓ Created page: Address Book and Beneficiaries Beneficiaries (ID: 13652033558) (16102 chars)
+2025-12-15 08:03:34,168 - INFO -   Stored mapping: '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md' -> page_id=13652033558, parent_id=13652099073
+2025-12-15 08:03:34,169 - WARNING - ⚠ WARNING: Parent resolution for '04-Transfers-and-Beneficiaries' returned root page ID!
+2025-12-15 08:03:34,169 - WARNING -   This means the directory page was not found. Page 'IBAN Transfers External Bank Transfers' will be created under root.
+2025-12-15 08:03:34,169 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md']
+2025-12-15 08:03:34,169 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md']
+2025-12-15 08:03:34,169 - WARNING -   Operation: OperationType.CREATE, Path: 04-Transfers-and-Beneficiaries\IBAN-Transfers.md, Title: IBAN Transfers External Bank Transfers
+2025-12-15 08:03:34,169 - INFO - Resolved parent for '04-Transfers-and-Beneficiaries\IBAN-Transfers.md': 13652099073 (parent path: '04-Transfers-and-Beneficiaries')
+2025-12-15 08:03:34,170 - INFO - Creating page: IBAN Transfers External Bank Transfers (parent: 13652099073)
+2025-12-15 08:03:34,304 - INFO - Creating page "Product" -> "IBAN Transfers External Bank Transfers"
+2025-12-15 08:03:34,883 - INFO - ✓ Created page: IBAN Transfers External Bank Transfers (ID: 13652066324) (18321 chars)
+2025-12-15 08:03:34,884 - INFO -   Stored mapping: '04-Transfers-and-Beneficiaries/IBAN-Transfers.md' -> page_id=13652066324, parent_id=13652099073
+2025-12-15 08:03:34,884 - WARNING - ⚠ WARNING: Parent resolution for '04-Transfers-and-Beneficiaries' returned root page ID!
+2025-12-15 08:03:34,884 - WARNING -   This means the directory page was not found. Page 'P2P and Wallet Transfers' will be created under root.
+2025-12-15 08:03:34,885 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md']
+2025-12-15 08:03:34,885 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md']
+2025-12-15 08:03:34,885 - WARNING -   Operation: OperationType.CREATE, Path: 04-Transfers-and-Beneficiaries\P2P-and-Wallet-Transfers.md, Title: P2P and Wallet Transfers
+2025-12-15 08:03:34,885 - INFO - Resolved parent for '04-Transfers-and-Beneficiaries\P2P-and-Wallet-Transfers.md': 13652099073 (parent path: '04-Transfers-and-Beneficiaries')
+2025-12-15 08:03:34,886 - INFO - Creating page: P2P and Wallet Transfers (parent: 13652099073)
+2025-12-15 08:03:35,079 - INFO - Creating page "Product" -> "P2P and Wallet Transfers"
+2025-12-15 08:03:35,849 - INFO - ✓ Created page: P2P and Wallet Transfers (ID: 13652295681) (14234 chars)
+2025-12-15 08:03:35,850 - INFO -   Stored mapping: '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md' -> page_id=13652295681, parent_id=13652099073
+2025-12-15 08:03:35,850 - INFO - Creating page: Payment Cards (parent: 13652099073)
+2025-12-15 08:03:35,984 - INFO - Creating page "Product" -> "Payment Cards"
+2025-12-15 08:03:36,774 - INFO - ✓ Created page: Payment Cards (ID: 13652328449) (41341 chars)
+2025-12-15 08:03:36,775 - INFO -   Stored mapping: '05-Payment-Cards/Payment-Cards.md' -> page_id=13652328449, parent_id=13652099073
+2025-12-15 08:03:36,775 - INFO - Creating page: Plans Fees and Limits (parent: 13652099073)
+2025-12-15 08:03:37,033 - INFO - Creating page "Product" -> "Plans Fees and Limits"
+2025-12-15 08:03:37,689 - INFO - ✓ Created page: Plans Fees and Limits (ID: 13652361217) (10010 chars)
+2025-12-15 08:03:37,690 - INFO -   Stored mapping: '06-Plans-Fees-Limits/Plans-Fees-Limits.md' -> page_id=13652361217, parent_id=13652099073
+2025-12-15 08:03:37,690 - WARNING - ⚠ WARNING: Parent resolution for '07-History-and-Payments' returned root page ID!
+2025-12-15 08:03:37,690 - WARNING -   This means the directory page was not found. Page 'Statements and Reports' will be created under root.
+2025-12-15 08:03:37,690 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md']
+2025-12-15 08:03:37,690 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md']
+2025-12-15 08:03:37,691 - WARNING -   Operation: OperationType.CREATE, Path: 07-History-and-Payments\Statements-and-Reports.md, Title: Statements and Reports
+2025-12-15 08:03:37,691 - INFO - Resolved parent for '07-History-and-Payments\Statements-and-Reports.md': 13652099073 (parent path: '07-History-and-Payments')
+2025-12-15 08:03:37,691 - INFO - Creating page: Statements and Reports (parent: 13652099073)
+2025-12-15 08:03:37,820 - INFO - Creating page "Product" -> "Statements and Reports"
+2025-12-15 08:03:38,400 - INFO - ✓ Created page: Statements and Reports (ID: 13652393985) (11275 chars)
+2025-12-15 08:03:38,400 - INFO -   Stored mapping: '07-History-and-Payments/Statements-and-Reports.md' -> page_id=13652393985, parent_id=13652099073
+2025-12-15 08:03:38,400 - WARNING - ⚠ WARNING: Parent resolution for '07-History-and-Payments' returned root page ID!
+2025-12-15 08:03:38,400 - WARNING -   This means the directory page was not found. Page 'Transaction History and Statements' will be created under root.
+2025-12-15 08:03:38,401 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md']
+2025-12-15 08:03:38,401 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md']
+2025-12-15 08:03:38,401 - WARNING -   Operation: OperationType.CREATE, Path: 07-History-and-Payments\Transaction-History.md, Title: Transaction History and Statements
+2025-12-15 08:03:38,401 - INFO - Resolved parent for '07-History-and-Payments\Transaction-History.md': 13652099073 (parent path: '07-History-and-Payments')
+2025-12-15 08:03:38,402 - INFO - Creating page: Transaction History and Statements (parent: 13652099073)
+2025-12-15 08:03:38,549 - INFO - Creating page "Product" -> "Transaction History and Statements"
+2025-12-15 08:03:39,057 - INFO - ✓ Created page: Transaction History and Statements (ID: 13652295716) (14071 chars)
+2025-12-15 08:03:39,058 - INFO -   Stored mapping: '07-History-and-Payments/Transaction-History.md' -> page_id=13652295716, parent_id=13652099073
+2025-12-15 08:03:39,058 - WARNING - ⚠ WARNING: Parent resolution for '08-Notifications' returned root page ID!
+2025-12-15 08:03:39,058 - WARNING -   This means the directory page was not found. Page 'Legal Consents' will be created under root.
+2025-12-15 08:03:39,059 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:39,059 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:39,060 - WARNING -   Operation: OperationType.CREATE, Path: 08-Notifications\Legal-Consents.md, Title: Legal Consents
+2025-12-15 08:03:39,060 - INFO - Resolved parent for '08-Notifications\Legal-Consents.md': 13652099073 (parent path: '08-Notifications')
+2025-12-15 08:03:39,060 - INFO - Creating page: Legal Consents (parent: 13652099073)
+2025-12-15 08:03:39,357 - INFO - Creating page "Product" -> "Legal Consents"
+2025-12-15 08:03:39,997 - INFO - ✓ Created page: Legal Consents (ID: 13652295765) (6007 chars)
+2025-12-15 08:03:40,000 - INFO -   Stored mapping: '08-Notifications/Legal-Consents.md' -> page_id=13652295765, parent_id=13652099073
+2025-12-15 08:03:40,004 - WARNING - ⚠ WARNING: Parent resolution for '08-Notifications' returned root page ID!
+2025-12-15 08:03:40,011 - WARNING -   This means the directory page was not found. Page 'Notifications' will be created under root.
+2025-12-15 08:03:40,014 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md']
+2025-12-15 08:03:40,015 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:40,016 - WARNING -   Operation: OperationType.CREATE, Path: 08-Notifications\Notifications.md, Title: Notifications
+2025-12-15 08:03:40,016 - INFO - Resolved parent for '08-Notifications\Notifications.md': 13652099073 (parent path: '08-Notifications')
+2025-12-15 08:03:40,016 - INFO - Creating page: Notifications (parent: 13652099073)
+2025-12-15 08:03:40,150 - INFO - Creating page "Product" -> "Notifications"
+2025-12-15 08:03:40,315 - WARNING - Page title 'Notifications' already exists. Retrying with: 'Wallets 3.0 - Notifications'
+2025-12-15 08:03:40,316 - INFO - Creating page "Product" -> "Wallets 3.0 - Notifications"
+2025-12-15 08:03:40,831 - INFO - ✓ Created page: Wallets 3.0 - Notifications (ID: 13652262960) [original title: Notifications] (7282 chars)
+2025-12-15 08:03:40,832 - INFO -   Stored mapping: '08-Notifications/Notifications.md' -> page_id=13652262960, parent_id=13652099073
+2025-12-15 08:03:40,832 - WARNING - ⚠ WARNING: Parent resolution for '08-Notifications' returned root page ID!
+2025-12-15 08:03:40,832 - WARNING -   This means the directory page was not found. Page 'Unified Prompts Framework' will be created under root.
+2025-12-15 08:03:40,832 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md']
+2025-12-15 08:03:40,832 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:40,833 - WARNING -   Operation: OperationType.CREATE, Path: 08-Notifications\Unified-Prompts-Framework.md, Title: Unified Prompts Framework
+2025-12-15 08:03:40,833 - INFO - Resolved parent for '08-Notifications\Unified-Prompts-Framework.md': 13652099073 (parent path: '08-Notifications')
+2025-12-15 08:03:40,833 - INFO - Creating page: Unified Prompts Framework (parent: 13652099073)
+2025-12-15 08:03:40,964 - INFO - Creating page "Product" -> "Unified Prompts Framework"
+2025-12-15 08:03:41,496 - INFO - ✓ Created page: Unified Prompts Framework (ID: 13652328504) (16954 chars)
+2025-12-15 08:03:41,496 - INFO -   Stored mapping: '08-Notifications/Unified-Prompts-Framework.md' -> page_id=13652328504, parent_id=13652099073
+2025-12-15 08:03:41,496 - WARNING - ⚠ WARNING: Parent resolution for '09-App-Settings-and-Profile' returned root page ID!
+2025-12-15 08:03:41,496 - WARNING -   This means the directory page was not found. Page 'Profile Settings and Security' will be created under root.
+2025-12-15 08:03:41,496 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md']
+2025-12-15 08:03:41,497 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:41,497 - WARNING -   Operation: OperationType.CREATE, Path: 09-App-Settings-and-Profile\Profile-Management.md, Title: Profile Settings and Security
+2025-12-15 08:03:41,497 - INFO - Resolved parent for '09-App-Settings-and-Profile\Profile-Management.md': 13652099073 (parent path: '09-App-Settings-and-Profile')
+2025-12-15 08:03:41,497 - INFO - Creating page: Profile Settings and Security (parent: 13652099073)
+2025-12-15 08:03:41,643 - INFO - Creating page "Product" -> "Profile Settings and Security"
+2025-12-15 08:03:42,258 - INFO - ✓ Created page: Profile Settings and Security (ID: 13652099134) (11374 chars)
+2025-12-15 08:03:42,258 - INFO -   Stored mapping: '09-App-Settings-and-Profile/Profile-Management.md' -> page_id=13652099134, parent_id=13652099073
+2025-12-15 08:03:42,258 - WARNING - ⚠ WARNING: Parent resolution for '09-App-Settings-and-Profile' returned root page ID!
+2025-12-15 08:03:42,258 - WARNING -   This means the directory page was not found. Page 'Security and Account Management' will be created under root.
+2025-12-15 08:03:42,258 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md']
+2025-12-15 08:03:42,259 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:42,259 - WARNING -   Operation: OperationType.CREATE, Path: 09-App-Settings-and-Profile\Security-and-Account-Management.md, Title: Security and Account Management
+2025-12-15 08:03:42,259 - INFO - Resolved parent for '09-App-Settings-and-Profile\Security-and-Account-Management.md': 13652099073 (parent path: '09-App-Settings-and-Profile')
+2025-12-15 08:03:42,259 - INFO - Creating page: Security and Account Management (parent: 13652099073)
+2025-12-15 08:03:42,463 - INFO - Creating page "Product" -> "Security and Account Management"
+2025-12-15 08:03:42,971 - INFO - ✓ Created page: Security and Account Management (ID: 13652394030) (7404 chars)
+2025-12-15 08:03:42,972 - INFO -   Stored mapping: '09-App-Settings-and-Profile/Security-and-Account-Management.md' -> page_id=13652394030, parent_id=13652099073
+2025-12-15 08:03:42,972 - WARNING - ⚠ WARNING: Parent resolution for '09-App-Settings-and-Profile' returned root page ID!
+2025-12-15 08:03:42,972 - WARNING -   This means the directory page was not found. Page 'Settings' will be created under root.
+2025-12-15 08:03:42,972 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md']
+2025-12-15 08:03:42,973 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:42,973 - WARNING -   Operation: OperationType.CREATE, Path: 09-App-Settings-and-Profile\Settings.md, Title: Settings
+2025-12-15 08:03:42,973 - INFO - Resolved parent for '09-App-Settings-and-Profile\Settings.md': 13652099073 (parent path: '09-App-Settings-and-Profile')
+2025-12-15 08:03:42,974 - INFO - Creating page: Settings (parent: 13652099073)
+2025-12-15 08:03:43,212 - INFO - Creating page "Product" -> "Settings"
+2025-12-15 08:03:43,734 - INFO - ✓ Created page: Settings (ID: 13652295792) (4933 chars)
+2025-12-15 08:03:43,735 - INFO -   Stored mapping: '09-App-Settings-and-Profile/Settings.md' -> page_id=13652295792, parent_id=13652099073
+2025-12-15 08:03:43,735 - WARNING - ⚠ WARNING: Parent resolution for '09-App-Settings-and-Profile' returned root page ID!
+2025-12-15 08:03:43,735 - WARNING -   This means the directory page was not found. Page 'Support and Help' will be created under root.
+2025-12-15 08:03:43,735 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md']
+2025-12-15 08:03:43,736 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:43,736 - WARNING -   Operation: OperationType.CREATE, Path: 09-App-Settings-and-Profile\Support-and-Help.md, Title: Support and Help
+2025-12-15 08:03:43,736 - INFO - Resolved parent for '09-App-Settings-and-Profile\Support-and-Help.md': 13652099073 (parent path: '09-App-Settings-and-Profile')
+2025-12-15 08:03:43,736 - INFO - Creating page: Support and Help (parent: 13652099073)
+2025-12-15 08:03:43,869 - INFO - Creating page "Product" -> "Support and Help"
+2025-12-15 08:03:44,420 - INFO - ✓ Created page: Support and Help (ID: 13652000850) (13878 chars)
+2025-12-15 08:03:44,420 - INFO -   Stored mapping: '09-App-Settings-and-Profile/Support-and-Help.md' -> page_id=13652000850, parent_id=13652099073
+2025-12-15 08:03:44,420 - WARNING - ⚠ WARNING: Parent resolution for '10-Services' returned root page ID!
+2025-12-15 08:03:44,421 - WARNING -   This means the directory page was not found. Page 'Credits' will be created under root.
+2025-12-15 08:03:44,421 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md']
+2025-12-15 08:03:44,421 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:44,421 - WARNING -   Operation: OperationType.CREATE, Path: 10-Services\Credits.md, Title: Credits
+2025-12-15 08:03:44,422 - INFO - Resolved parent for '10-Services\Credits.md': 13652099073 (parent path: '10-Services')
+2025-12-15 08:03:44,422 - INFO - Creating page: Credits (parent: 13652099073)
+2025-12-15 08:03:44,612 - INFO - Creating page "Product" -> "Credits"
+2025-12-15 08:03:45,195 - INFO - ✓ Created page: Credits (ID: 13652262989) (33174 chars)
+2025-12-15 08:03:45,196 - INFO -   Stored mapping: '10-Services/Credits.md' -> page_id=13652262989, parent_id=13652099073
+2025-12-15 08:03:45,196 - WARNING - ⚠ WARNING: Parent resolution for '10-Services' returned root page ID!
+2025-12-15 08:03:45,196 - WARNING -   This means the directory page was not found. Page 'Crypto' will be created under root.
+2025-12-15 08:03:45,196 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md']
+2025-12-15 08:03:45,197 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:45,197 - WARNING -   Operation: OperationType.CREATE, Path: 10-Services\Crypto.md, Title: Crypto
+2025-12-15 08:03:45,197 - INFO - Resolved parent for '10-Services\Crypto.md': 13652099073 (parent path: '10-Services')
+2025-12-15 08:03:45,197 - INFO - Creating page: Crypto (parent: 13652099073)
+2025-12-15 08:03:45,324 - INFO - Creating page "Product" -> "Crypto"
+2025-12-15 08:03:45,874 - INFO - ✓ Created page: Crypto (ID: 13652000899) (33419 chars)
+2025-12-15 08:03:45,874 - INFO -   Stored mapping: '10-Services/Crypto.md' -> page_id=13652000899, parent_id=13652099073
+2025-12-15 08:03:45,874 - WARNING - ⚠ WARNING: Parent resolution for '10-Services' returned root page ID!
+2025-12-15 08:03:45,875 - WARNING -   This means the directory page was not found. Page 'Utility Bills' will be created under root.
+2025-12-15 08:03:45,875 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md']
+2025-12-15 08:03:45,875 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:45,876 - WARNING -   Operation: OperationType.CREATE, Path: 10-Services\Utility-Bills.md, Title: Utility Bills
+2025-12-15 08:03:45,876 - INFO - Resolved parent for '10-Services\Utility-Bills.md': 13652099073 (parent path: '10-Services')
+2025-12-15 08:03:45,876 - INFO - Creating page: Utility Bills (parent: 13652099073)
+2025-12-15 08:03:46,251 - INFO - Creating page "Product" -> "Utility Bills"
+2025-12-15 08:03:46,775 - INFO - ✓ Created page: Utility Bills (ID: 13651379163) (18325 chars)
+2025-12-15 08:03:46,775 - INFO -   Stored mapping: '10-Services/Utility-Bills.md' -> page_id=13651379163, parent_id=13652099073
+2025-12-15 08:03:46,775 - WARNING - ⚠ WARNING: Parent resolution for '10-Services' returned root page ID!
+2025-12-15 08:03:46,776 - WARNING -   This means the directory page was not found. Page 'Vignettes' will be created under root.
+2025-12-15 08:03:46,776 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md']
+2025-12-15 08:03:46,776 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:46,776 - WARNING -   Operation: OperationType.CREATE, Path: 10-Services\Vignettes.md, Title: Vignettes
+2025-12-15 08:03:46,777 - INFO - Resolved parent for '10-Services\Vignettes.md': 13652099073 (parent path: '10-Services')
+2025-12-15 08:03:46,777 - INFO - Creating page: Vignettes (parent: 13652099073)
+2025-12-15 08:03:46,899 - INFO - Creating page "Product" -> "Vignettes"
+2025-12-15 08:03:47,440 - INFO - ✓ Created page: Vignettes (ID: 13652197395) (15724 chars)
+2025-12-15 08:03:47,440 - INFO -   Stored mapping: '10-Services/Vignettes.md' -> page_id=13652197395, parent_id=13652099073
+2025-12-15 08:03:47,441 - WARNING - ⚠ WARNING: Parent resolution for '11-Loyalty-Cards' returned root page ID!
+2025-12-15 08:03:47,441 - WARNING -   This means the directory page was not found. Page 'Expense Management' will be created under root.
+2025-12-15 08:03:47,441 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md', '10-Services/Vignettes.md']
+2025-12-15 08:03:47,441 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:47,442 - WARNING -   Operation: OperationType.CREATE, Path: 11-Loyalty-Cards\Expense-Management.md, Title: Expense Management
+2025-12-15 08:03:47,442 - INFO - Resolved parent for '11-Loyalty-Cards\Expense-Management.md': 13652099073 (parent path: '11-Loyalty-Cards')
+2025-12-15 08:03:47,442 - INFO - Creating page: Expense Management (parent: 13652099073)
+2025-12-15 08:03:47,572 - INFO - Creating page "Product" -> "Expense Management"
+2025-12-15 08:03:48,083 - INFO - ✓ Created page: Expense Management (ID: 13652230163) (9146 chars)
+2025-12-15 08:03:48,084 - INFO -   Stored mapping: '11-Loyalty-Cards/Expense-Management.md' -> page_id=13652230163, parent_id=13652099073
+2025-12-15 08:03:48,084 - WARNING - ⚠ WARNING: Parent resolution for '11-Loyalty-Cards' returned root page ID!
+2025-12-15 08:03:48,084 - WARNING -   This means the directory page was not found. Page 'User Engagement Features' will be created under root.
+2025-12-15 08:03:48,084 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md', '10-Services/Vignettes.md', '11-Loyalty-Cards/Expense-Management.md']
+2025-12-15 08:03:48,084 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:48,084 - WARNING -   Operation: OperationType.CREATE, Path: 11-Loyalty-Cards\Loyalty-Cards.md, Title: User Engagement Features
+2025-12-15 08:03:48,084 - INFO - Resolved parent for '11-Loyalty-Cards\Loyalty-Cards.md': 13652099073 (parent path: '11-Loyalty-Cards')
+2025-12-15 08:03:48,085 - INFO - Creating page: User Engagement Features (parent: 13652099073)
+2025-12-15 08:03:48,213 - INFO - Creating page "Product" -> "User Engagement Features"
+2025-12-15 08:03:48,729 - INFO - ✓ Created page: User Engagement Features (ID: 13652000934) (24617 chars)
+2025-12-15 08:03:48,730 - INFO -   Stored mapping: '11-Loyalty-Cards/Loyalty-Cards.md' -> page_id=13652000934, parent_id=13652099073
+2025-12-15 08:03:48,730 - WARNING - ⚠ WARNING: Parent resolution for '11-Loyalty-Cards' returned root page ID!
+2025-12-15 08:03:48,730 - WARNING -   This means the directory page was not found. Page 'Offers' will be created under root.
+2025-12-15 08:03:48,730 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md', '10-Services/Vignettes.md', '11-Loyalty-Cards/Expense-Management.md', '11-Loyalty-Cards/Loyalty-Cards.md']
+2025-12-15 08:03:48,731 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:48,731 - WARNING -   Operation: OperationType.CREATE, Path: 11-Loyalty-Cards\Offers.md, Title: Offers
+2025-12-15 08:03:48,732 - INFO - Resolved parent for '11-Loyalty-Cards\Offers.md': 13652099073 (parent path: '11-Loyalty-Cards')
+2025-12-15 08:03:48,732 - INFO - Creating page: Offers (parent: 13652099073)
+2025-12-15 08:03:48,861 - INFO - Creating page "Product" -> "Offers"
+2025-12-15 08:03:49,367 - INFO - ✓ Created page: Offers (ID: 13652394059) (10560 chars)
+2025-12-15 08:03:49,368 - INFO -   Stored mapping: '11-Loyalty-Cards/Offers.md' -> page_id=13652394059, parent_id=13652099073
+2025-12-15 08:03:49,368 - WARNING - ⚠ WARNING: Parent resolution for '11-Loyalty-Cards' returned root page ID!
+2025-12-15 08:03:49,368 - WARNING -   This means the directory page was not found. Page 'Referral Program' will be created under root.
+2025-12-15 08:03:49,368 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md', '10-Services/Vignettes.md', '11-Loyalty-Cards/Expense-Management.md', '11-Loyalty-Cards/Loyalty-Cards.md', '11-Loyalty-Cards/Offers.md']
+2025-12-15 08:03:49,369 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:49,369 - WARNING -   Operation: OperationType.CREATE, Path: 11-Loyalty-Cards\Referral-Program.md, Title: Referral Program
+2025-12-15 08:03:49,369 - INFO - Resolved parent for '11-Loyalty-Cards\Referral-Program.md': 13652099073 (parent path: '11-Loyalty-Cards')
+2025-12-15 08:03:49,369 - INFO - Creating page: Referral Program (parent: 13652099073)
+2025-12-15 08:03:49,494 - INFO - Creating page "Product" -> "Referral Program"
+2025-12-15 08:03:50,048 - INFO - ✓ Created page: Referral Program (ID: 13652295823) (12770 chars)
+2025-12-15 08:03:50,048 - INFO -   Stored mapping: '11-Loyalty-Cards/Referral-Program.md' -> page_id=13652295823, parent_id=13652099073
+2025-12-15 08:03:50,048 - INFO - Creating page: Marketing Screens (parent: 13652099073)
+2025-12-15 08:03:50,252 - INFO - Creating page "Product" -> "Marketing Screens"
+2025-12-15 08:03:50,780 - INFO - ✓ Created page: Marketing Screens (ID: 13652230190) (14738 chars)
+2025-12-15 08:03:50,781 - INFO -   Stored mapping: '15-Marketing-Screens/Marketing-Screens.md' -> page_id=13652230190, parent_id=13652099073
+2025-12-15 08:03:50,781 - INFO - Creating page: Brand Specific Features (parent: 13652099073)
+2025-12-15 08:03:50,926 - INFO - Creating page "Product" -> "Brand Specific Features"
+2025-12-15 08:03:51,464 - INFO - ✓ Created page: Brand Specific Features (ID: 13652000965) (16680 chars)
+2025-12-15 08:03:51,465 - INFO -   Stored mapping: '17-Brand-Specific-Features/Brand-Specific-Features.md' -> page_id=13652000965, parent_id=13652099073
+2025-12-15 08:03:51,465 - INFO - Creating page: Configuration and System Management (parent: 13652099073)
+2025-12-15 08:03:51,600 - INFO - Creating page "Product" -> "Configuration and System Management"
+2025-12-15 08:03:52,172 - INFO - ✓ Created page: Configuration and System Management (ID: 13652263026) (12986 chars)
+2025-12-15 08:03:52,173 - INFO -   Stored mapping: '18-Configuration/Configuration-and-System-Management.md' -> page_id=13652263026, parent_id=13652099073
+2025-12-15 08:03:52,173 - WARNING - ⚠ WARNING: Parent resolution for '21-Visa' returned root page ID!
+2025-12-15 08:03:52,173 - WARNING -   This means the directory page was not found. Page 'Faster Payments' will be created under root.
+2025-12-15 08:03:52,173 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md', '10-Services/Vignettes.md', '11-Loyalty-Cards/Expense-Management.md', '11-Loyalty-Cards/Loyalty-Cards.md', '11-Loyalty-Cards/Offers.md', '11-Loyalty-Cards/Referral-Program.md', '15-Marketing-Screens/Marketing-Screens.md', '17-Brand-Specific-Features/Brand-Specific-Features.md', '18-Configuration/Configuration-and-System-Management.md']
+2025-12-15 08:03:52,174 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:52,174 - WARNING -   Operation: OperationType.CREATE, Path: 21-Visa\Faster-Payments.md, Title: Faster Payments
+2025-12-15 08:03:52,174 - INFO - Resolved parent for '21-Visa\Faster-Payments.md': 13652099073 (parent path: '21-Visa')
+2025-12-15 08:03:52,175 - INFO - Creating page: Faster Payments (parent: 13652099073)
+2025-12-15 08:03:52,301 - INFO - Creating page "Product" -> "Faster Payments"
+2025-12-15 08:03:52,811 - INFO - ✓ Created page: Faster Payments (ID: 13652394084) (7418 chars)
+2025-12-15 08:03:52,813 - INFO -   Stored mapping: '21-Visa/Faster-Payments.md' -> page_id=13652394084, parent_id=13652099073
+2025-12-15 08:03:52,813 - WARNING - ⚠ WARNING: Parent resolution for '21-Visa' returned root page ID!
+2025-12-15 08:03:52,813 - WARNING -   This means the directory page was not found. Page 'Payment Methods' will be created under root.
+2025-12-15 08:03:52,813 - WARNING -   Created pages keys: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md', '10-Services/Vignettes.md', '11-Loyalty-Cards/Expense-Management.md', '11-Loyalty-Cards/Loyalty-Cards.md', '11-Loyalty-Cards/Offers.md', '11-Loyalty-Cards/Referral-Program.md', '15-Marketing-Screens/Marketing-Screens.md', '17-Brand-Specific-Features/Brand-Specific-Features.md', '18-Configuration/Configuration-and-System-Management.md', '21-Visa/Faster-Payments.md']
+2025-12-15 08:03:52,814 - WARNING -   Existing pages map keys (first 20): ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 08:03:52,814 - WARNING -   Operation: OperationType.CREATE, Path: 21-Visa\Visa.md, Title: Payment Methods
+2025-12-15 08:03:52,814 - INFO - Resolved parent for '21-Visa\Visa.md': 13652099073 (parent path: '21-Visa')
+2025-12-15 08:03:52,814 - INFO - Creating page: Payment Methods (parent: 13652099073)
+2025-12-15 08:03:52,958 - INFO - Creating page "Product" -> "Payment Methods"
+2025-12-15 08:03:53,660 - INFO - ✓ Created page: Payment Methods (ID: 13652295850) (8391 chars)
+2025-12-15 08:03:53,660 - INFO -   Stored mapping: '21-Visa/Visa.md' -> page_id=13652295850, parent_id=13652099073
+2025-12-15 08:03:53,661 - INFO - Sync completed successfully
+2025-12-15 12:06:48,104 - INFO - Logging to file: C:\Users\svetlin.chobanov\OneDrive - Paynetics\Documents\Python\Cursor project I\confluence_sync.log
+2025-12-15 12:06:48,873 - INFO - Starting sync from C:\Users\svetlin.chobanov\OneDrive - Paynetics\Documents\Cursor\Project\Outputs\Wallets\Wallets-2.0-Pages to Confluence page 13652328547
+2025-12-15 12:06:48,874 - INFO - Traversing directory structure...
+2025-12-15 12:06:48,903 - INFO - Found 32 Markdown files and 15 directories
+2025-12-15 12:06:48,903 - INFO - Analyzing changes...
+2025-12-15 12:06:48,903 - INFO - rest/api/content/13652328547/child/page
+2025-12-15 12:06:53,917 - INFO - Executing operations...
+2025-12-15 12:06:53,919 - INFO - rest/api/content/13652328547/child/page
+2025-12-15 12:06:54,077 - INFO - Operations to execute (sorted):
+2025-12-15 12:06:54,078 - INFO -   1. [DIR] 01-Onboarding-and-Authentication -> parent: 13652328547, title: Onboarding and Authentication
+2025-12-15 12:06:54,079 - INFO -   2. [DIR] 04-Transfers-and-Beneficiaries -> parent: 13652328547, title: Transfers and Beneficiaries
+2025-12-15 12:06:54,080 - INFO -   3. [DIR] 07-History-and-Payments -> parent: 13652328547, title: History and Payments
+2025-12-15 12:06:54,081 - INFO -   4. [DIR] 08-Notifications -> parent: 13652328547, title: Notifications
+2025-12-15 12:06:54,081 - INFO -   5. [DIR] 09-App-Settings-and-Profile -> parent: 13652328547, title: App Settings and Profile
+2025-12-15 12:06:54,082 - INFO -   6. [DIR] 10-Services -> parent: 13652328547, title: Services
+2025-12-15 12:06:54,082 - INFO -   7. [DIR] 11-Loyalty-Cards -> parent: 13652328547, title: Loyalty Cards
+2025-12-15 12:06:54,083 - INFO -   8. [DIR] 21-Visa -> parent: 13652328547, title: Visa
+2025-12-15 12:06:54,084 - INFO -   9. [FILE] 01-Onboarding-and-Authentication\Authentication-and-Security-Management.md -> parent: None, title: Authentication and Security Management
+2025-12-15 12:06:54,084 - INFO -   10. [FILE] 01-Onboarding-and-Authentication\Sign-in.md -> parent: None, title: Sign In
+2025-12-15 12:06:54,085 - INFO -   ... and 30 more operations
+2025-12-15 12:06:54,085 - INFO - Creating page: Onboarding and Authentication (parent: 13652328547)
+2025-12-15 12:06:54,195 - INFO - Creating page "Product" -> "Onboarding and Authentication"
+2025-12-15 12:06:54,342 - WARNING - Page title 'Onboarding and Authentication' already exists. Retrying with: 'Wallets 3.0 - Onboarding and Authentication'
+2025-12-15 12:06:54,344 - INFO - Creating page "Product" -> "Wallets 3.0 - Onboarding and Authentication"
+2025-12-15 12:06:54,866 - INFO - ✓ Created page: Wallets 3.0 - Onboarding and Authentication (ID: 13652721684) [original title: Onboarding and Authentication] (empty) under root
+2025-12-15 12:06:54,866 - INFO -   Path: '01-Onboarding-and-Authentication' -> page_id=13652721684, parent_id=13652328547
+2025-12-15 12:06:54,866 - INFO - Creating page: Transfers and Beneficiaries (parent: 13652328547)
+2025-12-15 12:06:55,020 - INFO - Creating page "Product" -> "Transfers and Beneficiaries"
+2025-12-15 12:06:55,177 - WARNING - Page title 'Transfers and Beneficiaries' already exists. Retrying with: 'Wallets 3.0 - Transfers and Beneficiaries'
+2025-12-15 12:06:55,178 - INFO - Creating page "Product" -> "Wallets 3.0 - Transfers and Beneficiaries"
+2025-12-15 12:06:55,694 - INFO - ✓ Created page: Wallets 3.0 - Transfers and Beneficiaries (ID: 13653147652) [original title: Transfers and Beneficiaries] (empty) under root
+2025-12-15 12:06:55,695 - INFO -   Path: '04-Transfers-and-Beneficiaries' -> page_id=13653147652, parent_id=13652328547
+2025-12-15 12:06:55,695 - INFO - Creating page: History and Payments (parent: 13652328547)
+2025-12-15 12:06:55,839 - INFO - Creating page "Product" -> "History and Payments"
+2025-12-15 12:06:55,990 - WARNING - Page title 'History and Payments' already exists. Retrying with: 'Wallets 3.0 - History and Payments'
+2025-12-15 12:06:55,990 - INFO - Creating page "Product" -> "Wallets 3.0 - History and Payments"
+2025-12-15 12:06:56,522 - INFO - ✓ Created page: Wallets 3.0 - History and Payments (ID: 13653803010) [original title: History and Payments] (empty) under root
+2025-12-15 12:06:56,522 - INFO -   Path: '07-History-and-Payments' -> page_id=13653803010, parent_id=13652328547
+2025-12-15 12:06:56,522 - INFO - Creating page: Notifications (parent: 13652328547)
+2025-12-15 12:06:56,666 - INFO - Creating page "Product" -> "Notifications"
+2025-12-15 12:06:57,197 - INFO - ✓ Created page: Notifications (ID: 13653639173) (empty) under root
+2025-12-15 12:06:57,197 - INFO -   Path: '08-Notifications' -> page_id=13653639173, parent_id=13652328547
+2025-12-15 12:06:57,198 - INFO - Creating page: App Settings and Profile (parent: 13652328547)
+2025-12-15 12:06:57,340 - INFO - Creating page "Product" -> "App Settings and Profile"
+2025-12-15 12:06:57,483 - WARNING - Page title 'App Settings and Profile' already exists. Retrying with: 'Wallets 3.0 - App Settings and Profile'
+2025-12-15 12:06:57,483 - INFO - Creating page "Product" -> "Wallets 3.0 - App Settings and Profile"
+2025-12-15 12:06:57,995 - INFO - ✓ Created page: Wallets 3.0 - App Settings and Profile (ID: 13653344264) [original title: App Settings and Profile] (empty) under root
+2025-12-15 12:06:57,996 - INFO -   Path: '09-App-Settings-and-Profile' -> page_id=13653344264, parent_id=13652328547
+2025-12-15 12:06:57,996 - INFO - Creating page: Services (parent: 13652328547)
+2025-12-15 12:06:58,130 - INFO - Creating page "Product" -> "Services"
+2025-12-15 12:06:58,643 - INFO - ✓ Created page: Services (ID: 13652590598) (empty) under root
+2025-12-15 12:06:58,644 - INFO -   Path: '10-Services' -> page_id=13652590598, parent_id=13652328547
+2025-12-15 12:06:58,645 - INFO - Creating page: Loyalty Cards (parent: 13652328547)
+2025-12-15 12:06:58,790 - INFO - Creating page "Product" -> "Loyalty Cards"
+2025-12-15 12:06:59,300 - INFO - ✓ Created page: Loyalty Cards (ID: 13652328558) (empty) under root
+2025-12-15 12:06:59,300 - INFO -   Path: '11-Loyalty-Cards' -> page_id=13652328558, parent_id=13652328547
+2025-12-15 12:06:59,301 - INFO - Creating page: Visa (parent: 13652328547)
+2025-12-15 12:06:59,417 - INFO - Creating page "Product" -> "Visa"
+2025-12-15 12:06:59,923 - INFO - ✓ Created page: Visa (ID: 13653180420) (empty) under root
+2025-12-15 12:06:59,923 - INFO -   Path: '21-Visa' -> page_id=13653180420, parent_id=13652328547
+2025-12-15 12:06:59,923 - INFO - Resolving parent for path: '01-Onboarding-and-Authentication' (normalized: '01-Onboarding-and-Authentication', title: 'Onboarding and Authentication')
+2025-12-15 12:06:59,924 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa']
+2025-12-15 12:06:59,924 - INFO - Looking for parent_key: '01-Onboarding-and-Authentication' (repr: '01-Onboarding-and-Authentication', type: str)
+2025-12-15 12:06:59,924 - INFO - ✓ Found parent '01-Onboarding-and-Authentication' in created_pages -> 13652721684
+2025-12-15 12:06:59,924 - INFO - Resolved parent for '01-Onboarding-and-Authentication\Authentication-and-Security-Management.md': 13652721684 (parent path: '01-Onboarding-and-Authentication')
+2025-12-15 12:06:59,924 - INFO - Creating page: Authentication and Security Management (parent: 13652721684)
+2025-12-15 12:07:00,078 - INFO - Creating page "Product" -> "Authentication and Security Management"
+2025-12-15 12:07:00,613 - INFO - ✓ Created page: Authentication and Security Management (ID: 13652885515) (14170 chars) under parent 13652721684
+2025-12-15 12:07:00,614 - INFO -   Path: '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md' -> page_id=13652885515, parent_id=13652721684
+2025-12-15 12:07:00,614 - INFO - Resolving parent for path: '01-Onboarding-and-Authentication' (normalized: '01-Onboarding-and-Authentication', title: 'Onboarding and Authentication')
+2025-12-15 12:07:00,615 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md']
+2025-12-15 12:07:00,615 - INFO - Looking for parent_key: '01-Onboarding-and-Authentication' (repr: '01-Onboarding-and-Authentication', type: str)
+2025-12-15 12:07:00,615 - INFO - ✓ Found parent '01-Onboarding-and-Authentication' in created_pages -> 13652721684
+2025-12-15 12:07:00,615 - INFO - Resolved parent for '01-Onboarding-and-Authentication\Sign-in.md': 13652721684 (parent path: '01-Onboarding-and-Authentication')
+2025-12-15 12:07:00,615 - INFO - Creating page: Sign In (parent: 13652721684)
+2025-12-15 12:07:00,748 - INFO - Creating page "Product" -> "Sign In"
+2025-12-15 12:07:01,263 - INFO - ✓ Created page: Sign In (ID: 13653147670) (7626 chars) under parent 13652721684
+2025-12-15 12:07:01,263 - INFO -   Path: '01-Onboarding-and-Authentication/Sign-in.md' -> page_id=13653147670, parent_id=13652721684
+2025-12-15 12:07:01,263 - INFO - Resolving parent for path: '01-Onboarding-and-Authentication' (normalized: '01-Onboarding-and-Authentication', title: 'Onboarding and Authentication')
+2025-12-15 12:07:01,263 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md']
+2025-12-15 12:07:01,264 - INFO - Looking for parent_key: '01-Onboarding-and-Authentication' (repr: '01-Onboarding-and-Authentication', type: str)
+2025-12-15 12:07:01,264 - INFO - ✓ Found parent '01-Onboarding-and-Authentication' in created_pages -> 13652721684
+2025-12-15 12:07:01,264 - INFO - Resolved parent for '01-Onboarding-and-Authentication\Sign-up.md': 13652721684 (parent path: '01-Onboarding-and-Authentication')
+2025-12-15 12:07:01,264 - INFO - Creating page: Sign Up (parent: 13652721684)
+2025-12-15 12:07:01,371 - INFO - Creating page "Product" -> "Sign Up"
+2025-12-15 12:07:01,910 - INFO - ✓ Created page: Sign Up (ID: 13653049348) (22771 chars) under parent 13652721684
+2025-12-15 12:07:01,911 - INFO -   Path: '01-Onboarding-and-Authentication/Sign-up.md' -> page_id=13653049348, parent_id=13652721684
+2025-12-15 12:07:01,911 - INFO - Creating page: Identity KYC and Account Status (parent: 13652328547)
+2025-12-15 12:07:02,030 - INFO - Creating page "Product" -> "Identity KYC and Account Status"
+2025-12-15 12:07:02,651 - INFO - ✓ Created page: Identity KYC and Account Status (ID: 13653868545) (43423 chars) under root
+2025-12-15 12:07:02,651 - INFO -   Path: '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md' -> page_id=13653868545, parent_id=13652328547
+2025-12-15 12:07:02,651 - INFO - Creating page: Top-Up (parent: 13652328547)
+2025-12-15 12:07:02,789 - INFO - Creating page "Product" -> "Top-Up"
+2025-12-15 12:07:03,330 - INFO - ✓ Created page: Top-Up (ID: 13652852741) (16648 chars) under root
+2025-12-15 12:07:03,330 - INFO -   Path: '03-Payments-and-Top-Up/Top-Up.md' -> page_id=13652852741, parent_id=13652328547
+2025-12-15 12:07:03,331 - INFO - Resolving parent for path: '04-Transfers-and-Beneficiaries' (normalized: '04-Transfers-and-Beneficiaries', title: 'Transfers and Beneficiaries')
+2025-12-15 12:07:03,331 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md']
+2025-12-15 12:07:03,331 - INFO - Looking for parent_key: '04-Transfers-and-Beneficiaries' (repr: '04-Transfers-and-Beneficiaries', type: str)
+2025-12-15 12:07:03,331 - INFO - ✓ Found parent '04-Transfers-and-Beneficiaries' in created_pages -> 13653147652
+2025-12-15 12:07:03,331 - INFO - Resolved parent for '04-Transfers-and-Beneficiaries\Address-Book-Beneficiaries.md': 13653147652 (parent path: '04-Transfers-and-Beneficiaries')
+2025-12-15 12:07:03,331 - INFO - Creating page: Address Book and Beneficiaries Beneficiaries (parent: 13653147652)
+2025-12-15 12:07:03,450 - INFO - Creating page "Product" -> "Address Book and Beneficiaries Beneficiaries"
+2025-12-15 12:07:03,968 - INFO - ✓ Created page: Address Book and Beneficiaries Beneficiaries (ID: 13653803028) (16102 chars) under parent 13653147652
+2025-12-15 12:07:03,968 - INFO -   Path: '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md' -> page_id=13653803028, parent_id=13653147652
+2025-12-15 12:07:03,969 - INFO - Resolving parent for path: '04-Transfers-and-Beneficiaries' (normalized: '04-Transfers-and-Beneficiaries', title: 'Transfers and Beneficiaries')
+2025-12-15 12:07:03,969 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md']
+2025-12-15 12:07:03,970 - INFO - Looking for parent_key: '04-Transfers-and-Beneficiaries' (repr: '04-Transfers-and-Beneficiaries', type: str)
+2025-12-15 12:07:03,971 - INFO - ✓ Found parent '04-Transfers-and-Beneficiaries' in created_pages -> 13653147652
+2025-12-15 12:07:03,971 - INFO - Resolved parent for '04-Transfers-and-Beneficiaries\IBAN-Transfers.md': 13653147652 (parent path: '04-Transfers-and-Beneficiaries')
+2025-12-15 12:07:03,972 - INFO - Creating page: IBAN Transfers External Bank Transfers (parent: 13653147652)
+2025-12-15 12:07:04,105 - INFO - Creating page "Product" -> "IBAN Transfers External Bank Transfers"
+2025-12-15 12:07:04,618 - INFO - ✓ Created page: IBAN Transfers External Bank Transfers (ID: 13653082116) (18321 chars) under parent 13653147652
+2025-12-15 12:07:04,619 - INFO -   Path: '04-Transfers-and-Beneficiaries/IBAN-Transfers.md' -> page_id=13653082116, parent_id=13653147652
+2025-12-15 12:07:04,619 - INFO - Resolving parent for path: '04-Transfers-and-Beneficiaries' (normalized: '04-Transfers-and-Beneficiaries', title: 'Transfers and Beneficiaries')
+2025-12-15 12:07:04,620 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md']
+2025-12-15 12:07:04,621 - INFO - Looking for parent_key: '04-Transfers-and-Beneficiaries' (repr: '04-Transfers-and-Beneficiaries', type: str)
+2025-12-15 12:07:04,621 - INFO - ✓ Found parent '04-Transfers-and-Beneficiaries' in created_pages -> 13653147652
+2025-12-15 12:07:04,622 - INFO - Resolved parent for '04-Transfers-and-Beneficiaries\P2P-and-Wallet-Transfers.md': 13653147652 (parent path: '04-Transfers-and-Beneficiaries')
+2025-12-15 12:07:04,622 - INFO - Creating page: P2P and Wallet Transfers (parent: 13653147652)
+2025-12-15 12:07:04,738 - INFO - Creating page "Product" -> "P2P and Wallet Transfers"
+2025-12-15 12:07:05,233 - INFO - ✓ Created page: P2P and Wallet Transfers (ID: 13653901313) (14234 chars) under parent 13653147652
+2025-12-15 12:07:05,234 - INFO -   Path: '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md' -> page_id=13653901313, parent_id=13653147652
+2025-12-15 12:07:05,235 - INFO - Creating page: Payment Cards (parent: 13652328547)
+2025-12-15 12:07:05,373 - INFO - Creating page "Product" -> "Payment Cards"
+2025-12-15 12:07:06,037 - INFO - ✓ Created page: Payment Cards (ID: 13653868612) (41341 chars) under root
+2025-12-15 12:07:06,037 - INFO -   Path: '05-Payment-Cards/Payment-Cards.md' -> page_id=13653868612, parent_id=13652328547
+2025-12-15 12:07:06,038 - INFO - Creating page: Plans Fees and Limits (parent: 13652328547)
+2025-12-15 12:07:06,145 - INFO - Creating page "Product" -> "Plans Fees and Limits"
+2025-12-15 12:07:06,639 - INFO - ✓ Created page: Plans Fees and Limits (ID: 13652951054) (10010 chars) under root
+2025-12-15 12:07:06,640 - INFO -   Path: '06-Plans-Fees-Limits/Plans-Fees-Limits.md' -> page_id=13652951054, parent_id=13652328547
+2025-12-15 12:07:06,640 - INFO - Resolving parent for path: '07-History-and-Payments' (normalized: '07-History-and-Payments', title: 'History and Payments')
+2025-12-15 12:07:06,640 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md']
+2025-12-15 12:07:06,641 - INFO - Looking for parent_key: '07-History-and-Payments' (repr: '07-History-and-Payments', type: str)
+2025-12-15 12:07:06,641 - INFO - ✓ Found parent '07-History-and-Payments' in created_pages -> 13653803010
+2025-12-15 12:07:06,641 - INFO - Resolved parent for '07-History-and-Payments\Statements-and-Reports.md': 13653803010 (parent path: '07-History-and-Payments')
+2025-12-15 12:07:06,641 - INFO - Creating page: Statements and Reports (parent: 13653803010)
+2025-12-15 12:07:06,758 - INFO - Creating page "Product" -> "Statements and Reports"
+2025-12-15 12:07:07,259 - INFO - ✓ Created page: Statements and Reports (ID: 13652852788) (11275 chars) under parent 13653803010
+2025-12-15 12:07:07,259 - INFO -   Path: '07-History-and-Payments/Statements-and-Reports.md' -> page_id=13652852788, parent_id=13653803010
+2025-12-15 12:07:07,260 - INFO - Resolving parent for path: '07-History-and-Payments' (normalized: '07-History-and-Payments', title: 'History and Payments')
+2025-12-15 12:07:07,260 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md']
+2025-12-15 12:07:07,261 - INFO - Looking for parent_key: '07-History-and-Payments' (repr: '07-History-and-Payments', type: str)
+2025-12-15 12:07:07,261 - INFO - ✓ Found parent '07-History-and-Payments' in created_pages -> 13653803010
+2025-12-15 12:07:07,262 - INFO - Resolved parent for '07-History-and-Payments\Transaction-History.md': 13653803010 (parent path: '07-History-and-Payments')
+2025-12-15 12:07:07,262 - INFO - Creating page: Transaction History and Statements (parent: 13653803010)
+2025-12-15 12:07:07,371 - INFO - Creating page "Product" -> "Transaction History and Statements"
+2025-12-15 12:07:07,900 - INFO - ✓ Created page: Transaction History and Statements (ID: 13652066369) (14071 chars) under parent 13653803010
+2025-12-15 12:07:07,900 - INFO -   Path: '07-History-and-Payments/Transaction-History.md' -> page_id=13652066369, parent_id=13653803010
+2025-12-15 12:07:07,900 - INFO - Resolving parent for path: '08-Notifications' (normalized: '08-Notifications', title: 'Notifications')
+2025-12-15 12:07:07,901 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 12:07:07,901 - INFO - Looking for parent_key: '08-Notifications' (repr: '08-Notifications', type: str)
+2025-12-15 12:07:07,901 - INFO - ✓ Found parent '08-Notifications' in created_pages -> 13653639173
+2025-12-15 12:07:07,901 - INFO - Resolved parent for '08-Notifications\Legal-Consents.md': 13653639173 (parent path: '08-Notifications')
+2025-12-15 12:07:07,901 - INFO - Creating page: Legal Consents (parent: 13653639173)
+2025-12-15 12:07:08,049 - INFO - Creating page "Product" -> "Legal Consents"
+2025-12-15 12:07:08,561 - INFO - ✓ Created page: Legal Consents (ID: 13652754435) (6007 chars) under parent 13653639173
+2025-12-15 12:07:08,562 - INFO -   Path: '08-Notifications/Legal-Consents.md' -> page_id=13652754435, parent_id=13653639173
+2025-12-15 12:07:08,563 - INFO - Resolving parent for path: '08-Notifications' (normalized: '08-Notifications', title: 'Notifications')
+2025-12-15 12:07:08,563 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md']
+2025-12-15 12:07:08,564 - INFO - Looking for parent_key: '08-Notifications' (repr: '08-Notifications', type: str)
+2025-12-15 12:07:08,564 - INFO - ✓ Found parent '08-Notifications' in created_pages -> 13653639173
+2025-12-15 12:07:08,565 - INFO - Resolved parent for '08-Notifications\Notifications.md': 13653639173 (parent path: '08-Notifications')
+2025-12-15 12:07:08,566 - INFO - Creating page: Notifications (parent: 13653639173)
+2025-12-15 12:07:08,705 - INFO - Creating page "Product" -> "Notifications"
+2025-12-15 12:07:08,863 - WARNING - Page title 'Notifications' already exists. Retrying with: 'Wallets 3.0 - Notifications'
+2025-12-15 12:07:08,863 - INFO - Creating page "Product" -> "Wallets 3.0 - Notifications"
+2025-12-15 12:07:09,371 - INFO - ✓ Created page: Wallets 3.0 - Notifications (ID: 13652557829) [original title: Notifications] (7282 chars) under parent 13653639173
+2025-12-15 12:07:09,372 - INFO -   Path: '08-Notifications/Notifications.md' -> page_id=13652557829, parent_id=13653639173
+2025-12-15 12:07:09,372 - INFO - Resolving parent for path: '08-Notifications' (normalized: '08-Notifications', title: 'Notifications')
+2025-12-15 12:07:09,372 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md']
+2025-12-15 12:07:09,372 - INFO - Looking for parent_key: '08-Notifications' (repr: '08-Notifications', type: str)
+2025-12-15 12:07:09,372 - INFO - ✓ Found parent '08-Notifications' in created_pages -> 13653639173
+2025-12-15 12:07:09,372 - INFO - Resolved parent for '08-Notifications\Unified-Prompts-Framework.md': 13653639173 (parent path: '08-Notifications')
+2025-12-15 12:07:09,373 - INFO - Creating page: Unified Prompts Framework (parent: 13653639173)
+2025-12-15 12:07:09,507 - INFO - Creating page "Product" -> "Unified Prompts Framework"
+2025-12-15 12:07:10,067 - INFO - ✓ Created page: Unified Prompts Framework (ID: 13652361252) (16954 chars) under parent 13653639173
+2025-12-15 12:07:10,067 - INFO -   Path: '08-Notifications/Unified-Prompts-Framework.md' -> page_id=13652361252, parent_id=13653639173
+2025-12-15 12:07:10,067 - INFO - Resolving parent for path: '09-App-Settings-and-Profile' (normalized: '09-App-Settings-and-Profile', title: 'App Settings and Profile')
+2025-12-15 12:07:10,068 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md']
+2025-12-15 12:07:10,068 - INFO - Looking for parent_key: '09-App-Settings-and-Profile' (repr: '09-App-Settings-and-Profile', type: str)
+2025-12-15 12:07:10,068 - INFO - ✓ Found parent '09-App-Settings-and-Profile' in created_pages -> 13653344264
+2025-12-15 12:07:10,068 - INFO - Resolved parent for '09-App-Settings-and-Profile\Profile-Management.md': 13653344264 (parent path: '09-App-Settings-and-Profile')
+2025-12-15 12:07:10,068 - INFO - Creating page: Profile Settings and Security (parent: 13653344264)
+2025-12-15 12:07:10,184 - INFO - Creating page "Product" -> "Profile Settings and Security"
+2025-12-15 12:07:10,706 - INFO - ✓ Created page: Profile Settings and Security (ID: 13653344282) (11374 chars) under parent 13653344264
+2025-12-15 12:07:10,706 - INFO -   Path: '09-App-Settings-and-Profile/Profile-Management.md' -> page_id=13653344282, parent_id=13653344264
+2025-12-15 12:07:10,706 - INFO - Resolving parent for path: '09-App-Settings-and-Profile' (normalized: '09-App-Settings-and-Profile', title: 'App Settings and Profile')
+2025-12-15 12:07:10,707 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md']
+2025-12-15 12:07:10,707 - INFO - Looking for parent_key: '09-App-Settings-and-Profile' (repr: '09-App-Settings-and-Profile', type: str)
+2025-12-15 12:07:10,707 - INFO - ✓ Found parent '09-App-Settings-and-Profile' in created_pages -> 13653344264
+2025-12-15 12:07:10,707 - INFO - Resolved parent for '09-App-Settings-and-Profile\Security-and-Account-Management.md': 13653344264 (parent path: '09-App-Settings-and-Profile')
+2025-12-15 12:07:10,707 - INFO - Creating page: Security and Account Management (parent: 13653344264)
+2025-12-15 12:07:10,836 - INFO - Creating page "Product" -> "Security and Account Management"
+2025-12-15 12:07:11,342 - INFO - ✓ Created page: Security and Account Management (ID: 13652656140) (7404 chars) under parent 13653344264
+2025-12-15 12:07:11,342 - INFO -   Path: '09-App-Settings-and-Profile/Security-and-Account-Management.md' -> page_id=13652656140, parent_id=13653344264
+2025-12-15 12:07:11,342 - INFO - Resolving parent for path: '09-App-Settings-and-Profile' (normalized: '09-App-Settings-and-Profile', title: 'App Settings and Profile')
+2025-12-15 12:07:11,342 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md']
+2025-12-15 12:07:11,343 - INFO - Looking for parent_key: '09-App-Settings-and-Profile' (repr: '09-App-Settings-and-Profile', type: str)
+2025-12-15 12:07:11,343 - INFO - ✓ Found parent '09-App-Settings-and-Profile' in created_pages -> 13653344264
+2025-12-15 12:07:11,343 - INFO - Resolved parent for '09-App-Settings-and-Profile\Settings.md': 13653344264 (parent path: '09-App-Settings-and-Profile')
+2025-12-15 12:07:11,343 - INFO - Creating page: Settings (parent: 13653344264)
+2025-12-15 12:07:11,450 - INFO - Creating page "Product" -> "Settings"
+2025-12-15 12:07:11,956 - INFO - ✓ Created page: Settings (ID: 13653442565) (4933 chars) under parent 13653344264
+2025-12-15 12:07:11,956 - INFO -   Path: '09-App-Settings-and-Profile/Settings.md' -> page_id=13653442565, parent_id=13653344264
+2025-12-15 12:07:11,957 - INFO - Resolving parent for path: '09-App-Settings-and-Profile' (normalized: '09-App-Settings-and-Profile', title: 'App Settings and Profile')
+2025-12-15 12:07:11,957 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md']
+2025-12-15 12:07:11,957 - INFO - Looking for parent_key: '09-App-Settings-and-Profile' (repr: '09-App-Settings-and-Profile', type: str)
+2025-12-15 12:07:11,957 - INFO - ✓ Found parent '09-App-Settings-and-Profile' in created_pages -> 13653344264
+2025-12-15 12:07:11,958 - INFO - Resolved parent for '09-App-Settings-and-Profile\Support-and-Help.md': 13653344264 (parent path: '09-App-Settings-and-Profile')
+2025-12-15 12:07:11,958 - INFO - Creating page: Support and Help (parent: 13653344264)
+2025-12-15 12:07:12,100 - INFO - Creating page "Product" -> "Support and Help"
+2025-12-15 12:07:12,591 - INFO - ✓ Created page: Support and Help (ID: 13653901348) (13878 chars) under parent 13653344264
+2025-12-15 12:07:12,592 - INFO -   Path: '09-App-Settings-and-Profile/Support-and-Help.md' -> page_id=13653901348, parent_id=13653344264
+2025-12-15 12:07:12,593 - INFO - Resolving parent for path: '10-Services' (normalized: '10-Services', title: 'Services')
+2025-12-15 12:07:12,593 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md']
+2025-12-15 12:07:12,594 - INFO - Looking for parent_key: '10-Services' (repr: '10-Services', type: str)
+2025-12-15 12:07:12,595 - INFO - ✓ Found parent '10-Services' in created_pages -> 13652590598
+2025-12-15 12:07:12,595 - INFO - Resolved parent for '10-Services\Credits.md': 13652590598 (parent path: '10-Services')
+2025-12-15 12:07:12,596 - INFO - Creating page: Credits (parent: 13652590598)
+2025-12-15 12:07:12,731 - INFO - Creating page "Product" -> "Credits"
+2025-12-15 12:07:13,242 - INFO - ✓ Created page: Credits (ID: 13653737474) (33174 chars) under parent 13652590598
+2025-12-15 12:07:13,243 - INFO -   Path: '10-Services/Credits.md' -> page_id=13653737474, parent_id=13652590598
+2025-12-15 12:07:13,244 - INFO - Resolving parent for path: '10-Services' (normalized: '10-Services', title: 'Services')
+2025-12-15 12:07:13,244 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md']
+2025-12-15 12:07:13,245 - INFO - Looking for parent_key: '10-Services' (repr: '10-Services', type: str)
+2025-12-15 12:07:13,245 - INFO - ✓ Found parent '10-Services' in created_pages -> 13652590598
+2025-12-15 12:07:13,246 - INFO - Resolved parent for '10-Services\Crypto.md': 13652590598 (parent path: '10-Services')
+2025-12-15 12:07:13,246 - INFO - Creating page: Crypto (parent: 13652590598)
+2025-12-15 12:07:13,377 - INFO - Creating page "Product" -> "Crypto"
+2025-12-15 12:07:13,968 - INFO - ✓ Created page: Crypto (ID: 13652754462) (33419 chars) under parent 13652590598
+2025-12-15 12:07:13,969 - INFO -   Path: '10-Services/Crypto.md' -> page_id=13652754462, parent_id=13652590598
+2025-12-15 12:07:13,970 - INFO - Resolving parent for path: '10-Services' (normalized: '10-Services', title: 'Services')
+2025-12-15 12:07:13,971 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md']
+2025-12-15 12:07:13,971 - INFO - Looking for parent_key: '10-Services' (repr: '10-Services', type: str)
+2025-12-15 12:07:13,972 - INFO - ✓ Found parent '10-Services' in created_pages -> 13652590598
+2025-12-15 12:07:13,972 - INFO - Resolved parent for '10-Services\Utility-Bills.md': 13652590598 (parent path: '10-Services')
+2025-12-15 12:07:13,973 - INFO - Creating page: Utility Bills (parent: 13652590598)
+2025-12-15 12:07:14,114 - INFO - Creating page "Product" -> "Utility Bills"
+2025-12-15 12:07:14,634 - INFO - ✓ Created page: Utility Bills (ID: 13653409800) (18325 chars) under parent 13652590598
+2025-12-15 12:07:14,634 - INFO -   Path: '10-Services/Utility-Bills.md' -> page_id=13653409800, parent_id=13652590598
+2025-12-15 12:07:14,635 - INFO - Resolving parent for path: '10-Services' (normalized: '10-Services', title: 'Services')
+2025-12-15 12:07:14,636 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md']
+2025-12-15 12:07:14,636 - INFO - Looking for parent_key: '10-Services' (repr: '10-Services', type: str)
+2025-12-15 12:07:14,637 - INFO - ✓ Found parent '10-Services' in created_pages -> 13652590598
+2025-12-15 12:07:14,637 - INFO - Resolved parent for '10-Services\Vignettes.md': 13652590598 (parent path: '10-Services')
+2025-12-15 12:07:14,638 - INFO - Creating page: Vignettes (parent: 13652590598)
+2025-12-15 12:07:14,771 - INFO - Creating page "Product" -> "Vignettes"
+2025-12-15 12:07:15,305 - INFO - ✓ Created page: Vignettes (ID: 13652361295) (15669 chars) under parent 13652590598
+2025-12-15 12:07:15,306 - INFO -   Path: '10-Services/Vignettes.md' -> page_id=13652361295, parent_id=13652590598
+2025-12-15 12:07:15,306 - INFO - Resolving parent for path: '11-Loyalty-Cards' (normalized: '11-Loyalty-Cards', title: 'Loyalty Cards')
+2025-12-15 12:07:15,307 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md', '10-Services/Vignettes.md']
+2025-12-15 12:07:15,308 - INFO - Looking for parent_key: '11-Loyalty-Cards' (repr: '11-Loyalty-Cards', type: str)
+2025-12-15 12:07:15,308 - INFO - ✓ Found parent '11-Loyalty-Cards' in created_pages -> 13652328558
+2025-12-15 12:07:15,309 - INFO - Resolved parent for '11-Loyalty-Cards\Expense-Management.md': 13652328558 (parent path: '11-Loyalty-Cards')
+2025-12-15 12:07:15,309 - INFO - Creating page: Expense Management (parent: 13652328558)
+2025-12-15 12:07:15,450 - INFO - Creating page "Product" -> "Expense Management"
+2025-12-15 12:07:15,956 - INFO - ✓ Created page: Expense Management (ID: 13653475333) (9146 chars) under parent 13652328558
+2025-12-15 12:07:15,957 - INFO -   Path: '11-Loyalty-Cards/Expense-Management.md' -> page_id=13653475333, parent_id=13652328558
+2025-12-15 12:07:15,957 - INFO - Resolving parent for path: '11-Loyalty-Cards' (normalized: '11-Loyalty-Cards', title: 'Loyalty Cards')
+2025-12-15 12:07:15,957 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md', '10-Services/Vignettes.md', '11-Loyalty-Cards/Expense-Management.md']
+2025-12-15 12:07:15,958 - INFO - Looking for parent_key: '11-Loyalty-Cards' (repr: '11-Loyalty-Cards', type: str)
+2025-12-15 12:07:15,958 - INFO - ✓ Found parent '11-Loyalty-Cards' in created_pages -> 13652328558
+2025-12-15 12:07:15,958 - INFO - Resolved parent for '11-Loyalty-Cards\Loyalty-Cards.md': 13652328558 (parent path: '11-Loyalty-Cards')
+2025-12-15 12:07:15,958 - INFO - Creating page: User Engagement Features (parent: 13652328558)
+2025-12-15 12:07:16,064 - INFO - Creating page "Product" -> "User Engagement Features"
+2025-12-15 12:07:16,577 - INFO - ✓ Created page: User Engagement Features (ID: 13652033641) (24617 chars) under parent 13652328558
+2025-12-15 12:07:16,578 - INFO -   Path: '11-Loyalty-Cards/Loyalty-Cards.md' -> page_id=13652033641, parent_id=13652328558
+2025-12-15 12:07:16,578 - INFO - Resolving parent for path: '11-Loyalty-Cards' (normalized: '11-Loyalty-Cards', title: 'Loyalty Cards')
+2025-12-15 12:07:16,578 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md', '10-Services/Vignettes.md', '11-Loyalty-Cards/Expense-Management.md', '11-Loyalty-Cards/Loyalty-Cards.md']
+2025-12-15 12:07:16,578 - INFO - Looking for parent_key: '11-Loyalty-Cards' (repr: '11-Loyalty-Cards', type: str)
+2025-12-15 12:07:16,579 - INFO - ✓ Found parent '11-Loyalty-Cards' in created_pages -> 13652328558
+2025-12-15 12:07:16,579 - INFO - Resolved parent for '11-Loyalty-Cards\Offers.md': 13652328558 (parent path: '11-Loyalty-Cards')
+2025-12-15 12:07:16,579 - INFO - Creating page: Offers (parent: 13652328558)
+2025-12-15 12:07:16,714 - INFO - Creating page "Product" -> "Offers"
+2025-12-15 12:07:17,222 - INFO - ✓ Created page: Offers (ID: 13652426759) (10560 chars) under parent 13652328558
+2025-12-15 12:07:17,222 - INFO -   Path: '11-Loyalty-Cards/Offers.md' -> page_id=13652426759, parent_id=13652328558
+2025-12-15 12:07:17,223 - INFO - Resolving parent for path: '11-Loyalty-Cards' (normalized: '11-Loyalty-Cards', title: 'Loyalty Cards')
+2025-12-15 12:07:17,223 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md', '10-Services/Vignettes.md', '11-Loyalty-Cards/Expense-Management.md', '11-Loyalty-Cards/Loyalty-Cards.md', '11-Loyalty-Cards/Offers.md']
+2025-12-15 12:07:17,223 - INFO - Looking for parent_key: '11-Loyalty-Cards' (repr: '11-Loyalty-Cards', type: str)
+2025-12-15 12:07:17,223 - INFO - ✓ Found parent '11-Loyalty-Cards' in created_pages -> 13652328558
+2025-12-15 12:07:17,223 - INFO - Resolved parent for '11-Loyalty-Cards\Referral-Program.md': 13652328558 (parent path: '11-Loyalty-Cards')
+2025-12-15 12:07:17,223 - INFO - Creating page: Referral Program (parent: 13652328558)
+2025-12-15 12:07:17,342 - INFO - Creating page "Product" -> "Referral Program"
+2025-12-15 12:07:17,830 - INFO - ✓ Created page: Referral Program (ID: 13653147697) (12770 chars) under parent 13652328558
+2025-12-15 12:07:17,830 - INFO -   Path: '11-Loyalty-Cards/Referral-Program.md' -> page_id=13653147697, parent_id=13652328558
+2025-12-15 12:07:17,830 - INFO - Creating page: Marketing Screens (parent: 13652328547)
+2025-12-15 12:07:17,962 - INFO - Creating page "Product" -> "Marketing Screens"
+2025-12-15 12:07:18,487 - INFO - ✓ Created page: Marketing Screens (ID: 13652721702) (14738 chars) under root
+2025-12-15 12:07:18,488 - INFO -   Path: '15-Marketing-Screens/Marketing-Screens.md' -> page_id=13652721702, parent_id=13652328547
+2025-12-15 12:07:18,488 - INFO - Creating page: Brand Specific Features (parent: 13652328547)
+2025-12-15 12:07:18,605 - INFO - Creating page "Product" -> "Brand Specific Features"
+2025-12-15 12:07:19,154 - INFO - ✓ Created page: Brand Specific Features (ID: 13653180438) (16680 chars) under root
+2025-12-15 12:07:19,154 - INFO -   Path: '17-Brand-Specific-Features/Brand-Specific-Features.md' -> page_id=13653180438, parent_id=13652328547
+2025-12-15 12:07:19,154 - INFO - Creating page: Configuration and System Management (parent: 13652328547)
+2025-12-15 12:07:19,291 - INFO - Creating page "Product" -> "Configuration and System Management"
+2025-12-15 12:07:19,838 - INFO - ✓ Created page: Configuration and System Management (ID: 13653737511) (12986 chars) under root
+2025-12-15 12:07:19,838 - INFO -   Path: '18-Configuration/Configuration-and-System-Management.md' -> page_id=13653737511, parent_id=13652328547
+2025-12-15 12:07:19,838 - INFO - Resolving parent for path: '21-Visa' (normalized: '21-Visa', title: 'Visa')
+2025-12-15 12:07:19,838 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md', '10-Services/Vignettes.md', '11-Loyalty-Cards/Expense-Management.md', '11-Loyalty-Cards/Loyalty-Cards.md', '11-Loyalty-Cards/Offers.md', '11-Loyalty-Cards/Referral-Program.md', '15-Marketing-Screens/Marketing-Screens.md', '17-Brand-Specific-Features/Brand-Specific-Features.md', '18-Configuration/Configuration-and-System-Management.md']
+2025-12-15 12:07:19,839 - INFO - Looking for parent_key: '21-Visa' (repr: '21-Visa', type: str)
+2025-12-15 12:07:19,839 - INFO - ✓ Found parent '21-Visa' in created_pages -> 13653180420
+2025-12-15 12:07:19,839 - INFO - Resolved parent for '21-Visa\Faster-Payments.md': 13653180420 (parent path: '21-Visa')
+2025-12-15 12:07:19,839 - INFO - Creating page: Faster Payments (parent: 13653180420)
+2025-12-15 12:07:19,955 - INFO - Creating page "Product" -> "Faster Payments"
+2025-12-15 12:07:20,443 - INFO - ✓ Created page: Faster Payments (ID: 13653803085) (7418 chars) under parent 13653180420
+2025-12-15 12:07:20,443 - INFO -   Path: '21-Visa/Faster-Payments.md' -> page_id=13653803085, parent_id=13653180420
+2025-12-15 12:07:20,444 - INFO - Resolving parent for path: '21-Visa' (normalized: '21-Visa', title: 'Visa')
+2025-12-15 12:07:20,444 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md', '08-Notifications/Notifications.md', '08-Notifications/Unified-Prompts-Framework.md', '09-App-Settings-and-Profile/Profile-Management.md', '09-App-Settings-and-Profile/Security-and-Account-Management.md', '09-App-Settings-and-Profile/Settings.md', '09-App-Settings-and-Profile/Support-and-Help.md', '10-Services/Credits.md', '10-Services/Crypto.md', '10-Services/Utility-Bills.md', '10-Services/Vignettes.md', '11-Loyalty-Cards/Expense-Management.md', '11-Loyalty-Cards/Loyalty-Cards.md', '11-Loyalty-Cards/Offers.md', '11-Loyalty-Cards/Referral-Program.md', '15-Marketing-Screens/Marketing-Screens.md', '17-Brand-Specific-Features/Brand-Specific-Features.md', '18-Configuration/Configuration-and-System-Management.md', '21-Visa/Faster-Payments.md']
+2025-12-15 12:07:20,444 - INFO - Looking for parent_key: '21-Visa' (repr: '21-Visa', type: str)
+2025-12-15 12:07:20,445 - INFO - ✓ Found parent '21-Visa' in created_pages -> 13653180420
+2025-12-15 12:07:20,445 - INFO - Resolved parent for '21-Visa\Visa.md': 13653180420 (parent path: '21-Visa')
+2025-12-15 12:07:20,445 - INFO - Creating page: Visa (parent: 13653180420)
+2025-12-15 12:07:20,585 - INFO - Creating page "Product" -> "Visa"
+2025-12-15 12:07:20,745 - WARNING - Page title 'Visa' already exists. Retrying with: 'Wallets 3.0 - Visa'
+2025-12-15 12:07:20,745 - INFO - Creating page "Product" -> "Wallets 3.0 - Visa"
+2025-12-15 12:07:21,257 - INFO - ✓ Created page: Wallets 3.0 - Visa (ID: 13652131932) [original title: Visa] (8518 chars) under parent 13653180420
+2025-12-15 12:07:21,258 - INFO -   Path: '21-Visa/Visa.md' -> page_id=13652131932, parent_id=13653180420
+2025-12-15 12:07:21,259 - INFO - Sync completed successfully
+2025-12-15 14:44:07,876 - INFO - Logging to file: C:\Users\svetlin.chobanov\OneDrive - Paynetics\Documents\Python\Cursor project I\confluence_sync.log
+2025-12-15 14:44:08,651 - INFO - Starting sync from C:\Users\svetlin.chobanov\OneDrive - Paynetics\Documents\Cursor\Project\Outputs\Wallets\Wallets-2.0-Pages to Confluence page 13653082155
+2025-12-15 14:44:08,651 - INFO - Traversing directory structure...
+2025-12-15 14:44:08,684 - INFO - Found 32 Markdown files and 15 directories
+2025-12-15 14:44:08,685 - INFO - Analyzing changes...
+2025-12-15 14:44:08,685 - INFO - rest/api/content/13653082155/child/page
+2025-12-15 14:44:13,509 - INFO - Executing operations...
+2025-12-15 14:44:13,510 - INFO - rest/api/content/13653082155/child/page
+2025-12-15 14:44:13,802 - INFO - Operations to execute (sorted):
+2025-12-15 14:44:13,804 - INFO -   1. [DIR] 01-Onboarding-and-Authentication -> parent: 13653082155, title: Onboarding and Authentication
+2025-12-15 14:44:13,804 - INFO -   2. [DIR] 04-Transfers-and-Beneficiaries -> parent: 13653082155, title: Transfers and Beneficiaries
+2025-12-15 14:44:13,805 - INFO -   3. [DIR] 07-History-and-Payments -> parent: 13653082155, title: History and Payments
+2025-12-15 14:44:13,806 - INFO -   4. [DIR] 08-Notifications -> parent: 13653082155, title: Notifications
+2025-12-15 14:44:13,807 - INFO -   5. [DIR] 09-App-Settings-and-Profile -> parent: 13653082155, title: App Settings and Profile
+2025-12-15 14:44:13,807 - INFO -   6. [DIR] 10-Services -> parent: 13653082155, title: Services
+2025-12-15 14:44:13,808 - INFO -   7. [DIR] 11-Loyalty-Cards -> parent: 13653082155, title: Loyalty Cards
+2025-12-15 14:44:13,809 - INFO -   8. [DIR] 21-Visa -> parent: 13653082155, title: Visa
+2025-12-15 14:44:13,809 - INFO -   9. [FILE] 01-Onboarding-and-Authentication\Authentication-and-Security-Management.md -> parent: None, title: Authentication and Security Management
+2025-12-15 14:44:13,810 - INFO -   10. [FILE] 01-Onboarding-and-Authentication\Sign-in.md -> parent: None, title: Sign In
+2025-12-15 14:44:13,811 - INFO -   ... and 30 more operations
+2025-12-15 14:44:13,812 - INFO - Creating page: Onboarding and Authentication (parent: 13653082155)
+2025-12-15 14:44:13,965 - INFO - Creating page "Product" -> "Onboarding and Authentication"
+2025-12-15 14:44:14,121 - WARNING - Page title 'Onboarding and Authentication' already exists. Retrying with: 'Wallets 4.0 - Onboarding and Authentication'
+2025-12-15 14:44:14,121 - INFO - Creating page "Product" -> "Wallets 4.0 - Onboarding and Authentication"
+2025-12-15 14:44:14,643 - INFO - ✓ Created page: Wallets 4.0 - Onboarding and Authentication (ID: 13653344315) [original title: Onboarding and Authentication] (empty) under root
+2025-12-15 14:44:14,644 - INFO -   Path: '01-Onboarding-and-Authentication' -> page_id=13653344315, parent_id=13653082155
+2025-12-15 14:44:14,645 - INFO - Creating page: Transfers and Beneficiaries (parent: 13653082155)
+2025-12-15 14:44:14,793 - INFO - Creating page "Product" -> "Transfers and Beneficiaries"
+2025-12-15 14:44:14,942 - WARNING - Page title 'Transfers and Beneficiaries' already exists. Retrying with: 'Wallets 4.0 - Transfers and Beneficiaries'
+2025-12-15 14:44:14,942 - INFO - Creating page "Product" -> "Wallets 4.0 - Transfers and Beneficiaries"
+2025-12-15 14:44:15,465 - INFO - ✓ Created page: Wallets 4.0 - Transfers and Beneficiaries (ID: 13653540869) [original title: Transfers and Beneficiaries] (empty) under root
+2025-12-15 14:44:15,467 - INFO -   Path: '04-Transfers-and-Beneficiaries' -> page_id=13653540869, parent_id=13653082155
+2025-12-15 14:44:15,468 - INFO - Creating page: History and Payments (parent: 13653082155)
+2025-12-15 14:44:15,616 - INFO - Creating page "Product" -> "History and Payments"
+2025-12-15 14:44:15,768 - WARNING - Page title 'History and Payments' already exists. Retrying with: 'Wallets 4.0 - History and Payments'
+2025-12-15 14:44:15,770 - INFO - Creating page "Product" -> "Wallets 4.0 - History and Payments"
+2025-12-15 14:44:16,293 - INFO - ✓ Created page: Wallets 4.0 - History and Payments (ID: 13652230228) [original title: History and Payments] (empty) under root
+2025-12-15 14:44:16,295 - INFO -   Path: '07-History-and-Payments' -> page_id=13652230228, parent_id=13653082155
+2025-12-15 14:44:16,296 - INFO - Creating page: Notifications (parent: 13653082155)
+2025-12-15 14:44:16,432 - INFO - Creating page "Product" -> "Notifications"
+2025-12-15 14:44:16,579 - WARNING - Page title 'Notifications' already exists. Retrying with: 'Wallets 4.0 - Notifications'
+2025-12-15 14:44:16,580 - INFO - Creating page "Product" -> "Wallets 4.0 - Notifications"
+2025-12-15 14:44:17,294 - INFO - ✓ Created page: Wallets 4.0 - Notifications (ID: 13652590616) [original title: Notifications] (empty) under root
+2025-12-15 14:44:17,294 - INFO -   Path: '08-Notifications' -> page_id=13652590616, parent_id=13653082155
+2025-12-15 14:44:17,294 - INFO - Creating page: App Settings and Profile (parent: 13653082155)
+2025-12-15 14:44:17,422 - INFO - Creating page "Product" -> "App Settings and Profile"
+2025-12-15 14:44:17,570 - WARNING - Page title 'App Settings and Profile' already exists. Retrying with: 'Wallets 4.0 - App Settings and Profile'
+2025-12-15 14:44:17,570 - INFO - Creating page "Product" -> "Wallets 4.0 - App Settings and Profile"
+2025-12-15 14:44:18,054 - INFO - ✓ Created page: Wallets 4.0 - App Settings and Profile (ID: 13653147725) [original title: App Settings and Profile] (empty) under root
+2025-12-15 14:44:18,055 - INFO -   Path: '09-App-Settings-and-Profile' -> page_id=13653147725, parent_id=13653082155
+2025-12-15 14:44:18,055 - INFO - Creating page: Services (parent: 13653082155)
+2025-12-15 14:44:18,191 - INFO - Creating page "Product" -> "Services"
+2025-12-15 14:44:18,310 - WARNING - Page title 'Services' already exists. Retrying with: 'Wallets 4.0 - Services'
+2025-12-15 14:44:18,310 - INFO - Creating page "Product" -> "Wallets 4.0 - Services"
+2025-12-15 14:44:18,818 - INFO - ✓ Created page: Wallets 4.0 - Services (ID: 13652197443) [original title: Services] (empty) under root
+2025-12-15 14:44:18,818 - INFO -   Path: '10-Services' -> page_id=13652197443, parent_id=13653082155
+2025-12-15 14:44:18,819 - INFO - Creating page: Loyalty Cards (parent: 13653082155)
+2025-12-15 14:44:18,939 - INFO - Creating page "Product" -> "Loyalty Cards"
+2025-12-15 14:44:19,072 - WARNING - Page title 'Loyalty Cards' already exists. Retrying with: 'Wallets 4.0 - Loyalty Cards'
+2025-12-15 14:44:19,073 - INFO - Creating page "Product" -> "Wallets 4.0 - Loyalty Cards"
+2025-12-15 14:44:19,579 - INFO - ✓ Created page: Wallets 4.0 - Loyalty Cards (ID: 13652525070) [original title: Loyalty Cards] (empty) under root
+2025-12-15 14:44:19,579 - INFO -   Path: '11-Loyalty-Cards' -> page_id=13652525070, parent_id=13653082155
+2025-12-15 14:44:19,580 - INFO - Creating page: Visa (parent: 13653082155)
+2025-12-15 14:44:19,720 - INFO - Creating page "Product" -> "Visa"
+2025-12-15 14:44:19,849 - WARNING - Page title 'Visa' already exists. Retrying with: 'Wallets 4.0 - Visa'
+2025-12-15 14:44:19,850 - INFO - Creating page "Product" -> "Wallets 4.0 - Visa"
+2025-12-15 14:44:20,357 - INFO - ✓ Created page: Wallets 4.0 - Visa (ID: 13653901400) [original title: Visa] (empty) under root
+2025-12-15 14:44:20,357 - INFO -   Path: '21-Visa' -> page_id=13653901400, parent_id=13653082155
+2025-12-15 14:44:20,357 - INFO - Resolving parent for path: '01-Onboarding-and-Authentication' (normalized: '01-Onboarding-and-Authentication', title: 'Onboarding and Authentication')
+2025-12-15 14:44:20,358 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa']
+2025-12-15 14:44:20,358 - INFO - Looking for parent_key: '01-Onboarding-and-Authentication' (repr: '01-Onboarding-and-Authentication', type: str)
+2025-12-15 14:44:20,358 - INFO - ✓ Found parent '01-Onboarding-and-Authentication' in created_pages -> 13653344315
+2025-12-15 14:44:20,358 - INFO - Resolved parent for '01-Onboarding-and-Authentication\Authentication-and-Security-Management.md': 13653344315 (parent path: '01-Onboarding-and-Authentication')
+2025-12-15 14:44:20,358 - INFO - Creating page: Authentication and Security Management (parent: 13653344315)
+2025-12-15 14:44:20,532 - INFO - Creating page "Product" -> "Authentication and Security Management"
+2025-12-15 14:44:20,681 - WARNING - Page title 'Authentication and Security Management' already exists. Retrying with: 'Wallets 4.0 - Authentication and Security Management'
+2025-12-15 14:44:20,681 - INFO - Creating page "Product" -> "Wallets 4.0 - Authentication and Security Management"
+2025-12-15 14:44:21,171 - INFO - ✓ Created page: Wallets 4.0 - Authentication and Security Management (ID: 13652525088) [original title: Authentication and Security Management] (14170 chars) under parent 13653344315
+2025-12-15 14:44:21,172 - INFO -   Path: '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md' -> page_id=13652525088, parent_id=13653344315
+2025-12-15 14:44:21,172 - INFO - Resolving parent for path: '01-Onboarding-and-Authentication' (normalized: '01-Onboarding-and-Authentication', title: 'Onboarding and Authentication')
+2025-12-15 14:44:21,172 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md']
+2025-12-15 14:44:21,173 - INFO - Looking for parent_key: '01-Onboarding-and-Authentication' (repr: '01-Onboarding-and-Authentication', type: str)
+2025-12-15 14:44:21,173 - INFO - ✓ Found parent '01-Onboarding-and-Authentication' in created_pages -> 13653344315
+2025-12-15 14:44:21,174 - INFO - Resolved parent for '01-Onboarding-and-Authentication\Sign-in.md': 13653344315 (parent path: '01-Onboarding-and-Authentication')
+2025-12-15 14:44:21,174 - INFO - Creating page: Sign In (parent: 13653344315)
+2025-12-15 14:44:21,307 - INFO - Creating page "Product" -> "Sign In"
+2025-12-15 14:44:21,457 - WARNING - Page title 'Sign In' already exists. Retrying with: 'Wallets 4.0 - Sign In'
+2025-12-15 14:44:21,458 - INFO - Creating page "Product" -> "Wallets 4.0 - Sign In"
+2025-12-15 14:44:21,991 - INFO - ✓ Created page: Wallets 4.0 - Sign In (ID: 13652951099) [original title: Sign In] (7626 chars) under parent 13653344315
+2025-12-15 14:44:21,992 - INFO -   Path: '01-Onboarding-and-Authentication/Sign-in.md' -> page_id=13652951099, parent_id=13653344315
+2025-12-15 14:44:21,993 - INFO - Resolving parent for path: '01-Onboarding-and-Authentication' (normalized: '01-Onboarding-and-Authentication', title: 'Onboarding and Authentication')
+2025-12-15 14:44:21,993 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md']
+2025-12-15 14:44:21,994 - INFO - Looking for parent_key: '01-Onboarding-and-Authentication' (repr: '01-Onboarding-and-Authentication', type: str)
+2025-12-15 14:44:21,994 - INFO - ✓ Found parent '01-Onboarding-and-Authentication' in created_pages -> 13653344315
+2025-12-15 14:44:21,995 - INFO - Resolved parent for '01-Onboarding-and-Authentication\Sign-up.md': 13653344315 (parent path: '01-Onboarding-and-Authentication')
+2025-12-15 14:44:21,996 - INFO - Creating page: Sign Up (parent: 13653344315)
+2025-12-15 14:44:22,110 - INFO - Creating page "Product" -> "Sign Up"
+2025-12-15 14:44:22,290 - WARNING - Page title 'Sign Up' already exists. Retrying with: 'Wallets 4.0 - Sign Up'
+2025-12-15 14:44:22,290 - INFO - Creating page "Product" -> "Wallets 4.0 - Sign Up"
+2025-12-15 14:44:22,858 - INFO - ✓ Created page: Wallets 4.0 - Sign Up (ID: 13653377032) [original title: Sign Up] (22771 chars) under parent 13653344315
+2025-12-15 14:44:22,859 - INFO -   Path: '01-Onboarding-and-Authentication/Sign-up.md' -> page_id=13653377032, parent_id=13653344315
+2025-12-15 14:44:22,859 - INFO - Creating page: Identity KYC and Account Status (parent: 13653082155)
+2025-12-15 14:44:23,001 - INFO - Creating page "Product" -> "Identity KYC and Account Status"
+2025-12-15 14:44:23,180 - WARNING - Page title 'Identity KYC and Account Status' already exists. Retrying with: 'Wallets 4.0 - Identity KYC and Account Status'
+2025-12-15 14:44:23,181 - INFO - Creating page "Product" -> "Wallets 4.0 - Identity KYC and Account Status"
+2025-12-15 14:44:23,731 - INFO - ✓ Created page: Wallets 4.0 - Identity KYC and Account Status (ID: 13653147743) [original title: Identity KYC and Account Status] (43423 chars) under root
+2025-12-15 14:44:23,732 - INFO -   Path: '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md' -> page_id=13653147743, parent_id=13653082155
+2025-12-15 14:44:23,732 - INFO - Creating page: Top-Up (parent: 13653082155)
+2025-12-15 14:44:23,865 - INFO - Creating page "Product" -> "Top-Up"
+2025-12-15 14:44:23,995 - WARNING - Page title 'Top-Up' already exists. Retrying with: 'Wallets 4.0 - Top-Up'
+2025-12-15 14:44:23,996 - INFO - Creating page "Product" -> "Wallets 4.0 - Top-Up"
+2025-12-15 14:44:24,523 - INFO - ✓ Created page: Wallets 4.0 - Top-Up (ID: 13653278739) [original title: Top-Up] (16648 chars) under root
+2025-12-15 14:44:24,524 - INFO -   Path: '03-Payments-and-Top-Up/Top-Up.md' -> page_id=13653278739, parent_id=13653082155
+2025-12-15 14:44:24,524 - INFO - Resolving parent for path: '04-Transfers-and-Beneficiaries' (normalized: '04-Transfers-and-Beneficiaries', title: 'Transfers and Beneficiaries')
+2025-12-15 14:44:24,524 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md']
+2025-12-15 14:44:24,525 - INFO - Looking for parent_key: '04-Transfers-and-Beneficiaries' (repr: '04-Transfers-and-Beneficiaries', type: str)
+2025-12-15 14:44:24,525 - INFO - ✓ Found parent '04-Transfers-and-Beneficiaries' in created_pages -> 13653540869
+2025-12-15 14:44:24,525 - INFO - Resolved parent for '04-Transfers-and-Beneficiaries\Address-Book-Beneficiaries.md': 13653540869 (parent path: '04-Transfers-and-Beneficiaries')
+2025-12-15 14:44:24,525 - INFO - Creating page: Address Book and Beneficiaries Beneficiaries (parent: 13653540869)
+2025-12-15 14:44:24,665 - INFO - Creating page "Product" -> "Address Book and Beneficiaries Beneficiaries"
+2025-12-15 14:44:24,799 - WARNING - Page title 'Address Book and Beneficiaries Beneficiaries' already exists. Retrying with: 'Wallets 4.0 - Address Book and Beneficiaries Beneficiaries'
+2025-12-15 14:44:24,800 - INFO - Creating page "Product" -> "Wallets 4.0 - Address Book and Beneficiaries Beneficiaries"
+2025-12-15 14:44:25,336 - INFO - ✓ Created page: Wallets 4.0 - Address Book and Beneficiaries Beneficiaries (ID: 13652001025) [original title: Address Book and Beneficiaries Beneficiaries] (16102 chars) under parent 13653540869
+2025-12-15 14:44:25,337 - INFO -   Path: '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md' -> page_id=13652001025, parent_id=13653540869
+2025-12-15 14:44:25,337 - INFO - Resolving parent for path: '04-Transfers-and-Beneficiaries' (normalized: '04-Transfers-and-Beneficiaries', title: 'Transfers and Beneficiaries')
+2025-12-15 14:44:25,337 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md']
+2025-12-15 14:44:25,337 - INFO - Looking for parent_key: '04-Transfers-and-Beneficiaries' (repr: '04-Transfers-and-Beneficiaries', type: str)
+2025-12-15 14:44:25,337 - INFO - ✓ Found parent '04-Transfers-and-Beneficiaries' in created_pages -> 13653540869
+2025-12-15 14:44:25,338 - INFO - Resolved parent for '04-Transfers-and-Beneficiaries\IBAN-Transfers.md': 13653540869 (parent path: '04-Transfers-and-Beneficiaries')
+2025-12-15 14:44:25,338 - INFO - Creating page: IBAN Transfers External Bank Transfers (parent: 13653540869)
+2025-12-15 14:44:25,456 - INFO - Creating page "Product" -> "IBAN Transfers External Bank Transfers"
+2025-12-15 14:44:25,607 - WARNING - Page title 'IBAN Transfers External Bank Transfers' already exists. Retrying with: 'Wallets 4.0 - IBAN Transfers External Bank Transfers'
+2025-12-15 14:44:25,607 - INFO - Creating page "Product" -> "Wallets 4.0 - IBAN Transfers External Bank Transfers"
+2025-12-15 14:44:26,118 - INFO - ✓ Created page: Wallets 4.0 - IBAN Transfers External Bank Transfers (ID: 13653213191) [original title: IBAN Transfers External Bank Transfers] (18321 chars) under parent 13653540869
+2025-12-15 14:44:26,118 - INFO -   Path: '04-Transfers-and-Beneficiaries/IBAN-Transfers.md' -> page_id=13653213191, parent_id=13653540869
+2025-12-15 14:44:26,118 - INFO - Resolving parent for path: '04-Transfers-and-Beneficiaries' (normalized: '04-Transfers-and-Beneficiaries', title: 'Transfers and Beneficiaries')
+2025-12-15 14:44:26,119 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md']
+2025-12-15 14:44:26,119 - INFO - Looking for parent_key: '04-Transfers-and-Beneficiaries' (repr: '04-Transfers-and-Beneficiaries', type: str)
+2025-12-15 14:44:26,119 - INFO - ✓ Found parent '04-Transfers-and-Beneficiaries' in created_pages -> 13653540869
+2025-12-15 14:44:26,119 - INFO - Resolved parent for '04-Transfers-and-Beneficiaries\P2P-and-Wallet-Transfers.md': 13653540869 (parent path: '04-Transfers-and-Beneficiaries')
+2025-12-15 14:44:26,119 - INFO - Creating page: P2P and Wallet Transfers (parent: 13653540869)
+2025-12-15 14:44:26,232 - INFO - Creating page "Product" -> "P2P and Wallet Transfers"
+2025-12-15 14:44:26,393 - WARNING - Page title 'P2P and Wallet Transfers' already exists. Retrying with: 'Wallets 4.0 - P2P and Wallet Transfers'
+2025-12-15 14:44:26,393 - INFO - Creating page "Product" -> "Wallets 4.0 - P2P and Wallet Transfers"
+2025-12-15 14:44:26,910 - INFO - ✓ Created page: Wallets 4.0 - P2P and Wallet Transfers (ID: 13652426784) [original title: P2P and Wallet Transfers] (14234 chars) under parent 13653540869
+2025-12-15 14:44:26,910 - INFO -   Path: '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md' -> page_id=13652426784, parent_id=13653540869
+2025-12-15 14:44:26,911 - INFO - Creating page: Payment Cards (parent: 13653082155)
+2025-12-15 14:44:27,059 - INFO - Creating page "Product" -> "Payment Cards"
+2025-12-15 14:44:27,227 - WARNING - Page title 'Payment Cards' already exists. Retrying with: 'Wallets 4.0 - Payment Cards'
+2025-12-15 14:44:27,228 - INFO - Creating page "Product" -> "Wallets 4.0 - Payment Cards"
+2025-12-15 14:44:28,024 - INFO - ✓ Created page: Wallets 4.0 - Payment Cards (ID: 13653704707) [original title: Payment Cards] (41341 chars) under root
+2025-12-15 14:44:28,024 - INFO -   Path: '05-Payment-Cards/Payment-Cards.md' -> page_id=13653704707, parent_id=13653082155
+2025-12-15 14:44:28,025 - INFO - Creating page: Plans Fees and Limits (parent: 13653082155)
+2025-12-15 14:44:28,142 - INFO - Creating page "Product" -> "Plans Fees and Limits"
+2025-12-15 14:44:28,294 - WARNING - Page title 'Plans Fees and Limits' already exists. Retrying with: 'Wallets 4.0 - Plans Fees and Limits'
+2025-12-15 14:44:28,295 - INFO - Creating page "Product" -> "Wallets 4.0 - Plans Fees and Limits"
+2025-12-15 14:44:28,829 - INFO - ✓ Created page: Wallets 4.0 - Plans Fees and Limits (ID: 13653704762) [original title: Plans Fees and Limits] (10010 chars) under root
+2025-12-15 14:44:28,830 - INFO -   Path: '06-Plans-Fees-Limits/Plans-Fees-Limits.md' -> page_id=13653704762, parent_id=13653082155
+2025-12-15 14:44:28,830 - INFO - Resolving parent for path: '07-History-and-Payments' (normalized: '07-History-and-Payments', title: 'History and Payments')
+2025-12-15 14:44:28,831 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md']
+2025-12-15 14:44:28,831 - INFO - Looking for parent_key: '07-History-and-Payments' (repr: '07-History-and-Payments', type: str)
+2025-12-15 14:44:28,831 - INFO - ✓ Found parent '07-History-and-Payments' in created_pages -> 13652230228
+2025-12-15 14:44:28,832 - INFO - Resolved parent for '07-History-and-Payments\Statements-and-Reports.md': 13652230228 (parent path: '07-History-and-Payments')
+2025-12-15 14:44:28,832 - INFO - Creating page: Statements and Reports (parent: 13652230228)
+2025-12-15 14:44:28,973 - INFO - Creating page "Product" -> "Statements and Reports"
+2025-12-15 14:44:29,123 - WARNING - Page title 'Statements and Reports' already exists. Retrying with: 'Wallets 4.0 - Statements and Reports'
+2025-12-15 14:44:29,123 - INFO - Creating page "Product" -> "Wallets 4.0 - Statements and Reports"
+2025-12-15 14:44:29,650 - INFO - ✓ Created page: Wallets 4.0 - Statements and Reports (ID: 13652263075) [original title: Statements and Reports] (11275 chars) under parent 13652230228
+2025-12-15 14:44:29,651 - INFO -   Path: '07-History-and-Payments/Statements-and-Reports.md' -> page_id=13652263075, parent_id=13652230228
+2025-12-15 14:44:29,651 - INFO - Resolving parent for path: '07-History-and-Payments' (normalized: '07-History-and-Payments', title: 'History and Payments')
+2025-12-15 14:44:29,651 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md']
+2025-12-15 14:44:29,652 - INFO - Looking for parent_key: '07-History-and-Payments' (repr: '07-History-and-Payments', type: str)
+2025-12-15 14:44:29,652 - INFO - ✓ Found parent '07-History-and-Payments' in created_pages -> 13652230228
+2025-12-15 14:44:29,652 - INFO - Resolved parent for '07-History-and-Payments\Transaction-History.md': 13652230228 (parent path: '07-History-and-Payments')
+2025-12-15 14:44:29,653 - INFO - Creating page: Transaction History and Statements (parent: 13652230228)
+2025-12-15 14:44:29,763 - INFO - Creating page "Product" -> "Transaction History and Statements"
+2025-12-15 14:44:29,925 - WARNING - Page title 'Transaction History and Statements' already exists. Retrying with: 'Wallets 4.0 - Transaction History and Statements'
+2025-12-15 14:44:29,925 - INFO - Creating page "Product" -> "Wallets 4.0 - Transaction History and Statements"
+2025-12-15 14:44:30,447 - INFO - ✓ Created page: Wallets 4.0 - Transaction History and Statements (ID: 13652590634) [original title: Transaction History and Statements] (14071 chars) under parent 13652230228
+2025-12-15 14:44:30,448 - INFO -   Path: '07-History-and-Payments/Transaction-History.md' -> page_id=13652590634, parent_id=13652230228
+2025-12-15 14:44:30,448 - INFO - Resolving parent for path: '08-Notifications' (normalized: '08-Notifications', title: 'Notifications')
+2025-12-15 14:44:30,449 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md']
+2025-12-15 14:44:30,449 - INFO - Looking for parent_key: '08-Notifications' (repr: '08-Notifications', type: str)
+2025-12-15 14:44:30,450 - INFO - ✓ Found parent '08-Notifications' in created_pages -> 13652590616
+2025-12-15 14:44:30,451 - INFO - Resolved parent for '08-Notifications\Legal-Consents.md': 13652590616 (parent path: '08-Notifications')
+2025-12-15 14:44:30,451 - INFO - Creating page: Legal Consents (parent: 13652590616)
+2025-12-15 14:44:30,564 - INFO - Creating page "Product" -> "Legal Consents"
+2025-12-15 14:44:30,712 - WARNING - Page title 'Legal Consents' already exists. Retrying with: 'Wallets 4.0 - Legal Consents'
+2025-12-15 14:44:30,712 - INFO - Creating page "Product" -> "Wallets 4.0 - Legal Consents"
+2025-12-15 14:44:31,216 - INFO - ✓ Created page: Wallets 4.0 - Legal Consents (ID: 13653409835) [original title: Legal Consents] (6007 chars) under parent 13652590616
+2025-12-15 14:44:31,217 - INFO -   Path: '08-Notifications/Legal-Consents.md' -> page_id=13653409835, parent_id=13652590616
+2025-12-15 14:44:31,217 - INFO - Resolving parent for path: '08-Notifications' (normalized: '08-Notifications', title: 'Notifications')
+2025-12-15 14:44:31,218 - INFO - Created pages keys at lookup time: ['01-Onboarding-and-Authentication', '04-Transfers-and-Beneficiaries', '07-History-and-Payments', '08-Notifications', '09-App-Settings-and-Profile', '10-Services', '11-Loyalty-Cards', '21-Visa', '01-Onboarding-and-Authentication/Authentication-and-Security-Management.md', '01-Onboarding-and-Authentication/Sign-in.md', '01-Onboarding-and-Authentication/Sign-up.md', '02-Identity-KYC-Account-Status/Identity-KYC-Account-Status.md', '03-Payments-and-Top-Up/Top-Up.md', '04-Transfers-and-Beneficiaries/Address-Book-Beneficiaries.md', '04-Transfers-and-Beneficiaries/IBAN-Transfers.md', '04-Transfers-and-Beneficiaries/P2P-and-Wallet-Transfers.md', '05-Payment-Cards/Payment-Cards.md', '06-Plans-Fees-Limits/Plans-Fees-Limits.md', '07-History-and-Payments/Statements-and-Reports.md', '07-History-and-Payments/Transaction-History.md', '08-Notifications/Legal-Consents.md']
+2025-12-15 14:44:31,219 - INFO - Looking for parent_key: '08-Notifications' (repr: '08-Notifications', type: str)
+2025-12-15 14:44:31,219 - INFO - ✓ Found parent '08-Notifications' in created_pages -> 13652590616
+2025-12-15 14:44:31,219 - INFO - Resolved parent for '08-Notifications\Notifications.md': 13652590616 (parent path: '08-Notifications')
+2025-12-15 14:44:31,220 - INFO - Creating page: Notifications (parent: 13652590616)
+2025-12-15 14:44:31,347 - INFO - Creating page "Product" -> "Notifications"
+2025-12-15 14:44:31,510 - WARNING - Page title 'Notifications' already exists. Retrying with: 'Wallets 4.0 - Notifications'
+2025-12-15 14:44:31,511 - INFO - Creating page "Product" -> "Wallets 4.0 - Notifications"
+2025-12-15 14:44:31,657 - ERROR - Failed to create page with modified title 'Wallets 4.0 - Notifications': com.atlassian.confluence.api.service.exceptions.api.BadRequestException: A page with this title already exists: A page already exists with the same TITLE in this space
+2025-12-15 14:44:31,657 - ERROR - Error executing operation create for Notifications: com.atlassian.confluence.api.service.exceptions.api.BadRequestException: A page with this title already exists: A page already exists with the same TITLE in this space
+2025-12-15 14:44:31,657 - ERROR - Error during sync: com.atlassian.confluence.api.service.exceptions.api.BadRequestException: A page with this title already exists: A page already exists with the same TITLE in this space
+Traceback (most recent call last):
+  File "C:\Users\svetlin.chobanov\OneDrive - Paynetics\Documents\Python\Cursor project I\confluence_sync.py", line 945, in _execute_operations
+    result = self.confluence.create_page(
+        space=space_key,
+    ...<4 lines>...
+        representation='storage'
+    )
+  File "C:\Users\svetlin.chobanov\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\atlassian\confluence\__init__.py", line 1151, in create_page
+    response = self.post(url, data=data)
+  File "C:\Users\svetlin.chobanov\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\atlassian\rest_client.py", line 718, in post
+    response = self.request(
+        "POST",
+    ...<8 lines>...
+        advanced_mode=advanced_mode,
+    )
+  File "C:\Users\svetlin.chobanov\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\atlassian\rest_client.py", line 450, in request
+    self.raise_for_status(response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\svetlin.chobanov\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\atlassian\confluence\__init__.py", line 4115, in raise_for_status
+    raise HTTPError(error_msg, response=response)
+requests.exceptions.HTTPError: com.atlassian.confluence.api.service.exceptions.api.BadRequestException: A page with this title already exists: A page already exists with the same TITLE in this space
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\svetlin.chobanov\OneDrive - Paynetics\Documents\Python\Cursor project I\confluence_sync.py", line 1209, in sync
+    self._execute_operations(operations)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\svetlin.chobanov\OneDrive - Paynetics\Documents\Python\Cursor project I\confluence_sync.py", line 989, in _execute_operations
+    result = self.confluence.create_page(
+        space=space_key,
+    ...<4 lines>...
+        representation='storage'
+    )
+  File "C:\Users\svetlin.chobanov\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\atlassian\confluence\__init__.py", line 1151, in create_page
+    response = self.post(url, data=data)
+  File "C:\Users\svetlin.chobanov\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\atlassian\rest_client.py", line 718, in post
+    response = self.request(
+        "POST",
+    ...<8 lines>...
+        advanced_mode=advanced_mode,
+    )
+  File "C:\Users\svetlin.chobanov\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\atlassian\rest_client.py", line 450, in request
+    self.raise_for_status(response)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\svetlin.chobanov\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\atlassian\confluence\__init__.py", line 4115, in raise_for_status
+    raise HTTPError(error_msg, response=response)
+requests.exceptions.HTTPError: com.atlassian.confluence.api.service.exceptions.api.BadRequestException: A page with this title already exists: A page already exists with the same TITLE in this space
+2025-12-15 14:44:31,663 - WARNING - Rolling back changes...
+2025-12-15 14:44:31,963 - INFO - Rolled back: Deleted created page 13653409835
+2025-12-15 14:44:32,335 - INFO - Rolled back: Deleted created page 13652590634
+2025-12-15 14:44:32,855 - INFO - Rolled back: Deleted created page 13652263075
+2025-12-15 14:44:33,129 - INFO - Rolled back: Deleted created page 13653704762
+2025-12-15 14:44:33,369 - INFO - Rolled back: Deleted created page 13653704707
+2025-12-15 14:44:33,703 - INFO - Rolled back: Deleted created page 13652426784
+2025-12-15 14:44:34,038 - INFO - Rolled back: Deleted created page 13653213191
+2025-12-15 14:44:34,322 - INFO - Rolled back: Deleted created page 13652001025
+2025-12-15 14:44:34,653 - INFO - Rolled back: Deleted created page 13653278739
+2025-12-15 14:44:34,963 - INFO - Rolled back: Deleted created page 13653147743
+2025-12-15 14:44:35,306 - INFO - Rolled back: Deleted created page 13653377032
+2025-12-15 14:44:35,596 - INFO - Rolled back: Deleted created page 13652951099
+2025-12-15 14:44:35,943 - INFO - Rolled back: Deleted created page 13652525088
+2025-12-15 14:44:36,259 - INFO - Rolled back: Deleted created page 13653901400
+2025-12-15 14:44:36,547 - INFO - Rolled back: Deleted created page 13652525070
+2025-12-15 14:44:36,818 - INFO - Rolled back: Deleted created page 13652197443
+2025-12-15 14:44:37,149 - INFO - Rolled back: Deleted created page 13653147725
+2025-12-15 14:44:37,390 - INFO - Rolled back: Deleted created page 13652590616
+2025-12-15 14:44:37,596 - INFO - Rolled back: Deleted created page 13652230228
+2025-12-15 14:44:37,900 - INFO - Rolled back: Deleted created page 13653540869
+2025-12-15 14:44:38,216 - INFO - Rolled back: Deleted created page 13653344315
+2025-12-15 14:44:38,217 - WARNING - Rollback completed (with possible errors)
