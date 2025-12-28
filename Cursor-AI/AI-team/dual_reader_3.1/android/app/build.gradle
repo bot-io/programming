@@ -1,0 +1,223 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+// Load keystore properties from key.properties file
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withReader('UTF-8') { reader ->
+        keystoreProperties.load(reader)
+    }
+}
+
+// Version management: Read from pubspec.yaml or use defaults
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    // Extract version code from pubspec.yaml (format: x.y.z+build)
+    def pubspecFile = rootProject.file('../pubspec.yaml')
+    if (pubspecFile.exists()) {
+        def pubspecContent = pubspecFile.text
+        def versionMatch = pubspecContent =~ /version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)/
+        if (versionMatch) {
+            // Use build number as versionCode
+            flutterVersionCode = versionMatch[0][4]
+        } else {
+            flutterVersionCode = '1'
+        }
+    } else {
+        flutterVersionCode = '1'
+    }
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    // Extract version name from pubspec.yaml
+    def pubspecFile = rootProject.file('../pubspec.yaml')
+    if (pubspecFile.exists()) {
+        def pubspecContent = pubspecFile.text
+        def versionMatch = pubspecContent =~ /version:\s*(\d+\.\d+\.\d+)\+\d+/
+        if (versionMatch) {
+            flutterVersionName = versionMatch[0][1]
+        } else {
+            flutterVersionName = '1.0.0'
+        }
+    } else {
+        flutterVersionName = '1.0.0'
+    }
+}
+
+android {
+    namespace "com.dualreader.app"
+    compileSdk 34
+    ndkVersion flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        applicationId "com.dualreader.app"
+        minSdk 21  // Android 5.0 (Lollipop) - Required minimum SDK
+        targetSdk 34
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        multiDexEnabled true
+        
+        // Enable vector drawables for better performance
+        vectorDrawables.useSupportLibrary = true
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                def keystorePath = keystoreProperties['storeFile']
+                if (keystorePath) {
+                    // Handle both relative and absolute paths
+                    def keystoreFile
+                    if (keystorePath.startsWith('../')) {
+                        // Relative path from android/ directory
+                        keystoreFile = file(keystorePath)
+                    } else if (!new File(keystorePath).isAbsolute()) {
+                        // Relative path from android/app/ directory
+                        keystoreFile = file("$rootDir/$keystorePath")
+                    } else {
+                        // Absolute path
+                        keystoreFile = file(keystorePath)
+                    }
+                    
+                    // Verify keystore file exists
+                    if (keystoreFile.exists()) {
+                        storeFile keystoreFile
+                    } else {
+                        println "WARNING: Keystore file not found at: ${keystoreFile.absolutePath}"
+                        println "Falling back to debug signing. Release builds will not be suitable for Play Store."
+                        storeFile null
+                    }
+                } else {
+                    println "WARNING: storeFile not specified in key.properties"
+                    println "Falling back to debug signing. Release builds will not be suitable for Play Store."
+                    storeFile null
+                }
+                storePassword keystoreProperties['storePassword']
+            } else {
+                // Fallback to debug signing if key.properties doesn't exist
+                // This allows building without signing config (for testing)
+                // WARNING: Debug-signed builds cannot be uploaded to Play Store
+                println "WARNING: key.properties not found. Using debug signing for release builds."
+                println "To enable release signing, create android/key.properties with your keystore details."
+                storeFile null
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            debuggable true
+            // Debug builds use debug signing
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
+        }
+        release {
+            // Use release signing config if available, otherwise fallback to debug
+            signingConfig keystorePropertiesFile.exists() && keystoreProperties['storeFile'] != null 
+                ? signingConfigs.release 
+                : signingConfigs.debug
+            // Enable code shrinking and obfuscation for release builds
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    // Build variants for APK and AAB generation
+    buildFeatures {
+        buildConfig true
+    }
+    
+    // Packaging options for APK and AAB
+    packagingOptions {
+        resources {
+            excludes += [
+                '/META-INF/{AL2.0,LGPL2.1}',
+                '/META-INF/DEPENDENCIES',
+                '/META-INF/LICENSE',
+                '/META-INF/LICENSE.txt',
+                '/META-INF/license.txt',
+                '/META-INF/NOTICE',
+                '/META-INF/NOTICE.txt',
+                '/META-INF/notice.txt',
+                '/META-INF/ASL2.0',
+                '/META-INF/*.kotlin_module'
+            ]
+        }
+    }
+    
+    // Build variants configuration
+    // APK Build Options:
+    //   - Universal APK: flutter build apk --release
+    //     (Single APK with all architectures, larger file size)
+    //   - Split APK: flutter build apk --release --split-per-abi
+    //     (Separate APKs per architecture: arm64-v8a, armeabi-v7a, x86_64)
+    //     (Smaller file sizes, users download only their architecture)
+    // AAB Build Option:
+    //   - App Bundle: flutter build appbundle --release
+    //     (Optimized format for Play Store, Google generates APKs per device)
+    //     (Recommended for Play Store distribution)
+    
+    // Bundle configuration for AAB
+    bundle {
+        language {
+            // Disable language splitting - include all languages in base APK
+            enableSplit = false
+        }
+        density {
+            // Disable density splitting - include all densities in base APK
+            enableSplit = false
+        }
+        abi {
+            // Enable ABI splitting for smaller downloads
+            enableSplit = true
+        }
+    }
+    
+    // APK splits configuration (alternative to --split-per-abi flag)
+    splits {
+        abi {
+            enable false  // Controlled via Flutter build command
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+            universalApk false
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {}

@@ -1,0 +1,5 @@
+Windows Build Instructions:
+1. Install React Native Windows: npx react-native-windows-init --overwrite
+2. Install Visual Studio with Windows 10 SDK
+3. Build: npx react-native run-windows
+4. Create MSIX: Use Visual Studio > Publish > Create App Packages

@@ -1,0 +1,121 @@
+{
+  "comment": "Flutter Web Build Optimization Configuration for Dual Reader 3.1",
+  "version": "3.1.0",
+  
+  "build": {
+    "mode": "release",
+    "optimizations": {
+      "treeShakeIcons": true,
+      "webRenderer": "canvaskit",
+      "minify": true,
+      "codeSplitting": true,
+      "removeSourceMaps": true
+    },
+    "baseHref": "/",
+    "target": "web",
+    "outputDir": "build/web"
+  },
+  
+  "pwa": {
+    "enabled": true,
+    "manifest": {
+      "path": "web/manifest.json",
+      "validate": true
+    },
+    "serviceWorker": {
+      "enabled": true,
+      "autoRegister": true,
+      "strategy": "cache-first",
+      "offlineSupport": true
+    },
+    "icons": {
+      "required": [16, 32, 72, 96, 128, 144, 152, 192, 384, 512],
+      "directory": "web/icons",
+      "generate": true
+    }
+  },
+  
+  "optimization": {
+    "compression": {
+      "enabled": true,
+      "gzip": true,
+      "brotli": true
+    },
+    "caching": {
+      "strategy": "aggressive",
+      "staticAssets": "1y",
+      "js": "1h",
+      "css": "1w",
+      "html": "5m",
+      "manifest": "no-cache",
+      "serviceWorker": "no-cache"
+    },
+    "bundle": {
+      "analyze": true,
+      "maxSize": {
+        "mainJs": "5MB",
+        "total": "50MB"
+      }
+    }
+  },
+  
+  "deployment": {
+    "platforms": {
+      "githubPages": {
+        "enabled": true,
+        "baseHref": "/",
+        "custom404": true,
+        "spaRouting": true
+      },
+      "netlify": {
+        "enabled": true,
+        "configFile": "netlify.toml",
+        "headersFile": "web/_headers"
+      },
+      "vercel": {
+        "enabled": true,
+        "configFile": "vercel.json"
+      },
+      "firebase": {
+        "enabled": false,
+        "configFile": "firebase.json"
+      }
+    },
+    "requirements": {
+      "https": true,
+      "serviceWorker": true,
+      "manifest": true,
+      "icons": true
+    }
+  },
+  
+  "verification": {
+    "preDeploy": {
+      "checkFiles": true,
+      "checkPWA": true,
+      "checkOptimization": true,
+      "checkSecurity": true,
+      "checkSize": true
+    },
+    "postDeploy": {
+      "lighthouse": true,
+      "pwaAudit": true,
+      "performance": true
+    }
+  },
+  
+  "scripts": {
+    "build": {
+      "windows": "powershell -File web/build_web.ps1",
+      "unix": "bash web/build_web.sh",
+      "manual": "flutter build web --release --base-href / --tree-shake-icons --web-renderer canvaskit"
+    },
+    "verify": {
+      "windows": "powershell -File web/verify_deployment.ps1",
+      "unix": "bash web/verify_deployment.sh"
+    },
+    "test": {
+      "local": "cd build/web && python3 -m http.server 8000"
+    }
+  }
+}

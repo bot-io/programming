@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <!-- Essential Meta Tags -->
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="description" content="A cross-platform ebook reader with dual-panel display and translation support. Read EPUB and MOBI files with side-by-side original and translated text.">
+  <meta name="keywords" content="ebook reader, epub reader, mobi reader, translation, dual panel, bilingual reader, ebook, reading app">
+  <meta name="author" content="Dual Reader Team">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#1976D2">
+  <meta name="color-scheme" content="dark light">
+  
+  <!-- Responsive Design Meta Tags -->
+  <meta name="HandheldFriendly" content="true">
+  <meta name="MobileOptimized" content="320">
+  <meta name="apple-touch-fullscreen" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Dual Reader">
+  
+  <!-- Additional Responsive Meta Tags -->
+  <meta name="screen-orientation" content="portrait landscape">
+  <meta name="full-screen" content="yes">
+  <meta name="browsermode" content="application">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-touch-icon-precomposed" content="icons/icon-192x192.png">
+  <meta name="mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="x5-orientation" content="portrait landscape">
+  <meta name="x5-fullscreen" content="true">
+  <meta name="x5-page-mode" content="app">
+  
+  <!-- PWA Installability -->
+  <meta name="application-name" content="Dual Reader">
+  <meta name="msapplication-TileColor" content="#1976D2">
+  <meta name="msapplication-TileImage" content="icons/icon-144x144.png">
+  <meta name="msapplication-navbutton-color" content="#1976D2">
+  <meta name="msapplication-starturl" content="/">
+  <meta name="msapplication-tap-highlight" content="no">
+  
+  <!-- Performance and Security -->
+  <!-- Note: CSP is commented out to allow Flutter web to work properly -->
+  <!-- Uncomment and adjust if you need stricter security policies -->
+  <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https:; media-src 'self' blob:;"> -->
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  <meta name="format-detection" content="telephone=no">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Dual Reader 3.1 - Ebook Reader with Translation">
+  <meta property="og:description" content="A cross-platform ebook reader with dual-panel display and translation support">
+  <meta property="og:site_name" content="Dual Reader">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Dual Reader 3.1 - Ebook Reader with Translation">
+  <meta name="twitter:description" content="A cross-platform ebook reader with dual-panel display and translation support">
+
+
+  <!-- iOS Specific -->
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="72x72" href="icons/icon-72x72.png">
+  <link rel="apple-touch-icon" sizes="96x96" href="icons/icon-96x96.png">
+  <link rel="apple-touch-icon" sizes="128x128" href="icons/icon-128x128.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="icons/icon-144x144.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="384x384" href="icons/icon-384x384.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512x512.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16x16.png">
+  <link rel="shortcut icon" href="favicon.png">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Browser Config for Windows Tiles -->
+  <meta name="msapplication-config" content="browserconfig.xml">
+
+  <!-- Title -->
+  <title>Dual Reader 3.1 - Ebook Reader with Translation</title>
+
+  <!-- Preconnect for performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Flutter Service Worker Script -->
+  <!-- The value below is injected by flutter build, do not touch. -->
+  <script>
+    var serviceWorkerVersion = null;
+  </script>
+  <!-- This script adds the flutter initialization JS code -->
+  <script src="flutter.js" defer></script>
+  
+  <!-- Service Worker Registration -->
+  <!-- Note: Flutter automatically registers flutter_service_worker.js during build -->
+  <!-- This ensures PWA functionality and offline support -->
+  
+  <!-- Preload critical resources for better performance -->
+  <link rel="preload" href="flutter.js" as="script" crossorigin="anonymous">
+  <link rel="preload" href="main.dart.js" as="script" crossorigin="anonymous">
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+
+  <!-- Prevent flash of unstyled content -->
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #121212;
+      overflow: hidden;
+    }
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      width: 100vw;
+      background-color: #121212;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading indicator -->
+  <div class="loading" id="loading">
+    <div>Loading Dual Reader...</div>
+  </div>
+
+  <script>
+    // Service Worker Registration
+    // Flutter automatically registers its own service worker (flutter_service_worker.js)
+    // This script provides PWA install prompt handling and service worker update notifications
+    if ('serviceWorker' in navigator) {
+      // Listen for service worker updates from Flutter's service worker
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        console.log('[PWA] Service worker updated');
+        window.dispatchEvent(new CustomEvent('sw-controller-change'));
+      });
+      
+      // Check for service worker updates periodically
+      window.addEventListener('load', function() {
+        if (navigator.serviceWorker.controller) {
+          // Service worker is already controlling, check for updates
+          navigator.serviceWorker.controller.addEventListener('statechange', function() {
+            if (this.state === 'installed') {
+              window.dispatchEvent(new CustomEvent('sw-update-available'));
+            }
+          });
+          
+          // Periodic update check (every 5 minutes)
+          setInterval(function() {
+            navigator.serviceWorker.getRegistration().then(function(registration) {
+              if (registration) {
+                registration.update().catch(function(error) {
+                  console.log('[PWA] Update check failed:', error);
+                });
+              }
+            });
+          }, 300000); // 5 minutes
+        }
+      });
+    }
+
+    // PWA Install Prompt Handling
+    let deferredPrompt = null;
+    let isInstallable = false;
+    
+    window.addEventListener('beforeinstallprompt', function(e) {
+      // Prevent Chrome 67 and earlier from automatically showing the prompt
+      e.preventDefault();
+      // Stash the event so it can be triggered later
+      deferredPrompt = e;
+      isInstallable = true;
+      console.log('[PWA] Install prompt available');
+      
+      // Create and show custom install button if needed
+      // This can be integrated into your Flutter app UI
+      window.showInstallPrompt = function() {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then(function(choiceResult) {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('[PWA] User accepted the install prompt');
+            } else {
+              console.log('[PWA] User dismissed the install prompt');
+            }
+            deferredPrompt = null;
+            isInstallable = false;
+          });
+        }
+      };
+      
+      // Check if install prompt is available
+      window.isPWAInstallable = function() {
+        return isInstallable && deferredPrompt !== null;
+      };
+      
+      // Dispatch custom event for Flutter app to handle
+      window.dispatchEvent(new CustomEvent('pwa-install-available', {
+        detail: { canInstall: true }
+      }));
+    });
+
+    // Handle successful PWA installation
+    window.addEventListener('appinstalled', function(evt) {
+      console.log('[PWA] App installed successfully');
+      deferredPrompt = null;
+      isInstallable = false;
+      // Dispatch custom event for Flutter app to handle
+      window.dispatchEvent(new CustomEvent('pwa-installed', {
+        detail: { platform: evt.platform || 'unknown' }
+      }));
+    });
+    
+    // Check if app is already installed/running in standalone mode
+    function checkStandaloneMode() {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                          window.navigator.standalone === true ||
+                          document.referrer.includes('android-app://');
+      
+      if (isStandalone) {
+        console.log('[PWA] App is running in standalone mode');
+        window.dispatchEvent(new CustomEvent('pwa-standalone'));
+      }
+      return isStandalone;
+    }
+    
+    // Check on load
+    checkStandaloneMode();
+    
+    // Expose PWA utilities globally for Flutter app
+    window.pwaUtils = {
+      showInstallPrompt: function() {
+        if (window.showInstallPrompt) {
+          window.showInstallPrompt();
+        }
+      },
+      isInstallable: function() {
+        return window.isPWAInstallable ? window.isPWAInstallable() : false;
+      },
+      isStandalone: checkStandaloneMode
+    };
+
+    // Flutter app initialization
+    // Flutter's build process automatically initializes the app
+    // This code provides fallback initialization and loading indicator management
+    window.addEventListener('load', function(ev) {
+      // Wait a bit for Flutter's auto-initialization
+      setTimeout(function() {
+        // Check if Flutter has already initialized
+        if (typeof _flutter !== 'undefined' && _flutter.loader) {
+          // Flutter loader is available, use it if not already initialized
+          if (!window._flutterAppInitialized) {
+            _flutter.loader.loadEntrypoint({
+              serviceWorker: {
+                serviceWorkerVersion: serviceWorkerVersion,
+              },
+              onEntrypointLoaded: function(engineInitializer) {
+                engineInitializer.initializeEngine().then(function(appRunner) {
+                  window._flutterAppInitialized = true;
+                  // Remove loading indicator
+                  const loadingElement = document.getElementById('loading');
+                  if (loadingElement) {
+                    loadingElement.style.display = 'none';
+                  }
+                  appRunner.runApp();
+                }).catch(function(error) {
+                  console.error('[Flutter] Failed to initialize engine:', error);
+                  const loadingElement = document.getElementById('loading');
+                  if (loadingElement) {
+                    loadingElement.innerHTML = '<div>Failed to load app. Please refresh the page.</div>';
+                  }
+                });
+              }
+            });
+          } else {
+            // Already initialized, just hide loading indicator
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement) {
+              loadingElement.style.display = 'none';
+            }
+          }
+        } else {
+          // Flutter loader not available yet, wait a bit more
+          // Flutter's build process should handle initialization automatically
+          setTimeout(function() {
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement && !window._flutterAppInitialized) {
+              // If still not initialized after delay, show error
+              loadingElement.innerHTML = '<div>Loading... If this persists, please refresh the page.</div>';
+            }
+          }, 2000);
+        }
+      }, 100);
+    });
+
+    // Handle online/offline status
+    window.addEventListener('online', function() {
+      console.log('[App] Online');
+    });
+
+    window.addEventListener('offline', function() {
+      console.log('[App] Offline');
+    });
+  </script>
+</body>
+</html>

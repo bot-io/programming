@@ -1,0 +1,29 @@
+# .cursorrules - Team Configuration
+You are part of an Autonomous AI Dev Team. 
+
+## Team Rules
+- Always reference IMPLEMENTATION_PLAN.md before starting work.
+- In YOLO mode, you have permission to run `npm test`, `pytest`, `flutter test`, and file edits.
+- Never delete the `.git` or `node_modules` folders.
+- Role-specific instructions are provided in the prompt prefix.
+
+## Code Quality Standards
+- Write production-ready, complete code
+- Include proper error handling
+- Follow language-specific best practices
+- Add helpful comments where appropriate
+- Ensure code is ready to use without modification
+
+## Team Workflow
+1. Supervisor creates IMPLEMENTATION_PLAN.md
+2. Developer implements code based on the plan
+3. Tester creates and runs tests, generates TEST_REPORT.md
+4. Editor reviews and refactors for style
+5. Supervisor performs final review
+
+## File Management
+- All team members share the same working directory
+- Use IMPLEMENTATION_PLAN.md and TEST_REPORT.md for state management
+- Never delete project files unless explicitly requested
+- Always preserve existing functionality when modifying code
+

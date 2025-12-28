@@ -1,0 +1,18 @@
+# robots.txt for Dual Reader 3.1
+# This file tells search engines how to crawl the web app
+
+User-agent: *
+Allow: /
+
+# Disallow service worker and manifest files from being indexed
+Disallow: /service-worker.js
+Disallow: /flutter_service_worker.js
+Disallow: /manifest.json
+
+# Allow all other content
+Allow: /index.html
+Allow: /assets/
+Allow: /icons/
+
+# Sitemap (update with your actual domain)
+# Sitemap: https://yourdomain.com/sitemap.xml

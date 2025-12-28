@@ -1,0 +1,81 @@
+# Netlify Configuration for Dual Reader 3.1
+# This file configures Netlify deployment settings for the Flutter web app
+
+[build]
+  # Build command for Flutter web
+  command = "flutter build web --release --base-href / --tree-shake-icons --web-renderer canvaskit"
+  
+  # Output directory where Flutter builds the web app
+  publish = "build/web"
+  
+  # Environment variables
+  [build.environment]
+    # Flutter version (adjust as needed)
+    FLUTTER_VERSION = "stable"
+    # Enable Skia renderer for better performance
+    FLUTTER_WEB_USE_SKIA = "true"
+
+# Headers configuration
+# Note: Netlify also reads _headers file in the publish directory
+# This provides additional configuration options
+
+[[headers]]
+  # Service Worker headers - must not be cached
+  for = "/service-worker.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Service-Worker-Allowed = "/"
+
+[[headers]]
+  # Flutter Service Worker headers
+  for = "/flutter_service_worker.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Service-Worker-Allowed = "/"
+
+[[headers]]
+  # Manifest file headers
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Content-Type = "application/manifest+json"
+
+[[headers]]
+  # Security headers for all files
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# Redirects for SPA routing
+# All routes should redirect to index.html for Flutter's router
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+  conditions = {Role = ["admin"]}
+
+# Fallback redirect for 404 errors
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Build plugins (optional)
+# Uncomment if you want to use Netlify plugins for optimization
+# [[plugins]]
+#   package = "@netlify/plugin-lighthouse"
+
+# Context-specific settings
+[context.production]
+  command = "flutter build web --release --base-href / --tree-shake-icons --web-renderer canvaskit"
+
+[context.deploy-preview]
+  command = "flutter build web --release --base-href / --tree-shake-icons --web-renderer canvaskit"
+
+[context.branch-deploy]
+  command = "flutter build web --release --base-href / --tree-shake-icons --web-renderer canvaskit"

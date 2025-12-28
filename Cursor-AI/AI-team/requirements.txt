@@ -1,0 +1,8 @@
+# AI Agent Team Protocol - Requirements
+# No external dependencies required - uses only Python standard library
+
+# Optional dependencies for enhanced functionality:
+# networkx>=3.0  # For advanced dependency graph visualization
+# matplotlib>=3.5  # For progress charts
+# graphviz>=0.20  # For dependency graph rendering
+

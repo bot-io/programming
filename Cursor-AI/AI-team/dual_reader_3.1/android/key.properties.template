@@ -1,0 +1,30 @@
+# Android Signing Configuration Template
+# Copy this file to android/key.properties and fill in your keystore details
+# 
+# IMPORTANT: 
+# - Never commit key.properties or keystore files to version control
+# - Keep your keystore file and passwords secure
+# - Store backups of your keystore in a safe location
+#
+# To generate a keystore, run:
+#   scripts/generate_keystore.sh (Linux/Mac)
+#   scripts/generate_keystore.ps1 (Windows)
+
+# Path to your keystore file
+# Can be relative (from android/ directory) or absolute
+# Examples:
+#   storeFile=../upload-keystore.jks          # Relative path (recommended)
+#   storeFile=C:/path/to/upload-keystore.jks  # Absolute path (Windows)
+#   storeFile=/path/to/upload-keystore.jks    # Absolute path (Linux/Mac)
+storeFile=../upload-keystore.jks
+
+# Keystore password (the password for the keystore file itself)
+storePassword=your-keystore-password-here
+
+# Key alias name (the name of the key in the keystore)
+# Default is usually "upload" or "key"
+keyAlias=upload
+
+# Key password (the password for the specific key)
+# Can be the same as storePassword
+keyPassword=your-key-password-here

@@ -1,0 +1,31 @@
+{
+  "comment": "Flutter Web Build Configuration for Dual Reader 3.1",
+  "pwa": {
+    "enabled": true,
+    "manifest": "manifest.json",
+    "serviceWorker": "flutter_service_worker.js",
+    "offlineSupport": true
+  },
+  "build": {
+    "baseHref": "/",
+    "canvaskit": {
+      "enabled": true,
+      "url": "https://unpkg.com/canvaskit-wasm@0.39.1/bin/"
+    },
+    "renderer": "canvaskit",
+    "csp": false
+  },
+  "deployment": {
+    "hosting": [
+      "github-pages",
+      "netlify",
+      "vercel",
+      "firebase-hosting"
+    ],
+    "requirements": {
+      "https": true,
+      "serviceWorker": true,
+      "manifest": true
+    }
+  }
+}
