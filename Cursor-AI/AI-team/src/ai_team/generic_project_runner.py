@@ -78,6 +78,7 @@ class GenericProjectRunner:
         self.progress_tracker = None
         self.progress_persistence = None
         self.parallel_assigner = None
+        self.team_id = None  # Will be generated at team initialization (REQ-1.2.1)
         
         # Validate infrastructure files exist
         self._validate_infrastructure_files()
@@ -165,7 +166,7 @@ This is a generic runner that works with any project type.
 The system relies purely on requirements.md - no project-specific assumptions.
 
 The supervisor will analyze requirements.md to:
-- Determine project type (Flutter, React, Python, etc.)
+- Determine project type (project-agnostic; based on requirements/tasks)
 - Determine optimal team size
 - Generate appropriate tasks
 
@@ -402,6 +403,46 @@ Add any additional requirements or notes here.
             save_interval: How often to save progress (seconds)
             status_interval: How often to update status display (seconds)
         """
+        # CRITICAL: Create initialization log file IMMEDIATELY before any other initialization steps
+        # This allows detection of cases where the team never finishes initializing
+        from datetime import datetime
+        import uuid
+        init_log_dir = os.path.join(self.project_dir, 'agent_logs')
+        os.makedirs(init_log_dir, exist_ok=True)
+        init_log_file = os.path.join(init_log_dir, 'team_initialization.log')
+        init_start_time = datetime.now()
+        
+        # REQ-1.2.1, REQ-1.2.2, REQ-1.2.6: Generate unique team ID at initialization
+        # Format: team-YYYYMMDD-HHMMSS-<short-uuid> (human-readable with timestamp)
+        timestamp_str = init_start_time.strftime('%Y%m%d-%H%M%S')
+        short_uuid = str(uuid.uuid4())[:8]  # First 8 chars of UUID for uniqueness
+        self.team_id = f"team-{timestamp_str}-{short_uuid}"
+        
+        # REQ-1.2.3, REQ-9.2.1.1: Set team ID in logger IMMEDIATELY after generation
+        # This must be done BEFORE agents are created so all logs include team ID from the start
+        if LOGGING_AVAILABLE:
+            AgentLogger.set_team_id(self.team_id)
+        
+        # REQ-1.2.5: Store team ID in a file for duplicate team detection
+        team_id_file = os.path.join(self.project_dir, '.team_id')
+        try:
+            with open(team_id_file, 'w', encoding='utf-8') as f:
+                f.write(self.team_id)
+                f.write(f"\n{init_start_time.isoformat()}\n")
+        except Exception as e:
+            print(f"[WARNING] Failed to write team ID file: {e}")
+        
+        try:
+            with open(init_log_file, 'w', encoding='utf-8') as f:
+                f.write(f"[{init_start_time.strftime('%Y-%m-%d %H:%M:%S.%f')}] [INIT] Team initialization started\n")
+                f.write(f"[{init_start_time.strftime('%Y-%m-%d %H:%M:%S.%f')}] [INIT] Team ID: {self.team_id}\n")
+                f.write(f"[{init_start_time.strftime('%Y-%m-%d %H:%M:%S.%f')}] [INIT] Project directory: {self.project_dir}\n")
+                f.write(f"[{init_start_time.strftime('%Y-%m-%d %H:%M:%S.%f')}] [INIT] Save interval: {save_interval}s, Status interval: {status_interval}s\n")
+                f.flush()
+        except Exception as e:
+            # If we can't create the log file, print a warning but continue
+            print(f"[WARNING] Failed to create initialization log file: {e}")
+        
         # #region debug log
         import json
         try:
@@ -429,6 +470,8 @@ Add any additional requirements or notes here.
             project_name=project_name,
             enable_conflict_prevention=True
         )
+        # REQ-1.2.2: Store team ID in coordinator for persistence throughout team lifecycle
+        self.coordinator.team_id = self.team_id
         
         # Enable parallel execution optimizer if requested
         if self.enable_parallel_optimization:
@@ -519,13 +562,44 @@ Add any additional requirements or notes here.
             self.progress_tracker,
             output_dir=os.path.join(self.project_dir, "progress_reports"),
             project_dir=self.project_dir,
-            team_start_time=self.team_start_time
+            team_start_time=self.team_start_time,
+            team_id=self.team_id  # REQ-1.2.4: Pass team ID to progress persistence
         )
         
-        # Save initial progress
-        self.progress_persistence.save_progress()
+        # REQ-3.7.1.1: Save initial progress IMMEDIATELY as one of the first actions
+        # This ensures progress report is available from the earliest stages
+        try:
+            self.progress_persistence.save_progress()
+            if os.path.exists(self.progress_persistence.md_file):
+                print(f"Progress report created: {self.progress_persistence.md_file}")
+            else:
+                print(f"[WARNING] Progress report file not found after save: {self.progress_persistence.md_file}")
+        except Exception as e:
+            print(f"[ERROR] Failed to create initial progress report: {e}")
+            if LOGGING_AVAILABLE:
+                AgentLogger.error("GenericProjectRunner", f"Failed to create initial progress report: {e}")
         print(f"Progress will be saved to: {self.progress_persistence.md_file}")
         print()
+        
+        # REQ-1.2.5: Display team ID for validation and debugging
+        # (Team ID already set in logger earlier, before agents were created)
+        print(f"Team ID: {self.team_id}")
+        print()
+        
+        # Log initialization completion
+        init_complete_time = datetime.now()
+        init_duration = (init_complete_time - init_start_time).total_seconds()
+        try:
+            with open(init_log_file, 'a', encoding='utf-8') as f:
+                f.write(f"[{init_complete_time.strftime('%Y-%m-%d %H:%M:%S.%f')}] [INIT] Team initialization completed\n")
+                f.write(f"[{init_complete_time.strftime('%Y-%m-%d %H:%M:%S.%f')}] [INIT] Team ID: {self.team_id}\n")
+                f.write(f"[{init_complete_time.strftime('%Y-%m-%d %H:%M:%S.%f')}] [INIT] Initialization duration: {init_duration:.2f} seconds\n")
+                f.write(f"[{init_complete_time.strftime('%Y-%m-%d %H:%M:%S.%f')}] [INIT] Total agents: {len(self.agents)}\n")
+                f.write(f"[{init_complete_time.strftime('%Y-%m-%d %H:%M:%S.%f')}] [INIT] Total tasks: {len(self.coordinator.tasks)}\n")
+                f.write(f"[{init_complete_time.strftime('%Y-%m-%d %H:%M:%S.%f')}] [INIT] Entering main execution loop\n")
+                f.flush()
+        except Exception as e:
+            print(f"[WARNING] Failed to write to initialization log file: {e}")
         
         # Monitor progress
         last_status_time = time.time()
@@ -534,41 +608,134 @@ Add any additional requirements or notes here.
         task_update_interval = 5  # Update tasks.md every 5 seconds
         
         try:
+            consecutive_errors = 0
+            max_consecutive_errors = 10  # Allow up to 10 consecutive errors before giving up
+            
             while True:
-                time.sleep(1)
+                try:
+                    time.sleep(1)
+                    consecutive_errors = 0  # Reset error count on successful iteration
+                except Exception as sleep_error:
+                    # Even sleep can fail in rare cases, but continue
+                    if LOGGING_AVAILABLE:
+                        AgentLogger.warning("GenericProjectRunner", f"Error in sleep: {sleep_error}")
+                    consecutive_errors += 1
+                    if consecutive_errors >= max_consecutive_errors:
+                        print(f"[FATAL] Too many consecutive errors ({consecutive_errors}), stopping team")
+                        if LOGGING_AVAILABLE:
+                            AgentLogger.critical("GenericProjectRunner", 
+                                f"Team stopping due to {consecutive_errors} consecutive errors")
+                        break
+                    continue
                 
-                # VALIDATION CHECK: Verify setup tasks at 100% actually have files
-                self._validate_in_progress_setup_tasks()
-                
-                # AUTO-COMPLETE CHECK: Check for setup tasks at 100% with files existing
-                # Run this more frequently to catch completed tasks quickly
-                self._auto_complete_setup_tasks()
-                
-                # FORCE AUTO-COMPLETE: If files exist but task is still in_progress, force complete
-                self._force_complete_setup_tasks_with_files()
+                try:
+                    # VALIDATION CHECK: Verify setup tasks at 100% actually have files
+                    self._validate_in_progress_setup_tasks()
+                    
+                    # AUTO-COMPLETE CHECK: Check for setup tasks at 100% with files existing
+                    # Run this more frequently to catch completed tasks quickly
+                    self._auto_complete_setup_tasks()
+                    
+                    # FORCE AUTO-COMPLETE: If files exist but task is still in_progress, force complete
+                    self._force_complete_setup_tasks_with_files()
+                except Exception as e:
+                    consecutive_errors += 1
+                    if LOGGING_AVAILABLE:
+                        AgentLogger.error("GenericProjectRunner", f"Error in task validation/auto-complete: {e}",
+                            extra={'error_type': type(e).__name__, 'consecutive_errors': consecutive_errors})
+                    if consecutive_errors >= max_consecutive_errors:
+                        print(f"[FATAL] Too many consecutive errors ({consecutive_errors}), stopping team")
+                        break
+                    continue
                 
                 # SUPERVISOR: Let supervisor run its audit (it runs in its own loop, but we can trigger it)
                 # The supervisor runs continuously in its own thread, so we don't need to call it here
                 
-                # ENSURE TASKS ARE MARKED AS READY: Update task statuses based on dependencies
-                for task in self.coordinator.tasks.values():
-                    if task.status == TaskStatus.BLOCKED and task.dependencies:
-                        # Check if all dependencies are now completed
-                        all_deps_completed = all(
-                            self.coordinator.tasks[dep_id].status == TaskStatus.COMPLETED
-                            for dep_id in task.dependencies
-                            if dep_id in self.coordinator.tasks
+                try:
+                    # ENSURE TASKS ARE MARKED AS READY: Update task statuses based on dependencies
+                    # CRITICAL: Check ALL tasks, especially BLOCKED ones, to unblock them when dependencies complete
+                    # This ensures tasks are properly blocked/unblocked as dependencies change
+                    for task in self.coordinator.tasks.values():
+                        # Skip tasks that are already completed or failed
+                        if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED]:
+                            continue
+                        
+                        # CRITICAL: Always check BLOCKED tasks - they might be ready to unblock
+                        # Also check tasks with dependencies - they may need to be blocked or unblocked
+                        # BUT: Skip summary/metadata tasks (tasks with colons in ID are typically documentation)
+                        if task.id and ':' in task.id:
+                            # This is likely a summary/metadata task - skip status updates to prevent infinite loops
+                            continue
+                        
+                        # Check all tasks that need status updates:
+                        # 1. BLOCKED tasks (might be ready to unblock)
+                        # 2. Tasks with dependencies (might need to be blocked/unblocked based on dependency status)
+                        # 3. PENDING tasks (might need to be READY or BLOCKED)
+                        needs_status_check = (
+                            task.status == TaskStatus.BLOCKED or 
+                            (task.dependencies and len(task.dependencies) > 0) or
+                            task.status == TaskStatus.PENDING
                         )
-                        if all_deps_completed:
+                        
+                        if needs_status_check:
+                            old_status = task.status
+                            # Always call _update_task_status to check current dependency state
                             self.coordinator._update_task_status(task.id)
-                
-                # FORCE AGENTS TO PICK UP READY TASKS: If agents are idle and there are ready tasks, force assignment
-                # Call this more frequently to ensure tasks are picked up quickly
-                self._force_task_assignment()
-                
-                # Also check every 2 seconds (not just every loop iteration)
-                if int(time.time()) % 2 == 0:
+                            
+                            # If status changed (blocked -> ready, or pending -> ready/blocked), persist it
+                            if task.status != old_status:
+                                # Debug: Log what happened
+                                if LOGGING_AVAILABLE:
+                                    AgentLogger.debug("GenericProjectRunner",
+                                        f"Status check triggered for task {task.id}: {old_status.value} -> {task.status.value} (deps: {task.dependencies})",
+                                        task_id=task.id)
+                                # Log the status change for debugging
+                                if LOGGING_AVAILABLE:
+                                    AgentLogger.info("GenericProjectRunner", 
+                                        f"Task {task.id} status changed: {old_status.value} -> {task.status.value} (dependencies: {task.dependencies})",
+                                        task_id=task.id, 
+                                        extra={'old_status': old_status.value, 'new_status': task.status.value, 'dependencies': task.dependencies})
+                                print(f"[RUNNER] Task '{task.id}' status updated: {old_status.value} -> {task.status.value}")
+                                try:
+                                    self.parser.update_task_in_file(task)
+                                except Exception as e:
+                                    if LOGGING_AVAILABLE:
+                                        AgentLogger.warning("GenericProjectRunner", f"Failed to persist status update for {task.id}: {e}")
+                            # PENDING tasks should be checked - they may have no dependencies and should be READY
+                            # OR they may have dependencies and should be BLOCKED
+                            old_status = task.status
+                            self.coordinator._update_task_status(task.id)
+                            if task.status != old_status:
+                                if LOGGING_AVAILABLE:
+                                    AgentLogger.info("GenericProjectRunner",
+                                        f"Task {task.id} status changed: {old_status.value} -> {task.status.value}",
+                                        task_id=task.id,
+                                        extra={'old_status': old_status.value, 'new_status': task.status.value, 'has_dependencies': bool(task.dependencies)})
+                                print(f"[RUNNER] Task '{task.id}' status updated: {old_status.value} -> {task.status.value}")
+                                try:
+                                    self.parser.update_task_in_file(task)
+                                except Exception as e:
+                                    if LOGGING_AVAILABLE:
+                                        AgentLogger.warning("GenericProjectRunner", f"Failed to persist status update for {task.id}: {e}")
+                    
+                    # FORCE AGENTS TO PICK UP READY TASKS: If agents are idle and there are ready tasks, force assignment
+                    # Call this more frequently to ensure tasks are picked up quickly
                     self._force_task_assignment()
+                    
+                    # Also check every 2 seconds (not just every loop iteration)
+                    if int(time.time()) % 2 == 0:
+                        self._force_task_assignment()
+                except Exception as e:
+                    consecutive_errors += 1
+                    if LOGGING_AVAILABLE:
+                        AgentLogger.error("GenericProjectRunner", f"Error in task management loop: {e}",
+                            extra={'error_type': type(e).__name__, 'consecutive_errors': consecutive_errors})
+                    if consecutive_errors >= max_consecutive_errors:
+                        print(f"[FATAL] Too many consecutive errors ({consecutive_errors}), stopping team")
+                        break
+                    import traceback
+                    traceback.print_exc()
+                    continue
                 
                 # ENSURE ALL AGENTS ARE RUNNING: Check agent states and restart if needed
                 # Only check every 10 seconds to avoid overhead
@@ -625,14 +792,34 @@ Add any additional requirements or notes here.
                     last_status_time = time.time()
                 
                 # Save progress periodically
+                # CRITICAL: Always save progress even if there are errors - wrap in try-except
                 if time.time() - last_save_time >= save_interval:
-                    self.progress_persistence.save_progress()
-                    last_save_time = time.time()
+                    try:
+                        self.progress_persistence.save_progress()
+                        last_save_time = time.time()
+                        if LOGGING_AVAILABLE:
+                            AgentLogger.debug("GenericProjectRunner", "Progress saved successfully")
+                    except Exception as save_error:
+                        # Don't let save errors crash the team - log and continue
+                        if LOGGING_AVAILABLE:
+                            AgentLogger.error("GenericProjectRunner", f"Error saving progress: {save_error}",
+                                extra={'error_type': type(save_error).__name__})
+                        print(f"[WARNING] Failed to save progress: {save_error}")
+                        # Still update last_save_time to avoid rapid retries
+                        last_save_time = time.time()
                 
                 # Update tasks.md periodically
+                # CRITICAL: Wrap in try-except to prevent crashes
                 if time.time() - last_task_update_time >= task_update_interval:
-                    self._update_tasks_file()
-                    last_task_update_time = time.time()
+                    try:
+                        self._update_tasks_file()
+                        last_task_update_time = time.time()
+                    except Exception as task_update_error:
+                        # Don't let task file update errors crash the team
+                        if LOGGING_AVAILABLE:
+                            AgentLogger.error("GenericProjectRunner", f"Error updating tasks.md: {task_update_error}",
+                                extra={'error_type': type(task_update_error).__name__})
+                        last_task_update_time = time.time()  # Update to avoid rapid retries
                 
                 # Check if only template tasks exist - let supervisor generate real tasks first
                 template_keywords = ['example task', 'template', 'criterion 1', 'criterion 2']
@@ -685,6 +872,12 @@ Add any additional requirements or notes here.
                             
                             # Create a new task to fix verification issues
                             self._create_verification_fix_task()
+                            # CRITICAL: Refresh task snapshot after dynamically adding tasks.
+                            # Otherwise the completion check below may use a stale `all_tasks` list and exit
+                            # even though a new READY task was added.
+                            all_tasks = list(self.coordinator.tasks.values())
+                            completed = sum(1 for t in all_tasks if t.status == TaskStatus.COMPLETED)
+                            failed = sum(1 for t in all_tasks if t.status == TaskStatus.FAILED)
                         else:
                             print("\n" + "=" * 100)
                             print("✅ FINAL VERIFICATION PASSED ✅")
@@ -698,27 +891,57 @@ Add any additional requirements or notes here.
                             print("=" * 100)
                 
                 # Check completion (only if we have real tasks)
+                # CRITICAL: Only exit if ALL tasks are completed (including dynamically created ones)
+                # Count ready tasks to ensure we don't exit prematurely
+                # CRITICAL: Always use a fresh snapshot right before completion/failure checks.
+                all_tasks = list(self.coordinator.tasks.values())
+                completed = sum(1 for t in all_tasks if t.status == TaskStatus.COMPLETED)
+                failed = sum(1 for t in all_tasks if t.status == TaskStatus.FAILED)
+                ready_tasks = sum(1 for t in all_tasks if t.status == TaskStatus.READY)
+                in_progress_tasks = sum(1 for t in all_tasks if t.status == TaskStatus.IN_PROGRESS)
+                assigned_tasks = sum(1 for t in all_tasks if t.status == TaskStatus.ASSIGNED)
+                
                 if completed == len(all_tasks) and has_real_tasks:
-                    print()
-                    print("=" * 100)
-                    print("ALL TASKS COMPLETED!")
-                    print("=" * 100)
-                    break
+                    # Double-check: make sure there are no ready, in_progress, or assigned tasks
+                    if ready_tasks == 0 and in_progress_tasks == 0 and assigned_tasks == 0:
+                        print()
+                        print("=" * 100)
+                        print("ALL TASKS COMPLETED!")
+                        print("=" * 100)
+                        break
+                    else:
+                        # There are still tasks to process - don't exit
+                        if LOGGING_AVAILABLE:
+                            AgentLogger.debug("GenericProjectRunner", 
+                                f"Completion check: completed={completed}, total={len(all_tasks)}, "
+                                f"ready={ready_tasks}, in_progress={in_progress_tasks}, assigned={assigned_tasks}",
+                                extra={'completed': completed, 'total': len(all_tasks), 
+                                      'ready': ready_tasks, 'in_progress': in_progress_tasks, 'assigned': assigned_tasks})
                 
                 # Check for failures
                 if failed > 0 and completed + failed == len(all_tasks):
-                    print()
-                    print("=" * 100)
-                    print(f"TASKS FINISHED: {completed} completed, {failed} failed")
-                    print("=" * 100)
-                    break
+                    # Only exit if there are no ready, in_progress, or assigned tasks
+                    if ready_tasks == 0 and in_progress_tasks == 0 and assigned_tasks == 0:
+                        print()
+                        print("=" * 100)
+                        print(f"TASKS FINISHED: {completed} completed, {failed} failed")
+                        print("=" * 100)
+                        break
         
         except KeyboardInterrupt:
             print("\n\nInterrupted by user")
+            if LOGGING_AVAILABLE:
+                AgentLogger.warning("GenericProjectRunner", "Team interrupted by user (KeyboardInterrupt)")
         except Exception as e:
             print(f"\n\nError in main loop: {e}")
             import traceback
             traceback.print_exc()
+            if LOGGING_AVAILABLE:
+                AgentLogger.critical("GenericProjectRunner", f"Fatal error in main loop: {e}", extra={
+                    'error_type': type(e).__name__,
+                    'error_message': str(e),
+                    'traceback': traceback.format_exc()
+                })
             # Try to save progress even if there's an error
             try:
                 if hasattr(self, 'progress_persistence') and self.progress_persistence:
@@ -726,6 +949,8 @@ Add any additional requirements or notes here.
                     print("Progress saved before stopping.")
             except Exception as save_error:
                 print(f"Warning: Could not save progress: {save_error}")
+                if LOGGING_AVAILABLE:
+                    AgentLogger.error("GenericProjectRunner", f"Failed to save progress after error: {save_error}")
         
         finally:
             # Stop agents
@@ -781,33 +1006,18 @@ Add any additional requirements or notes here.
                 should_complete = False
                 artifacts = []
                 
-                # For setup tasks, check if required files exist
-                if 'setup' in task_id.lower():
-                    # Check for Flutter project first
-                    has_pubspec = os.path.exists(os.path.join(self.project_dir, 'pubspec.yaml'))
-                    has_main_dart = os.path.exists(os.path.join(self.project_dir, 'lib', 'main.dart'))
-                    
-                    if has_pubspec and has_main_dart:
-                        should_complete = True
-                        artifacts = [
-                            os.path.join(self.project_dir, 'pubspec.yaml'),
-                            os.path.join(self.project_dir, 'lib', 'main.dart'),
-                        ]
-                        artifacts = [a for a in artifacts if os.path.exists(a)]
-                    else:
-                        # Check for React Native project
-                        has_package = os.path.exists(os.path.join(self.project_dir, 'package.json'))
-                        has_app = os.path.exists(os.path.join(self.project_dir, 'App.js')) or os.path.exists(os.path.join(self.project_dir, 'App.tsx'))
-                        if has_package and has_app:
+                # For setup tasks, check if task has artifacts defined
+                # Generic approach: rely on task artifacts, not hardcoded file checks
+                if 'setup' in task_id.lower() or 'initialize' in task_id.lower():
+                    # Check if task already has artifacts defined
+                    if task.artifacts and len(task.artifacts) > 0:
+                        # Verify artifacts exist
+                        existing_artifacts = [a for a in task.artifacts if os.path.exists(a)]
+                        if len(existing_artifacts) > 0:
                             should_complete = True
-                            artifacts = [
-                                os.path.join(self.project_dir, 'package.json'),
-                                os.path.join(self.project_dir, 'App.js'),
-                                os.path.join(self.project_dir, 'index.js'),
-                                os.path.join(self.project_dir, 'app.json'),
-                                os.path.join(self.project_dir, 'README.md')
-                            ]
-                            artifacts = [a for a in artifacts if os.path.exists(a)]
+                            artifacts = existing_artifacts
+                    # If no artifacts defined, don't auto-complete based on file system checks
+                    # Let supervisor handle completion based on requirements.md analysis
                 # For deployment tasks, check if deployment directory exists
                 elif 'deploy' in task_id.lower():
                     deployment_dir = os.path.join(self.project_dir, 'deployment')
@@ -926,32 +1136,19 @@ Add any additional requirements or notes here.
         return len(conflicts) == 0, conflicts
     
     def _get_expected_files_for_task(self, task: Task) -> List[str]:
-        """Get expected files that this task will likely create/modify"""
-        expected = []
-        task_id = task.id.lower()
-        task_title = task.title.lower()
+        """
+        Get expected files that this task will likely create/modify.
         
-        # Simple heuristic based on task title/ID
-        if 'service' in task_id or 'service' in task_title:
-            if 'translation' in task_id or 'translation' in task_title:
-                expected.append('lib/services/translation_service.dart')
-            elif 'parser' in task_id or 'parser' in task_title:
-                if 'mobi' in task_id or 'mobi' in task_title:
-                    expected.append('lib/services/mobi_parser_service.dart')
-                elif 'epub' in task_id or 'epub' in task_title:
-                    expected.append('lib/services/epub_parser_service.dart')
-            else:
-                expected.append('lib/services/')
-        elif 'model' in task_id or 'model' in task_title:
-            expected.append('lib/models/')
-        elif 'screen' in task_id or 'screen' in task_title or 'page' in task_id or 'page' in task_title:
-            expected.append('lib/screens/')
-        elif 'widget' in task_id or 'widget' in task_title:
-            expected.append('lib/widgets/')
-        else:
-            # Default: could be in lib/
-            expected.append('lib/')
-        
+        Project-agnostic approach:
+        - Prefer explicit `task.artifacts` (if present)
+        - Otherwise, return an empty list (no assumptions about framework/layout)
+        """
+        expected: List[str] = []
+        try:
+            if getattr(task, "artifacts", None):
+                expected.extend([a for a in task.artifacts if a])
+        except Exception:
+            pass
         return expected
     
     def _force_task_assignment(self):
@@ -961,6 +1158,14 @@ Add any additional requirements or notes here.
         
         ready_tasks = self.coordinator.get_ready_tasks()
         if not ready_tasks:
+            # Debug: Check if there are tasks that should be ready
+            all_tasks = list(self.coordinator.tasks.values())
+            ready_count = sum(1 for t in all_tasks if t.status == TaskStatus.READY)
+            if ready_count > 0:
+                if LOGGING_AVAILABLE:
+                    AgentLogger.warning("GenericProjectRunner", 
+                        f"get_ready_tasks() returned empty but {ready_count} tasks have READY status",
+                        extra={'ready_task_ids': [t.id for t in all_tasks if t.status == TaskStatus.READY]})
             return
         
         # Use parallel optimizer if available
@@ -999,8 +1204,11 @@ Add any additional requirements or notes here.
                     continue
                 
                 # Check conflicts with this specific agent
-                has_conflicts, conflict_list = self._check_task_conflicts(task, agent.agent_id)
-                if has_conflicts:
+                # Note: _check_task_conflicts returns (no_conflicts, conflict_list)
+                # where no_conflicts is True if there are NO conflicts
+                no_conflicts, conflict_list = self._check_task_conflicts(task, agent.agent_id)
+                if no_conflicts:
+                    # No conflicts - can assign to this agent
                     # Prefer developer for implementation tasks, tester for test tasks
                     task_id_lower = task.id.lower()
                     task_title_lower = task.title.lower()
@@ -1027,8 +1235,10 @@ Add any additional requirements or notes here.
                 continue  # No available agent for this task
             
             # Final conflict check before assignment
-            has_conflicts, conflict_list = self._check_task_conflicts(task, best_agent.agent_id)
-            if has_conflicts:
+            # Note: _check_task_conflicts returns (no_conflicts, conflict_list)
+            # where no_conflicts is True iff there are NO conflicts.
+            no_conflicts, conflict_list = self._check_task_conflicts(task, best_agent.agent_id)
+            if not no_conflicts:
                 # Has conflicts - skip this task for now
                 if LOGGING_AVAILABLE:
                     AgentLogger.debug(best_agent.agent_id, f"Skipping task {task.id} due to conflicts", 
@@ -1247,41 +1457,16 @@ Add any additional requirements or notes here.
             print("[OK] Test suite PASSED")
         print()
         
-        # Step 2: Verify app builds
-        print("[2/4] Verifying app builds...")
-        build_passed = self._verify_app_builds()
-        if not build_passed:
-            print("[FAIL] App build FAILED")
-            all_passed = False
-        else:
-            print("[OK] App build PASSED")
-        print()
-        
-        # Step 3: Verify app can start
-        print("[3/4] Verifying app can start...")
-        start_passed = self._verify_app_starts()
-        if not start_passed:
-            print("[FAIL] App startup FAILED")
-            all_passed = False
-        else:
-            print("[OK] App startup PASSED")
-        print()
-        
-        # Step 4: Run app and verify it's responsive
-        print("[4/4] Verifying app is responsive...")
-        responsive_passed = self._verify_app_responsive()
-        if not responsive_passed:
-            print("[FAIL] App responsiveness check FAILED")
-            all_passed = False
-        else:
-            print("[OK] App responsiveness check PASSED")
-        print()
+        # Step 2-4: Build/start/responsiveness verification is intentionally not hardcoded here.
+        # The core runner is project-agnostic; validation should be expressed through tasks'
+        # acceptance criteria commands and artifacts (validated by agents), and/or agent-provided
+        # test executors.
         
         return all_passed
     
     def _run_comprehensive_tests(self) -> bool:
-        """Run comprehensive test suite"""
-        # Try to use agents' test methods if available
+        """Run comprehensive test suite (only via agent-provided executor)."""
+        # Try to use agents' test methods if available.
         for agent in self.agents:
             if hasattr(agent, '_run_test_suite'):
                 try:
@@ -1293,296 +1478,38 @@ Add any additional requirements or notes here.
                         return False
                 except Exception as e:
                     print(f"  Error running tests: {e}")
-        
-        # Fallback: Try common test commands
-        project_dir = self.project_dir
-        
-        # React Native
-        if os.path.exists(os.path.join(project_dir, 'package.json')):
-            try:
-                import subprocess
-                result = subprocess.run(
-                    ['npm', 'test', '--', '--passWithNoTests'],
-                    cwd=project_dir,
-                    capture_output=True,
-                    timeout=300,
-                    shell=True
-                )
-                if result.returncode == 0:
-                    return True
-                else:
-                    print(f"  npm test output: {result.stdout.decode('utf-8', errors='ignore')[:500]}")
-                    print(f"  npm test errors: {result.stderr.decode('utf-8', errors='ignore')[:500]}")
-                    return False
-            except Exception as e:
-                print(f"  Error running npm test: {e}")
-                return False
-        
-        # Flutter
-        if os.path.exists(os.path.join(project_dir, 'pubspec.yaml')):
-            try:
-                import subprocess
-                result = subprocess.run(
-                    ['flutter', 'test'],
-                    cwd=project_dir,
-                    capture_output=True,
-                    timeout=300,
-                    shell=True
-                )
-                return result.returncode == 0
-            except Exception as e:
-                print(f"  Error running flutter test: {e}")
-                return False
-        
-        # Python/Flask
-        if os.path.exists(os.path.join(project_dir, 'src', 'app.py')):
-            try:
-                import subprocess
-                import sys
-                result = subprocess.run(
-                    [sys.executable, '-m', 'pytest', 'tests/', '-v'],
-                    cwd=project_dir,
-                    capture_output=True,
-                    timeout=300,
-                    shell=True
-                )
-                return result.returncode == 0
-            except Exception as e:
-                print(f"  Error running pytest: {e}")
-                return False
-        
-        print("  No test suite found - skipping test verification")
+
+        print("  No test executor found - skipping test verification")
         return True  # Don't fail if no tests exist
     
     def _verify_app_builds(self) -> bool:
-        """Verify the app can build successfully"""
-        project_dir = self.project_dir
+        """
+        Verify the app can build successfully.
         
-        # React Native - check if it can build
-        if os.path.exists(os.path.join(project_dir, 'package.json')):
-            try:
-                import subprocess
-                # Check if dependencies are installed
-                if not os.path.exists(os.path.join(project_dir, 'node_modules')):
-                    print("  Installing dependencies...")
-                    result = subprocess.run(
-                        ['npm', 'install'],
-                        cwd=project_dir,
-                        capture_output=True,
-                        timeout=300,
-                        shell=True
-                    )
-                    if result.returncode != 0:
-                        print(f"  npm install failed: {result.stderr.decode('utf-8', errors='ignore')[:300]}")
-                        return False
-                
-                # Try to build/verify structure
-                print("  Verifying React Native project structure...")
-                has_package = os.path.exists(os.path.join(project_dir, 'package.json'))
-                has_app = os.path.exists(os.path.join(project_dir, 'App.js')) or os.path.exists(os.path.join(project_dir, 'App.tsx'))
-                has_index = os.path.exists(os.path.join(project_dir, 'index.js'))
-                
-                if has_package and has_app and has_index:
-                    return True
-                else:
-                    print(f"  Missing files: package.json={has_package}, App.js={has_app}, index.js={has_index}")
-                    return False
-            except Exception as e:
-                print(f"  Error verifying build: {e}")
-                return False
-        
-        # Flutter
-        if os.path.exists(os.path.join(project_dir, 'pubspec.yaml')):
-            try:
-                import subprocess
-                # First, verify Flutter is available
-                flutter_check = subprocess.run(
-                    ['flutter', '--version'],
-                    cwd=project_dir,
-                    capture_output=True,
-                    timeout=10,
-                    shell=True
-                )
-                if flutter_check.returncode != 0:
-                    print("  [WARNING] Flutter not found in PATH - cannot build executables")
-                    print("  [INFO] Verifying project structure only...")
-                    # Still verify structure
-                    has_pubspec = os.path.exists(os.path.join(project_dir, 'pubspec.yaml'))
-                    has_main = os.path.exists(os.path.join(project_dir, 'lib', 'main.dart'))
-                    if has_pubspec and has_main:
-                        print("  [OK] Flutter project structure is valid")
-                        return True
-                    return False
-                
-                # Run flutter analyze
-                print("  Running flutter analyze...")
-                result = subprocess.run(
-                    ['flutter', 'analyze'],
-                    cwd=project_dir,
-                    capture_output=True,
-                    timeout=120,
-                    shell=True
-                )
-                if result.returncode != 0:
-                    print(f"  [WARNING] Flutter analyze found issues:")
-                    print(f"  {result.stdout.decode('utf-8', errors='ignore')[:500]}")
-                    print(f"  {result.stderr.decode('utf-8', errors='ignore')[:500]}")
-                
-                # Try to build Web (most likely to work without Android/iOS SDK)
-                print("  Attempting to build Web version...")
-                build_result = subprocess.run(
-                    ['flutter', 'build', 'web', '--release'],
-                    cwd=project_dir,
-                    capture_output=True,
-                    timeout=600,
-                    shell=True
-                )
-                if build_result.returncode == 0:
-                    web_build_dir = os.path.join(project_dir, 'build', 'web')
-                    if os.path.exists(web_build_dir):
-                        print(f"  [OK] Web build successful: {web_build_dir}")
-                        return True
-                    else:
-                        print("  [WARNING] Build command succeeded but build directory not found")
-                else:
-                    print(f"  [WARNING] Web build failed (this is OK if Flutter SDK is not fully configured)")
-                    print(f"  Build output: {build_result.stdout.decode('utf-8', errors='ignore')[:300]}")
-                
-                # If analyze passed, consider it OK even if build failed
-                return result.returncode == 0
-            except FileNotFoundError:
-                print("  [WARNING] Flutter not found in PATH - cannot build executables")
-                # Still verify structure
-                has_pubspec = os.path.exists(os.path.join(project_dir, 'pubspec.yaml'))
-                has_main = os.path.exists(os.path.join(project_dir, 'lib', 'main.dart'))
-                if has_pubspec and has_main:
-                    print("  [OK] Flutter project structure is valid (Flutter SDK not available)")
-                    return True
-                return False
-            except Exception as e:
-                print(f"  [WARNING] Error verifying Flutter build: {e}")
-                # Still verify structure
-                has_pubspec = os.path.exists(os.path.join(project_dir, 'pubspec.yaml'))
-                has_main = os.path.exists(os.path.join(project_dir, 'lib', 'main.dart'))
-                if has_pubspec and has_main:
-                    print("  [OK] Flutter project structure is valid")
-                    return True
-                return False
-        
-        # Python/Flask
-        if os.path.exists(os.path.join(project_dir, 'src', 'app.py')):
-            try:
-                import sys
-                import subprocess
-                result = subprocess.run(
-                    [sys.executable, '-c', 
-                     f'import sys; sys.path.insert(0, "{os.path.join(project_dir, "src")}"); from app import app; print("OK")'],
-                    cwd=project_dir,
-                    capture_output=True,
-                    timeout=10,
-                    shell=True
-                )
-                return result.returncode == 0
-            except Exception as e:
-                print(f"  Error verifying Python app: {e}")
-                return False
-        
+        NOTE: The core runner intentionally does not hardcode framework/tooling-specific build steps.
+        Build verification should be represented explicitly as task acceptance criteria commands and/or
+        agent-provided build/test executors.
+        """
+        print("  Build verification is task/agent-driven - skipping runner-level build checks")
         return True
     
     def _verify_app_starts(self) -> bool:
-        """Verify the app can actually start"""
-        project_dir = self.project_dir
+        """
+        Verify the app can start.
         
-        # React Native - verify Metro can start
-        if os.path.exists(os.path.join(project_dir, 'package.json')):
-            try:
-                import subprocess
-                import time
-                import threading
-                
-                print("  Starting Metro bundler (test)...")
-                # Start Metro in background
-                metro_process = subprocess.Popen(
-                    ['npm', 'start', '--', '--reset-cache'],
-                    cwd=project_dir,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    shell=True
-                )
-                
-                # Wait a bit for Metro to start
-                time.sleep(10)
-                
-                # Check if Metro is responding
-                try:
-                    import urllib.request
-                    response = urllib.request.urlopen('http://localhost:8081/status', timeout=5)
-                    if response.status == 200:
-                        metro_process.terminate()
-                        metro_process.wait(timeout=5)
-                        return True
-                except:
-                    pass
-                
-                # Cleanup
-                try:
-                    metro_process.terminate()
-                    metro_process.wait(timeout=5)
-                except:
-                    metro_process.kill()
-                
-                print("  Metro bundler did not respond (this may be OK if dependencies not installed)")
-                # Don't fail - Metro might not be needed for basic verification
-                return True
-            except Exception as e:
-                print(f"  Error starting Metro: {e}")
-                # Don't fail - this is a test, not a requirement
-                return True
-        
-        # Python/Flask - verify server can start
-        if os.path.exists(os.path.join(project_dir, 'src', 'app.py')):
-            try:
-                import sys
-                import subprocess
-                result = subprocess.run(
-                    [sys.executable, '-c',
-                     f'import sys; sys.path.insert(0, "{os.path.join(project_dir, "src")}"); from app import app; print("App imported successfully")'],
-                    cwd=project_dir,
-                    capture_output=True,
-                    timeout=10,
-                    shell=True
-                )
-                return result.returncode == 0
-            except Exception as e:
-                print(f"  Error verifying Flask app: {e}")
-                return False
-        
+        NOTE: Runner-level startup checks are intentionally not hardcoded. Express startup verification
+        via tasks' acceptance criteria commands, or implement an agent-provided executor.
+        """
+        print("  Startup verification is task/agent-driven - skipping runner-level startup checks")
         return True
     
     def _verify_app_responsive(self) -> bool:
-        """Verify the app is responsive (can handle requests)"""
-        project_dir = self.project_dir
+        """
+        Verify the app is responsive.
         
-        # For React Native, check if bundle can be generated
-        if os.path.exists(os.path.join(project_dir, 'package.json')):
-            try:
-                # Just verify the structure is correct
-                # Full responsiveness test would require running the app
-                return True
-            except Exception as e:
-                print(f"  Error checking responsiveness: {e}")
-                return False
-        
-        # For Flask, try to make a test request
-        if os.path.exists(os.path.join(project_dir, 'src', 'app.py')):
-            try:
-                # This would require starting the server, which we skip for now
-                # Just verify it can be imported
-                return True
-            except Exception as e:
-                print(f"  Error checking responsiveness: {e}")
-                return False
-        
+        NOTE: Responsiveness checks are environment/framework-specific; keep them task/agent-driven.
+        """
+        print("  Responsiveness verification is task/agent-driven - skipping runner-level responsiveness checks")
         return True
     
     def _verify_app_runs(self):
@@ -1599,34 +1526,19 @@ Add any additional requirements or notes here.
         
         for task_id, task in self.coordinator.tasks.items():
             # Check setup tasks that are in_progress
-            if 'setup' in task_id.lower() and task.status == TaskStatus.IN_PROGRESS:
-                # Check what type of project this is
-                has_pubspec = os.path.exists(os.path.join(self.project_dir, 'pubspec.yaml'))
-                has_package = os.path.exists(os.path.join(self.project_dir, 'package.json'))
-                
-                files_exist = False
-                artifacts = []
-                
-                if has_pubspec:
-                    # Flutter project - check for main.dart
-                    has_main = os.path.exists(os.path.join(self.project_dir, 'lib', 'main.dart'))
-                    if has_main:
-                        files_exist = True
-                        artifacts = [
-                            os.path.join(self.project_dir, 'pubspec.yaml'),
-                            os.path.join(self.project_dir, 'lib', 'main.dart'),
-                        ]
-                elif has_package:
-                    # React Native project
-                    has_app = os.path.exists(os.path.join(self.project_dir, 'App.js')) or os.path.exists(os.path.join(self.project_dir, 'App.tsx'))
-                    has_index = os.path.exists(os.path.join(self.project_dir, 'index.js'))
-                    if has_app and has_index:
-                        files_exist = True
-                        artifacts = [
-                            os.path.join(self.project_dir, 'package.json'),
-                            os.path.join(self.project_dir, 'App.js'),
-                            os.path.join(self.project_dir, 'index.js'),
-                        ]
+            # Generic approach: only complete if task has artifacts defined
+            if ('setup' in task_id.lower() or 'initialize' in task_id.lower()) and task.status == TaskStatus.IN_PROGRESS:
+                # Check if task has artifacts defined
+                if task.artifacts and len(task.artifacts) > 0:
+                    # Verify artifacts exist
+                    existing_artifacts = [a for a in task.artifacts if os.path.exists(a)]
+                    files_exist = len(existing_artifacts) > 0
+                    artifacts = existing_artifacts
+                else:
+                    # No artifacts defined - don't force complete based on file system checks
+                    # Let supervisor handle completion based on requirements.md analysis
+                    files_exist = False
+                    artifacts = []
                 
                 # If files exist, force complete the task
                 if files_exist:
@@ -1667,23 +1579,16 @@ Add any additional requirements or notes here.
         for task_id, task in self.coordinator.tasks.items():
             # Only check setup tasks that are in_progress with high progress
             if 'setup' in task_id.lower() and task.status == TaskStatus.IN_PROGRESS and task.progress >= 90:
-                # Check what type of project this is
-                has_pubspec = os.path.exists(os.path.join(self.project_dir, 'pubspec.yaml'))
-                has_package = os.path.exists(os.path.join(self.project_dir, 'package.json'))
-                
-                files_exist = False
-                
-                if has_pubspec:
-                    # Flutter project - check for main.dart
-                    has_main = os.path.exists(os.path.join(self.project_dir, 'lib', 'main.dart'))
-                    files_exist = has_main
-                elif has_package:
-                    # React Native project - check for App.js and index.js
-                    has_app = os.path.exists(os.path.join(self.project_dir, 'App.js')) or os.path.exists(os.path.join(self.project_dir, 'App.tsx'))
-                    has_index = os.path.exists(os.path.join(self.project_dir, 'index.js'))
-                    files_exist = has_app and has_index
-                
-                # If task is at high progress but files don't exist, reset it
+                # Project-agnostic: only validate if the task explicitly declares artifacts.
+                files_exist = True
+                if getattr(task, "artifacts", None):
+                    missing = [a for a in task.artifacts if a and not os.path.exists(a)]
+                    files_exist = len(missing) == 0
+                else:
+                    # No declared artifacts => cannot validate generically here.
+                    files_exist = True
+
+                # If task is at high progress but declared artifacts don't exist, reset it
                 if not files_exist:
                     print(f"[VALIDATION] WARNING: Setup task '{task_id}' is at {task.progress}% but required files don't exist!")
                     print(f"[VALIDATION] Resetting task to force re-execution...")
@@ -1713,15 +1618,12 @@ Add any additional requirements or notes here.
         """
         from .agents.agent_coordinator import TaskStatus
         
-        # Check what type of project this is
-        has_pubspec = os.path.exists(os.path.join(self.project_dir, 'pubspec.yaml'))
-        has_package = os.path.exists(os.path.join(self.project_dir, 'package.json'))
-        
-        if has_pubspec:
-            # Flutter project
-            has_main = os.path.exists(os.path.join(self.project_dir, 'lib', 'main.dart'))
-            if not has_main:
-                print(f"[VALIDATION] WARNING: Setup task '{task.id}' completed but lib/main.dart doesn't exist!")
+        # Generic approach: validate based on task artifacts, not hardcoded file checks
+        if task.artifacts and len(task.artifacts) > 0:
+            # Check if all artifacts exist
+            missing_artifacts = [a for a in task.artifacts if not os.path.exists(a)]
+            if missing_artifacts:
+                print(f"[VALIDATION] WARNING: Setup task '{task.id}' completed but artifacts don't exist: {missing_artifacts}")
                 print(f"[VALIDATION] Resetting task progress to force re-execution...")
                 task.progress = 0
                 task.status = TaskStatus.READY
@@ -1730,20 +1632,8 @@ Add any additional requirements or notes here.
                         0, self.coordinator.agent_workloads.get(task.assigned_agent, 0) - 1
                     )
                 task.assigned_agent = None
-        elif has_package:
-            # React Native project
-            has_app = os.path.exists(os.path.join(self.project_dir, 'App.js')) or os.path.exists(os.path.join(self.project_dir, 'App.tsx'))
-            has_index = os.path.exists(os.path.join(self.project_dir, 'index.js'))
-            if not (has_app and has_index):
-                print(f"[VALIDATION] WARNING: Setup task '{task.id}' completed but required files don't exist!")
-                print(f"[VALIDATION] Resetting task progress to force re-execution...")
-                task.progress = 0
-                task.status = TaskStatus.READY
-                if task.assigned_agent:
-                    self.coordinator.agent_workloads[task.assigned_agent] = max(
-                        0, self.coordinator.agent_workloads.get(task.assigned_agent, 0) - 1
-                    )
-                task.assigned_agent = None
+                return False
+        # If no artifacts defined, can't validate generically - supervisor will handle based on requirements.md
     
     def _create_verification_fix_task(self):
         """Create a task to fix verification issues"""
@@ -1776,11 +1666,27 @@ Add any additional requirements or notes here.
         self.coordinator.add_task(fix_task)
         print(f"\n[INFO] Created task '{fix_task_id}' to fix verification issues")
         
+        # CRITICAL: Ensure task is immediately visible to agents
+        # Verify task was added and is in READY status
+        if fix_task_id in self.coordinator.tasks:
+            added_task = self.coordinator.tasks[fix_task_id]
+            if added_task.status != TaskStatus.READY:
+                print(f"[WARNING] Task '{fix_task_id}' status is {added_task.status}, forcing to READY")
+                added_task.status = TaskStatus.READY
+            if LOGGING_AVAILABLE:
+                AgentLogger.info("GenericProjectRunner", f"Verification fix task created and registered",
+                    task_id=fix_task_id, extra={'status': added_task.status.value, 'total_tasks': len(self.coordinator.tasks)})
+        else:
+            print(f"[ERROR] Task '{fix_task_id}' was not added to coordinator!")
+            if LOGGING_AVAILABLE:
+                AgentLogger.error("GenericProjectRunner", f"Failed to add verification fix task to coordinator")
+        
         # Update tasks.md
         try:
             self.parser.update_task_in_file(fix_task)
-        except:
-            pass
+        except Exception as e:
+            if LOGGING_AVAILABLE:
+                AgentLogger.warning("GenericProjectRunner", f"Failed to update tasks.md for {fix_task_id}: {e}")
 
 
 def main():

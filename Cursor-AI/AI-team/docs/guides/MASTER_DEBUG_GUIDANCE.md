@@ -14,7 +14,6 @@ Clean up the dual_reader_3.1 directory, remove all previously generated files, s
 
 ## Key Files to Monitor
 - `dual_reader_3.1/progress_reports/progress.md` - Team progress
-- `dual_reader_3.1/IMPLEMENTATION_PLAN.md` - Implementation plan
 - `dual_reader_3.1/TEST_REPORT.md` - Test results
 - Agent logs - Check for errors and stuck states
 

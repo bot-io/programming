@@ -1,4 +1,0 @@
-Android Build Instructions:
-1. cd android
-2. ./gradlew assembleRelease (or gradlew.bat assembleRelease on Windows)
-3. APK will be at: android/app/build/outputs/apk/release/app-release.apk

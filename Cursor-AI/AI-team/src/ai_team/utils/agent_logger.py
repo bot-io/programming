@@ -26,12 +26,18 @@ class AgentLogger:
     _lock = threading.Lock()
     _log_files = {}
     _project_dir = None
+    _team_id = None  # REQ-1.2.3: Team ID for all log entries
     
     @classmethod
     def set_project_dir(cls, project_dir: str):
         """Set the project directory for log files"""
         cls._project_dir = os.path.abspath(project_dir)
         os.makedirs(cls._project_dir, exist_ok=True)
+    
+    @classmethod
+    def set_team_id(cls, team_id: str):
+        """REQ-1.2.3: Set the team ID for all log entries"""
+        cls._team_id = team_id
     
     @classmethod
     def _get_log_file(cls, agent_id: str) -> str:
@@ -53,7 +59,11 @@ class AgentLogger:
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
         
         # Build log entry
-        parts = [f"[{timestamp}]", f"[{level}]", f"[{agent_id}]"]
+        # REQ-1.2.3: Include team ID in all log entries
+        parts = [f"[{timestamp}]", f"[{level}]"]
+        if cls._team_id:
+            parts.append(f"[team:{cls._team_id}]")
+        parts.append(f"[{agent_id}]")
         if task_id:
             parts.append(f"[task:{task_id}]")
         parts.append(message)

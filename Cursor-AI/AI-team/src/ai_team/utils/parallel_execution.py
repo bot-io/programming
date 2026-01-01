@@ -236,32 +236,19 @@ class ParallelTaskAssigner:
         return False  # No conflicts
     
     def _get_expected_files_for_task(self, task: Task) -> List[str]:
-        """Get expected files that this task will likely create/modify"""
-        expected = []
-        task_id = task.id.lower()
-        task_title = task.title.lower()
+        """
+        Get expected files that this task will likely create/modify.
         
-        # Simple heuristic based on task title/ID
-        if 'service' in task_id or 'service' in task_title:
-            if 'translation' in task_id or 'translation' in task_title:
-                expected.append('lib/services/translation_service.dart')
-            elif 'parser' in task_id or 'parser' in task_title:
-                if 'mobi' in task_id or 'mobi' in task_title:
-                    expected.append('lib/services/mobi_parser_service.dart')
-                elif 'epub' in task_id or 'epub' in task_title:
-                    expected.append('lib/services/epub_parser_service.dart')
-            else:
-                expected.append('lib/services/')
-        elif 'model' in task_id or 'model' in task_title:
-            expected.append('lib/models/')
-        elif 'screen' in task_id or 'screen' in task_title or 'page' in task_id or 'page' in task_title:
-            expected.append('lib/screens/')
-        elif 'widget' in task_id or 'widget' in task_title:
-            expected.append('lib/widgets/')
-        else:
-            # Default: could be in lib/
-            expected.append('lib/')
-        
+        Project-agnostic approach:
+        - Prefer explicit `task.artifacts` (if present)
+        - Otherwise, return an empty list (no assumptions about framework/layout)
+        """
+        expected: List[str] = []
+        try:
+            if getattr(task, "artifacts", None):
+                expected.extend([a for a in task.artifacts if a])
+        except Exception:
+            pass
         return expected
     
     def get_parallelism_metrics(self) -> Dict:

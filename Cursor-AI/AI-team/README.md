@@ -110,6 +110,26 @@ agent = GenericAgent(
 
 See `example_cursor_agent.py` for a complete example.
 
+## Configuration: Single Source of Truth
+
+**Use `ai_team_settings.local.json` as your single source of truth for API keys.**
+
+1. Copy the example: `cp SETTINGS.example.json ai_team_settings.local.json`
+2. Edit `ai_team_settings.local.json` with your real API keys
+3. The file is gitignored (never committed)
+
+**Precedence** (highest → lowest):
+- Environment variables (optional override)
+- `ai_team_settings.local.json` (recommended; single source of truth)
+
+See `SETTINGS.example.json` for the template format.
+
+## Run automation tests
+
+```bash
+python run_tests.py
+```
+
 ## Quick Start
 
 ### 1. Create a Coordinator

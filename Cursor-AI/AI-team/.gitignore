@@ -1,0 +1,20 @@
+# Local secrets / settings (DO NOT COMMIT)
+
+.env
+.env.*
+
+# Local locks/state
+.ai_team_locks/
+
+# Logs / local run artifacts
+agent_logs/
+**/agent_logs/
+.cursor/
+**/.cursor/
+
+# Python caches
+__pycache__/
+**/__pycache__/
+*.pyc
+
+

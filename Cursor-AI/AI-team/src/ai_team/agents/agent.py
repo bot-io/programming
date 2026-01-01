@@ -11,6 +11,10 @@ from datetime import datetime
 from ..utils.conflict_prevention import LockType, ChangeSet
 import threading
 import os
+import re
+import subprocess
+import sys
+import time
 
 # Import logger
 try:
@@ -64,7 +68,16 @@ class Agent(ABC):
         self._pause_event = threading.Event()
         self._pause_event.set()  # Initially not paused
         self._work_thread: Optional[threading.Thread] = None
+        # Heartbeat throttling (for supervisor liveness detection)
+        self._last_heartbeat_sent = 0.0
         self.coordinator.register_agent_instance(self)
+        # Best-effort project directory (used for executing acceptance criteria commands).
+        self.project_dir: Optional[str] = None
+        if hasattr(coordinator, 'runner') and hasattr(coordinator.runner, 'project_dir'):
+            try:
+                self.project_dir = coordinator.runner.project_dir
+            except Exception:
+                self.project_dir = None
         
         # Initialize logging
         if LOGGING_AVAILABLE:
@@ -75,6 +88,499 @@ class Agent(ABC):
             if project_dir:
                 AgentLogger.set_project_dir(project_dir)
             AgentLogger.info(self.agent_id, f"Agent initialized (specialization: {specialization})")
+
+    def _get_project_dir(self) -> str:
+        """Get project directory for command execution and validation."""
+        if self.project_dir:
+            return self.project_dir
+        if hasattr(self.coordinator, 'runner') and hasattr(self.coordinator.runner, 'project_dir'):
+            try:
+                return self.coordinator.runner.project_dir
+            except Exception:
+                pass
+        return os.getcwd()
+
+    def _extract_acceptance_commands(self, task: Task) -> List[str]:
+        """
+        Extract runnable shell commands from task description and acceptance criteria.
+        We intentionally only execute backticked snippets (e.g., `tool command ...`) to avoid
+        running arbitrary prose.
+        """
+        texts: List[str] = []
+        try:
+            if getattr(task, "description", None):
+                texts.append(task.description)
+            if getattr(task, "acceptance_criteria", None):
+                # acceptance_criteria is typically a list of strings
+                texts.extend([str(x) for x in task.acceptance_criteria if x])
+        except Exception:
+            pass
+
+        commands: List[str] = []
+        for t in texts:
+            tl = (t or "").lower()
+            looks_like_command_line = any(k in tl for k in ("command", "run ", "run:", "execute", "executed"))
+            for m in re.findall(r'`([^`]+)`', t):
+                cmd = m.strip()
+                if not cmd:
+                    continue
+                # Allow obvious tooling commands even if the line doesn't include "Command/Run/Execute".
+                # This keeps us generic but avoids missing real commands in loosely-worded criteria.
+                cmd_l = cmd.lower()
+                looks_like_tool_cmd = cmd_l.startswith(("flutter ", "dart ", "python ", "npm ", "npx ", "yarn ", "pnpm ", "gradle", "./gradlew", "gradlew"))
+                if looks_like_command_line or looks_like_tool_cmd:
+                    commands.append(cmd)
+
+        # Basic safety filters: prevent obviously destructive commands.
+        deny_prefixes = (
+            "rm ", "rm-", "del ", "rmdir", "remove-item", "format ", "shutdown", "reboot",
+            "mkfs", "diskpart", "reg ", "powershell -command remove-item",
+        )
+        safe: List[str] = []
+        for c in commands:
+            c_norm = c.strip().lower()
+            if any(c_norm.startswith(p) for p in deny_prefixes):
+                continue
+            safe.append(c)
+
+        # De-duplicate while preserving order
+        seen = set()
+        unique: List[str] = []
+        for c in safe:
+            if c not in seen:
+                seen.add(c)
+                unique.append(c)
+        return unique
+
+    def _run_acceptance_commands(self, task: Task) -> Tuple[bool, str]:
+        """
+        Run extracted acceptance commands (if any).
+        Returns (ok, message). If no commands found, returns (True, 'no commands').
+        """
+        commands = self._extract_acceptance_commands(task)
+        if not commands:
+            return True, "No acceptance commands to run"
+
+        cwd = self._get_project_dir()
+        is_windows = os.name == "nt"
+        is_macos = sys.platform == "darwin"
+        # Default timeout: allow longer for build/install/test commands.
+        def _timeout_for(cmd: str) -> int:
+            c = cmd.lower()
+            if " build" in c:
+                return 900
+            if " test" in c:
+                return 600
+            if " install" in c or " restore" in c:
+                return 600
+            return 300
+
+        for cmd in commands:
+            cmd_to_run = cmd
+            cmd_lower = cmd_to_run.lower().strip()
+
+            def _is_existing_relative_path_token(s: str) -> Optional[str]:
+                """
+                If an extracted "command" is actually just a path token (file OR directory),
+                treat it as an existence check instead of executing it.
+                This is fully generic and fixes common patterns like backticked `lib/` or `android/app/build.gradle`.
+                Returns the normalized relative path if it exists; otherwise None.
+                """
+                ss = (s or "").strip().strip("\"'")
+                if not ss or " " in ss:
+                    return None
+                if ss.lower().startswith(("http://", "https://")):
+                    return None
+                # Only treat relative paths as artifact checks.
+                try:
+                    if os.path.isabs(ss):
+                        return None
+                except Exception:
+                    return None
+                rel = ss.replace("\\", "/")
+                if rel.startswith("./"):
+                    rel = rel[2:]
+                p = os.path.join(cwd, rel.replace("/", os.sep))
+                return rel if os.path.exists(p) else None
+
+            # Platform-aware skips (generic): only skip when the criterion line explicitly says so.
+            # (We do NOT special-case any tool/framework names here.)
+            context_lines: List[str] = []
+            try:
+                if getattr(task, "acceptance_criteria", None):
+                    context_lines.extend([str(x) for x in task.acceptance_criteria if x])
+                if getattr(task, "description", None):
+                    context_lines.append(str(task.description))
+            except Exception:
+                context_lines = []
+
+            # Find the line that contains this command (best-effort).
+            # Some task files wrap commands in backticks, others don't.
+            ctx = next((l for l in context_lines if f"`{cmd}`" in l or cmd in l), "")
+            ctx_l = ctx.lower()
+            # Only execute snippets that are actually described as commands in the criteria.
+            # Many tasks include backticked inline config snippets (e.g. `hive: ^2.2.3`, `minSdkVersion 21`)
+            # which should NOT be executed as shell commands.
+            is_command_line = any(k in ctx_l for k in ("command", "run ", "run:", "execute", "executed"))
+            # Platform-aware skips (generic). Many task files phrase this as:
+            # - "macOS only"
+            # - "On macOS: ..."
+            # - "Windows only" / "On Windows: ..."
+            if (("macos only" in ctx_l or "mac only" in ctx_l or "on macos" in ctx_l) and (not is_macos)):
+                print(f"  [{self.agent_id}] [ACCEPTANCE] Skipping command (macOS only): {cmd_to_run}")
+                continue
+            if (("windows only" in ctx_l or "on windows" in ctx_l) and (not is_windows)):
+                print(f"  [{self.agent_id}] [ACCEPTANCE] Skipping command (Windows only): {cmd_to_run}")
+                continue
+            if (("linux only" in ctx_l or "on linux" in ctx_l) and (os.name != "posix" or sys.platform == "darwin")):
+                print(f"  [{self.agent_id}] [ACCEPTANCE] Skipping command (Linux only): {cmd_to_run}")
+                continue
+
+            # If the extracted "command" is actually an existing path token, validate existence instead of executing.
+            rel = _is_existing_relative_path_token(cmd_to_run)
+            if rel:
+                print(f"  [{self.agent_id}] [ACCEPTANCE] Path exists: {rel}")
+                continue
+
+            # If the snippet came from a non-command criteria line, skip it (it's likely inline code/config).
+            if ctx and not is_command_line:
+                print(f"  [{self.agent_id}] [ACCEPTANCE] Skipping inline snippet (not a command): {cmd_to_run}")
+                continue
+
+            # If we couldn't find any context line, be conservative: skip obvious key:value snippets.
+            if not ctx:
+                s = cmd_to_run.strip()
+                if ":" in s and "/" not in s and "\\" not in s:
+                    print(f"  [{self.agent_id}] [ACCEPTANCE] Skipping inline key:value snippet: {cmd_to_run}")
+                    continue
+
+            # Normalize common LLM-generated incomplete create/init commands:
+            # If a tool's create/init is invoked without a target, default to current directory.
+            if re.fullmatch(r"\S+\s+(create|init)\s*", cmd_lower):
+                cmd_to_run = f"{cmd_to_run} ."
+
+            # Acquire a coarse per-tool lock to avoid concurrent executions of the same heavy tool
+            # in the same project (e.g., build/test tools that use global caches/locks).
+            # This must remain framework/language agnostic: we lock based on the first executable token.
+            # (Generic, cross-platform: uses an atomic lock file with stale-lock recovery.)
+            lock_dir = os.path.join(cwd, ".ai_team_locks")
+            exe_token = (cmd_to_run.strip().split() or [""])[0].strip().strip("\"'").lower()
+            # Normalize common Windows forms.
+            if exe_token.endswith(".exe"):
+                exe_token = exe_token[:-4]
+            if exe_token in {"./gradlew", "gradlew", "gradlew.bat"}:
+                exe_token = "gradlew"
+            if exe_token == "":
+                exe_token = "unknown"
+            tool_lock = os.path.join(lock_dir, f"tool.{exe_token}.lock")  # file (legacy runs may leave a directory here)
+            is_tool_cmd = exe_token not in {"unknown"}
+
+            def _acquire_tool_lock(timeout_s: int) -> bool:
+                if not is_tool_cmd:
+                    return True
+                try:
+                    os.makedirs(lock_dir, exist_ok=True)
+                except Exception:
+                    return True  # don't hard-fail if we can't create lock dir
+                start = time.time()
+                # Stale lock recovery: if lock exists for too long, assume previous holder crashed and remove it.
+                # Use a conservative threshold to avoid breaking legitimate long builds/tests.
+                stale_s = max(600, timeout_s * 2)
+                while True:
+                    try:
+                        # Legacy: some runs used a directory lock. Clean it up if stale.
+                        if os.path.isdir(tool_lock):
+                            try:
+                                age = time.time() - os.path.getmtime(tool_lock)
+                                if age > stale_s:
+                                    # Directory is stale; remove it.
+                                    try:
+                                        os.rmdir(tool_lock)
+                                    except Exception:
+                                        # Best-effort: directory should be empty; if not, ignore.
+                                        pass
+                            except Exception:
+                                pass
+
+                        # Atomic file lock creation.
+                        fd = os.open(tool_lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                        try:
+                            payload = f"pid={os.getpid()}\nagent={self.agent_id}\nstarted={datetime.now().isoformat()}\ntool={exe_token}\ncmd={cmd_to_run}\n"
+                            os.write(fd, payload.encode("utf-8", errors="replace"))
+                        finally:
+                            try:
+                                os.close(fd)
+                            except Exception:
+                                pass
+                        return True
+                    except FileExistsError:
+                        # Lock file exists. If stale, remove and retry.
+                        try:
+                            age = time.time() - os.path.getmtime(tool_lock)
+                            if age > stale_s:
+                                try:
+                                    os.remove(tool_lock)
+                                    continue
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                        if time.time() - start > timeout_s:
+                            return False
+                        time.sleep(0.5)
+                    except IsADirectoryError:
+                        # Another process left a directory at flutter_lock path. Treat as lock held.
+                        try:
+                            age = time.time() - os.path.getmtime(tool_lock)
+                            if age > stale_s:
+                                try:
+                                    os.rmdir(tool_lock)
+                                    continue
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                        if time.time() - start > timeout_s:
+                            return False
+                        time.sleep(0.5)
+                    except Exception:
+                        return True
+
+            def _release_tool_lock():
+                if not is_tool_cmd:
+                    return
+                try:
+                    if os.path.isdir(tool_lock):
+                        os.rmdir(tool_lock)
+                    else:
+                        os.remove(tool_lock)
+                except Exception:
+                    pass
+
+            # Wait up to the command timeout (+60s) to acquire the tool lock; build/test can be slow.
+            lock_timeout_s = max(180, min(1200, _timeout_for(cmd_to_run) + 60))
+            if not _acquire_tool_lock(lock_timeout_s):
+                return False, f"Acceptance command lock timed out (tool={exe_token}): `{cmd_to_run}`"
+
+            print(f"  [{self.agent_id}] [ACCEPTANCE] Running: {cmd_to_run}")
+            try:
+                # Environment: allow light-weight, best-effort auto-detection for common toolchains.
+                # This is especially important on Windows where some SDK-driven tools may not see the Android SDK
+                # unless ANDROID_HOME / ANDROID_SDK_ROOT is set.
+                env = os.environ.copy()
+                if is_windows and ("ANDROID_HOME" not in env and "ANDROID_SDK_ROOT" not in env):
+                    try:
+                        localappdata = env.get("LOCALAPPDATA") or ""
+                        candidate = os.path.join(localappdata, "Android", "Sdk")
+                        if candidate and os.path.isdir(candidate):
+                            env["ANDROID_HOME"] = candidate
+                            env["ANDROID_SDK_ROOT"] = candidate
+                    except Exception:
+                        pass
+
+                result = subprocess.run(
+                    cmd_to_run,
+                    cwd=cwd,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    env=env,
+                    timeout=_timeout_for(cmd),
+                )
+                # Post-check: some commands return exit 0 but still indicate missing toolchains in output.
+                # Keep this generic and only enforce when the task itself is about the relevant platform/tool.
+                if result.returncode == 0:
+                    out = ((result.stdout or "") + "\n" + (result.stderr or "")).strip()
+                    # Some doctor/check commands may show missing Android SDK while still exiting 0.
+                    if "flutter doctor" in cmd_lower:
+                        task_text = f"{getattr(task, 'title', '')} {getattr(task, 'description', '')}".lower()
+                        is_android_task = "android" in task_text
+                        if is_android_task and (
+                            "unable to locate android sdk" in out.lower()
+                            or "no android sdk found" in out.lower()
+                            or "android toolchain - develop for android devices" in out.lower() and "[x]" in out.lower()
+                        ):
+                            return False, "Acceptance command indicates missing Android SDK. Install Android Studio/SDK and set ANDROID_HOME (or use `flutter config --android-sdk`)."
+                if result.returncode != 0:
+                    stderr = (result.stderr or "").strip()
+                    stdout = (result.stdout or "").strip()
+                    combined = (stderr + "\n" + stdout).strip()
+
+                    # Generic retry: Dart/Flutter tests sometimes fail because generated tests import the wrong
+                    # package name (e.g., `package:test_notes_app/...`) even though pubspec.yaml defines a different
+                    # `name:`. If we detect this, rewrite imports in the failing test files and retry once.
+                    if cmd_lower.startswith("flutter test") and "couldn't resolve the package 'test_notes_app'" in combined.lower():
+                        try:
+                            pkg = None
+                            pubspec_path = os.path.join(cwd, "pubspec.yaml")
+                            if os.path.exists(pubspec_path):
+                                with open(pubspec_path, "r", encoding="utf-8", errors="replace") as f:
+                                    for line in f.read().splitlines():
+                                        m = re.match(r"^\s*name\s*:\s*([A-Za-z0-9_\-]+)\s*$", line)
+                                        if m:
+                                            pkg = m.group(1).strip()
+                                            break
+                            if pkg and pkg != "test_notes_app":
+                                # Extract referenced dart paths from output and patch them.
+                                candidates = set()
+                                for m in re.finditer(r"(?:(?:[A-Za-z]:)?[\\/])?(?:test[\\/][^\\s:]+\\.dart)", combined):
+                                    candidates.add(m.group(0))
+                                # Also catch absolute paths printed by flutter.
+                                for m in re.finditer(r"(?:[A-Za-z]:[\\/][^\\s:]+\\.dart)", combined):
+                                    candidates.add(m.group(0))
+
+                                fixed = 0
+                                for p in list(candidates)[:6]:
+                                    # Normalize to absolute path.
+                                    ap = p
+                                    if not os.path.isabs(ap):
+                                        ap = os.path.join(cwd, p.replace("/", os.sep).replace("\\", os.sep))
+                                    if not os.path.exists(ap):
+                                        continue
+                                    try:
+                                        txt = ""
+                                        with open(ap, "r", encoding="utf-8", errors="replace") as fh:
+                                            txt = fh.read()
+                                        if "package:test_notes_app/" in txt:
+                                            txt2 = txt.replace("package:test_notes_app/", f"package:{pkg}/")
+                                            with open(ap, "w", encoding="utf-8", errors="replace") as fh:
+                                                fh.write(txt2)
+                                            fixed += 1
+                                    except Exception:
+                                        continue
+
+                                if fixed:
+                                    retry = cmd_to_run
+                                    print(f"  [{self.agent_id}] [ACCEPTANCE] Retrying after fixing Dart package imports in {fixed} file(s): {retry}")
+                                    retry_res = subprocess.run(
+                                        retry,
+                                        cwd=cwd,
+                                        shell=True,
+                                        capture_output=True,
+                                        text=True,
+                                        env=env,
+                                        timeout=_timeout_for(retry),
+                                    )
+                                    if retry_res.returncode == 0:
+                                        continue
+                                    retry_err = ((retry_res.stderr or "") + "\n" + (retry_res.stdout or "")).strip()[:400]
+                                    return False, f"Acceptance command failed: `{retry}` (exit {retry_res.returncode}) :: {retry_err}"
+                        except Exception:
+                            pass
+
+                    # Generic retry: if a command starts with "cd <dir> && ..." but that dir doesn't exist
+                    # and the project root already looks like the workspace (e.g., pubspec.yaml present),
+                    # retry without the cd prefix.
+                    m_cd = re.match(r"^\\s*cd\\s+([^\\s&]+)\\s*&&\\s*(.+)$", cmd_to_run, flags=re.IGNORECASE)
+                    if m_cd and ("cannot find the path specified" in combined.lower() or "system cannot find the path specified" in combined.lower()):
+                        subdir = m_cd.group(1).strip().strip("\"'")
+                        rest = m_cd.group(2).strip()
+                        try:
+                            if not os.path.isdir(os.path.join(cwd, subdir)) and os.path.exists(os.path.join(cwd, "pubspec.yaml")):
+                                retry = rest
+                                print(f"  [{self.agent_id}] [ACCEPTANCE] Retrying without missing cd dir: {retry}")
+                                retry_res = subprocess.run(
+                                    retry,
+                                    cwd=cwd,
+                                    shell=True,
+                                    capture_output=True,
+                                    text=True,
+                                    env=env,
+                                    timeout=_timeout_for(retry),
+                                )
+                                if retry_res.returncode == 0:
+                                    continue
+                                retry_err = ((retry_res.stderr or "") + "\\n" + (retry_res.stdout or "")).strip()[:400]
+                                return False, f"Acceptance command failed: `{retry}` (exit {retry_res.returncode}) :: {retry_err}"
+                        except Exception:
+                            pass
+
+                    # Generic retry: remove an unsupported flag if the tool reports it explicitly.
+                    if ("could not find an option named \"debug\"" in combined.lower()
+                        or "no option named \"debug\"" in combined.lower()) and "--debug" in cmd_to_run:
+                        retry = cmd_to_run.replace("--debug", "").replace("  ", " ").strip()
+                        print(f"  [{self.agent_id}] [ACCEPTANCE] Retrying without --debug: {retry}")
+                        retry_res = subprocess.run(
+                            retry,
+                            cwd=cwd,
+                            shell=True,
+                            capture_output=True,
+                            text=True,
+                            timeout=_timeout_for(retry),
+                        )
+                        if retry_res.returncode == 0:
+                            continue
+                        retry_err = (retry_res.stderr or retry_res.stdout or "").strip()[:400]
+                        return False, f"Acceptance command failed: `{retry}` (exit {retry_res.returncode}) :: {retry_err}"
+
+                    # Generic retry: remove a specifically-named unsupported option, if present.
+                    # Example: "Could not find an option named \"no-sound-null-safety\"."
+                    m_opt = re.search(r'could not find an option named \"\\s*([a-z0-9\\-]+)\\s*\"', combined, flags=re.IGNORECASE)
+                    if m_opt:
+                        opt = m_opt.group(1).strip()
+                        if opt:
+                            flag = f"--{opt}"
+                            if flag in cmd_to_run:
+                                retry = cmd_to_run.replace(flag, "").replace("  ", " ").strip()
+                                print(f"  [{self.agent_id}] [ACCEPTANCE] Retrying without unsupported option {flag}: {retry}")
+                                retry_res = subprocess.run(
+                                    retry,
+                                    cwd=cwd,
+                                    shell=True,
+                                    capture_output=True,
+                                    text=True,
+                                    env=env,
+                                    timeout=_timeout_for(retry),
+                                )
+                                if retry_res.returncode == 0:
+                                    continue
+                                retry_err = ((retry_res.stderr or "") + "\\n" + (retry_res.stdout or "")).strip()[:400]
+                                return False, f"Acceptance command failed: `{retry}` (exit {retry_res.returncode}) :: {retry_err}"
+
+                    # Generic retry: some CLIs reject "create/init" invocations that accidentally specify
+                    # multiple output directories (e.g., "NAME ." in the same command).
+                    # If we detect this error, try removing the extra positional output argument.
+                    if "multiple output directories specified" in combined.lower():
+                        tokens = cmd_to_run.strip().split()
+                        if tokens and tokens[-1] == "." and len(tokens) >= 3:
+                            # Find the last positional arg before '.' that doesn't look like an option.
+                            # We'll remove it once and retry.
+                            idx = None
+                            for i in range(len(tokens) - 2, 0, -1):
+                                if tokens[i].startswith("-"):
+                                    continue
+                                # Avoid removing the subcommand itself (e.g., "create"/"init").
+                                if tokens[i].lower() in ("create", "init"):
+                                    break
+                                idx = i
+                                break
+                            if idx is not None:
+                                retry_tokens = tokens[:idx] + tokens[idx + 1 :]
+                                retry = " ".join(retry_tokens).replace("  ", " ").strip()
+                                print(f"  [{self.agent_id}] [ACCEPTANCE] Retrying after removing extra output dir token: {retry}")
+                                retry_res = subprocess.run(
+                                    retry,
+                                    cwd=cwd,
+                                    shell=True,
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=_timeout_for(retry),
+                                )
+                                if retry_res.returncode == 0:
+                                    continue
+                                retry_err = ((retry_res.stderr or "") + "\n" + (retry_res.stdout or "")).strip()[:400]
+                                return False, f"Acceptance command failed: `{retry}` (exit {retry_res.returncode}) :: {retry_err}"
+
+                    snippet = (combined or "")[:400]
+                    return False, f"Acceptance command failed: `{cmd_to_run}` (exit {result.returncode}) :: {snippet}"
+            except subprocess.TimeoutExpired:
+                return False, f"Acceptance command timed out: `{cmd_to_run}`"
+            except Exception as e:
+                return False, f"Acceptance command error: `{cmd_to_run}` :: {e}"
+            finally:
+                _release_tool_lock()
+
+        return True, "Acceptance commands passed"
 
     def request_task(self) -> Optional[Task]:
         """Request a task from the coordinator"""
@@ -93,17 +599,29 @@ class Agent(ABC):
             return None
 
         # Filter by specialization if applicable
-        if self.specialization:
-            # Simple keyword matching - can be enhanced
+        # CRITICAL: Don't filter out tasks if no matches - use all ready tasks
+        # Specialization matching is a preference, not a requirement
+        if self.specialization and ready_tasks:
+            # Simple keyword matching - prefer tasks matching specialization
             matching_tasks = [
                 t for t in ready_tasks
                 if self.specialization.lower() in t.title.lower() or
                    self.specialization.lower() in t.description.lower()
             ]
-            if matching_tasks:
+            # Only use filtered list if we have matches AND there are other tasks
+            # If all tasks match or no tasks match, use original list
+            if matching_tasks and len(matching_tasks) < len(ready_tasks):
                 ready_tasks = matching_tasks
                 if LOGGING_AVAILABLE:
                     AgentLogger.debug(self.agent_id, f"Filtered to {len(matching_tasks)} tasks matching specialization '{self.specialization}'")
+            elif matching_tasks:
+                # All tasks match specialization - use them
+                if LOGGING_AVAILABLE:
+                    AgentLogger.debug(self.agent_id, f"All {len(matching_tasks)} ready tasks match specialization '{self.specialization}'")
+            else:
+                # No tasks match specialization, but use all ready tasks anyway
+                if LOGGING_AVAILABLE:
+                    AgentLogger.debug(self.agent_id, f"No tasks match specialization '{self.specialization}', using all {len(ready_tasks)} ready tasks")
 
         # Get task with least dependencies first (or use other priority logic)
         task = min(ready_tasks, key=lambda t: len(t.dependencies))
@@ -150,6 +668,8 @@ class Agent(ABC):
         else:
             task = self.current_task
 
+        was_in_progress = task.status == TaskStatus.IN_PROGRESS
+
         # Check if task is already completed - if so, clear it and return False
         if task.status == TaskStatus.COMPLETED:
             if LOGGING_AVAILABLE:
@@ -191,8 +711,8 @@ class Agent(ABC):
             self.send_status_update(
                 task.id,
                 TaskStatus.IN_PROGRESS,
-                progress=0,
-                message=f"Starting work on: {task.title}"
+                progress=(task.progress if was_in_progress else 0),
+                message=(f"Resuming work on: {task.title}" if was_in_progress else f"Starting work on: {task.title}")
             )
             
             if LOGGING_AVAILABLE:
@@ -307,11 +827,19 @@ class Agent(ABC):
         Returns (is_valid, reason)
         Override this method in subclasses for specific validation logic.
         """
-        # Basic validation: artifacts should exist
-        if artifacts:
-            missing = [a for a in artifacts if not os.path.exists(a)]
+        # Basic validation: require expected artifacts to exist.
+        # IMPORTANT: If agents mark tasks complete without producing any artifacts,
+        # we can still infer expected file outputs from the task text to prevent
+        # false completion (e.g., shipping the default template app).
+        expected = artifacts or self._infer_expected_artifacts(task)
+        if expected:
+            missing: List[str] = []
+            for a in expected:
+                ap = self._resolve_artifact_path(a)
+                if not os.path.exists(ap):
+                    missing.append(a)
             if missing:
-                return False, f"Missing artifacts: {', '.join(missing)}"
+                return False, f"Missing required artifacts: {', '.join(missing[:10])}"
         
         # Check if task has acceptance criteria and validate them
         if hasattr(task, 'acceptance_criteria') and task.acceptance_criteria:
@@ -319,6 +847,82 @@ class Agent(ABC):
             pass
         
         return True, "Task validation passed"
+
+    def _resolve_artifact_path(self, artifact: str) -> str:
+        """
+        Resolve an artifact path to an absolute path.
+        - Absolute paths are returned as-is
+        - Relative paths are treated as relative to the project directory (not the process cwd)
+        """
+        try:
+            if os.path.isabs(artifact):
+                return artifact
+        except Exception:
+            pass
+        base = self._get_project_dir()
+        return os.path.abspath(os.path.join(base, artifact))
+
+    def _infer_expected_artifacts(self, task: Task) -> List[str]:
+        """
+        Heuristic extraction of file paths mentioned in task description/acceptance criteria.
+        Generic: no framework-specific assumptions.
+        """
+        texts: List[str] = []
+        try:
+            if getattr(task, "description", None):
+                texts.append(str(task.description))
+            if getattr(task, "acceptance_criteria", None):
+                texts.extend([str(x) for x in task.acceptance_criteria if x])
+        except Exception:
+            pass
+
+        candidates: List[str] = []
+        # Backticked snippets often contain file paths.
+        for t in texts:
+            for m in re.findall(r"`([^`]+)`", t):
+                candidates.append(m.strip())
+
+        # Explicit acceptance statements often mention files/directories without backticks, e.g.:
+        # - "File lib/models/note.dart exists"
+        # - "Directory lib/models/ exists"
+        # We extract these as artifacts so completion validation can catch missing scaffolding.
+        for t in texts:
+            for m in re.findall(r"\bFile\s+([^\s]+)\s+exists\b", t, flags=re.IGNORECASE):
+                candidates.append(m.strip())
+            for m in re.findall(r"\bDirectory\s+([^\s]+)\s+exists\b", t, flags=re.IGNORECASE):
+                candidates.append(m.strip())
+            for m in re.findall(r"\bFolder\s+([^\s]+)\s+exists\b", t, flags=re.IGNORECASE):
+                candidates.append(m.strip())
+
+        # Also scan raw text for common path patterns with an extension.
+        for t in texts:
+            for m in re.findall(r"(?:(?:[A-Za-z]:)?[\\/])?(?:[\\w.\\-]+[\\/])+[\\w.\\-]+\\.(?:dart|yaml|yml|json|md|py|js|ts|tsx|java|kt|swift|html|css)", t):
+                candidates.append(m.strip())
+            for m in re.findall(r"\\b[\\w./\\-]+\\.(?:dart|yaml|yml|json|md|py|js|ts|tsx|java|kt|swift|html|css)\\b", t):
+                candidates.append(m.strip())
+
+        cleaned: List[str] = []
+        for c in candidates:
+            if not c or " " in c:
+                continue
+            if c.startswith("http://") or c.startswith("https://"):
+                continue
+            # Ignore common commands that are backticked.
+            if any(c.lower().startswith(p) for p in ("flutter ", "python ", "npm ", "dart ", "gradle", "adb ")):
+                continue
+            c = c.replace("\\", "/")
+            if c.startswith("./"):
+                c = c[2:]
+            cleaned.append(c)
+
+        # De-duplicate while preserving order.
+        seen = set()
+        out: List[str] = []
+        for c in cleaned:
+            if c not in seen:
+                seen.add(c)
+                out.append(c)
+        return out[:12]
     
     def complete_task(
         self,
@@ -355,33 +959,52 @@ class Agent(ABC):
         
         # Step 0.5: Validate artifacts exist and are not placeholders
         if artifacts:
-            if not self._validate_artifacts_basic(artifacts):
+            ok_artifacts, artifact_issues = self._validate_artifacts_basic(artifacts)
+            if not ok_artifacts:
                 print(f"  [{self.agent_id}] [ERROR] Artifacts validation failed - cannot complete task")
                 self.send_status_update(
                     task_id,
                     TaskStatus.BLOCKED,
-                    message="Artifacts validation failed - required files not created or are placeholders"
+                    message="Artifacts validation failed: " + (", ".join(artifact_issues[:5]) if artifact_issues else "required files not created or are placeholders")
                 )
                 return False
+
+        # Step 0.75: Run acceptance criteria commands if present.
+        # This prevents false "completed" statuses for tasks that claim command-based validation.
+        ok, msg = self._run_acceptance_commands(task)
+        if not ok:
+            if LOGGING_AVAILABLE:
+                AgentLogger.warning(self.agent_id, f"Acceptance criteria failed: {msg}", task_id=task_id)
+            print(f"  [{self.agent_id}] [ERROR] {msg}")
+            self.send_status_update(task_id, TaskStatus.BLOCKED, message=msg)
+            return False
         
-        # Step 1: Write tests for new functionality if this is a feature/fix task
-        test_artifacts = self._ensure_tests_exist(task_id, artifacts or [])
-        if test_artifacts:
-            if artifacts:
-                artifacts.extend(test_artifacts)
-            else:
-                artifacts = test_artifacts
-        
-        # Step 2: Run test suite
-        print(f"  [{self.agent_id}] Running test suite...")
-        test_result = self._run_test_suite()
-        test_status = "PASSED" if test_result == 0 else "FAILED"
-        if test_result != 0:
-            print(f"  [{self.agent_id}] [WARNING] Some tests failed")
-        
-        # Step 3: Run the app to verify it works
-        print(f"  [{self.agent_id}] Verifying app runs correctly...")
-        app_status = self._verify_app_runs()
+        # Step 1-3: Optional, minimal verification for Python projects (generic).
+        # For other project types, acceptance commands (above) and task artifacts are the primary signals.
+        project_dir = self._get_project_dir()
+        is_python_project = os.path.exists(os.path.join(project_dir, "src", "app.py")) or os.path.exists(os.path.join(project_dir, "pyproject.toml"))
+        test_status = "SKIPPED"
+        app_status = "SKIPPED"
+
+        if is_python_project:
+            # Step 1: Write tests for new functionality if this is a feature/fix task
+            test_artifacts = self._ensure_tests_exist(task_id, artifacts or [])
+            if test_artifacts:
+                if artifacts:
+                    artifacts.extend(test_artifacts)
+                else:
+                    artifacts = test_artifacts
+
+            # Step 2: Run test suite
+            print(f"  [{self.agent_id}] Running test suite...")
+            test_result = self._run_test_suite()
+            test_status = "PASSED" if test_result == 0 else "FAILED"
+            if test_result != 0:
+                print(f"  [{self.agent_id}] [WARNING] Some tests failed")
+
+            # Step 3: Run the app to verify it works
+            print(f"  [{self.agent_id}] Verifying app runs correctly...")
+            app_status = self._verify_app_runs()
         
         # Step 4: Validate changes before completion if conflict prevention is enabled
         # Note: Allow updates to files from completed tasks (they're already integrated)
@@ -396,7 +1019,7 @@ class Agent(ABC):
                 return False
         
         # Step 5: Complete task with test and app status
-        combined_tests = f"{tests or 'Tests written'}. Test suite: {test_status}. App status: {app_status}"
+        combined_tests = f"{tests or 'Checks complete'}. Test suite: {test_status}. App status: {app_status}. Acceptance: {msg}"
         
         msg = AgentMessage(
             agent_id=self.agent_id,
@@ -416,26 +1039,44 @@ class Agent(ABC):
             return True
         return False
     
-    def _validate_artifacts_basic(self, artifacts: List[str]) -> bool:
+    def _validate_artifacts_basic(self, artifacts: List[str]) -> Tuple[bool, List[str]]:
         """
         Basic validation that artifacts are actual files with content.
         Subclasses can override for more specific validation.
         """
         if not artifacts:
-            return False
+            return False, ["no artifacts provided"]
         
+        issues: List[str] = []
         for artifact in artifacts:
-            if not os.path.exists(artifact):
+            artifact_path = self._resolve_artifact_path(artifact)
+            if not os.path.exists(artifact_path):
                 print(f"    [VALIDATION] Artifact file does not exist: {artifact}")
-                return False
+                issues.append(f"missing:{artifact}")
+                continue
+
+            # Many tasks (especially scaffolding/setup tasks) legitimately treat directories as artifacts.
+            # For directories, existence is sufficient (size checks are not meaningful).
+            try:
+                if os.path.isdir(artifact_path):
+                    continue
+            except Exception:
+                # If we can't stat it reliably, treat it as invalid.
+                issues.append(f"stat_error:{artifact}")
+                continue
             
             # Check file size (must be > 0 bytes)
-            file_size = os.path.getsize(artifact)
+            file_size = os.path.getsize(artifact_path)
             if file_size == 0:
+                # Allow common placeholder files used to keep empty dirs in git.
+                base = os.path.basename(artifact_path).lower()
+                if base in {".gitkeep", ".keep"}:
+                    continue
                 print(f"    [VALIDATION] Artifact file is empty: {artifact}")
-                return False
+                issues.append(f"empty:{artifact}")
+                continue
         
-        return True
+        return (len(issues) == 0), issues
     
     def _ensure_tests_exist(self, task_id: str, artifacts: List[str]) -> List[str]:
         """
@@ -561,43 +1202,10 @@ class Test{task.id.replace('-', '_').title()}:
         Verify the app runs correctly.
         Protocol: Always run the app at the end to verify it works.
         """
-        import subprocess
-        import sys
-        import os
-        import time
-        
-        # Find project root
-        current_file = os.path.abspath(__file__)
-        project_root = os.path.dirname(os.path.dirname(current_file))
-        
-        # Check for Flask app
-        app_file = os.path.join(project_root, 'src', 'app.py')
-        start_script = os.path.join(project_root, 'start_server.py')
-        
-        if os.path.exists(app_file) or os.path.exists(start_script):
-            try:
-                # Try to import the app to verify it loads
-                if os.path.exists(start_script):
-                    # Quick import test
-                    result = subprocess.run(
-                        [sys.executable, '-c', f'import sys; sys.path.insert(0, "{os.path.join(project_root, "src")}"); from app import app; print("App imports successfully")'],
-                        cwd=project_root,
-                        capture_output=True,
-                        timeout=10
-                    )
-                    if result.returncode == 0:
-                        return "IMPORTS_OK"
-                    else:
-                        error = result.stderr.decode('utf-8', errors='ignore')
-                        print(f"    App import error: {error[:200]}")
-                        return "IMPORT_ERROR"
-                else:
-                    return "NO_APP_FILE"
-            except Exception as e:
-                print(f"    Error verifying app: {e}")
-                return "VERIFY_ERROR"
-        
-        return "NO_APP"
+        # Project-agnostic note:
+        # Running an application is highly environment-specific; this core implementation
+        # relies on task acceptance commands for run/build validation.
+        return "SKIPPED"
 
     @abstractmethod
     def work(self, task: Task) -> bool:
@@ -693,6 +1301,18 @@ class Test{task.id.replace('-', '_').title()}:
         loop_iteration = 0
         while self._running and not self._stop_event.is_set():
             loop_iteration += 1
+
+            # Lightweight heartbeat to coordinator (generic liveness signal).
+            # This helps the supervisor distinguish "idle but alive" from "hung".
+            try:
+                now = time.time()
+                if now - self._last_heartbeat_sent >= 5.0:
+                    if hasattr(self.coordinator, "record_heartbeat"):
+                        task_id = self.current_task.id if self.current_task else None
+                        self.coordinator.record_heartbeat(self.agent_id, task_id=task_id, state=getattr(self.state, "value", None))
+                    self._last_heartbeat_sent = now
+            except Exception:
+                pass
             if LOGGING_AVAILABLE and loop_iteration % 100 == 0:
                 AgentLogger.debug(self.agent_id, f"Work loop iteration {loop_iteration}", 
                                 extra={'has_current_task': self.current_task is not None})
@@ -707,78 +1327,64 @@ class Test{task.id.replace('-', '_').title()}:
             
             # Request a new task if we don't have one
             if not self.current_task:
-                if LOGGING_AVAILABLE:
-                    AgentLogger.execution_flow(self.agent_id, "No current task, requesting new task")
-                task = self.request_task()
-                if not task:
-                    # No tasks available, wait a bit and check again
-                    if LOGGING_AVAILABLE and loop_iteration % 10 == 0:
-                        AgentLogger.debug(self.agent_id, "No tasks available, waiting...")
-                    self._stop_event.wait(timeout=1.0)  # Reduced wait time for faster task pickup
-                    continue
-                
-                # Start working on the task
-                if LOGGING_AVAILABLE:
-                    AgentLogger.execution_flow(self.agent_id, f"Starting work on task: {task.id}", task_id=task.id)
-                if not self.start_work():
-                    # Failed to start, try again
+                # First, try to resume a previously assigned/in-progress task for this agent.
+                # This is important after process restarts where tasks may be persisted as
+                # ASSIGNED/IN_PROGRESS in tasks.md/progress reports.
+                try:
+                    agent_tasks = self.coordinator.get_agent_tasks(self.agent_id) or []
+                except Exception:
+                    agent_tasks = []
+
+                resumable = [
+                    t for t in agent_tasks
+                    if t.status in (TaskStatus.ASSIGNED, TaskStatus.IN_PROGRESS)
+                ]
+                resumed_task = False
+                if resumable:
+                    # Prefer already IN_PROGRESS tasks, then ASSIGNED.
+                    def _sort_key(t: Task):
+                        return (0 if t.status == TaskStatus.IN_PROGRESS else 1, t.started_at or datetime.min)
+
+                    task = sorted(resumable, key=_sort_key)[0]
+                    self.current_task = task
                     if LOGGING_AVAILABLE:
-                        AgentLogger.warning(self.agent_id, f"Failed to start work on task: {task.id}", task_id=task.id)
-                    self.current_task = None
-                    self._stop_event.wait(timeout=0.5)
-                    continue
+                        AgentLogger.execution_flow(self.agent_id, f"Resuming assigned task: {task.id}", task_id=task.id)
+                    if not self.start_work(task.id):
+                        if LOGGING_AVAILABLE:
+                            AgentLogger.warning(self.agent_id, f"Failed to resume task: {task.id}", task_id=task.id)
+                        self.current_task = None
+                        self._stop_event.wait(timeout=0.5)
+                        continue
+                    resumed_task = True
+
+                # If we successfully resumed a task, do NOT request a new one in the same iteration.
+                # Fall through to the "work on current task" block below.
+                if not resumed_task:
+                    if LOGGING_AVAILABLE:
+                        AgentLogger.execution_flow(self.agent_id, "No current task, requesting new task")
+                    task = self.request_task()
+                    if not task:
+                        # No tasks available, wait a bit and check again
+                        if LOGGING_AVAILABLE and loop_iteration % 10 == 0:
+                            AgentLogger.debug(self.agent_id, "No tasks available, waiting...")
+                        self._stop_event.wait(timeout=1.0)  # Reduced wait time for faster task pickup
+                        continue
+                    
+                    # Start working on the task
+                    if LOGGING_AVAILABLE:
+                        AgentLogger.execution_flow(self.agent_id, f"Starting work on task: {task.id}", task_id=task.id)
+                    if not self.start_work():
+                        # Failed to start, try again
+                        if LOGGING_AVAILABLE:
+                            AgentLogger.warning(self.agent_id, f"Failed to start work on task: {task.id}", task_id=task.id)
+                        self.current_task = None
+                        self._stop_event.wait(timeout=0.5)
+                        continue
 
             # Work on current task
             if self.current_task:
-                # Check if task is at 100% and should be auto-completed (for setup tasks with files)
-                if self.current_task.progress >= 100:
-                    if 'setup' in self.current_task.id.lower():
-                        # Try to get project_dir from agent, coordinator, or default
-                        project_dir = getattr(self, 'project_dir', None)
-                        if not project_dir:
-                            # Try to get from coordinator if it has project_dir
-                            if hasattr(self.coordinator, 'project_dir') and self.coordinator.project_dir:
-                                project_dir = self.coordinator.project_dir
-                            else:
-                                # Default: assume dual_reader_3.0 project
-                                project_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'dual_reader_3.0')
-                        
-                        has_package = os.path.exists(os.path.join(project_dir, 'package.json'))
-                        has_app = os.path.exists(os.path.join(project_dir, 'App.js')) or os.path.exists(os.path.join(project_dir, 'App.tsx'))
-                        if has_package and has_app and self.current_task.status.value != 'completed':
-                            print(f"[{self.agent_id}] [AUTO-COMPLETE] Task at 100% with files, completing...")
-                            try:
-                                # TaskStatus is already imported at module level
-                                from datetime import datetime
-                                artifacts = [
-                                    os.path.join(project_dir, 'package.json'),
-                                    os.path.join(project_dir, 'App.js'),
-                                    os.path.join(project_dir, 'index.js'),
-                                ]
-                                artifacts = [a for a in artifacts if os.path.exists(a)]
-                                
-                                if self.current_task.id in self.coordinator.tasks:
-                                    coordinator_task = self.coordinator.tasks[self.current_task.id]
-                                    coordinator_task.status = TaskStatus.COMPLETED
-                                    coordinator_task.progress = 100
-                                    coordinator_task.completed_at = datetime.now()
-                                    coordinator_task.artifacts = artifacts
-                                    
-                                    if coordinator_task.assigned_agent:
-                                        self.coordinator.agent_workloads[coordinator_task.assigned_agent] = max(
-                                            0, 
-                                            self.coordinator.agent_workloads.get(coordinator_task.assigned_agent, 0) - 1
-                                        )
-                                    
-                                    for other_task in self.coordinator.tasks.values():
-                                        if self.current_task.id in other_task.dependencies:
-                                            self.coordinator._update_task_status(other_task.id)
-                                    
-                                    print(f"[{self.agent_id}] [OK] Task auto-completed!")
-                                    self.current_task = None
-                                    continue  # Skip work() call, get next task
-                            except Exception as e:
-                                print(f"[{self.agent_id}] [ERROR] Auto-complete failed: {e}")
+                # Do not auto-complete tasks based on framework-specific file layouts.
+                # Completion should be driven by explicit artifacts and acceptance criteria.
                 
                 try:
                     success = self.work(self.current_task)

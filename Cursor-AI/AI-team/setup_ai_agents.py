@@ -27,7 +27,7 @@ def main():
         "anthropic>=0.18.0"
     ]
     
-    print("Installing packages for AI code generation...")
+    print("Installing optional packages for AI code generation...")
     print()
     
     success = True
@@ -43,10 +43,13 @@ def main():
         print()
         print("Next steps:")
         print("1. Set your API key as an environment variable:")
+        print("   - For Gemini (recommended): export GEMINI_API_KEY='your-key-here'")
         print("   - For OpenAI: export OPENAI_API_KEY='your-key-here'")
         print("   - For Anthropic: export ANTHROPIC_API_KEY='your-key-here'")
         print()
         print("2. Or create a .env file in the project root:")
+        print("   AI_PROVIDER=gemini")
+        print("   GEMINI_API_KEY=your-key-here")
         print("   OPENAI_API_KEY=your-key-here")
         print("   ANTHROPIC_API_KEY=your-key-here")
         print()

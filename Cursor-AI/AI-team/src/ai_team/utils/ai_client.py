@@ -6,17 +6,19 @@ Allows agents to generate code using AI instead of templates.
 import os
 from typing import Optional, Dict, Any, List
 import json
+import urllib.request
+import urllib.error
 
 
 class AIClient:
     """Unified interface for LLM APIs"""
     
-    def __init__(self, provider: str = "openai", api_key: Optional[str] = None):
+    def __init__(self, provider: str = "gemini", api_key: Optional[str] = None):
         """
         Initialize AI client.
         
         Args:
-            provider: "openai" or "anthropic"
+            provider: "gemini", "openai", or "anthropic"
             api_key: API key (if None, tries to get from environment)
         """
         self.provider = provider.lower()
@@ -28,7 +30,20 @@ class AIClient:
     
     def _get_api_key(self) -> Optional[str]:
         """Get API key from environment variables"""
-        if self.provider == "openai":
+        # Settings file fallback (gitignored, local-only). Import lazily to avoid any import cycles.
+        def _settings_get(name: str) -> Optional[str]:
+            try:
+                from .settings import get_setting
+                v = get_setting(name)
+                return str(v) if v is not None else None
+            except Exception:
+                return None
+
+        if self.provider == "gemini":
+            # Google AI Studio / Gemini API key
+            # Prefer GEMINI_API_KEY, but allow GOOGLE_API_KEY for compatibility with some setups.
+            return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or _settings_get("GEMINI_API_KEY") or _settings_get("GOOGLE_API_KEY")
+        elif self.provider == "openai":
             # Check for Cursor API key first (starts with "key_")
             cursor_key = os.getenv("CURSOR_API_KEY")
             if cursor_key:
@@ -44,8 +59,10 @@ class AIClient:
                     return openai_key
                 # Otherwise, it's a standard OpenAI key
                 return openai_key
+            # settings fallback
+            return _settings_get("OPENAI_API_KEY") or _settings_get("CURSOR_API_KEY")
         elif self.provider == "anthropic":
-            return os.getenv("ANTHROPIC_API_KEY")
+            return os.getenv("ANTHROPIC_API_KEY") or _settings_get("ANTHROPIC_API_KEY")
         return None
     
     def _init_client(self):
@@ -54,7 +71,11 @@ class AIClient:
             return
         
         try:
-            if self.provider == "openai":
+            if self.provider == "gemini":
+                # Stdlib-only REST client; no external dependency required.
+                self.client = True
+                print(f"[AI_CLIENT] Gemini REST client initialized successfully")
+            elif self.provider == "openai":
                 import openai
                 # Check if using Cursor API key (starts with "key_")
                 is_cursor = self.api_key.startswith("key_")
@@ -151,7 +172,9 @@ class AIClient:
             model = self._get_default_model()
         
         # Generate
-        if self.provider == "openai":
+        if self.provider == "gemini":
+            return self._generate_gemini(full_prompt, model, temperature, max_tokens)
+        elif self.provider == "openai":
             return self._generate_openai(full_prompt, model, temperature, max_tokens)
         elif self.provider == "anthropic":
             return self._generate_anthropic(full_prompt, model, temperature, max_tokens)
@@ -186,6 +209,16 @@ Provide complete, working code that implements the requirements."""
     
     def _get_default_model(self) -> str:
         """Get default model for provider"""
+        if self.provider == "gemini":
+            # Allow override via env var for convenience.
+            if os.getenv("GEMINI_MODEL"):
+                return os.getenv("GEMINI_MODEL") or "gemini-1.5-pro"
+            try:
+                from .settings import get_setting
+                m = get_setting("GEMINI_MODEL")
+                return str(m).strip() if m else "gemini-1.5-pro"
+            except Exception:
+                return "gemini-1.5-pro"
         # Check if using Cursor API key - Cursor uses OpenAI-compatible API
         if os.getenv("CURSOR_API_KEY") and self.provider == "openai":
             # Cursor AI typically uses gpt-4 or similar models
@@ -196,6 +229,89 @@ Provide complete, working code that implements the requirements."""
         elif self.provider == "anthropic":
             return "claude-3-opus-20240229"  # or "claude-3-sonnet-20240229"
         return "gpt-4"
+
+    def _generate_gemini(
+        self,
+        prompt_dict: Dict[str, str],
+        model: str,
+        temperature: float,
+        max_tokens: Optional[int],
+    ) -> str:
+        """
+        Generate using Gemini API via stdlib-only REST calls.
+
+        This avoids extra Python dependencies and keeps the AI-team stack lightweight.
+        Env var:
+          - GEMINI_API_KEY (or GOOGLE_API_KEY fallback)
+        """
+        # v1beta endpoint (Google AI Studio / Generative Language API)
+        # NOTE: We never log the key.
+        endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
+
+        system_text = (prompt_dict or {}).get("system", "")
+        user_text = (prompt_dict or {}).get("user", "")
+
+        # Gemini supports systemInstruction; use it when present to keep prompts structured.
+        body: Dict[str, Any] = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": user_text}],
+                }
+            ],
+            "generationConfig": {
+                "temperature": float(temperature),
+            },
+        }
+        if system_text:
+            body["systemInstruction"] = {"parts": [{"text": system_text}]}
+        if max_tokens:
+            body["generationConfig"]["maxOutputTokens"] = int(max_tokens)
+
+        data = json.dumps(body).encode("utf-8")
+        req = urllib.request.Request(
+            endpoint,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                raw = resp.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as e:
+            # Try to extract useful error text, but never include the full URL (it contains the key).
+            err_body = ""
+            try:
+                err_body = e.read().decode("utf-8", errors="replace")
+            except Exception:
+                err_body = ""
+            raise RuntimeError(f"Gemini API HTTP {getattr(e, 'code', 'unknown')}: {err_body[:1000]}") from None
+        except Exception as e:
+            raise RuntimeError(f"Gemini API request failed: {e}") from None
+
+        try:
+            parsed = json.loads(raw or "{}")
+        except Exception:
+            raise RuntimeError("Gemini API returned non-JSON response") from None
+
+        try:
+            candidates = parsed.get("candidates") or []
+            if not candidates:
+                raise RuntimeError(f"Gemini API returned no candidates: {raw[:1000]}")
+            content = (candidates[0] or {}).get("content") or {}
+            parts = content.get("parts") or []
+            texts = []
+            for p in parts:
+                t = (p or {}).get("text")
+                if t:
+                    texts.append(t)
+            out = "".join(texts).strip()
+            if not out:
+                raise RuntimeError(f"Gemini API returned empty text: {raw[:1000]}")
+            return out
+        except Exception as e:
+            raise RuntimeError(f"Gemini API parse error: {e}") from None
     
     def _generate_openai(self, prompt_dict: Dict[str, str], model: str, temperature: float, max_tokens: Optional[int]) -> str:
         """Generate using OpenAI API (or Cursor AI which is OpenAI-compatible)"""
@@ -288,6 +404,14 @@ def create_ai_client(provider: Optional[str] = None, api_key: Optional[str] = No
     """
     print(f"[AI_CLIENT] create_ai_client called: provider={provider}, api_key provided={bool(api_key)}")
     
+    # Allow settings file to specify provider if caller didn't.
+    if not provider:
+        try:
+            from .settings import get_setting
+            provider = str(get_setting("AI_PROVIDER") or "").strip() or None
+        except Exception:
+            provider = None
+
     # Try specified provider first
     if provider:
         client = AIClient(provider=provider, api_key=api_key)
@@ -297,6 +421,18 @@ def create_ai_client(provider: Optional[str] = None, api_key: Optional[str] = No
         else:
             print(f"[AI_CLIENT] Provider {provider} not available (api_key={bool(client.api_key)}, client={bool(client.client)})")
     
+    # Default order (project-agnostic):
+    # 1) Gemini (if GEMINI_API_KEY set)
+    # 2) OpenAI (if OPENAI_API_KEY/CURSOR_API_KEY set)
+    # 3) Anthropic (if ANTHROPIC_API_KEY set)
+    print(f"[AI_CLIENT] Trying Gemini provider...")
+    client = AIClient(provider="gemini", api_key=api_key)
+    if client.is_available():
+        print(f"[AI_CLIENT] Successfully created Gemini client")
+        return client
+    else:
+        print(f"[AI_CLIENT] Gemini not available (api_key={bool(client.api_key)}, client={bool(client.client)})")
+
     # Try OpenAI (prioritize OPENAI_API_KEY over CURSOR_API_KEY)
     print(f"[AI_CLIENT] Trying OpenAI provider...")
     client = AIClient(provider="openai", api_key=api_key)
@@ -305,9 +441,6 @@ def create_ai_client(provider: Optional[str] = None, api_key: Optional[str] = No
         return client
     else:
         print(f"[AI_CLIENT] OpenAI not available (api_key={bool(client.api_key)}, client={bool(client.client)})")
-        if client.api_key:
-            api_key_preview = client.api_key[:10] + "..." if len(client.api_key) > 10 else client.api_key
-            print(f"[AI_CLIENT] API key preview: {api_key_preview} (starts with 'key_': {client.api_key.startswith('key_') if client.api_key else False})")
     
     # Try Anthropic
     print(f"[AI_CLIENT] Trying Anthropic provider...")
@@ -319,6 +452,6 @@ def create_ai_client(provider: Optional[str] = None, api_key: Optional[str] = No
         print(f"[AI_CLIENT] Anthropic not available (api_key={bool(client.api_key)}, client={bool(client.client)})")
     
     # No API key found
-    print(f"[AI_CLIENT] No available AI provider found. Check environment variables: CURSOR_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY")
+    print(f"[AI_CLIENT] No available AI provider found. Check environment variables: GEMINI_API_KEY (or GOOGLE_API_KEY), OPENAI_API_KEY/CURSOR_API_KEY, ANTHROPIC_API_KEY")
     return None
 

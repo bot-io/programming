@@ -10,8 +10,22 @@ from typing import Optional, Dict, Any, List
 import tempfile
 import time
 
-# Debug logging configuration
-DEBUG_LOG_PATH = r"c:\Users\svetlin.chobanov\Documents\GitHub\programming\Cursor-AI\AI-team\.cursor\debug.log"
+def _default_debug_log_path() -> str:
+    """
+    Return a generic, machine-independent debug log path.
+    Prefer a local `.cursor/debug.log` in the current working directory.
+    Fall back to the OS temp directory if needed.
+    """
+    try:
+        base = os.getcwd()
+        cursor_dir = os.path.join(base, ".cursor")
+        os.makedirs(cursor_dir, exist_ok=True)
+        return os.path.join(cursor_dir, "debug.log")
+    except Exception:
+        return os.path.join(tempfile.gettempdir(), "ai_team_debug.log")
+
+# Debug logging configuration (generic; no hardcoded user paths)
+DEBUG_LOG_PATH = _default_debug_log_path()
 
 def _debug_log(location: str, message: str, data: dict = None, hypothesis_id: str = None):
     """Write debug log entry"""
@@ -53,6 +67,10 @@ class CursorCLIClient:
     def __init__(self):
         """Initialize Cursor CLI client"""
         self.cli_command = self._find_cli_command()
+        # Cache availability checks to avoid repeatedly spawning `cursor-agent --version`
+        # across many agents/tasks (which can fail transiently and cause false "CLI not available").
+        self._available_cache: Optional[bool] = None
+        self._available_cache_ts: float = 0.0
         self.verify_cli_available()
     
     def _find_cli_command(self) -> str:
@@ -86,27 +104,59 @@ class CursorCLIClient:
     
     def verify_cli_available(self) -> bool:
         """Verify that cursor-agent CLI is installed and available"""
+        # Use a short TTL cache to reduce flakiness under load.
         try:
-            result = subprocess.run(
-                [self.cli_command, "--version"],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
+            if self._available_cache is not None and (time.time() - float(self._available_cache_ts)) < 30.0:
+                return bool(self._available_cache)
+        except Exception:
+            pass
+
+        try:
+            # Retry briefly to avoid false negatives due to transient process limits.
+            last = None
+            for attempt in range(3):
+                try:
+                    result = subprocess.run(
+                        [self.cli_command, "--version"],
+                        capture_output=True,
+                        text=True,
+                        timeout=8
+                    )
+                    last = result
+                    if result.returncode == 0:
+                        print(f"[CURSOR_CLI] Cursor CLI is available at: {self.cli_command}")
+                        self._available_cache = True
+                        self._available_cache_ts = time.time()
+                        return True
+                except Exception as e:
+                    last = e
+                time.sleep(0.25 * (attempt + 1))
+
+            # If we get here, attempts failed.
+            result = last if hasattr(last, "returncode") else None
             if result.returncode == 0:
                 print(f"[CURSOR_CLI] Cursor CLI is available at: {self.cli_command}")
+                self._available_cache = True
+                self._available_cache_ts = time.time()
                 return True
             else:
                 print(f"[CURSOR_CLI] WARNING: cursor-agent CLI may not be properly installed")
                 print(f"[CURSOR_CLI] Install with: curl https://cursor.com/install -fsSL | bash")
+                self._available_cache = False
+                self._available_cache_ts = time.time()
                 return False
         except FileNotFoundError:
             print(f"[CURSOR_CLI] ERROR: cursor-agent CLI not found in PATH")
             print(f"[CURSOR_CLI] Install with: curl https://cursor.com/install -fsSL | bash")
             print(f"[CURSOR_CLI] Then authenticate with: cursor auth login")
+            self._available_cache = False
+            self._available_cache_ts = time.time()
             return False
         except Exception as e:
             print(f"[CURSOR_CLI] WARNING: Could not verify CLI: {e}")
+            # Cache negative briefly to avoid thrash.
+            self._available_cache = False
+            self._available_cache_ts = time.time()
             return False
     
     def is_available(self) -> bool:
@@ -361,7 +411,7 @@ class CursorCLIClient:
         
         role_instructions = {
             "Supervisor": """You are a Supervisor in an AI Dev Team. Your role is to:
-- Analyze requirements and create implementation plans
+- Analyze requirements and produce an actionable task breakdown
 - Review code and test results
 - Coordinate the team's work
 - Ensure quality and completeness""",

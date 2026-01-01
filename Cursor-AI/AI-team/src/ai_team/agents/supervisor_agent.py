@@ -8,6 +8,8 @@ import time
 import sys
 import io
 import json
+import re
+import hashlib
 from typing import List, Dict, Optional, Set
 from datetime import datetime, timedelta
 from .agent import Agent, IncrementalWorkMixin
@@ -20,8 +22,23 @@ try:
 except ImportError:
     CLEANUP_AVAILABLE = False
 
-# Debug logging configuration
-DEBUG_LOG_PATH = r"c:\Users\svetlin.chobanov\Documents\GitHub\programming\Cursor-AI\AI-team\.cursor\debug.log"
+def _default_debug_log_path() -> str:
+    """
+    Return a generic, machine-independent debug log path.
+    Prefer a local `.cursor/debug.log` in the current working directory.
+    Fall back to the OS temp directory if needed.
+    """
+    try:
+        base = os.getcwd()
+        cursor_dir = os.path.join(base, ".cursor")
+        os.makedirs(cursor_dir, exist_ok=True)
+        return os.path.join(cursor_dir, "debug.log")
+    except Exception:
+        import tempfile
+        return os.path.join(tempfile.gettempdir(), "ai_team_debug.log")
+
+# Debug logging configuration (generic; no hardcoded user paths)
+DEBUG_LOG_PATH = _default_debug_log_path()
 
 def _debug_log(location: str, message: str, data: dict = None, hypothesis_id: str = None):
     """Write debug log entry"""
@@ -102,6 +119,9 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
         self.cleanup_interval = 300  # Cleanup every 5 minutes
         self.team_size_analyzed = False  # Track if team size has been analyzed
         self.optimal_team_size = None  # Store optimal team size recommendation
+        # Track how long tasks have remained in PENDING (in-memory per run).
+        # This prevents "forever pending" stalls without requiring extra TaskStatus values.
+        self._pending_first_seen: Dict[str, datetime] = {}
     
     def request_task(self) -> Optional[Task]:
         """Supervisor doesn't request regular tasks - it monitors"""
@@ -212,6 +232,9 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
         
         # 4. Check for stuck tasks (in progress too long)
         issues.extend(self._check_stuck_tasks())
+
+        # 4.1 Check for unresponsive agents (no heartbeats)
+        issues.extend(self._check_unresponsive_agents())
         
         # 5. Check for tasks stuck in ASSIGNED status
         issues.extend(self._check_stuck_assigned_tasks())
@@ -227,6 +250,238 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
         
         # 8.5. Check if all tasks are incorrectly marked as completed
         issues.extend(self._check_incorrectly_completed_tasks())
+        
+        # 8.6. Check for progress stagnation (Global Metric: Progress Update Frequency)
+        issues.extend(self._check_progress_stagnation())
+        
+        # 8.7. Check for tasks in progress requirement (Global Metric: Tasks in Progress Requirement)
+        issues.extend(self._check_tasks_in_progress_requirement())
+
+        # 8.8. Deadlock breaker: if the whole team is idle (0 READY / 0 IN_PROGRESS) but some tasks
+        # are BLOCKED due to execution/parsing failures, proactively requeue them to READY with a retry budget.
+        # This is intentionally generic and prevents "all agents idle forever" when a transient executor issue is fixed.
+        try:
+            def _sv(x) -> str:
+                try:
+                    return (x.value if hasattr(x, "value") else str(x)).strip().lower()
+                except Exception:
+                    return str(x).strip().lower()
+
+            in_progress_count = sum(1 for t in self.coordinator.tasks.values() if _sv(t.status) == TaskStatus.IN_PROGRESS.value)
+            ready_count = sum(1 for t in self.coordinator.tasks.values() if _sv(t.status) == TaskStatus.READY.value)
+            blocked_tasks = [t for t in self.coordinator.tasks.values() if _sv(t.status) == TaskStatus.BLOCKED.value]
+            if in_progress_count == 0 and ready_count == 0 and blocked_tasks:
+                retryable = []
+                for t in blocked_tasks:
+                    msg = (t.blocker_message or "").lower()
+                    if not msg:
+                        continue
+                    if (
+                        "execution failed" in msg
+                        or "could not find a json object" in msg
+                        or "failed to parse json" in msg
+                        or "invalid json shape" in msg
+                        or "cursor cli returned empty response" in msg
+                    ):
+                        try:
+                            repeats = int((t.metadata or {}).get("blocker_repeats", 0))
+                        except Exception:
+                            repeats = 0
+                        if repeats <= 2:
+                            retryable.append(t)
+
+                if retryable:
+                    requeued = 0
+                    for t in retryable:
+                        t.status = TaskStatus.READY
+                        t.progress = 0
+                        t.blocker_message = None
+                        t.blocker_type = None
+                        t.assigned_agent = None
+                        t.started_at = None
+                        try:
+                            if t.metadata is not None:
+                                t.metadata["blocker_signature"] = None
+                                t.metadata["blocker_repeats"] = 0
+                        except Exception:
+                            pass
+                        self._persist_task_update(t)
+                        requeued += 1
+
+                    if requeued:
+                        msg = f"Requeued {requeued} blocked task(s) to READY (deadlock breaker: retryable execution failures)"
+                        self.fixes_applied.append(msg)
+                        if LOGGING_AVAILABLE:
+                            AgentLogger.info(self.agent_id, msg, extra={"task_ids": [t.id for t in retryable[:10]]})
+                        print(f"  [{self.agent_id}] [FIX] {msg}", flush=True)
+        except Exception as e:
+            if LOGGING_AVAILABLE:
+                AgentLogger.warning(self.agent_id, f"Deadlock breaker failed: {e}")
+
+        # 8.9. Deadlock breaker (acceptance failures): if the whole team is idle (0 READY / 0 IN_PROGRESS)
+        # but tasks are BLOCKED due to acceptance/test/build failures, requeue a small bounded set back to READY.
+        #
+        # Rationale: BLOCKED tasks are not assignable, so the team can freeze with 0 work even though there is
+        # actionable work to fix (e.g., failing tests, transient wrong-CWD invocations, missing folders created by the task).
+        # We do NOT auto-unblock indefinitely: each task gets a small retry budget via metadata.
+        try:
+            def _sv(x) -> str:
+                try:
+                    return (x.value if hasattr(x, "value") else str(x)).strip().lower()
+                except Exception:
+                    return str(x).strip().lower()
+
+            in_progress_count = sum(1 for t in self.coordinator.tasks.values() if _sv(t.status) == TaskStatus.IN_PROGRESS.value)
+            ready_count = sum(1 for t in self.coordinator.tasks.values() if _sv(t.status) == TaskStatus.READY.value)
+            blocked_tasks = [t for t in self.coordinator.tasks.values() if _sv(t.status) == TaskStatus.BLOCKED.value]
+            if in_progress_count == 0 and ready_count == 0 and blocked_tasks:
+                # If we see tool-lock timeout blockers, attempt to clear stale tool lock files.
+                # This is generic (no project assumptions), bounded, and only when the team is fully idle.
+                try:
+                    lock_dir = os.path.join(self.project_dir, ".ai_team_locks")
+                    if os.path.isdir(lock_dir):
+                        for name in os.listdir(lock_dir):
+                            if not name.startswith("tool.") or not name.endswith(".lock"):
+                                continue
+                            p = os.path.join(lock_dir, name)
+                            try:
+                                age_s = time.time() - os.path.getmtime(p)
+                            except Exception:
+                                continue
+                            if age_s > 300:  # 5 minutes stale
+                                try:
+                                    if os.path.isdir(p):
+                                        os.rmdir(p)
+                                    else:
+                                        os.remove(p)
+                                    if LOGGING_AVAILABLE:
+                                        AgentLogger.info(self.agent_id, "Cleared stale tool lock after idle deadlock", extra={"lock": name, "age_s": age_s})
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
+
+                retryable: List[Task] = []
+                for t in blocked_tasks:
+                    # Never touch environment blocks here.
+                    bt = (getattr(t, "blocker_type", None) or "").strip().lower()
+                    msg = (t.blocker_message or "").lower()
+                    if bt == "environment":
+                        continue
+                    # Acceptance failures are usually actionable code/test/build issues.
+                    # Also treat tool-lock timeouts as retryable acceptance failures: they often happen
+                    # due to transient contention or stale locks and should not freeze the whole team.
+                    if ("acceptance command failed" in msg) or ("lock timed out" in msg and "tool=" in msg):
+                        try:
+                            repeats = int((t.metadata or {}).get("acceptance_retry_repeats", 0))
+                        except Exception:
+                            repeats = 0
+                        if repeats <= 2:
+                            retryable.append(t)
+
+                if retryable:
+                    # Requeue a bounded number to avoid thrashing.
+                    retryable = retryable[:6]
+                    requeued = 0
+                    for t in retryable:
+                        try:
+                            t.metadata = t.metadata or {}
+                            t.metadata["acceptance_retry_repeats"] = int(t.metadata.get("acceptance_retry_repeats", 0)) + 1
+                        except Exception:
+                            pass
+                        # Make it assignable again; keep progress so agents can "continue fixing" rather than restart.
+                        t.status = TaskStatus.READY
+                        t.assigned_agent = None
+                        # Preserve blocker_message for context; it will be overwritten on next failure/success.
+                        self._persist_task_update(t)
+                        requeued += 1
+
+                    if requeued:
+                        msg2 = f"Requeued {requeued} blocked task(s) to READY (deadlock breaker: acceptance failures)"
+                        self.fixes_applied.append(msg2)
+                        if LOGGING_AVAILABLE:
+                            AgentLogger.info(self.agent_id, msg2, extra={"task_ids": [t.id for t in retryable]})
+                        print(f"  [{self.agent_id}] [FIX] {msg2}", flush=True)
+        except Exception as e:
+            if LOGGING_AVAILABLE:
+                AgentLogger.warning(self.agent_id, f"Acceptance deadlock breaker failed: {e}")
+
+        # 8.10. Deadlock breaker (environment blocks): if tasks are BLOCKED by ENVIRONMENT reasons,
+        # requeue a small bounded set back to READY with a retry budget.
+        #
+        # Rationale: Environment blockers can be resolved externally by the user (e.g., install Android SDK).
+        # Without a retry mechanism, the team may remain idle forever with stale blocker messages.
+        try:
+            def _sv(x) -> str:
+                try:
+                    return (x.value if hasattr(x, "value") else str(x)).strip().lower()
+                except Exception:
+                    return str(x).strip().lower()
+
+            ready_count = sum(1 for t in self.coordinator.tasks.values() if _sv(t.status) == TaskStatus.READY.value)
+            blocked_tasks = [t for t in self.coordinator.tasks.values() if _sv(t.status) == TaskStatus.BLOCKED.value]
+            if ready_count == 0 and blocked_tasks:
+                retryable: List[Task] = []
+                now_ts = time.time()
+
+                def _agent_running(agent_id: Optional[str]) -> bool:
+                    if not agent_id:
+                        return False
+                    try:
+                        st = self.coordinator.agent_states.get(agent_id)
+                        sv = (st.value if hasattr(st, "value") else str(st)).strip().lower()
+                        return sv == "running"
+                    except Exception:
+                        return False
+
+                for t in blocked_tasks:
+                    bt = (getattr(t, "blocker_type", None) or "").strip().lower()
+                    if bt != "environment":
+                        continue
+                    # If a running agent is actively assigned, let it finish rather than thrash.
+                    if _agent_running(getattr(t, "assigned_agent", None)):
+                        continue
+                    try:
+                        repeats = int((t.metadata or {}).get("environment_retry_repeats", 0))
+                    except Exception:
+                        repeats = 0
+                    try:
+                        last_try = float((t.metadata or {}).get("environment_retry_last_ts", 0.0))
+                    except Exception:
+                        last_try = 0.0
+                    # Cooldown: don't requeue the same env task too aggressively.
+                    if now_ts - last_try < 300:
+                        continue
+                    if repeats <= 2:
+                        retryable.append(t)
+
+                if retryable:
+                    retryable = retryable[:1]  # keep bounded; environment checks can be slow + may require flutter lock
+                    requeued = 0
+                    for t in retryable:
+                        try:
+                            t.metadata = t.metadata or {}
+                            t.metadata["environment_retry_repeats"] = int(t.metadata.get("environment_retry_repeats", 0)) + 1
+                            t.metadata["environment_retry_last_ts"] = now_ts
+                        except Exception:
+                            pass
+                        t.status = TaskStatus.READY
+                        t.assigned_agent = None
+                        # Clear stale blocker so the next attempt reflects current environment.
+                        t.blocker_message = None
+                        t.blocker_type = None
+                        self._persist_task_update(t)
+                        requeued += 1
+
+                    if requeued:
+                        msg3 = f"Requeued {requeued} blocked task(s) to READY (deadlock breaker: environment blockers)"
+                        self.fixes_applied.append(msg3)
+                        if LOGGING_AVAILABLE:
+                            AgentLogger.info(self.agent_id, msg3, extra={"task_ids": [t.id for t in retryable]})
+                        print(f"  [{self.agent_id}] [FIX] {msg3}", flush=True)
+        except Exception as e:
+            if LOGGING_AVAILABLE:
+                AgentLogger.warning(self.agent_id, f"Environment deadlock breaker failed: {e}")
         
         # #region debug log
         _debug_log("supervisor_agent.py:201", "_audit_team: After step 8, before step 9", {
@@ -343,14 +598,105 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
             import traceback
             traceback.print_exc()
         
-        # 11. Check for pending tasks that should be ready or blocked (dependency status update)
+        # 11. Reload missing tasks from tasks.md into coordinator
+        try:
+            from ..utils.task_config_parser import TaskConfigParser
+            parser = TaskConfigParser(self.project_dir)
+            
+            # Get all tasks from tasks.md
+            all_tasks_from_file = parser.parse_tasks()
+            coordinator_task_ids = set(self.coordinator.tasks.keys())
+            file_task_ids = {task.id for task in all_tasks_from_file}
+            
+            # Find tasks in file but not in coordinator
+            missing_task_ids = file_task_ids - coordinator_task_ids
+            if missing_task_ids:
+                print(f"  [{self.agent_id}] [FIX] Found {len(missing_task_ids)} tasks in tasks.md not loaded into coordinator", flush=True)
+                sys.stdout.flush()
+                
+                missing_tasks_loaded = 0
+                for task in all_tasks_from_file:
+                    if task.id in missing_task_ids:
+                        # Add missing task to coordinator
+                        self.coordinator.add_task(task)
+                        # Update status based on dependencies
+                        self.coordinator._update_task_status(task.id)
+                        missing_tasks_loaded += 1
+                        print(f"  [{self.agent_id}] [FIX] Loaded missing task '{task.id}' into coordinator (status: {task.status.value})", flush=True)
+                        sys.stdout.flush()
+                
+                if missing_tasks_loaded > 0:
+                    print(f"  [{self.agent_id}] [FIX] Loaded {missing_tasks_loaded} missing task(s) into coordinator", flush=True)
+                    sys.stdout.flush()
+                    self.fixes_applied.append(f"Loaded {missing_tasks_loaded} missing task(s) into coordinator")
+        except Exception as e:
+            print(f"  [{self.agent_id}] [ERROR] Exception reloading missing tasks: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # 12. Check for pending tasks that should be ready or blocked (dependency status update)
         try:
             pending_tasks_updated = 0
+            stuck_pending_tasks = []
+            pending_stale_threshold = timedelta(minutes=2)  # Conservative: avoids false positives on slow runs
             for task in self.coordinator.tasks.values():
                 if task.status == TaskStatus.PENDING:
-                    # Update task status based on dependencies
+                    # Record first time we observed this task in PENDING.
+                    if task.id not in self._pending_first_seen:
+                        self._pending_first_seen[task.id] = datetime.now()
+
+                    pending_age = datetime.now() - self._pending_first_seen.get(task.id, datetime.now())
+
+                    # Check if task has dependencies that are all completed
+                    if task.dependencies:
+                        all_deps_completed = True
+                        missing_deps = []
+                        incomplete_deps = []
+                        for dep_id in task.dependencies:
+                            if dep_id not in self.coordinator.tasks:
+                                missing_deps.append(dep_id)
+                                all_deps_completed = False
+                            else:
+                                dep_task = self.coordinator.tasks[dep_id]
+                                if dep_task.status not in [TaskStatus.COMPLETED, TaskStatus.REVIEW]:
+                                    incomplete_deps.append(dep_id)
+                                    all_deps_completed = False
+                        
+                        if all_deps_completed and len(task.dependencies) > 0:
+                            # Task has completed dependencies but is still PENDING - this is a stuck task
+                            stuck_pending_tasks.append({
+                                'task_id': task.id,
+                                'dependencies': task.dependencies,
+                                'missing_deps': missing_deps,
+                                'incomplete_deps': incomplete_deps
+                            })
+                        # If deps are not completed, PENDING adds little value after a grace period:
+                        # mark BLOCKED with a clear dependency reason so the system can reason about it.
+                        if pending_age > pending_stale_threshold and not all_deps_completed:
+                            task.status = TaskStatus.BLOCKED
+                            task.blocker_message = f"Supervisor: Pending > {int(pending_stale_threshold.total_seconds())}s. Waiting on dependencies: {incomplete_deps or missing_deps}"
+                            try:
+                                task.blocker_type = "dependency"
+                            except Exception:
+                                pass
+                    
+                    # Check dependencies BEFORE updating status to force transition if needed
+                    old_status = task.status
+                    if task.dependencies:
+                        all_deps_completed = all(
+                            dep_id in self.coordinator.tasks and 
+                            self.coordinator.tasks[dep_id].status in [TaskStatus.COMPLETED, TaskStatus.REVIEW]
+                            for dep_id in task.dependencies
+                        )
+                        if all_deps_completed and task.status == TaskStatus.PENDING:
+                            # Force transition to READY before calling _update_task_status
+                            task.status = TaskStatus.READY
+                            print(f"  [{self.agent_id}] [FIX] Force-transitioned PENDING task '{task.id}' to READY (all dependencies completed)", flush=True)
+                            sys.stdout.flush()
+                    
+                    # Update task status based on dependencies (may have already been force-transitioned)
                     self.coordinator._update_task_status(task.id)
-                    if task.status != TaskStatus.PENDING:
+                    if task.status != old_status:
                         pending_tasks_updated += 1
                         print(f"  [{self.agent_id}] [FIX] Updated pending task '{task.id}' to {task.status.value}", flush=True)
                         sys.stdout.flush()
@@ -362,6 +708,25 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
                         except Exception as e:
                             print(f"  [{self.agent_id}] [WARNING] Failed to update tasks.md for task {task.id}: {e}", flush=True)
                             sys.stdout.flush()
+                    # If task is no longer pending, clear its pending timer.
+                    if task.status != TaskStatus.PENDING and task.id in self._pending_first_seen:
+                        try:
+                            del self._pending_first_seen[task.id]
+                        except Exception:
+                            pass
+            
+            # Log stuck pending tasks as issues
+            if stuck_pending_tasks:
+                for stuck_task in stuck_pending_tasks:
+                    print(f"  [{self.agent_id}] [ISSUE] PENDING task '{stuck_task['task_id']}' has all dependencies completed but is not transitioning to READY", flush=True)
+                    sys.stdout.flush()
+                    # Log to issues file
+                    self._log_issue_to_file(
+                        issue_type="2.3 PENDING Tasks Not Transitioning to READY",
+                        description=f"Task {stuck_task['task_id']} has all dependencies completed ({stuck_task['dependencies']}) but remains in PENDING state",
+                        affected_components=[stuck_task['task_id']],
+                        status="detected"
+                    )
             
             if pending_tasks_updated > 0:
                 print(f"  [{self.agent_id}] [FIX] Updated {pending_tasks_updated} pending task(s) to ready/blocked", flush=True)
@@ -371,8 +736,58 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
             print(f"  [{self.agent_id}] [ERROR] Exception updating pending tasks: {e}")
             import traceback
             traceback.print_exc()
+
+        # 12.5 Check for FAILED tasks blocking all progress (Global Metric: Tasks in Progress Requirement)
+        # If a foundational task fails, it can block the entire dependency graph and leave 0 tasks in progress.
+        # We reset failed tasks back to READY for retry (with cleared assignment) so work can resume.
+        try:
+            in_progress_count = sum(1 for t in self.coordinator.tasks.values() if t.status == TaskStatus.IN_PROGRESS)
+            ready_count = sum(1 for t in self.coordinator.tasks.values() if t.status == TaskStatus.READY)
+            failed_tasks = [t for t in self.coordinator.tasks.values() if t.status == TaskStatus.FAILED]
+
+            # Only intervene when the project is clearly stuck (no work happening) and failures exist.
+            if failed_tasks and in_progress_count == 0 and ready_count == 0:
+                reset_failed = 0
+                for task in failed_tasks:
+                    try:
+                        # Reset failed task to READY so an agent can retry it
+                        task.status = TaskStatus.READY
+                        task.progress = 0
+                        task.assigned_agent = None
+                        task.started_at = None
+                        task.completed_at = None
+                        task.blocker_message = None
+
+                        # Persist the status change
+                        try:
+                            from ..utils.task_config_parser import TaskConfigParser
+                            parser = TaskConfigParser(self.project_dir)
+                            parser.update_task_in_file(task)
+                        except Exception as persist_err:
+                            print(f"  [{self.agent_id}] [WARNING] Failed to update tasks.md for failed task {task.id}: {persist_err}", flush=True)
+
+                        reset_failed += 1
+                    except Exception as reset_err:
+                        print(f"  [{self.agent_id}] [WARNING] Failed to reset failed task {task.id}: {reset_err}", flush=True)
+
+                if reset_failed > 0:
+                    print(f"  [{self.agent_id}] [FIX] Reset {reset_failed} failed task(s) to READY for retry", flush=True)
+                    sys.stdout.flush()
+                    self.fixes_applied.append(f"Reset {reset_failed} failed task(s) to READY for retry")
+
+                    # Log as a high-level issue (no IDs, metric referenced via logger mapping)
+                    self._log_issue_to_file(
+                        issue_type="Failed tasks blocking progress",
+                        description="Failed tasks are blocking all work, leaving no tasks in progress (violates Tasks in Progress Requirement metric)",
+                        affected_components=["tasks"],
+                        status="detected"
+                    )
+        except Exception as e:
+            print(f"  [{self.agent_id}] [ERROR] Exception handling failed tasks: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
         
-        # 12. Check if only template tasks exist - generate real tasks from requirements
+        # 13. Check if only template tasks exist - generate real tasks from requirements
         try:
             print(f"  [{self.agent_id}] [DEBUG] About to check template tasks (total: {len(self.coordinator.tasks)})")
             # #region debug log
@@ -493,10 +908,86 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
     
     def _check_completed_tasks(self) -> List[Dict]:
         """Check that completed tasks actually have their artifacts"""
-        issues = []
+        issues: List[Dict] = []
+        incorrectly_completed: List[Dict[str, object]] = []
+
+        def _infer_expected_paths(task: Task) -> List[str]:
+            """
+            Best-effort, generic inference of expected files/dirs from task text.
+            We intentionally avoid framework-specific assumptions: we only trust
+            explicit path-like tokens (e.g., "pubspec.yaml", "lib/models/", "src/app.py").
+            """
+            texts: List[str] = []
+            try:
+                if getattr(task, "description", None):
+                    texts.append(str(task.description))
+                if getattr(task, "acceptance_criteria", None):
+                    texts.extend([str(x) for x in task.acceptance_criteria if x])
+            except Exception:
+                pass
+            candidates: List[str] = []
+
+            # Capture explicit filenames with extensions.
+            for t in texts:
+                for m in re.findall(r"\b[\w./\\-]+\.(?:dart|yaml|yml|json|md|py|js|ts|tsx|java|kt|swift|html|css)\b", t):
+                    candidates.append(m)
+
+            # Capture simple directory tokens like "lib/", "android/", etc (often comma-separated).
+            for t in texts:
+                for m in re.findall(r"\b[\w./\\-]+[\\/]\b", t):
+                    candidates.append(m)
+
+            cleaned: List[str] = []
+            for c in candidates:
+                c = c.strip().strip(",").strip()
+                if not c:
+                    continue
+                if c.startswith("http://") or c.startswith("https://"):
+                    continue
+                # Ignore backticked commands (we only want paths).
+                if any(c.lower().startswith(p) for p in ("flutter ", "python ", "npm ", "dart ", "gradle", "adb ")):
+                    continue
+                c = c.replace("\\", "/")
+                if c.startswith("./"):
+                    c = c[2:]
+                cleaned.append(c)
+
+            # De-dupe while preserving order.
+            seen = set()
+            out: List[str] = []
+            for c in cleaned:
+                if c not in seen:
+                    seen.add(c)
+                    out.append(c)
+            return out[:20]
         
         for task in self.coordinator.tasks.values():
             if task.status == TaskStatus.COMPLETED:
+                # Generic safeguard: a task can be incorrectly marked completed if
+                # it references concrete files/dirs that do not exist in the project.
+                expected = _infer_expected_paths(task)
+                missing_expected: List[str] = []
+                for p in expected:
+                    # Resolve relative to project root.
+                    try:
+                        abs_path = os.path.join(self.project_dir, p.replace("/", os.sep)) if self.project_dir else p
+                    except Exception:
+                        abs_path = p
+
+                    # Directory expectations: allow either dir exists, or a file exists at that path.
+                    if p.endswith("/") or p.endswith("\\"):
+                        if not os.path.isdir(abs_path):
+                            missing_expected.append(p)
+                    else:
+                        if not os.path.exists(abs_path):
+                            missing_expected.append(p)
+
+                if missing_expected:
+                    incorrectly_completed.append({
+                        "task_id": task.id,
+                        "missing": missing_expected[:10],
+                    })
+
                 # Check artifacts exist
                 if task.artifacts:
                     missing_artifacts = []
@@ -538,79 +1029,43 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
                             'task_title': task.title,
                             'severity': 'high'
                         })
-        
+
+        # If we found completed tasks that reference missing concrete artifacts/paths,
+        # DO NOT reset them to READY/PENDING. That would make the completed count go backwards
+        # (violating supervisor_issues_checklist.md) and produces confusing progress regressions.
+        #
+        # Instead, create fix-up tasks to (re)create the missing files/dirs while keeping the
+        # original tasks completed (monotonic progress).
+        if incorrectly_completed:
+            issues.append({
+                "type": "completed_tasks_missing_expected_files",
+                "severity": "high",
+                "task_ids": [x["task_id"] for x in incorrectly_completed],
+                "reason": "Completed tasks reference missing files/dirs (inferred from acceptance criteria)",
+                "examples": incorrectly_completed[:10],
+            })
+
         return issues
     
     def _check_missing_files(self) -> List[Dict]:
-        """Check for critical files that should exist based on project type"""
-        issues = []
+        """
+        Check for missing critical files.
         
-        if not self.project_dir:
-            return issues
-        
-        # Detect project type
-        project_type = self._detect_project_type()
-        
-        if project_type == 'flutter':
-            # Check Flutter-specific files
-            required_files = {
-                'pubspec.yaml': 'Flutter project configuration',
-                'lib/main.dart': 'Flutter app entry point'
-            }
-            
-            for file_path, description in required_files.items():
-                full_path = os.path.join(self.project_dir, file_path)
-                if not os.path.exists(full_path):
-                    issues.append({
-                        'type': 'missing_file',
-                        'file': file_path,
-                        'description': description,
-                        'severity': 'critical'
-                    })
-            
-            # Check for feature files that should exist based on completed tasks
-            expected_files = self._get_expected_files_from_tasks()
-            for file_path in expected_files:
-                full_path = os.path.join(self.project_dir, file_path)
-                if not os.path.exists(full_path):
-                    # Check if there's a completed task that should have created this
-                    task = self._find_task_for_file(file_path)
-                    if task and task.status == TaskStatus.COMPLETED:
-                        issues.append({
-                            'type': 'missing_expected_file',
-                            'file': file_path,
-                            'task_id': task.id,
-                            'task_title': task.title,
-                            'severity': 'high'
-                        })
-        
-        elif project_type == 'react_native':
-            # Check React Native-specific files
-            required_files = {
-                'package.json': 'React Native project configuration',
-                'App.js': 'React Native app entry point (or App.tsx)'
-            }
-            
-            for file_path, description in required_files.items():
-                full_path = os.path.join(self.project_dir, file_path)
-                if not os.path.exists(full_path):
-                    # Check for .tsx variant
-                    if file_path == 'App.js':
-                        tsx_path = os.path.join(self.project_dir, 'App.tsx')
-                        if os.path.exists(tsx_path):
-                            continue
-                    issues.append({
-                        'type': 'missing_file',
-                        'file': file_path,
-                        'description': description,
-                        'severity': 'critical'
-                    })
-        
-        return issues
+        Project-agnostic approach:
+        - Do not hardcode framework/file expectations.
+        - Rely on per-task `artifacts` validation (handled elsewhere) and task acceptance criteria.
+        """
+        return []
     
     def _check_final_verification(self) -> List[Dict]:
-        """Check that final verification actually built executables"""
-        issues = []
+        """
+        Check that final verification is meaningfully verifiable.
+        
+        Project-agnostic approach:
+        - If a final verification task is marked completed, it must have either
+          explicit artifacts or executable acceptance-criteria commands (backticked).
+        """
+        issues: List[Dict] = []
         
         # Find final verification task
         final_task = None
@@ -622,47 +1077,26 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
         if not final_task:
             return issues
         
-        # If final verification is completed, check for build artifacts
+        # If final verification is completed, ensure it's verifiable
         if final_task.status == TaskStatus.COMPLETED:
-            project_type = self._detect_project_type()
-            
-            if project_type == 'flutter':
-                # Check for build directory
-                build_dir = os.path.join(self.project_dir, 'build')
-                if not os.path.exists(build_dir):
-                    issues.append({
-                        'type': 'no_build_artifacts',
-                        'description': 'Final verification completed but no build artifacts found',
-                        'severity': 'critical',
-                        'expected': 'build/ directory with APK, iOS, or Web builds'
-                    })
-                else:
-                    # Check for specific build outputs
-                    web_build = os.path.exists(os.path.join(build_dir, 'web'))
-                    android_build = os.path.exists(os.path.join(build_dir, 'app', 'outputs', 'flutter-apk'))
-                    ios_build = os.path.exists(os.path.join(build_dir, 'ios'))
-                    
-                    if not (web_build or android_build or ios_build):
-                        issues.append({
-                            'type': 'incomplete_build',
-                            'description': 'Build directory exists but no actual builds found',
-                            'severity': 'high',
-                            'expected': 'Web, Android, or iOS build artifacts'
-                        })
-            
-            elif project_type == 'react_native':
-                # Check for React Native builds
-                android_build = os.path.exists(os.path.join(self.project_dir, 'android', 'app', 'build', 'outputs', 'apk'))
-                ios_build = os.path.exists(os.path.join(self.project_dir, 'ios', 'build'))
-                dist_build = os.path.exists(os.path.join(self.project_dir, 'dist'))
-                
-                if not (android_build or ios_build or dist_build):
-                    issues.append({
-                        'type': 'no_build_artifacts',
-                        'description': 'Final verification completed but no build artifacts found',
-                        'severity': 'critical',
-                        'expected': 'Android APK, iOS build, or dist/ directory'
-                    })
+            has_artifacts = bool(getattr(final_task, "artifacts", None))
+            has_cmds = False
+            try:
+                import re
+                if getattr(final_task, "acceptance_criteria", None):
+                    for line in final_task.acceptance_criteria:
+                        if re.search(r'`[^`]+`', str(line)):
+                            has_cmds = True
+                            break
+            except Exception:
+                has_cmds = False
+
+            if not has_artifacts and not has_cmds:
+                issues.append({
+                    'type': 'final_verification_not_verifiable',
+                    'description': 'Final verification completed but has no artifacts and no executable acceptance commands',
+                    'severity': 'high'
+                })
         
         return issues
     
@@ -705,6 +1139,45 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
                                 'severity': 'high'  # High severity - needs investigation
                             })
         
+        return issues
+
+    def _check_unresponsive_agents(self) -> List[Dict]:
+        """
+        Detect agents that stopped heartbeating (likely hung thread / dead loop).
+        This is generic and does not assume any project type.
+        """
+        issues: List[Dict] = []
+        stale_threshold_seconds = 60
+
+        try:
+            last_map = getattr(self.coordinator, "agent_last_heartbeat", {}) or {}
+            now = datetime.now()
+            for agent_id, last_dt in last_map.items():
+                if agent_id == self.agent_id:
+                    continue
+                state = self.coordinator.get_agent_state(agent_id)
+                if not state or state.value not in ["running", "started"]:
+                    continue
+                try:
+                    age = (now - last_dt).total_seconds()
+                except Exception:
+                    continue
+                if age >= stale_threshold_seconds:
+                    spec = ""
+                    try:
+                        spec = (getattr(self.coordinator, "agent_specializations", {}) or {}).get(agent_id, "")
+                    except Exception:
+                        spec = ""
+                    issues.append({
+                        "type": "agent_unresponsive",
+                        "agent_id": agent_id,
+                        "specialization": spec,
+                        "seconds_since_heartbeat": int(age),
+                        "severity": "high",
+                    })
+        except Exception:
+            return issues
+
         return issues
     
     def _check_supervisor_assigned_tasks(self) -> List[Dict]:
@@ -828,8 +1301,6 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
             tasks_with_recent_completion = 0
             
             if self.project_dir:
-                project_type = self._detect_project_type()
-                
                 # Count tasks with artifacts or recent completion
                 for task in completed_tasks:
                     # Check if task has artifacts
@@ -842,32 +1313,35 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
                         if time_since_completion.total_seconds() < 3600:  # 1 hour
                             tasks_with_recent_completion += 1
                 
-                # Check if there's substantial work done
-                if project_type == 'flutter':
-                    lib_dir = os.path.join(self.project_dir, 'lib')
-                    if os.path.exists(lib_dir):
-                        # Count Dart files in lib/
-                        dart_files = []
-                        for root, dirs, files in os.walk(lib_dir):
-                            dart_files.extend([f for f in files if f.endswith('.dart')])
-                        
-                        # If there are multiple Dart files, there's substantial work
-                        if len(dart_files) >= 3:  # At least 3 Dart files
-                            has_substantial_work = True
-                    
-                    # Check if build directory exists or main app files exist
-                    build_dir = os.path.join(self.project_dir, 'build')
-                    main_dart = os.path.join(self.project_dir, 'lib', 'main.dart')
-                    
-                    # Project is complete if build exists OR main.dart exists with substantial content
-                    if os.path.exists(build_dir):
+                # Project-agnostic "substantial work" heuristics:
+                # - Some tasks produced artifacts, or
+                # - The project directory contains non-infra files beyond the runner/progress/logs.
+                if tasks_with_artifacts >= 3:
+                    has_substantial_work = True
+                try:
+                    infra_names = {
+                        "requirements.md", "tasks.md", "run_team.py", ".team_id",
+                    }
+                    infra_dirs = {
+                        "agent_logs", "progress_reports", "tests", "__pycache__", ".pytest_cache"
+                    }
+                    non_infra_files = 0
+                    for root, dirs, files in os.walk(self.project_dir):
+                        # prune infra dirs
+                        dirs[:] = [d for d in dirs if d not in infra_dirs]
+                        for fn in files:
+                            if fn in infra_names:
+                                continue
+                            non_infra_files += 1
+                            if non_infra_files >= 5:
+                                break
+                        if non_infra_files >= 5:
+                            break
+                    if non_infra_files >= 5:
+                        has_substantial_work = True
                         project_complete = True
-                    elif os.path.exists(main_dart):
-                        with open(main_dart, 'r', encoding='utf-8') as f:
-                            content = f.read()
-                        # If main.dart has more than just placeholder/TODO content
-                        if len(content) > 500 and 'TODO' not in content[:200]:
-                            project_complete = True
+                except Exception:
+                    pass
                 
                 # #region debug log
                 _debug_log("supervisor_agent.py:625", "_check_incorrectly_completed_tasks: Project completeness check", {
@@ -876,7 +1350,7 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
                     "tasks_with_artifacts": tasks_with_artifacts,
                     "tasks_with_recent_completion": tasks_with_recent_completion,
                     "total_completed": len(completed_tasks),
-                    "project_type": project_type
+                    "project_complete_signal": "artifacts_or_non_infra_files"
                 }, "H4")
                 # #endregion
             
@@ -938,34 +1412,38 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
         )
         
         if all_completed:
-            # Project should be built
-            project_type = self._detect_project_type()
-            
-            if project_type == 'flutter':
-                build_dir = os.path.join(self.project_dir, 'build')
-                if not os.path.exists(build_dir):
-                    issues.append({
-                        'type': 'project_not_built',
-                        'description': 'All tasks completed but project not built',
-                        'severity': 'critical',
-                        'action': 'Run flutter build web --release'
-                    })
+            # Project-agnostic: if all tasks are completed but there are no artifacts and no
+            # executable acceptance commands, completion is not verifiable.
+            tasks = list(self.coordinator.tasks.values())
+            completed_tasks = [t for t in tasks if t.status == TaskStatus.COMPLETED]
+            has_any_artifacts = any(bool(getattr(t, "artifacts", None)) for t in completed_tasks)
+            has_any_cmds = False
+            try:
+                import re
+                for t in completed_tasks:
+                    if getattr(t, "acceptance_criteria", None):
+                        for line in t.acceptance_criteria:
+                            if re.search(r'`[^`]+`', str(line)):
+                                has_any_cmds = True
+                                break
+                    if has_any_cmds:
+                        break
+            except Exception:
+                has_any_cmds = False
+
+            if (not has_any_artifacts) and (not has_any_cmds):
+                issues.append({
+                    'type': 'completion_not_verifiable',
+                    'description': 'All tasks completed but no artifacts or executable acceptance commands were provided',
+                    'severity': 'high',
+                    'action': 'Add acceptance commands and/or artifacts to tasks to make completion verifiable'
+                })
         
         return issues
     
     def _detect_project_type(self) -> str:
-        """Detect project type from files"""
-        if not self.project_dir:
-            return 'unknown'
-        
-        if os.path.exists(os.path.join(self.project_dir, 'pubspec.yaml')):
-            return 'flutter'
-        elif os.path.exists(os.path.join(self.project_dir, 'package.json')):
-            return 'react_native'
-        elif os.path.exists(os.path.join(self.project_dir, 'requirements.txt')):
-            return 'python'
-        else:
-            return 'unknown'
+        """Deprecated: project-type detection is intentionally not hardcoded. Kept for backwards compatibility."""
+        return 'generic'
     
     def _get_expected_files_from_tasks(self) -> List[str]:
         """Get list of files that should exist based on completed tasks"""
@@ -987,6 +1465,189 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
         
         return expected
     
+    def _check_progress_stagnation(self) -> List[Dict]:
+        """
+        Check for progress stagnation (Global Metric: Progress Update Frequency)
+        Standard: If progress < 100%, last update must be within 2 minutes
+        Stuck Threshold: If last update > 10 minutes, team is stuck
+        """
+        issues = []
+        try:
+            progress_file = os.path.join(self.project_dir, 'progress_reports', 'progress.md')
+            if not os.path.exists(progress_file):
+                return issues
+            
+            # Read progress report
+            with open(progress_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Extract last updated time
+            import re
+            last_updated_match = re.search(r'\*\*Last Updated:\*\* (.+)', content)
+            if not last_updated_match:
+                return issues
+            
+            last_updated_str = last_updated_match.group(1).strip()
+            try:
+                from datetime import datetime
+                last_updated = datetime.strptime(last_updated_str, '%Y-%m-%d %H:%M:%S')
+                time_since_update = datetime.now() - last_updated
+                minutes_since_update = time_since_update.total_seconds() / 60
+            except:
+                return issues
+            
+            # Extract progress percentage
+            progress_match = re.search(r'\*\*Overall Progress:\*\* ([\d.]+)%', content)
+            if not progress_match:
+                return issues
+            
+            progress_pct = float(progress_match.group(1))
+            
+            # Check against Global Metric: Progress Update Frequency
+            if progress_pct < 100:
+                if minutes_since_update > 10:
+                    # Stuck threshold exceeded
+                    issues.append({
+                        'type': 'progress_stagnation',
+                        'severity': 'critical',
+                        'description': f'Progress not updating for {int(minutes_since_update)} minutes (violates Progress Update Frequency metric - stuck if > 10 minutes)',
+                        'progress': progress_pct,
+                        'minutes_since_update': minutes_since_update
+                    })
+                elif minutes_since_update > 2:
+                    # Warning threshold exceeded
+                    issues.append({
+                        'type': 'progress_stagnation',
+                        'severity': 'warning',
+                        'description': f'Progress not updating for {int(minutes_since_update)} minutes (violates Progress Update Frequency metric - must update within 2 minutes)',
+                        'progress': progress_pct,
+                        'minutes_since_update': minutes_since_update
+                    })
+        except Exception as e:
+            if LOGGING_AVAILABLE:
+                AgentLogger.warning(self.agent_id, f"Error checking progress stagnation: {e}")
+        
+        return issues
+    
+    def _check_tasks_in_progress_requirement(self) -> List[Dict]:
+        """
+        Check for tasks in progress requirement (Global Metric: Tasks in Progress Requirement)
+        Standard: When project is incomplete (progress < 100%), there must be tasks in progress
+        Exception: If all ready tasks are blocked or there are no ready tasks, having 0 tasks in progress is acceptable
+        """
+        issues = []
+        try:
+            # Get overall progress
+            completed_count = sum(1 for t in self.coordinator.tasks.values() 
+                                 if t.status == TaskStatus.COMPLETED)
+            total_tasks = len(self.coordinator.tasks)
+            if total_tasks == 0:
+                return issues
+            
+            progress_pct = (completed_count / total_tasks) * 100
+            
+            # Only check if project is incomplete
+            if progress_pct >= 100:
+                return issues
+            
+            # Count tasks in progress
+            in_progress_count = sum(1 for t in self.coordinator.tasks.values() 
+                                   if t.status == TaskStatus.IN_PROGRESS)
+            
+            # Count ready tasks
+            ready_count = sum(1 for t in self.coordinator.tasks.values() 
+                            if t.status == TaskStatus.READY)
+            
+            # Count blocked tasks
+            blocked_count = sum(1 for t in self.coordinator.tasks.values() 
+                              if t.status == TaskStatus.BLOCKED)
+            
+            # Check if exception applies: all ready tasks are blocked or no ready tasks
+            # If there are ready tasks that are not blocked, we should have tasks in progress
+            if in_progress_count == 0:
+                if ready_count > 0:
+                    # Violates metric: there are ready tasks but no tasks in progress
+                    issues.append({
+                        'type': 'no_tasks_in_progress',
+                        'severity': 'warning',
+                        'description': f'No tasks in progress while {ready_count} ready tasks available (violates Tasks in Progress Requirement metric)',
+                        'ready_count': ready_count,
+                        'blocked_count': blocked_count,
+                        'progress': progress_pct
+                    })
+                elif ready_count == 0 and blocked_count > 0:
+                    # All tasks are blocked. This is only acceptable if they're genuinely waiting on deps/env.
+                    # If some tasks are blocked due to generic execution failures, we should retry them with a budget.
+                    retryable = []
+                    retryable_conflicts = []
+                    for t in self.coordinator.tasks.values():
+                        if t.status != TaskStatus.BLOCKED:
+                            continue
+                        msg = (t.blocker_message or "").lower()
+                        if not msg:
+                            continue
+                        # Execution/parsing failures are often transient or fixed by improvements to the generic executor.
+                        if (
+                            "execution failed" in msg
+                            or "could not find a json object" in msg
+                            or "failed to parse json" in msg
+                            or "invalid json shape" in msg
+                            or "cursor cli returned empty response" in msg
+                        ):
+                            # Only retry a few times to avoid loops.
+                            try:
+                                repeats = int((t.metadata or {}).get("blocker_repeats", 0))
+                            except Exception:
+                                repeats = 0
+                            if repeats <= 2:
+                                retryable.append(t.id)
+                        # Conflict prevention can legitimately block if two tasks race, but it should NOT deadlock
+                        # downstream tasks forever once the upstream task is integrated.
+                        if (
+                            "conflict with integrated task" in msg
+                            or ("validation failed" in msg and "conflict" in msg and "integrated task" in msg)
+                        ):
+                            try:
+                                repeats = int((t.metadata or {}).get("blocker_repeats", 0))
+                            except Exception:
+                                repeats = 0
+                            if repeats <= 2:
+                                retryable_conflicts.append(t.id)
+
+                    if retryable:
+                        issues.append({
+                            'type': 'all_tasks_blocked_retryable_execution_failures',
+                            'severity': 'warning',
+                            'description': f'All tasks are BLOCKED and there are retryable execution-failure blocks ({len(retryable)} tasks). Will requeue to READY with retry budget.',
+                            'task_ids': retryable[:10],  # cap for logs
+                            'action': 'retry_blocked_execution_failures',
+                        })
+                    elif retryable_conflicts:
+                        issues.append({
+                            'type': 'all_tasks_blocked_retryable_conflict_prevention',
+                            'severity': 'warning',
+                            'description': f'All tasks are BLOCKED and there are retryable conflict-prevention blocks ({len(retryable_conflicts)} tasks). Will requeue to READY with retry budget.',
+                            'task_ids': retryable_conflicts[:10],  # cap for logs
+                            'action': 'retry_blocked_conflict_prevention',
+                        })
+                elif ready_count == 0 and blocked_count == 0:
+                    # No ready tasks and no blocked tasks - might be an issue
+                    pending_count = sum(1 for t in self.coordinator.tasks.values() 
+                                      if t.status == TaskStatus.PENDING)
+                    if pending_count > 0:
+                        issues.append({
+                            'type': 'no_tasks_in_progress',
+                            'severity': 'warning',
+                            'description': f'No tasks in progress, no ready tasks, {pending_count} pending tasks (may violate Tasks in Progress Requirement metric if pending tasks should be ready)',
+                            'pending_count': pending_count,
+                            'progress': progress_pct
+                        })
+        except Exception as e:
+            if LOGGING_AVAILABLE:
+                AgentLogger.warning(self.agent_id, f"Error checking tasks in progress requirement: {e}")
+        
+        return issues
+    
     def _find_task_for_file(self, file_path: str) -> Optional[Task]:
         """Find task that should have created this file"""
         for task in self.coordinator.tasks.values():
@@ -996,6 +1657,106 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
                         return task
         return None
     
+    def _log_issue_to_file(self, issue_type: str, description: str, affected_components: List[str], 
+                           status: str = "detected", fix_applied: str = None):
+        """
+        Log an issue to supervisor_issues_checklist.md in the parent directory.
+        Only adds the issue if it doesn't already exist in the file.
+        Issues are logged as high-level descriptions only, without detailed IDs or fix information.
+        """
+        try:
+            # Get parent directory (one level up from project_dir)
+            if not self.project_dir:
+                return
+            
+            parent_dir = os.path.dirname(os.path.abspath(self.project_dir))
+            issues_file = os.path.join(parent_dir, 'supervisor_issues_checklist.md')
+            
+            if not os.path.exists(issues_file):
+                # Create file if it doesn't exist
+                with open(issues_file, 'w', encoding='utf-8') as f:
+                    f.write("# Supervisor Issues Checklist and Log\n\n")
+                    f.write("## Detected Issues Log\n\n")
+                    f.write("### Issues Detected\n\n")
+                    f.write("*Issues will be logged here by the supervisor as they are detected.*\n")
+            
+            # Read existing file
+            with open(issues_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Create a high-level description (remove specific IDs and details)
+            # Extract just the core issue description without task IDs, team IDs, etc.
+            # Include reference to global metrics when applicable
+            high_level_desc = description
+            # Remove specific task references like "task-007" -> "tasks"
+            import re
+            high_level_desc = re.sub(r'task-\d+', 'tasks', high_level_desc)
+            high_level_desc = re.sub(r'team-[^\s]+', '', high_level_desc)
+            
+            # Add metric reference based on issue type
+            if "PENDING" in issue_type and "READY" in issue_type:
+                if "no dependencies" in description.lower() or "empty" in description.lower():
+                    high_level_desc = "Tasks with no dependencies not transitioning to READY (violates Dependency Resolution metric)"
+                else:
+                    high_level_desc = "Tasks with completed dependencies not transitioning to READY (violates Dependency Resolution and Task State Transition Timeframes metrics)"
+            elif "BLOCKED" in issue_type and "READY" in issue_type:
+                high_level_desc = "Blocked tasks not unblocking when dependencies complete (violates Dependency Resolution and Task State Transition Timeframes metrics)"
+            elif "Ready Tasks Not Being Assigned" in issue_type or "ready tasks" in description.lower():
+                high_level_desc = "Ready tasks not being assigned (violates Tasks in Progress Requirement and Task State Transition Timeframes metrics)"
+            elif "failed" in issue_type.lower() or "failed task" in description.lower():
+                high_level_desc = "Failed tasks blocking progress (violates Tasks in Progress Requirement metric)"
+            elif "progress" in description.lower() and ("stuck" in description.lower() or "stagnation" in description.lower()):
+                high_level_desc = "Progress not updating (violates Progress Update Frequency metric - must update within 2 minutes, stuck if > 10 minutes)"
+            elif "backwards" in description.lower() or "decreasing" in description.lower():
+                high_level_desc = "Progress history showing backwards movement (violates Progress History Integrity metric)"
+            
+            # Clean up remaining specific references
+            high_level_desc = re.sub(r'\d+ minutes?', 'extended period', high_level_desc)
+            high_level_desc = re.sub(r'\d+%', '', high_level_desc)
+            high_level_desc = high_level_desc.strip()
+            
+            # Check if this issue already exists (by high-level description)
+            # Look for similar descriptions in the issues list
+            if "### Issues Detected" in content:
+                issues_section = content.split("### Issues Detected")[1]
+                # Check if a similar high-level description already exists
+                if high_level_desc.lower() in issues_section.lower():
+                    return  # Issue already logged, skip
+            
+            # Format issue entry as simple bullet point
+            issue_entry = f"- {high_level_desc}\n"
+            
+            # Append to "Issues Detected" section
+            if "### Issues Detected" in content:
+                # Insert before the placeholder text
+                if "*Issues will be logged here" in content:
+                    content = content.replace(
+                        "*Issues will be logged here by the supervisor as they are detected.*",
+                        issue_entry + "\n*Issues will be logged here by the supervisor as they are detected.*"
+                    )
+                else:
+                    # Append to the section
+                    marker = "### Issues Detected"
+                    idx = content.find(marker)
+                    if idx != -1:
+                        # Find the end of the section or insert before next section
+                        next_section = content.find("\n## ", idx + len(marker))
+                        if next_section != -1:
+                            content = content[:next_section] + "\n" + issue_entry + content[next_section:]
+                        else:
+                            content += "\n" + issue_entry
+            else:
+                # Add the section if it doesn't exist
+                content += f"\n\n### Issues Detected\n{issue_entry}\n*Issues will be logged here by the supervisor as they are detected.*\n"
+            
+            # Write back to file
+            with open(issues_file, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            print(f"  [{self.agent_id}] [LOG] Logged issue to {issues_file}: {high_level_desc[:50]}...", flush=True)
+        except Exception as e:
+            print(f"  [{self.agent_id}] [WARNING] Failed to log issue to file: {e}", flush=True)
+    
     def _persist_task_completion(self, task: Task):
         """Helper method to persist task completion to tasks.md"""
         try:
@@ -1004,6 +1765,19 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
             parser.update_task_in_file(task)
         except Exception as e:
             print(f"  [{self.agent_id}] [WARNING] Failed to update tasks.md: {e}", flush=True)
+            sys.stdout.flush()
+
+    def _persist_task_update(self, task: Task):
+        """
+        Persist any task status/progress/metadata changes to tasks.md.
+        (Used for supervisor-driven resets/unblocks as well as completions.)
+        """
+        try:
+            from ..utils.task_config_parser import TaskConfigParser
+            parser = TaskConfigParser(self.project_dir)
+            parser.update_task_in_file(task)
+        except Exception as e:
+            print(f"  [{self.agent_id}] [WARNING] Failed to persist task update to tasks.md: {e}", flush=True)
             sys.stdout.flush()
     
     def _fix_issue(self, issue: Dict):
@@ -1094,6 +1868,78 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
                 else:
                     print(f"  [{self.agent_id}] [INFO] Task '{task_id}' missing artifacts but recently completed or has progress - preserving")
         
+        elif issue_type == 'all_tasks_blocked_retryable_execution_failures':
+            # Generic deadlock breaker: if the whole team is idle because root tasks are blocked
+            # by execution/parsing failures, requeue them so the updated executors can retry.
+            task_ids = issue.get('task_ids') or []
+            if not isinstance(task_ids, list):
+                task_ids = []
+            requeued = 0
+            for tid in task_ids:
+                t = self.coordinator.tasks.get(tid)
+                if not t or t.status != TaskStatus.BLOCKED:
+                    continue
+                # Clear block + reset progress so it can be picked up again.
+                t.status = TaskStatus.READY
+                t.progress = 0
+                t.blocker_message = None
+                t.blocker_type = None
+                t.assigned_agent = None
+                t.started_at = None
+                # Clear retry counters so future repeats reflect new attempts.
+                try:
+                    if t.metadata is not None:
+                        t.metadata["blocker_signature"] = None
+                        t.metadata["blocker_repeats"] = 0
+                except Exception:
+                    pass
+                self._persist_task_update(t)
+                requeued += 1
+
+            if requeued > 0:
+                self.fixes_applied.append(f"Requeued {requeued} blocked task(s) to READY after execution-failure deadlock")
+                if LOGGING_AVAILABLE:
+                    AgentLogger.info(self.agent_id, "Requeued blocked tasks to READY (execution-failure deadlock breaker)", extra={
+                        "requeued": requeued,
+                        "task_ids": task_ids[:10],
+                    })
+                print(f"  [{self.agent_id}] [FIX] Requeued {requeued} blocked task(s) to READY (execution-failure deadlock breaker)", flush=True)
+        
+        elif issue_type == 'all_tasks_blocked_retryable_conflict_prevention':
+            # Generic deadlock breaker: requeue tasks blocked by "Conflict with integrated task ..."
+            # This can happen if conflict checks were too strict or after we improve the allow-completed-updates path.
+            task_ids = issue.get('task_ids') or []
+            if not isinstance(task_ids, list):
+                task_ids = []
+            requeued = 0
+            for tid in task_ids:
+                t = self.coordinator.tasks.get(tid)
+                if not t or t.status != TaskStatus.BLOCKED:
+                    continue
+                t.status = TaskStatus.READY
+                t.progress = 0
+                t.blocker_message = None
+                t.blocker_type = None
+                t.assigned_agent = None
+                t.started_at = None
+                try:
+                    if t.metadata is not None:
+                        t.metadata["blocker_signature"] = None
+                        t.metadata["blocker_repeats"] = 0
+                except Exception:
+                    pass
+                self._persist_task_update(t)
+                requeued += 1
+
+            if requeued > 0:
+                self.fixes_applied.append(f"Requeued {requeued} blocked task(s) to READY after conflict-prevention deadlock")
+                if LOGGING_AVAILABLE:
+                    AgentLogger.info(self.agent_id, "Requeued blocked tasks to READY (conflict-prevention deadlock breaker)", extra={
+                        "requeued": requeued,
+                        "task_ids": task_ids[:10],
+                    })
+                print(f"  [{self.agent_id}] [FIX] Requeued {requeued} blocked task(s) to READY (conflict-prevention deadlock breaker)", flush=True)
+        
         elif issue_type == 'no_artifacts':
             # Check if task was recently completed - if so, don't reset immediately
             task_id = issue['task_id']
@@ -1162,14 +2008,10 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
             
             if task_id not in self.coordinator.tasks:
                 print(f"  [{self.agent_id}] [FIX] Creating build task")
-                project_type = self._detect_project_type()
-                
-                if project_type == 'flutter':
-                    description = "Build Flutter app: flutter build web --release (and Android/iOS if SDKs available)"
-                elif project_type == 'react_native':
-                    description = "Build React Native app: npm run build or equivalent"
-                else:
-                    description = "Build the application"
+                description = (
+                    "Build deliverables according to requirements.md. "
+                    "Use an explicit build command in acceptance criteria and record produced artifacts."
+                )
                 
                 build_task = Task(
                     id=task_id,
@@ -1307,6 +2149,47 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
                     # Agent is running but stuck - create investigation task or log for manual review
                     print(f"  [{self.agent_id}] [INVESTIGATE] Agent appears to be running but task is stuck - may need manual intervention")
                     self.fixes_applied.append(f"Investigated stuck task {task_id}")
+
+        elif issue_type == 'agent_unresponsive':
+            # Stop the unresponsive agent, requeue its tasks, and spawn a replacement.
+            agent_id = issue.get("agent_id")
+            spec = issue.get("specialization") or ""
+            secs = issue.get("seconds_since_heartbeat")
+            print(f"  [{self.agent_id}] [FIX] Agent '{agent_id}' unresponsive ({secs}s since heartbeat) - replacing", flush=True)
+
+            # 1) Stop the agent (best-effort)
+            try:
+                self.coordinator.stop_agent(agent_id)
+            except Exception:
+                pass
+
+            # 2) Requeue tasks assigned to that agent
+            requeued = 0
+            for task in list(self.coordinator.tasks.values()):
+                if task.assigned_agent == agent_id and task.status in (TaskStatus.ASSIGNED, TaskStatus.IN_PROGRESS):
+                    task.assigned_agent = None
+                    # Keep progress but make it retryable
+                    task.status = TaskStatus.READY
+                    task.blocker_message = f"Supervisor: requeued from unresponsive agent {agent_id}"
+                    requeued += 1
+                    try:
+                        self._persist_task_update(task)
+                    except Exception:
+                        pass
+
+            # 3) Spawn replacement agent for the same specialization (if possible)
+            new_agent_id = None
+            if spec:
+                try:
+                    if hasattr(self.coordinator, "spawn_agent_for_specialization"):
+                        new_agent_id = self.coordinator.spawn_agent_for_specialization(spec)
+                except Exception:
+                    new_agent_id = None
+
+            msg = f"Replaced unresponsive agent {agent_id}; requeued {requeued} tasks"
+            if new_agent_id:
+                msg += f"; spawned {new_agent_id}"
+            self.fixes_applied.append(msg)
         
         elif issue_type == 'all_tasks_incorrectly_completed':
             # All tasks are incorrectly marked as completed - reset them, but be selective
@@ -1463,26 +2346,86 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
             }, "H5")
             # #endregion
         
-        elif issue_type == 'some_tasks_incorrectly_completed':
-            # Some tasks incorrectly completed - reset them
-            task_ids = issue.get('task_ids', [])
-            print(f"  [{self.agent_id}] [FIX] Resetting {len(task_ids)} incorrectly completed tasks")
-            # TaskStatus is already imported at module level
-            
-            for task_id in task_ids:
-                task = self.coordinator.tasks.get(task_id)
-                if task and task.status == TaskStatus.COMPLETED:
-                    if task.dependencies:
-                        task.status = TaskStatus.PENDING
-                    else:
-                        task.status = TaskStatus.READY
-                    task.progress = 0
-                    task.assigned_agent = None
-                    task.completed_at = None
-                    task.started_at = None
-                    self.coordinator._update_task_status(task_id)
-            
-            self.fixes_applied.append(f"Reset {len(task_ids)} incorrectly completed tasks")
+        elif issue_type == 'completed_tasks_missing_expected_files':
+            # Completed tasks reference missing files/dirs inferred from acceptance criteria.
+            # CRITICAL: Never reset COMPLETED tasks; instead create dedicated fix-up tasks to restore artifacts.
+            task_ids = issue.get('task_ids', []) or []
+            examples = issue.get('examples', []) or []
+            created = 0
+            max_new = 12  # bounded to avoid runaway creation on noisy signals
+
+            print(f"  [{self.agent_id}] [FIX] Creating fix-up tasks for missing expected files/dirs (preserving COMPLETED tasks). Candidates={len(task_ids)}", flush=True)
+            sys.stdout.flush()
+
+            parser = None
+            try:
+                from ..utils.task_config_parser import TaskConfigParser
+                parser = TaskConfigParser(self.project_dir)
+            except Exception:
+                parser = None
+
+            def _norm_path(p: str) -> str:
+                p2 = (p or "").strip().replace("\\", "/")
+                while "//" in p2:
+                    p2 = p2.replace("//", "/")
+                return p2
+
+            for ex in examples:
+                if created >= max_new:
+                    break
+                orig_task_id = ex.get("task_id")
+                missing_list = ex.get("missing") or []
+                if not orig_task_id or not isinstance(missing_list, list):
+                    continue
+
+                for missing_path in missing_list[:6]:
+                    if created >= max_new:
+                        break
+                    mp = _norm_path(str(missing_path))
+                    if not mp:
+                        continue
+
+                    # If it already exists now, skip (race/window).
+                    try:
+                        abs_path = os.path.join(self.project_dir, mp) if self.project_dir and not os.path.isabs(mp) else mp
+                        if os.path.exists(abs_path):
+                            continue
+                    except Exception:
+                        pass
+
+                    digest = hashlib.md5(f"{orig_task_id}::{mp}".encode("utf-8", errors="ignore")).hexdigest()[:8]
+                    fix_task_id = f"fix-missing-{orig_task_id}-{digest}"
+                    if fix_task_id in self.coordinator.tasks:
+                        continue
+
+                    deps = [orig_task_id] if orig_task_id in self.coordinator.tasks else []
+                    fix_task = Task(
+                        id=fix_task_id,
+                        title=f"Restore missing artifact for {orig_task_id}",
+                        description=f"Create/restore missing file or directory `{mp}` expected by `{orig_task_id}`. Do not change `{orig_task_id}` status.",
+                        status=TaskStatus.READY,
+                        progress=0,
+                        estimated_hours=0.5,
+                        dependencies=deps,
+                        assigned_agent=None,
+                        created_at=datetime.now()
+                    )
+                    # Make it concrete for validation: artifact must exist after completion.
+                    fix_task.artifacts = [mp]
+                    fix_task.acceptance_criteria = [f"Artifact exists: {mp}"]
+
+                    self.coordinator.add_task(fix_task)
+                    if parser:
+                        try:
+                            parser.update_task_in_file(fix_task)
+                        except Exception:
+                            pass
+                    created += 1
+
+            if created:
+                self.fixes_applied.append(f"Created {created} fix-up task(s) for missing expected files/dirs (preserved completed tasks)")
+            else:
+                self.fixes_applied.append("No fix-up tasks created (missing paths already exist or could not be determined)")
         
         elif issue_type == 'assigned_at_100_percent':
             # Task has 100% progress but is still ASSIGNED/IN_PROGRESS - should be completed
@@ -1504,7 +2447,6 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
                 if is_template:
                     print(f"  [{self.agent_id}] [FIX] Template task '{task_id}' at 100% - completing immediately", flush=True)
                     sys.stdout.flush()
-                    from datetime import datetime
                     
                     # Use coordinator's complete_task method if task is assigned to an agent
                     if task.assigned_agent and task.assigned_agent != self.agent_id:
@@ -1567,178 +2509,48 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
                     if missing_artifacts:
                         print(f"  [{self.agent_id}] [WARNING] Some artifacts missing: {', '.join(missing_artifacts)}", flush=True)
                         sys.stdout.flush()
-                        # For setup tasks, check if required files exist even if not in artifacts list
-                        if 'setup' in task_id.lower() or 'initialize' in task_id.lower() or 'setup' in task.title.lower() or 'initialize' in task.title.lower() or 'flutter project' in task.title.lower():
-                            # Check for common setup files
-                            setup_files_exist = False
-                            if self.project_dir:
-                                pubspec_exists = os.path.exists(os.path.join(self.project_dir, 'pubspec.yaml'))
-                                main_dart_exists = os.path.exists(os.path.join(self.project_dir, 'lib', 'main.dart'))
-                                package_json_exists = os.path.exists(os.path.join(self.project_dir, 'package.json'))
-                                
-                                if pubspec_exists and main_dart_exists:
-                                    setup_files_exist = True
-                                    # Update artifacts to include these files
-                                    if not task.artifacts:
-                                        task.artifacts = []
-                                    task.artifacts.extend([
-                                        os.path.relpath(os.path.join(self.project_dir, 'pubspec.yaml'), self.project_dir),
-                                        os.path.relpath(os.path.join(self.project_dir, 'lib', 'main.dart'), self.project_dir)
-                                    ])
-                                elif package_json_exists:
-                                    setup_files_exist = True
-                            
-                            if setup_files_exist:
-                                # Setup files exist - complete the task
-                                from datetime import datetime
-                                # Use coordinator's complete_task method if task is assigned to an agent
-                                # Otherwise, complete directly
-                                if task.assigned_agent and task.assigned_agent != self.agent_id:
-                                    # Task assigned to another agent - try to complete via coordinator
-                                    if self.coordinator.complete_task(task_id, task.assigned_agent):
-                                        print(f"  [{self.agent_id}] [FIX] Marked setup task '{task_id}' as COMPLETED (setup files exist)")
-                                        self.fixes_applied.append(f"Completed setup task {task_id} (setup files exist)")
-                                        
-                                        # Persist completion to tasks.md
-                                        self._persist_task_completion(task)
-                                        
-                                        # Update dependent tasks
-                                        for other_task in self.coordinator.tasks.values():
-                                            if task_id in other_task.dependencies:
-                                                self.coordinator._update_task_status(other_task.id)
-                                        return
-                                
-                                # Complete directly (either no assigned agent or coordinator rejected)
-                                task.status = TaskStatus.COMPLETED
-                                task.progress = 100
-                                task.completed_at = datetime.now()
-                                if not task.started_at:
-                                    task.started_at = task.completed_at
-                                # Update agent workload if task was assigned
-                                if task.assigned_agent and task.assigned_agent in self.coordinator.agent_workloads:
-                                    self.coordinator.agent_workloads[task.assigned_agent] = max(
-                                        0, self.coordinator.agent_workloads[task.assigned_agent] - 1
-                                    )
-                                task.assigned_agent = None
-                                print(f"  [{self.agent_id}] [FIX] Marked setup task '{task_id}' as COMPLETED (setup files exist)")
-                                self.fixes_applied.append(f"Completed setup task {task_id} (setup files exist)")
-                                
-                                # Persist completion to tasks.md
-                                self._persist_task_completion(task)
-                                
-                                # Update dependent tasks
-                                for other_task in self.coordinator.tasks.values():
-                                    if task_id in other_task.dependencies:
-                                        self.coordinator._update_task_status(other_task.id)
-                                return
-                        
-                        # Reset to ready so it can be retried
-                        self.send_status_update(
-                            task_id,
-                            TaskStatus.READY,
-                            message=f"Supervisor: Task at 100% but artifacts missing. Resetting to ready.",
-                            progress=100  # Keep progress
-                        )
-                        self.fixes_applied.append(f"Reset task {task_id} (100% but missing artifacts)")
+                        # Project-agnostic: if artifacts are missing, do not attempt to infer completion
+                        # from framework-specific file layouts. Reset to READY so an agent can re-run
+                        # the task and explicitly declare artifacts/acceptance commands.
+
+                        # Hard reset so it can be retried and does not keep re-triggering this issue.
+                        task.status = TaskStatus.READY
+                        task.progress = 0
+                        task.assigned_agent = None
+                        task.started_at = None
+                        task.completed_at = None
+                        task.blocker_message = ""
+                        self.coordinator._update_task_status(task_id)
+                        try:
+                            self._persist_task_update(task)
+                        except Exception:
+                            pass
+                        self.fixes_applied.append(f"Reset task {task_id} (100% but missing artifacts) -> READY/0%")
+                        return
                     else:
                         # All artifacts exist - complete the task
                         artifacts_exist = True
                 else:
-                    # No artifacts in task - check if it's a setup task and verify setup files exist
-                    print(f"  [{self.agent_id}] [DEBUG] Task '{task_id}' has no artifacts - checking if setup task", flush=True)
+                    # No artifacts declared => cannot validate generically. Reset to READY for explicit rerun.
+                    print(f"  [{self.agent_id}] [DEBUG] Task '{task_id}' has no artifacts - cannot validate generically", flush=True)
                     sys.stdout.flush()
-                    if 'setup' in task_id.lower() or 'initialize' in task_id.lower() or 'flutter project' in task.title.lower():
-                        print(f"  [{self.agent_id}] [DEBUG] Task '{task_id}' is a setup/initialize task - checking for setup files", flush=True)
-                        sys.stdout.flush()
-                        if self.project_dir:
-                            pubspec_exists = os.path.exists(os.path.join(self.project_dir, 'pubspec.yaml'))
-                            main_dart_exists = os.path.exists(os.path.join(self.project_dir, 'lib', 'main.dart'))
-                            package_json_exists = os.path.exists(os.path.join(self.project_dir, 'package.json'))
-                            
-                            if pubspec_exists and main_dart_exists:
-                                # Setup files exist - complete the task
-                                print(f"  [{self.agent_id}] [DEBUG] Setup files found for task '{task_id}' - completing", flush=True)
-                                sys.stdout.flush()
-                                from datetime import datetime
-                                # Set artifacts first
-                                task.artifacts = [
-                                    os.path.relpath(os.path.join(self.project_dir, 'pubspec.yaml'), self.project_dir),
-                                    os.path.relpath(os.path.join(self.project_dir, 'lib', 'main.dart'), self.project_dir)
-                                ]
-                                # Use coordinator's complete_task method if task is assigned to an agent
-                                # Otherwise, complete directly
-                                if task.assigned_agent and task.assigned_agent != self.agent_id:
-                                    print(f"  [{self.agent_id}] [DEBUG] Attempting to complete via coordinator for agent {task.assigned_agent}", flush=True)
-                                    sys.stdout.flush()
-                                    # Task assigned to another agent - try to complete via coordinator
-                                    if self.coordinator.complete_task(task_id, task.assigned_agent):
-                                        print(f"  [{self.agent_id}] [FIX] Marked setup task '{task_id}' as COMPLETED (setup files exist)")
-                                        self.fixes_applied.append(f"Completed setup task {task_id} (setup files exist)")
-                                        
-                                        # Persist completion to tasks.md
-                                        self._persist_task_completion(task)
-                                        
-                                        # Update dependent tasks
-                                        for other_task in self.coordinator.tasks.values():
-                                            if task_id in other_task.dependencies:
-                                                self.coordinator._update_task_status(other_task.id)
-                                        return
-                                
-                                # Complete directly (either no assigned agent or coordinator rejected)
-                                task.status = TaskStatus.COMPLETED
-                                task.progress = 100
-                                task.completed_at = datetime.now()
-                                if not task.started_at:
-                                    task.started_at = task.completed_at
-                                # Update agent workload if task was assigned
-                                if task.assigned_agent and task.assigned_agent in self.coordinator.agent_workloads:
-                                    self.coordinator.agent_workloads[task.assigned_agent] = max(
-                                        0, self.coordinator.agent_workloads[task.assigned_agent] - 1
-                                    )
-                                task.assigned_agent = None
-                                print(f"  [{self.agent_id}] [FIX] Marked setup task '{task_id}' as COMPLETED (setup files exist)", flush=True)
-                                sys.stdout.flush()
-                                self.fixes_applied.append(f"Completed setup task {task_id} (setup files exist)")
-                                
-                                # Update tasks.md file to persist completion
-                                try:
-                                    from ..utils.task_config_parser import TaskConfigParser
-                                    parser = TaskConfigParser(self.project_dir)
-                                    parser.update_task_in_file(task)
-                                except Exception as e:
-                                    print(f"  [{self.agent_id}] [WARNING] Failed to update tasks.md: {e}")
-                                
-                                # Update dependent tasks
-                                for other_task in self.coordinator.tasks.values():
-                                    if task_id in other_task.dependencies:
-                                        self.coordinator._update_task_status(other_task.id)
-                                return
-                            elif package_json_exists:
-                                # React Native setup
-                                from datetime import datetime
-                                task.status = TaskStatus.COMPLETED
-                                task.completed_at = datetime.now()
-                                if not task.started_at:
-                                    task.started_at = task.completed_at
-                                task.artifacts = [
-                                    os.path.relpath(os.path.join(self.project_dir, 'package.json'), self.project_dir)
-                                ]
-                                print(f"  [{self.agent_id}] [FIX] Marked setup task '{task_id}' as COMPLETED (package.json exists)")
-                                self.fixes_applied.append(f"Completed setup task {task_id} (package.json exists)")
-                                
-                                # Persist completion to tasks.md
-                                self._persist_task_completion(task)
-                                
-                                # Update dependent tasks
-                                for other_task in self.coordinator.tasks.values():
-                                    if task_id in other_task.dependencies:
-                                        self.coordinator._update_task_status(other_task.id)
-                                return
+                    task.status = TaskStatus.READY
+                    task.progress = 0
+                    task.assigned_agent = None
+                    task.started_at = None
+                    task.completed_at = None
+                    task.blocker_message = ""
+                    self.coordinator._update_task_status(task_id)
+                    try:
+                        self._persist_task_update(task)
+                    except Exception:
+                        pass
+                    self.fixes_applied.append(f"Reset task {task_id} (100% but no artifacts declared) -> READY/0%")
+                    return
                 
                 # If we got here and artifacts exist, complete the task
                 if artifacts_exist:
                     # All artifacts exist - complete the task
-                    from datetime import datetime
                     # Use coordinator's complete_task method if task is assigned to an agent
                     # Otherwise, complete directly
                     if task.assigned_agent and task.assigned_agent != self.agent_id:
@@ -1788,7 +2600,6 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
                     # If it's a verification/testing task, it might be legitimately done
                     if 'test' in task_id.lower() or 'verify' in task_id.lower() or 'verification' in task_id.lower():
                         print(f"  [{self.agent_id}] [FIX] Test/verification task at 100% - completing it")
-                        from datetime import datetime
                         task.status = TaskStatus.COMPLETED
                         task.completed_at = datetime.now()
                         if not task.started_at:
@@ -1805,7 +2616,6 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
                     else:
                         # Task at 100% progress should be completed by default, even without artifacts
                         # Most tasks at 100% are legitimately done
-                        from datetime import datetime
                         
                         # Use coordinator's complete_task method if task is assigned to an agent
                         # Otherwise, complete directly
@@ -2314,6 +3124,7 @@ class SupervisorAgent(Agent, IncrementalWorkMixin):
         prompt = None
         try:
             # Ask it to write the file directly to the workspace
+            # REQ-8.2.3.10: Ensure tasks cover project dependencies/toolchain setup and installation early.
             prompt = f"""You are a Supervisor in an AI Dev Team. Write a comprehensive tasks.md file to the workspace.
 
 Requirements:
@@ -2333,7 +3144,16 @@ Write a tasks.md file with ALL tasks needed to implement this project. Use this 
   - Criterion 2
   - Criterion 3
 
-Generate at least 20-30 tasks covering: project setup, core features, UI components, testing, and deployment.
+CRITICAL REQUIREMENT (Dependencies & Installation):
+- You MUST identify and include ALL tasks related to project dependencies and their installation/toolchain setup.
+- Include explicit tasks for: verifying required SDKs/tools, installing dependencies (package manager commands), generating lockfiles, and validating the environment by running a minimal build/test command.
+- These dependency/toolchain tasks MUST be placed at the very beginning of the plan and MUST be prerequisites (dependencies) for any tasks that require code, builds, or tests.
+- Use precise acceptance criteria for dependency tasks (e.g., the exact command that must succeed).
+- Ensure acceptance-criteria commands are runnable as-written:
+  - Commands that need a target directory MUST include it (e.g., `tool create .` instead of `tool create`).
+  - Avoid unsupported flags; if a tool reports an option is invalid, adjust the command accordingly.
+
+Generate at least 20-30 tasks covering: dependency/toolchain setup, project setup, core features, UI components, testing, and deployment.
 
 Write the file now using your file writing tools. The file should be at tasks.md in the current workspace.
 - Dependencies: task-id-1, task-id-2
@@ -2548,6 +3368,33 @@ Generate ALL tasks needed to complete this project from start to finish."""
                 existing_task_ids = set(self.coordinator.tasks.keys())
                 new_task_ids = {task.id for task in new_tasks}
                 is_merging = len(existing_task_ids.intersection(new_task_ids)) > 0
+
+                # IMPORTANT (generic): tasks generated from requirements are a PLAN, not executed work.
+                # Some LLM generations may incorrectly mark tasks as "completed"/"started" immediately.
+                # On a fresh load, normalize all generated tasks back to PENDING/READY (based on deps),
+                # with 0% progress and no completion timestamps/assignments.
+                if not is_merging:
+                    try:
+                        normalized = 0
+                        for t in new_tasks:
+                            # Preserve task identity/metadata, but reset execution state.
+                            t.assigned_agent = None
+                            t.started_at = None
+                            t.completed_at = None
+                            t.progress = 0
+                            t.blocker_message = ""
+                            if getattr(t, "artifacts", None):
+                                t.artifacts = []
+                            # READY if no deps, else PENDING (dependency engine will unblock).
+                            t.status = TaskStatus.PENDING if t.dependencies else TaskStatus.READY
+                            try:
+                                parser.update_task_in_file(t)
+                            except Exception:
+                                pass
+                            normalized += 1
+                        print(f"  [{self.agent_id}] [GENERATE] Normalized {normalized} generated tasks to READY/PENDING with 0% progress")
+                    except Exception as e:
+                        print(f"  [{self.agent_id}] [WARNING] Failed to normalize generated tasks: {e}")
                 
                 # Only reset incorrectly completed tasks if we're NOT merging with existing tasks
                 # When merging, we preserve existing task states (handled in merge logic below)
@@ -2556,7 +3403,7 @@ Generate ALL tasks needed to complete this project from start to finish."""
                 if not is_merging:
                     # Fresh load - check for incorrectly completed tasks
                     # CRITICAL: Never reset tasks that are already COMPLETED in the coordinator
-                    # This ensures completed task count never goes backwards (per Manifesto requirement)
+                    # This ensures completed task count never goes backwards (per supervisor_issues_checklist.md requirement)
                     for task in new_tasks:
                         # If task is marked completed but shouldn't be (no artifacts, dependencies not met, etc.)
                         if task.status == TaskStatus.COMPLETED:
@@ -2594,7 +3441,7 @@ Generate ALL tasks needed to complete this project from start to finish."""
                                     recently_completed = True
                             
                             # CRITICAL: Never reset tasks that have a completed_at timestamp
-                            # This ensures completed task count never goes backwards (per Manifesto requirement)
+                            # This ensures completed task count never goes backwards (per supervisor_issues_checklist.md requirement)
                             # Once a task has been completed (has completed_at), it should stay completed
                             if task.completed_at:
                                 # Task has been completed before - preserve it to prevent count from going backwards

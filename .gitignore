@@ -239,6 +239,9 @@ agent_debug.log
 test_*.txt
 *.test
 
+# Task files
+tasks.md
+
 # ============================================
 # Security and Secrets
 # ============================================

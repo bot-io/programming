@@ -10,7 +10,25 @@ from datetime import datetime
 from collections import defaultdict
 import json
 import os
+import inspect
 from ..utils.conflict_prevention import ConflictPreventionSystem, ChangeSet, LockType
+
+# Import logger (optional)
+try:
+    from ..utils.agent_logger import AgentLogger
+    LOGGING_AVAILABLE = True
+except Exception:
+    LOGGING_AVAILABLE = False
+    # Fallback logger (keep it minimal; coordinator should not crash if logging is unavailable)
+    class AgentLogger:  # type: ignore
+        @staticmethod
+        def debug(*args, **kwargs): pass
+        @staticmethod
+        def info(*args, **kwargs): pass
+        @staticmethod
+        def warning(*args, **kwargs): pass
+        @staticmethod
+        def error(*args, **kwargs): pass
 
 
 class TaskStatus(Enum):
@@ -23,6 +41,17 @@ class TaskStatus(Enum):
     REVIEW = "review"
     COMPLETED = "completed"
     FAILED = "failed"
+
+class BlockerType(Enum):
+    """
+    Orthogonal classification of why a task is blocked.
+    This is intentionally separate from TaskStatus to avoid state explosion.
+    """
+    DEPENDENCY = "dependency"
+    ACCEPTANCE = "acceptance"
+    ENVIRONMENT = "environment"
+    CONFLICT = "conflict"
+    UNKNOWN = "unknown"
 
 
 class MessageType(Enum):
@@ -61,6 +90,7 @@ class Task:
     acceptance_criteria: List[str] = field(default_factory=list)
     artifacts: List[str] = field(default_factory=list)
     blocker_message: Optional[str] = None
+    blocker_type: Optional[str] = None  # One of BlockerType.*.value (string for persistence compatibility)
     metadata: Dict[str, Any] = field(default_factory=dict)  # Task metadata for adapters
 
     def to_dict(self):
@@ -80,6 +110,7 @@ class Task:
             "acceptance_criteria": self.acceptance_criteria,
             "artifacts": self.artifacts,
             "blocker_message": self.blocker_message,
+            "blocker_type": self.blocker_type,
             "metadata": self.metadata
         }
 
@@ -98,6 +129,7 @@ class Task:
             acceptance_criteria=data.get("acceptance_criteria", []),
             artifacts=data.get("artifacts", []),
             blocker_message=data.get("blocker_message"),
+            blocker_type=data.get("blocker_type"),
             metadata=data.get("metadata", {})
         )
         if data.get("created_at"):
@@ -178,10 +210,16 @@ class AgentCoordinator:
         self.agents: Set[str] = set()
         self.agent_instances: Dict[str, 'Agent'] = {}  # agent_id -> Agent instance
         self.agent_states: Dict[str, AgentState] = {}  # agent_id -> AgentState
+        # Agent liveness tracking (generic, in-memory). Used by Supervisor to detect unresponsive agents.
+        self.agent_last_heartbeat: Dict[str, datetime] = {}
+        self.agent_specializations: Dict[str, str] = {}
+        # Specialization -> callable(agent_id, coordinator, specialization?) -> Agent instance
+        self._agent_spawn_factories: Dict[str, Any] = {}
         self.messages: List[AgentMessage] = []
         self.checkpoints: List[Checkpoint] = []
         self.agent_workloads: Dict[str, int] = defaultdict(int)  # agent_id -> number of active tasks
         self.conflict_prevention = ConflictPreventionSystem() if enable_conflict_prevention else None
+        self.team_id: Optional[str] = None  # REQ-1.2.2: Team ID persists for entire team lifecycle
 
     def register_agent(self, agent_id: str, agent_instance: Optional['Agent'] = None):
         """Register a new agent with the coordinator"""
@@ -190,12 +228,106 @@ class AgentCoordinator:
         self.agent_states[agent_id] = AgentState.CREATED
         if agent_instance:
             self.agent_instances[agent_id] = agent_instance
+            # Best-effort: track specialization for spawned agent replacement.
+            try:
+                spec = getattr(agent_instance, "specialization", "") or ""
+                if spec:
+                    self.agent_specializations[agent_id] = spec
+            except Exception:
+                pass
+        # Initialize heartbeat to "now" to avoid false positives right after registration.
+        try:
+            self.agent_last_heartbeat[agent_id] = datetime.now()
+        except Exception:
+            pass
         print(f"Agent '{agent_id}' registered")
     
     def register_agent_instance(self, agent: 'Agent'):
         """Register an agent instance for remote control"""
         self.agent_instances[agent.agent_id] = agent
+        # Track specialization and register a spawn factory for this specialization.
+        try:
+            spec = getattr(agent, "specialization", "") or ""
+            if spec:
+                self.agent_specializations[agent.agent_id] = spec
+                self._register_spawn_factory_for_agent(agent, spec)
+        except Exception:
+            pass
+        try:
+            self.agent_last_heartbeat[agent.agent_id] = datetime.now()
+        except Exception:
+            pass
         self.register_agent(agent.agent_id, agent)
+
+    def record_heartbeat(self, agent_id: str, task_id: Optional[str] = None, state: Optional[str] = None):
+        """
+        Record that an agent is alive. Intended to be called by agents from their work loop.
+        This is generic and does not assume any project type.
+        """
+        self.agent_last_heartbeat[agent_id] = datetime.now()
+        # Keep a small amount of structured data in-memory for diagnosis.
+        try:
+            agent = self.agent_instances.get(agent_id)
+            if agent is not None and hasattr(agent, "state"):
+                self.agent_states[agent_id] = agent.state  # type: ignore
+        except Exception:
+            pass
+
+    def _register_spawn_factory_for_agent(self, agent: 'Agent', specialization: str):
+        """
+        Register a factory that can spawn a new agent of the same class for a given specialization.
+        We do this lazily from the first observed agent instance.
+        """
+        if not specialization or specialization == "supervisor":
+            return
+        if specialization in self._agent_spawn_factories:
+            return
+
+        cls = agent.__class__
+
+        def _factory(agent_id: str) -> 'Agent':
+            # Prefer __init__(agent_id, coordinator, specialization) when supported.
+            try:
+                sig = inspect.signature(cls.__init__)
+                params = list(sig.parameters.keys())
+                # params includes 'self'
+                if "specialization" in params:
+                    return cls(agent_id, self, specialization)  # type: ignore[misc]
+            except Exception:
+                pass
+            # Fallback: common pattern is __init__(agent_id, coordinator)
+            return cls(agent_id, self)  # type: ignore[misc]
+
+        self._agent_spawn_factories[specialization] = _factory
+
+    def spawn_agent_for_specialization(self, specialization: str, agent_id: Optional[str] = None) -> Optional[str]:
+        """
+        Spawn a new agent for the given specialization (developer/tester/etc).
+        This is used by Supervisor remediation to replace unresponsive agents.
+        """
+        if not specialization:
+            return None
+        factory = self._agent_spawn_factories.get(specialization)
+        if not factory:
+            return None
+
+        # Generate a unique agent_id if not provided
+        if not agent_id:
+            base = f"{specialization}-agent-auto-"
+            n = 1
+            while f"{base}{n}" in self.agents:
+                n += 1
+            agent_id = f"{base}{n}"
+
+        try:
+            agent = factory(agent_id)
+            # Agent base __init__ should register itself; but keep safe.
+            if agent_id not in self.agent_instances:
+                self.register_agent_instance(agent)
+            self.start_agent(agent_id)
+            return agent_id
+        except Exception:
+            return None
     
     def start_agent(self, agent_id: str) -> bool:
         """
@@ -373,30 +505,198 @@ class AgentCoordinator:
 
     def _update_task_status(self, task_id: str):
         """Update task status based on dependencies"""
+        if task_id not in self.tasks:
+            return  # Task doesn't exist
+        
         task = self.tasks[task_id]
+        
+        # Don't change status of tasks that are already completed or failed
+        if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED]:
+            return
+        
+        # Don't change status of tasks that are in progress or assigned (they're actively being worked on)
+        if task.status in [TaskStatus.IN_PROGRESS, TaskStatus.ASSIGNED]:
+            return
         
         # Check if all dependencies are completed
         if task.dependencies:
+            # Check which dependencies exist and their status
+            missing_deps = [dep_id for dep_id in task.dependencies if dep_id not in self.tasks]
+            existing_deps = [dep_id for dep_id in task.dependencies if dep_id in self.tasks]
+            
+            # If there are missing dependencies, we can't determine readiness - keep current status or block
+            if missing_deps:
+                # Missing deps should not leave tasks stuck in PENDING indefinitely.
+                # Convert to BLOCKED with a clear dependency blocker so supervisor/agents can react.
+                if task.status != TaskStatus.BLOCKED:
+                    task.status = TaskStatus.BLOCKED
+                    task.blocker_message = f"Missing dependencies: {missing_deps}"
+                    try:
+                        task.blocker_type = BlockerType.DEPENDENCY.value
+                    except Exception:
+                        task.blocker_type = "dependency"
+                return
+            
+            # Check if all existing dependencies are completed
+            # CRITICAL: Dependencies can be COMPLETED or REVIEW (both mean they're done)
             all_deps_completed = all(
-                self.tasks[dep_id].status == TaskStatus.COMPLETED
-                for dep_id in task.dependencies
-                if dep_id in self.tasks
+                self.tasks[dep_id].status in [TaskStatus.COMPLETED, TaskStatus.REVIEW]
+                for dep_id in existing_deps
             )
             
             if all_deps_completed:
                 # Unblock if blocked, or make ready if pending
                 if task.status == TaskStatus.BLOCKED:
-                    task.status = TaskStatus.READY
-                    task.blocker_message = None
-                    print(f"Task '{task_id}' is now READY (dependencies met)")
+                    # Only auto-unblock if this block appears dependency-related.
+                    # Tasks can be BLOCKED for other reasons (e.g., missing environment/tooling, acceptance failures).
+                    # In those cases, blindly unblocking causes infinite READY->IN_PROGRESS->BLOCKED loops.
+                    blocker = (task.blocker_message or "").strip().lower()
+                    bt = (getattr(task, "blocker_type", None) or "").strip().lower()
+                    # Special-case: some BLOCKED states are transient execution/tooling failures.
+                    # If dependencies are met and the blocker indicates an execution/parsing failure,
+                    # allow a small retry budget before leaving the task blocked.
+                    try:
+                        repeats = int((task.metadata or {}).get("blocker_repeats", 0))
+                    except Exception:
+                        repeats = 0
+                    retryable_exec_block = (
+                        (not bt or bt == BlockerType.UNKNOWN.value)
+                        and repeats <= 2
+                        and (
+                            "execution failed" in blocker
+                            or "could not find a json object" in blocker
+                            or "failed to parse json" in blocker
+                            or "invalid json shape" in blocker
+                            or "cursor cli returned empty response" in blocker
+                        )
+                    )
+                    dependency_block = (
+                        bt == BlockerType.DEPENDENCY.value
+                        or not blocker
+                        or blocker.startswith("waiting on dependencies")
+                        or blocker.startswith("blocked on dependency")
+                        or blocker.startswith("waiting on:")
+                    )
+                    if dependency_block or retryable_exec_block:
+                        task.status = TaskStatus.READY
+                        task.blocker_message = None
+                        task.blocker_type = None
+                        print(f"[COORDINATOR] Task '{task_id}' is now READY (all dependencies met)")
+                        if LOGGING_AVAILABLE:
+                            AgentLogger.info(
+                                "AgentCoordinator",
+                                f"Task {task_id} unblocked: BLOCKED -> READY (dependencies: {existing_deps})",
+                                task_id=task_id,
+                                extra={'dependencies': existing_deps},
+                            )
+                    else:
+                        # Keep blocked; dependency condition is satisfied but the block reason is not dependencies.
+                        if LOGGING_AVAILABLE:
+                            try:
+                                # Avoid log spam: this branch is evaluated frequently in the main loop.
+                                # Only log when the blocker message/type changes for the task.
+                                sig = f"non_dep_block::{getattr(task, 'blocker_type', None)}::{task.blocker_message}"
+                                last_sig = None
+                                try:
+                                    last_sig = (task.metadata or {}).get("_last_non_dep_block_log_sig")
+                                except Exception:
+                                    last_sig = None
+                                if sig != last_sig:
+                                    try:
+                                        task.metadata["_last_non_dep_block_log_sig"] = sig
+                                    except Exception:
+                                        pass
+                                    AgentLogger.debug(
+                                        "AgentCoordinator",
+                                        f"Task {task_id} remains BLOCKED despite deps met (non-dependency blocker): {task.blocker_message}",
+                                        task_id=task_id,
+                                        extra={'dependencies': existing_deps},
+                                    )
+                            except Exception:
+                                pass
                 elif task.status == TaskStatus.PENDING:
                     task.status = TaskStatus.READY
-                    print(f"Task '{task_id}' is now READY (dependencies met)")
-            elif not all_deps_completed and task.status not in [TaskStatus.IN_PROGRESS, TaskStatus.ASSIGNED, TaskStatus.COMPLETED]:
-                task.status = TaskStatus.BLOCKED
-                task.blocker_message = f"Waiting on dependencies: {task.dependencies}"
+                    print(f"[COORDINATOR] Task '{task_id}' is now READY (all dependencies met)")
+                    if LOGGING_AVAILABLE:
+                        AgentLogger.info("AgentCoordinator", 
+                            f"Task {task_id} transitioned: PENDING -> READY (dependencies: {existing_deps})",
+                            task_id=task_id,
+                            extra={'dependencies': existing_deps})
+                    # CRITICAL: Force immediate persistence of status change
+                    # This ensures the status change is not lost
+                    return  # Status changed, caller should persist
+            else:
+                # Not all dependencies are completed - block the task
+                # CRITICAL: Dependencies can be COMPLETED or REVIEW (both mean they're done)
+                incomplete_deps = [dep_id for dep_id in existing_deps 
+                                  if self.tasks[dep_id].status not in [TaskStatus.COMPLETED, TaskStatus.REVIEW]]
+                if task.status != TaskStatus.BLOCKED:
+                    task.status = TaskStatus.BLOCKED
+                    task.blocker_message = f"Waiting on dependencies: {incomplete_deps}"
+                    print(f"Task '{task_id}' is now BLOCKED (waiting on: {incomplete_deps})")
+                else:
+                    # Already blocked, but update blocker message with current incomplete deps
+                    task.blocker_message = f"Waiting on dependencies: {incomplete_deps}"
         elif task.status == TaskStatus.PENDING:
+            # No dependencies - make ready
             task.status = TaskStatus.READY
+        elif task.status == TaskStatus.BLOCKED and not task.dependencies:
+            # Task is blocked but has no dependencies - might be a false block or needs manual review
+            # If blocker_message doesn't contain task IDs, it might be a different type of block
+            # For now, keep it blocked but log it for debugging
+            if not task.blocker_message:
+                # No blocker message and no dependencies - unblock it
+                task.status = TaskStatus.READY
+                task.blocker_message = None
+                print(f"Task '{task_id}' is now READY (no dependencies and no blocker message)")
+            else:
+                # Has blocker message but no dependencies - might be blocked for other reasons
+                # Try to extract task IDs from blocker message one more time
+                import re
+                task_id_pattern = r'task-\d+|[\w-]+-\d+'
+                potential_deps = re.findall(task_id_pattern, task.blocker_message)
+                if potential_deps:
+                    for dep_id in potential_deps:
+                        if dep_id in self.tasks and dep_id not in task.dependencies:
+                            task.dependencies.append(dep_id)
+                            print(f"Task '{task_id}' dependency '{dep_id}' extracted from blocker message")
+                    # Recursively check again now that we have dependencies
+                    if task.dependencies:
+                        self._update_task_status(task_id)
+                        return
+                # Still no dependencies after extraction - keep blocked but log
+                if LOGGING_AVAILABLE:
+                    # IMPORTANT: do not re-import AgentLogger inside this function.
+                    # Local imports would shadow the module-level AgentLogger and can raise:
+                    # "cannot access local variable 'AgentLogger' where it is not associated with a value"
+                    try:
+                        AgentLogger.debug(
+                            "AgentCoordinator",
+                            f"Task {task_id} is BLOCKED with no dependencies - blocker: {task.blocker_message}",
+                            task_id=task_id,
+                        )
+                    except Exception:
+                        pass
+        elif task.status == TaskStatus.BLOCKED and not task.dependencies:
+            # Task is blocked but has no dependencies - might be a false block
+            # Check if blocker_message suggests it should stay blocked or can be unblocked
+            if task.blocker_message:
+                # If blocker message doesn't contain task IDs, it might be a different type of block
+                # For now, keep it blocked but log it
+                if LOGGING_AVAILABLE:
+                    # IMPORTANT: do not re-import AgentLogger inside this function.
+                    try:
+                        AgentLogger.debug(
+                            "AgentCoordinator",
+                            f"Task {task_id} is BLOCKED with no dependencies - blocker: {task.blocker_message}",
+                            task_id=task_id,
+                        )
+                    except Exception:
+                        pass
+            else:
+                # No blocker message and no dependencies - unblock it
+                task.status = TaskStatus.READY
+                print(f"Task '{task_id}' is now READY (no dependencies and no blocker message)")
 
     def assign_task(self, task_id: str, agent_id: str, check_conflicts: bool = True) -> bool:
         """
@@ -435,39 +735,41 @@ class AgentCoordinator:
                         print(f"  [CONFLICT] Cannot assign task '{task_id}' to '{agent_id}': file '{file_path}' locked by '{owner}'")
                         return False
 
+        old_status = task.status
         task.assigned_agent = agent_id
         task.status = TaskStatus.ASSIGNED
         self.agent_workloads[agent_id] += 1
         print(f"Task '{task_id}' assigned to agent '{agent_id}'")
+        try:
+            if LOGGING_AVAILABLE:
+                AgentLogger.info(
+                    "AgentCoordinator",
+                    f"[task:{task_id}] Task assigned: {old_status.value} -> {task.status.value}",
+                    task_id=task_id,
+                    extra={
+                        "old_status": old_status.value,
+                        "new_status": task.status.value,
+                        "assigned_agent": agent_id,
+                    },
+                )
+        except Exception:
+            pass
         return True
     
     def _get_expected_files_for_task(self, task: Task) -> List[str]:
-        """Get expected files that this task will likely create/modify"""
-        expected = []
-        task_id = task.id.lower()
-        task_title = task.title.lower()
+        """
+        Get expected files that this task will likely create/modify.
         
-        # Simple heuristic based on task title/ID
-        if 'service' in task_id or 'service' in task_title:
-            if 'translation' in task_id or 'translation' in task_title:
-                expected.append('lib/services/translation_service.dart')
-            elif 'parser' in task_id or 'parser' in task_title:
-                if 'mobi' in task_id or 'mobi' in task_title:
-                    expected.append('lib/services/mobi_parser_service.dart')
-                elif 'epub' in task_id or 'epub' in task_title:
-                    expected.append('lib/services/epub_parser_service.dart')
-            else:
-                expected.append('lib/services/')
-        elif 'model' in task_id or 'model' in task_title:
-            expected.append('lib/models/')
-        elif 'screen' in task_id or 'screen' in task_title or 'page' in task_id or 'page' in task_title:
-            expected.append('lib/screens/')
-        elif 'widget' in task_id or 'widget' in task_title:
-            expected.append('lib/widgets/')
-        else:
-            # Default: could be in lib/
-            expected.append('lib/')
-        
+        Project-agnostic approach:
+        - Prefer explicit `task.artifacts` (if present)
+        - Otherwise, return an empty list (no assumptions about framework/layout)
+        """
+        expected: List[str] = []
+        try:
+            if getattr(task, "artifacts", None):
+                expected.extend([a for a in task.artifacts if a])
+        except Exception:
+            pass
         return expected
 
     def start_task(self, task_id: str, agent_id: str) -> bool:
@@ -490,13 +792,45 @@ class AgentCoordinator:
             print(f"Error: Task '{task_id}' is at 100% progress - supervisor should complete it, cannot start")
             return False
 
+        # Allow resuming tasks that were persisted as IN_PROGRESS (e.g., after a process restart).
+        # This is critical for progress persistence: agents must be able to pick up their
+        # previously-started tasks instead of leaving them stuck forever.
+        if task.status == TaskStatus.IN_PROGRESS:
+            print(f"Agent '{agent_id}' resumed task '{task_id}'")
+            try:
+                if LOGGING_AVAILABLE:
+                    AgentLogger.info(
+                        "AgentCoordinator",
+                        f"[task:{task_id}] Task resumed: {task.status.value}",
+                        task_id=task_id,
+                        extra={"agent_id": agent_id},
+                    )
+            except Exception:
+                pass
+            return True
+
         if task.status != TaskStatus.ASSIGNED:
             print(f"Error: Task '{task_id}' not in ASSIGNED status (current: {task.status.value})")
             return False
 
+        old_status = task.status
         task.status = TaskStatus.IN_PROGRESS
         task.started_at = datetime.now()
         print(f"Agent '{agent_id}' started task '{task_id}'")
+        try:
+            if LOGGING_AVAILABLE:
+                AgentLogger.info(
+                    "AgentCoordinator",
+                    f"[task:{task_id}] Task started: {old_status.value} -> {task.status.value}",
+                    task_id=task_id,
+                    extra={
+                        "old_status": old_status.value,
+                        "new_status": task.status.value,
+                        "agent_id": agent_id,
+                    },
+                )
+        except Exception:
+            pass
         return True
 
     def process_message(self, message: AgentMessage):
@@ -507,7 +841,7 @@ class AgentCoordinator:
             task = self.tasks[message.task_id]
 
             if message.message_type == MessageType.STATUS_UPDATE:
-                # CRITICAL: Per Manifesto requirement, completed tasks must never be reset
+                # CRITICAL: Per supervisor_issues_checklist.md requirement, completed tasks must never be reset
                 # Once a task is COMPLETED, it stays COMPLETED to prevent completed count from going backwards
                 was_completed = task.status == TaskStatus.COMPLETED
                 new_status = message.status
@@ -515,23 +849,105 @@ class AgentCoordinator:
                 
                 if was_completed and will_not_be_completed:
                     # Task is already completed - reject status change to prevent backwards progress
-                    print(f"[{message.agent_id}] [WARNING] Task '{task.id}' is already COMPLETED - rejecting status change to {new_status.value} (per Manifesto: completed count must never go backwards)")
+                    print(f"[{message.agent_id}] [WARNING] Task '{task.id}' is already COMPLETED - rejecting status change to {new_status.value} (per supervisor_issues_checklist.md: completed count must never go backwards)")
                     # Don't update status or clear completed_at
                     if message.message:
                         print(f"[{message.agent_id}] {message.message}")
                     return  # Don't process the status update
                 
+                old_status = task.status
+                old_progress = task.progress
+
                 if message.status:
                     task.status = message.status
+                    # Preserve blocker reason when a task is blocked for non-dependency reasons.
+                    if message.status == TaskStatus.BLOCKED:
+                        if message.message:
+                            task.blocker_message = message.message
+                            # Best-effort blocker classification from message text.
+                            msg = message.message.lower()
+                            if "waiting on dependencies" in msg or "blocked on dependency" in msg or "missing dependencies" in msg:
+                                task.blocker_type = BlockerType.DEPENDENCY.value
+                            elif "acceptance command failed" in msg or "acceptance criteria failed" in msg:
+                                task.blocker_type = BlockerType.ACCEPTANCE.value
+                            elif "no android sdk" in msg or "android_home" in msg or "not found" in msg or "sdk" in msg:
+                                # Environment/tooling failures (generic heuristic)
+                                task.blocker_type = BlockerType.ENVIRONMENT.value
+                            elif "conflict" in msg or "locked by" in msg:
+                                task.blocker_type = BlockerType.CONFLICT.value
+                            else:
+                                task.blocker_type = BlockerType.UNKNOWN.value
+                            # Track repeated blocker signatures to support supervisor quarantine policies.
+                            try:
+                                sig = msg.strip()[:200]
+                                prev = task.metadata.get("blocker_signature")
+                                if prev == sig:
+                                    task.metadata["blocker_repeats"] = int(task.metadata.get("blocker_repeats", 0)) + 1
+                                else:
+                                    task.metadata["blocker_signature"] = sig
+                                    task.metadata["blocker_repeats"] = 1
+                            except Exception:
+                                pass
+                    else:
+                        # Clear blocker message when task transitions out of BLOCKED.
+                        if old_status == TaskStatus.BLOCKED:
+                            task.blocker_message = None
+                            task.blocker_type = None
                 if message.progress is not None:
                     task.progress = message.progress
                 if message.message:
                     print(f"[{message.agent_id}] {message.message}")
 
+                try:
+                    if LOGGING_AVAILABLE and (
+                        task.status != old_status
+                        or task.progress != old_progress
+                        or bool(message.message)
+                    ):
+                        AgentLogger.info(
+                            "AgentCoordinator",
+                            f"[task:{task.id}] Status update from {message.agent_id}: "
+                            f"{old_status.value}/{old_progress} -> {task.status.value}/{task.progress}",
+                            task_id=task.id,
+                            extra={
+                                "from_agent": message.agent_id,
+                                "old_status": old_status.value,
+                                "new_status": task.status.value,
+                                "old_progress": old_progress,
+                                "new_progress": task.progress,
+                                "message": (message.message or "")[:200],
+                            },
+                        )
+                except Exception:
+                    pass
+
             elif message.message_type == MessageType.DEPENDENCY_REQUEST:
+                old_status = task.status
                 task.status = TaskStatus.BLOCKED
                 task.blocker_message = message.message or f"Waiting on: {message.blocked_on}"
+                # CRITICAL: If blocked_on is a task ID, ensure it's in dependencies list
+                if message.blocked_on and message.blocked_on not in task.dependencies:
+                    if message.blocked_on in self.tasks:
+                        # Add to dependencies if it's a valid task ID
+                        task.dependencies.append(message.blocked_on)
                 print(f"[{message.agent_id}] Blocked on dependency: {message.blocked_on}")
+                try:
+                    if LOGGING_AVAILABLE:
+                        AgentLogger.info(
+                            "AgentCoordinator",
+                            f"[task:{task.id}] Dependency request from {message.agent_id}: "
+                            f"{old_status.value} -> {task.status.value}",
+                            task_id=task.id,
+                            extra={
+                                "from_agent": message.agent_id,
+                                "old_status": old_status.value,
+                                "new_status": task.status.value,
+                                "blocked_on": message.blocked_on,
+                                "blocker_message": (task.blocker_message or "")[:200],
+                            },
+                        )
+                except Exception:
+                    pass
 
             elif message.message_type == MessageType.CHECKPOINT:
                 if message.progress is not None:
@@ -547,7 +963,12 @@ class AgentCoordinator:
                 print(f"[{message.agent_id}] Checkpoint: {message.progress}% - {message.changes}")
 
             elif message.message_type == MessageType.COMPLETION:
-                task.status = TaskStatus.REVIEW
+                # In this system, agents apply changes directly to the shared workspace.
+                # That means a "completion" is effectively already integrated (there is no
+                # separate merge step). Keeping tasks in REVIEW without marking their changes
+                # as integrated causes false "pending task" conflicts for downstream tasks
+                # touching the same files (e.g., pubspec.yaml).
+                task.status = TaskStatus.COMPLETED
                 task.progress = 100
                 task.completed_at = datetime.now()
                 if message.artifacts:
@@ -572,13 +993,29 @@ class AgentCoordinator:
                         task.status = TaskStatus.BLOCKED
                     else:
                         print(f"[{message.agent_id}] Completed task '{message.task_id}' (validated, ready for integration)")
+                        # Mark changes integrated so they are treated as baseline and do not block
+                        # subsequent tasks from modifying the same files.
+                        try:
+                            self.conflict_prevention.mark_changes_integrated(message.task_id)
+                        except Exception:
+                            pass
                 
                 print(f"[{message.agent_id}] Completed task '{message.task_id}'")
                 
-                # Update dependencies for other tasks
+                # CRITICAL: Update dependencies for other tasks IMMEDIATELY when a task completes
+                # This ensures blocked tasks are unblocked as soon as dependencies complete
+                # Note: Task is in REVIEW status, which should be treated as completed for dependency purposes
+                updated_count = 0
                 for other_task in self.tasks.values():
                     if message.task_id in other_task.dependencies:
+                        old_status = other_task.status
                         self._update_task_status(other_task.id)
+                        if other_task.status != old_status:
+                            updated_count += 1
+                            print(f"[COORDINATOR] Task '{other_task.id}' status updated: {old_status.value} -> {other_task.status.value} (dependency '{message.task_id}' completed/REVIEW)")
+                
+                if updated_count > 0:
+                    print(f"[COORDINATOR] Updated {updated_count} dependent task(s) after '{message.task_id}' completion")
 
     def complete_task(self, task_id: str, agent_id: str) -> bool:
         """Mark a task as completed and integrated"""
@@ -603,14 +1040,19 @@ class AgentCoordinator:
                     self.conflict_prevention.release_resource_access(artifact, agent_id)
         
         # Update status of dependent tasks to unblock them
+        # CRITICAL: Update ALL dependent tasks when a task completes
+        updated_count = 0
         for other_task in self.tasks.values():
             if task_id in other_task.dependencies:
+                old_status = other_task.status
                 self._update_task_status(other_task.id)
-
-        # Update dependent tasks
-        for other_task in self.tasks.values():
-            if task_id in other_task.dependencies:
-                self._update_task_status(other_task.id)
+                # Log status changes for debugging
+                if other_task.status != old_status:
+                    updated_count += 1
+                    print(f"[COORDINATOR] Task '{other_task.id}' status updated: {old_status.value} -> {other_task.status.value} (dependency '{task_id}' completed)")
+        
+        if updated_count > 0:
+            print(f"[COORDINATOR] Updated {updated_count} dependent task(s) after '{task_id}' completion")
 
         print(f"Task '{task_id}' completed and integrated by agent '{agent_id}'")
         return True

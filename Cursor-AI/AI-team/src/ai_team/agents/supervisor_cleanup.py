@@ -7,19 +7,20 @@ import glob
 from typing import List, Set
 from datetime import datetime, timedelta
 
-# Protected directories that should NEVER be deleted
+# Protected directories that should NEVER be deleted.
+# Project-agnostic: only protect the VCS directory and AI-team infra output directories.
 PROTECTED_DIRS = {
-    'lib', 'test', 'android', 'ios', 'web', 'assets', 'scripts',
-    'docs', 'progress_reports', 'agent_logs', '.git', 'node_modules',
-    'build', 'dist', 'out', '.dart_tool', '.idea', '.vscode'
+    '.git',
+    'progress_reports',
+    'agent_logs',
 }
 
 # Protected file patterns that should NEVER be deleted
 # CRITICAL: run_team.py is required infrastructure - without it, the team cannot start
 PROTECTED_FILE_PATTERNS = [
-    'pubspec.yaml', 'pubspec.lock', 'requirements.md', 'tasks.md',
+    'requirements.md', 'tasks.md',
     'README.md', 'LICENSE', '.gitignore', '.gitattributes',
-    'analysis_options.yaml', 'build.yaml', 'run_team.py',  # Infrastructure file - MUST be preserved
+    'run_team.py',  # Infrastructure file - MUST be preserved
     'check_task_status.py', 'view_progress_history.py'
 ]
 
@@ -42,16 +43,6 @@ TEMPORARY_DIRS = [
     'workspaces',  # Agent workspaces
     '__pycache__',  # Python cache
     '.pytest_cache',  # Pytest cache
-]
-
-# File patterns in src/ that look like temporary task files
-TEMP_TASK_FILE_PATTERNS = [
-    'src/task_*.dart',  # Temporary task files in src/
-]
-
-# Test files that shouldn't be in the project (e.g., Python test files in Dart project)
-TEMP_TEST_PATTERNS = [
-    'test/*.test.py',  # Python test files in Dart project
 ]
 
 def is_protected_path(path: str, project_dir: str) -> bool:
@@ -97,30 +88,6 @@ def get_temporary_files(project_dir: str, max_age_hours: int = 24) -> List[str]:
                     mtime = datetime.fromtimestamp(os.path.getmtime(filepath))
                     if mtime < cutoff_time:
                         temp_files.append(filepath)
-                except OSError:
-                    pass
-    
-    # Check temporary task files in src/
-    for pattern in TEMP_TASK_FILE_PATTERNS:
-        matches = glob.glob(os.path.join(project_dir, pattern))
-        for match in matches:
-            if not is_protected_path(match, project_dir):
-                try:
-                    mtime = datetime.fromtimestamp(os.path.getmtime(match))
-                    if mtime < cutoff_time:
-                        temp_files.append(match)
-                except OSError:
-                    pass
-    
-    # Check temporary test files
-    for pattern in TEMP_TEST_PATTERNS:
-        matches = glob.glob(os.path.join(project_dir, pattern))
-        for match in matches:
-            if not is_protected_path(match, project_dir):
-                try:
-                    mtime = datetime.fromtimestamp(os.path.getmtime(match))
-                    if mtime < cutoff_time:
-                        temp_files.append(match)
                 except OSError:
                     pass
     

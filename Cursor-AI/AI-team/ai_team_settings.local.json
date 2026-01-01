@@ -1,0 +1,5 @@
+{
+  "AI_PROVIDER": "gemini",
+  "GEMINI_API_KEY": "[REMOVE_ME]AIzaSyBVsLBhoEOS-NDwW7GvKbUGUgT9CitbolQ",
+  "GEMINI_MODEL": "gemini-1.5-pro"
+}

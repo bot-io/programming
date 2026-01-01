@@ -182,9 +182,16 @@ class GenericTaskAdapter(TaskAdapter):
         return context.metadata.get('artifacts', [])
     
     def _default_executor(self, context: TaskContext) -> bool:
-        """Default executor that does nothing"""
-        print(f"[{context.agent_id}] Generic executor for task '{context.task.id}'")
-        return True
+        """
+        Default executor.
+        
+        IMPORTANT: Returning True without doing any work causes false "COMPLETED"
+        states (tasks appear done while no artifacts/requirements are implemented).
+        If a caller wants a generic adapter to succeed, they MUST provide an executor.
+        """
+        print(f"[{context.agent_id}] [ERROR] No executor configured for task '{context.task.id}'.")
+        print(f"[{context.agent_id}] [ERROR] Configure a real executor (e.g., Cursor CLI-backed) or a specialized adapter.")
+        return False
 
 
 class TaskTypeDetector:

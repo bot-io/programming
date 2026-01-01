@@ -1,12 +1,12 @@
 # AI-Powered Agent Team
 
-The AI agent team has been enhanced to use **true AI code generation** instead of templates. Agents now use LLM APIs (OpenAI, Anthropic) to generate code dynamically based on requirements and tasks.
+The AI agent team has been enhanced to use **true AI code generation** instead of templates. Agents can use LLM APIs (Gemini, OpenAI, Anthropic) to generate code dynamically based on requirements and tasks.
 
 ## Features
 
 - **AI-Powered Code Generation**: Agents use LLM APIs to generate code based on task descriptions and requirements
 - **Automatic Fallback**: If AI is unavailable, agents fall back to template-based generation
-- **Multi-Provider Support**: Supports both OpenAI and Anthropic APIs
+- **Multi-Provider Support**: Supports Gemini, OpenAI, and Anthropic
 - **Intelligent Code Generation**: AI generates complete, production-ready code with proper structure
 - **Test Generation**: Automatically generates test files for new code
 
@@ -18,18 +18,24 @@ The AI agent team has been enhanced to use **true AI code generation** instead o
 python setup_ai_agents.py
 ```
 
-This installs:
-- `openai` - For OpenAI API (GPT-4, GPT-3.5)
-- `anthropic` - For Anthropic API (Claude)
+This installs optional client packages:
+- `openai` - For OpenAI API
+- `anthropic` - For Anthropic API
+
+Gemini support is implemented via a **stdlib-only REST client**, so no extra package is required for Gemini.
 
 ### 2. Configure API Keys
 
-You need an API key from either OpenAI or Anthropic. The agents will automatically use whichever is available.
+You need an API key from Gemini (recommended), OpenAI, or Anthropic. The agents will automatically use whichever is available.
 
 #### Option A: Environment Variables (Recommended)
 
 **Windows (PowerShell):**
 ```powershell
+$env:GEMINI_API_KEY="your-gemini-api-key-here"
+# Optional:
+$env:AI_PROVIDER="gemini"
+# OR
 $env:OPENAI_API_KEY="your-openai-api-key-here"
 # OR
 $env:ANTHROPIC_API_KEY="your-anthropic-api-key-here"
@@ -37,12 +43,16 @@ $env:ANTHROPIC_API_KEY="your-anthropic-api-key-here"
 
 **Windows (Command Prompt):**
 ```cmd
+set GEMINI_API_KEY=your-gemini-api-key-here
+set AI_PROVIDER=gemini
 set OPENAI_API_KEY=your-openai-api-key-here
 set ANTHROPIC_API_KEY=your-anthropic-api-key-here
 ```
 
 **Linux/Mac:**
 ```bash
+export GEMINI_API_KEY="your-gemini-api-key-here"
+export AI_PROVIDER="gemini"
 export OPENAI_API_KEY="your-openai-api-key-here"
 export ANTHROPIC_API_KEY="your-anthropic-api-key-here"
 ```
@@ -52,6 +62,8 @@ export ANTHROPIC_API_KEY="your-anthropic-api-key-here"
 Create a `.env` file in the project root:
 
 ```
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your-gemini-api-key-here
 OPENAI_API_KEY=your-openai-api-key-here
 ANTHROPIC_API_KEY=your-anthropic-api-key-here
 ```
@@ -124,14 +136,16 @@ When an agent receives a task like "Implement ebook parsing", it:
 ### Provider Selection
 
 The agents automatically try providers in this order:
-1. OpenAI (if `OPENAI_API_KEY` is set)
-2. Anthropic (if `ANTHROPIC_API_KEY` is set)
+1. Gemini (if `GEMINI_API_KEY` is set)
+2. OpenAI (if `OPENAI_API_KEY` or `CURSOR_API_KEY` is set)
+3. Anthropic (if `ANTHROPIC_API_KEY` is set)
 
 You can also specify a provider explicitly in the agent initialization (future enhancement).
 
 ### Model Selection
 
 Default models:
+- **Gemini**: `gemini-1.5-pro` (override with `GEMINI_MODEL`)
 - **OpenAI**: `gpt-4-turbo-preview` (or `gpt-4`, `gpt-3.5-turbo`)
 - **Anthropic**: `claude-3-opus-20240229` (or `claude-3-sonnet-20240229`)
 
@@ -157,7 +171,7 @@ Models can be customized in `ai_client.py`.
 **Cause**: No API key found in environment variables.
 
 **Solution**: 
-1. Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` environment variable
+1. Set `GEMINI_API_KEY` (recommended) or `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` environment variable
 2. Restart the agent team
 
 ### "Failed to generate code"

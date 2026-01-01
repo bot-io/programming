@@ -74,8 +74,15 @@ class TaskConfigParser:
         
         tasks = []
         
-        # Find all task blocks (between ### task-id and next ### or end)
-        task_pattern = r'^###\s+([^\n]+)\s*\n((?:[^\n#]|\n(?!###))+?)(?=\n###|\Z)'
+        # Find all task blocks (between ### task-id and the next heading or end)
+        #
+        # CRITICAL: The previous regex intentionally excluded '#' characters inside a task block.
+        # That caused tasks immediately followed by phase headers like '## Phase X' to NOT be parsed
+        # (because the parser couldn't consume the '##' line and also couldn't stop at it).
+        #
+        # We instead stop task blocks at the next '###' task header OR a '##' section header.
+        # This keeps phase headers out of task bodies and ensures tasks are always parsed.
+        task_pattern = r'^###\s+([^\n]+)\s*\n(.*?)(?=^###\s+|^##\s+|\Z)'
         matches = re.finditer(task_pattern, content, re.MULTILINE | re.DOTALL)
         
         for match in matches:
@@ -102,6 +109,12 @@ class TaskConfigParser:
     
     def _parse_task_block(self, task_id: str, content: str) -> Optional[Dict[str, Any]]:
         """Parse a single task block"""
+        # Field-marker regex used to terminate multi-line fields (description, dependencies, artifacts, etc.).
+        # IMPORTANT: tasks.md commonly uses bullet-style keys like "- Acceptance Criteria:" and "- Estimated Hours:".
+        # The previous terminator pattern matched only the first word (e.g., "Acceptance:") which fails for
+        # "Acceptance Criteria:" and caused subsequent sections to be swallowed into dependencies/artifacts.
+        _FIELD_MARKER = r'^-?\s*(?:Status|Progress|Estimated(?:\s+Hours?)?|Dependencies|Assigned(?:\s+Agent)?|Created|Started|Completed|Artifacts|Acceptance(?:\s+Criteria)?|Blocker(?:\s+Type)?)\s*:'
+
         task_data = {
             "id": task_id,
             "title": "",
@@ -117,6 +130,7 @@ class TaskConfigParser:
             "acceptance_criteria": [],
             "artifacts": [],
             "blocker_message": None,
+            "blocker_type": None,
             "metadata": {}
         }
         
@@ -129,7 +143,7 @@ class TaskConfigParser:
             task_data["title"] = task_id.replace('-', ' ').title()
         
         # Description (can be multi-line, everything after Title until next field)
-        desc_match = re.search(r'^-?\s*Description:\s*(.+?)(?=^-?\s*(?:Status|Progress|Estimated|Dependencies|Assigned|Created|Started|Completed|Artifacts|Acceptance|Blocker):|\Z)', 
+        desc_match = re.search(rf'^-?\s*Description:\s*(.+?)(?={_FIELD_MARKER}|\Z)',
                               content, re.MULTILINE | re.DOTALL)
         if desc_match:
             task_data["description"] = desc_match.group(1).strip()
@@ -164,12 +178,47 @@ class TaskConfigParser:
             task_data["estimated_hours"] = float(hours_match.group(1))
         
         # Dependencies
-        deps_match = re.search(r'^-?\s*Dependencies:\s*(.+?)(?=^-|\Z)', content, re.MULTILINE | re.DOTALL)
+        # IMPORTANT: dependencies are line-oriented. In practice, tasks.md blocks often contain
+        # non-dashed lines (e.g., "Artifacts: ..."). The previous pattern only stopped at lines
+        # starting with "-", so it could accidentally swallow "Artifacts:" into the dependency list,
+        # creating fake dependencies like "Artifacts: lib/foo.dart" and deadlocking the project.
+        deps_match = re.search(
+            rf'^-?\s*Dependencies:\s*(.+?)(?={_FIELD_MARKER}|\Z)',
+            content,
+            re.MULTILINE | re.DOTALL
+        )
         if deps_match:
             deps_str = deps_match.group(1).strip()
-            # Split by comma or newline
-            deps = [d.strip() for d in re.split(r'[,;\n]', deps_str) if d.strip()]
-            task_data["dependencies"] = deps
+            # Handle "none", "no dependencies", etc. as empty list (case-insensitive check)
+            deps_str_lower = deps_str.lower()
+            if deps_str_lower in ['none', 'no dependencies', 'no deps', 'n/a', 'na', '']:
+                task_data["dependencies"] = []
+            else:
+                # Split by comma or newline
+                # CRITICAL: Don't lowercase task IDs - preserve original case
+                deps = [d.strip() for d in re.split(r'[,;\n]', deps_str) if d.strip()]
+                # Filter out "none" if it appears in the list (case-insensitive)
+                deps = [d for d in deps if d.lower() not in ['none', 'no dependencies', 'no deps', 'n/a', 'na']]
+                # Filter out accidental non-task tokens (common corruption):
+                # - section headers accidentally captured (e.g., "- Acceptance Criteria:")
+                # - artifacts/file paths accidentally appended
+                # - freeform bullet items
+                cleaned_deps: List[str] = []
+                for d in deps:
+                    d_norm = d.replace("\\", "/").strip()
+                    d_id = d_norm.lstrip("- ").strip()
+                    d_id_l = d_id.lower()
+                    if not d_id or d_id_l in {"acceptance criteria:", "acceptance criteria", "acceptance:", "acceptance"}:
+                        continue
+                    if d_id_l.startswith("artifacts:") or d_id_l.startswith("artifact:"):
+                        continue
+                    if re.match(r'^(lib|test|android|ios|web|windows|linux|macos)/', d_norm, flags=re.IGNORECASE):
+                        continue
+                    # Dependencies are task IDs; keep only those to avoid deadlocks due to stray tokens.
+                    # Support both numeric task IDs (task-001) and slugged IDs (task-001-verify-flutter-sdk).
+                    if re.fullmatch(r"task-[A-Za-z0-9][A-Za-z0-9-]*", d_id):
+                        cleaned_deps.append(d_id)
+                task_data["dependencies"] = cleaned_deps
         
         # Assigned Agent
         agent_match = re.search(r'^-?\s*Assigned Agent:\s*(.+)', content, re.MULTILINE)
@@ -193,25 +242,51 @@ class TaskConfigParser:
                     pass
         
         # Artifacts
-        artifacts_match = re.search(r'^-?\s*Artifacts:\s*(.+?)(?=^-|\Z)', content, re.MULTILINE | re.DOTALL)
+        artifacts_match = re.search(
+            rf'^-?\s*Artifacts:\s*(.+?)(?={_FIELD_MARKER}|\Z)',
+            content,
+            re.MULTILINE | re.DOTALL
+        )
         if artifacts_match:
             artifacts_str = artifacts_match.group(1).strip()
             artifacts = [a.strip() for a in re.split(r'[,;\n]', artifacts_str) if a.strip()]
-            task_data["artifacts"] = artifacts
+            cleaned_artifacts: List[str] = []
+            for a in artifacts:
+                a_norm = a.replace("\\", "/").strip()
+                a_norm_l = a_norm.lower().lstrip("- ").strip()
+                if not a_norm:
+                    continue
+                if a_norm_l.startswith("acceptance criteria") or a_norm_l.startswith("artifact exists"):
+                    continue
+                if a_norm_l.startswith("artifacts:") or a_norm_l.startswith("artifact:"):
+                    continue
+                cleaned_artifacts.append(a_norm)
+            task_data["artifacts"] = cleaned_artifacts
         
         # Acceptance Criteria
-        criteria_match = re.search(r'^-?\s*Acceptance Criteria:\s*(.+?)(?=^-|\Z)', content, re.MULTILINE | re.DOTALL)
+        criteria_match = re.search(
+            rf'^-?\s*Acceptance Criteria:\s*(.+?)(?={_FIELD_MARKER}|\Z)',
+            content,
+            re.MULTILINE | re.DOTALL
+        )
         if criteria_match:
             criteria_str = criteria_match.group(1).strip()
-            criteria = [c.strip() for c in re.split(r'\n[-*]\s*', criteria_str) if c.strip()]
-            # Remove leading dashes/bullets
-            criteria = [re.sub(r'^[-*]\s*', '', c) for c in criteria]
-            task_data["acceptance_criteria"] = criteria
+            # Prefer line-based bullet extraction to handle indentation like "  - foo".
+            criteria = [m.group(1).strip() for m in re.finditer(r'^\s*[-*]\s*(.+)$', criteria_str, re.MULTILINE)]
+            # Fallback: if criteria is a blob without bullets.
+            if not criteria and criteria_str:
+                criteria = [criteria_str]
+            task_data["acceptance_criteria"] = [c for c in criteria if c]
         
         # Blocker Message
         blocker_match = re.search(r'^-?\s*Blocker:\s*(.+)', content, re.MULTILINE)
         if blocker_match:
             task_data["blocker_message"] = blocker_match.group(1).strip()
+
+        # Blocker Type (optional, generic metadata)
+        blocker_type_match = re.search(r'^-?\s*Blocker Type:\s*(.+)', content, re.MULTILINE)
+        if blocker_type_match:
+            task_data["blocker_type"] = blocker_type_match.group(1).strip().lower()
         
         # Metadata (JSON format)
         metadata_match = re.search(r'^-?\s*Metadata:\s*(.+?)(?=^-|\Z)', content, re.MULTILINE | re.DOTALL)
@@ -240,6 +315,7 @@ class TaskConfigParser:
             acceptance_criteria=data["acceptance_criteria"],
             artifacts=data["artifacts"],
             blocker_message=data["blocker_message"],
+            blocker_type=data.get("blocker_type"),
             metadata=data.get("metadata", {})
         )
         
@@ -260,12 +336,44 @@ class TaskConfigParser:
         with open(self.tasks_file, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # Find the task block
-        task_pattern = rf'^(###\s+{re.escape(task.id)}\s*\n)((?:[^\n#]|\n(?!###))+?)(?=\n###|\Z)'
+        # Find the task block.
+        #
+        # IMPORTANT: Keep this consistent with parse_tasks().
+        # Tasks are separated by either the next "###" task header OR a "##" section header.
+        # The previous pattern did not stop at "##" headers and also effectively rejected '#'
+        # within a task block, causing updates to silently fail for tasks followed by "## ...".
+        task_pattern = rf'^(###\s+{re.escape(task.id)}\s*\n)(.*?)(?=^###\s+|^##\s+|\Z)'
         match = re.search(task_pattern, content, re.MULTILINE | re.DOTALL)
         
         if not match:
-            return False
+            # Task block not found in file. This can happen for dynamically created tasks
+            # (e.g., verification/fix-up tasks). Append a new task block so the task is
+            # persisted and survives restarts.
+            deps_str = ", ".join(task.dependencies) if task.dependencies else "none"
+            criteria_lines = []
+            if getattr(task, "acceptance_criteria", None):
+                for c in task.acceptance_criteria:
+                    if c:
+                        criteria_lines.append(f"  - {str(c).strip()}")
+            if not criteria_lines:
+                criteria_lines = ["  - Task completes successfully"]
+
+            appended = "\n" + "\n".join([
+                f"### {task.id}",
+                f"- Title: {task.title}",
+                f"- Description: {task.description}",
+                f"Status: {task.status.value}",
+                f"Progress: {task.progress}",
+                f"- Estimated Hours: {getattr(task, 'estimated_hours', 0) or 0}",
+                f"- Dependencies: {deps_str}",
+                "- Acceptance Criteria:",
+                *criteria_lines,
+                ""
+            ])
+
+            with open(self.tasks_file, 'a', encoding='utf-8') as f:
+                f.write(appended)
+            return True
         
         task_block = match.group(2)
         
@@ -310,15 +418,28 @@ class TaskConfigParser:
         # Update artifacts
         if task.artifacts:
             artifacts_str = ', '.join(task.artifacts)
-            if re.search(r'^-?\s*Artifacts:\s*.+', task_block, re.MULTILINE | re.DOTALL):
-                task_block = re.sub(r'^-?\s*Artifacts:\s*.+?(?=^-|\Z)', f'Artifacts: {artifacts_str}', task_block, flags=re.MULTILINE | re.DOTALL)
+            # Replace only the Artifacts line (line-based).
+            # The previous DOTALL pattern could "eat" into following fields and also
+            # accidentally join lines (e.g., "Artifacts: ...- Dependencies: ...").
+            if re.search(r'^-?\s*Artifacts:\s*.*$', task_block, re.MULTILINE):
+                task_block = re.sub(
+                    r'^-?\s*Artifacts:\s*.*$',
+                    f'Artifacts: {artifacts_str}',
+                    task_block,
+                    flags=re.MULTILINE
+                )
             else:
                 task_block = f"Artifacts: {artifacts_str}\n{task_block}"
         
         # Update blocker message
         if task.blocker_message:
-            if re.search(r'^-?\s*Blocker:\s*.+', task_block, re.MULTILINE):
-                task_block = re.sub(r'^-?\s*Blocker:\s*.+', f'Blocker: {task.blocker_message}', task_block, flags=re.MULTILINE)
+            if re.search(r'^-?\s*Blocker:\s*.*$', task_block, re.MULTILINE):
+                task_block = re.sub(
+                    r'^-?\s*Blocker:\s*.*$',
+                    f'Blocker: {task.blocker_message}',
+                    task_block,
+                    flags=re.MULTILINE
+                )
             else:
                 task_block = f"Blocker: {task.blocker_message}\n{task_block}"
         else:
@@ -326,6 +447,22 @@ class TaskConfigParser:
             # This ensures completed tasks don't have blocker messages in tasks.md
             if re.search(r'^-?\s*Blocker:\s*.+', task_block, re.MULTILINE):
                 task_block = re.sub(r'^-?\s*Blocker:\s*.+\n?', '', task_block, flags=re.MULTILINE)
+
+        # Update blocker type (optional, generic metadata)
+        blocker_type_val = getattr(task, "blocker_type", None)
+        if blocker_type_val:
+            if re.search(r'^-?\s*Blocker Type:\s*.*$', task_block, re.MULTILINE):
+                task_block = re.sub(
+                    r'^-?\s*Blocker Type:\s*.*$',
+                    f'Blocker Type: {blocker_type_val}',
+                    task_block,
+                    flags=re.MULTILINE
+                )
+            else:
+                task_block = f"Blocker Type: {blocker_type_val}\n{task_block}"
+        else:
+            if re.search(r'^-?\s*Blocker Type:\s*.+', task_block, re.MULTILINE):
+                task_block = re.sub(r'^-?\s*Blocker Type:\s*.+\n?', '', task_block, flags=re.MULTILINE)
         
         # Replace the task block in content
         new_content = content[:match.start(2)] + task_block + content[match.end(2):]

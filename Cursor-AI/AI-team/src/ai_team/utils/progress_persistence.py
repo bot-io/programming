@@ -15,12 +15,15 @@ class ProgressPersistence:
     
     def __init__(self, coordinator: AgentCoordinator, tracker: DetailedProgressTracker, 
                  output_dir: str = "progress_reports", project_dir: Optional[str] = None,
-                 team_start_time: Optional[datetime] = None):
+                 team_start_time: Optional[datetime] = None, team_id: Optional[str] = None):
         self.coordinator = coordinator
         self.tracker = tracker
         self.output_dir = output_dir
         self.project_dir = project_dir or "."
         os.makedirs(output_dir, exist_ok=True)
+        
+        # REQ-1.2.4: Store team ID for progress reports
+        self.team_id = team_id or (getattr(coordinator, 'team_id', None) if coordinator else None)
         
         # Track team start time
         self.team_start_time = team_start_time or datetime.now()
@@ -81,11 +84,11 @@ class ProgressPersistence:
     def _record_completed_count_change(self, current_completed: int, previous_completed: int):
         """
         Record a change in completed task count.
-        CRITICAL: Per Manifesto requirement, completed task count must never go backwards.
+        CRITICAL: Per supervisor_issues_checklist.md requirement, completed task count must never go backwards.
         We only record increases, never decreases.
         """
         if current_completed != previous_completed:
-            # Only record if count increased (per Manifesto: "must never go backwards")
+            # Only record if count increased (per supervisor_issues_checklist.md: "must never go backwards")
             if current_completed > previous_completed:
                 entry = {
                     'timestamp': datetime.now().isoformat(),
@@ -102,9 +105,9 @@ class ProgressPersistence:
                 
                 self._save_completed_count_history()
             else:
-                # Count decreased - this should never happen per Manifesto
+                # Count decreased - this should never happen per supervisor_issues_checklist.md
                 # Log warning but don't record the decrease
-                print(f"[WARNING] Completed task count decreased from {previous_completed} to {current_completed} - this violates Manifesto requirement. Not recording decrease.")
+                print(f"[WARNING] Completed task count decreased from {previous_completed} to {current_completed} - this violates supervisor_issues_checklist.md requirement. Not recording decrease.")
     
     def _cleanup_old_history(self, keep_count: int = 100):
         """Clean up old history files, keeping only the most recent ones"""
@@ -144,6 +147,27 @@ class ProgressPersistence:
     
     def _get_state_snapshot(self) -> Dict:
         """Get a snapshot of current state for comparison"""
+        # Defensive check: ensure coordinator and tasks dict exist
+        if not self.coordinator:
+            return {
+                'overall_progress': 0,
+                'task_states': {},
+                'completed_count': 0,
+                'in_progress_count': 0,
+                'blocked_count': 0,
+                'ready_count': 0,
+            }
+        
+        if not hasattr(self.coordinator, 'tasks') or self.coordinator.tasks is None:
+            return {
+                'overall_progress': 0,
+                'task_states': {},
+                'completed_count': 0,
+                'in_progress_count': 0,
+                'blocked_count': 0,
+                'ready_count': 0,
+            }
+        
         all_tasks = list(self.coordinator.tasks.values())
         total = len(all_tasks)
         completed = sum(1 for t in all_tasks if t.status == TaskStatus.COMPLETED)
@@ -189,6 +213,19 @@ class ProgressPersistence:
     def save_progress(self):
         """Save current progress to Markdown and JSON files, and create historical snapshot"""
         try:
+            # Defensive check: Log coordinator state for debugging
+            # Write to a debug log file so we can track coordinator state
+            try:
+                debug_log_path = os.path.join(self.project_dir, "agent_logs", "progress_persistence_debug.log")
+                os.makedirs(os.path.dirname(debug_log_path), exist_ok=True)
+                with open(debug_log_path, 'a', encoding='utf-8') as f:
+                    if self.coordinator and hasattr(self.coordinator, 'tasks'):
+                        task_count = len(self.coordinator.tasks) if self.coordinator.tasks else 0
+                        f.write(f"[{datetime.now().isoformat()}] Coordinator has {task_count} tasks (coordinator id: {id(self.coordinator)})\n")
+                        f.flush()
+            except Exception as e:
+                pass  # Don't fail on debug logging
+            
             # Check if there's been factual progress change
             current_state = self._get_state_snapshot()
             has_changed = self._has_progress_changed()
@@ -215,7 +252,7 @@ class ProgressPersistence:
             md_content = self._generate_markdown_report()
             
             # Always write markdown file to update "Last Updated" timestamp
-            # This ensures Manifesto requirement: "if progress < 100%, it must be within the last 2 minutes"
+            # This ensures supervisor_issues_checklist.md requirement: "if progress < 100%, it must be within the last 2 minutes"
             # Even if there's no factual change, we update the timestamp to show the system is active
             with open(self.md_file, 'w', encoding='utf-8') as f:
                 f.write(md_content)
@@ -292,6 +329,11 @@ class ProgressPersistence:
         lines.append("# AI Agent Team Progress Report")
         lines.append("")
         
+        # REQ-1.2.4: Include team ID in all progress reports
+        if self.team_id:
+            lines.append(f"**Team ID:** `{self.team_id}`")
+            lines.append("")
+        
         # Current time
         current_time = datetime.now()
         lines.append(f"**Last Updated:** {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -303,7 +345,11 @@ class ProgressPersistence:
         lines.append(f"**Elapsed Time:** {elapsed_str}")
         
         # Overall Statistics (needed for time estimation)
-        all_tasks = list(self.coordinator.tasks.values())
+        # Defensive check: ensure coordinator and tasks dict exist
+        if not self.coordinator or not hasattr(self.coordinator, 'tasks') or self.coordinator.tasks is None:
+            all_tasks = []
+        else:
+            all_tasks = list(self.coordinator.tasks.values())
         total = len(all_tasks)
         completed = sum(1 for t in all_tasks if t.status == TaskStatus.COMPLETED)
         remaining = total - completed
@@ -346,6 +392,13 @@ class ProgressPersistence:
         lines.append("")
         lines.append("---")
         lines.append("")
+        # Defensive check: ensure we have tasks before counting
+        if not all_tasks:
+            # Log warning if coordinator exists but has no tasks (might indicate sync issue)
+            if self.coordinator and hasattr(self.coordinator, 'tasks'):
+                import sys
+                print(f"[WARNING] ProgressPersistence: Coordinator exists but tasks dict is empty or None. Coordinator type: {type(self.coordinator)}, has tasks attr: {hasattr(self.coordinator, 'tasks')}", file=sys.stderr, flush=True)
+        
         in_progress = sum(1 for t in all_tasks if t.status == TaskStatus.IN_PROGRESS)
         blocked = sum(1 for t in all_tasks if t.status == TaskStatus.BLOCKED)
         ready = sum(1 for t in all_tasks if t.status == TaskStatus.READY)
@@ -526,7 +579,11 @@ class ProgressPersistence:
     
     def _generate_json_snapshot(self) -> Dict:
         """Generate JSON snapshot of current state"""
-        all_tasks = list(self.coordinator.tasks.values())
+        # Defensive check: ensure coordinator and tasks dict exist
+        if not self.coordinator or not hasattr(self.coordinator, 'tasks') or self.coordinator.tasks is None:
+            all_tasks = []
+        else:
+            all_tasks = list(self.coordinator.tasks.values())
         activities = self.tracker.get_all_agents_activity()
         
         # Calculate time metrics
