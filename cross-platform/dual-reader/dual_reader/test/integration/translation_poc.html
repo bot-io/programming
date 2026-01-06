@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Translation POC - Transformers.js</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .status.loading {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+    }
+    .status.success {
+      background: #d4edda;
+      border-left: 4px solid #28a745;
+    }
+    .status.error {
+      background: #f8d7da;
+      border-left: 4px solid #dc3545;
+    }
+    .test-case {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .test-case h3 {
+      margin-top: 0;
+      color: #555;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    .result strong {
+      color: #333;
+    }
+    .info {
+      background: #e7f3ff;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
+      border-left: 4px solid #2196F3;
+    }
+    .info h3 {
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌐 Translation POC - Transformers.js</h1>
+
+    <div id="status" class="status loading">
+      Initializing Transformers.js and loading model...
+    </div>
+
+    <div class="info">
+      <h3>ℹ️ Information</h3>
+      <p><strong>Model:</strong> Helsinki-NLP/opus-mt-en-es (~270MB)</p>
+      <p><strong>Language:</strong> English → Spanish</p>
+      <p><strong>Storage:</strong> Browser IndexedDB (cached locally)</p>
+      <p><strong>Platform:</strong> WebAssembly (runs entirely in browser)</p>
+      <p id="modelStatus"><strong>Model Status:</strong> Loading...</p>
+    </div>
+
+    <div class="test-case">
+      <h3>✅ Test 1: Simple Translation</h3>
+      <input type="text" id="input1" value="Hello world" placeholder="Enter English text">
+      <button onclick="translateText('input1', 'result1')">Translate</button>
+      <div id="result1" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-case">
+      <h3>✅ Test 2: Sentence Translation</h3>
+      <input type="text" id="input2" value="Thank you for your help" placeholder="Enter English text">
+      <button onclick="translateText('input2', 'result2')">Translate</button>
+      <div id="result2" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-case">
+      <h3>✅ Test 3: Longer Text</h3>
+      <input type="text" id="input3" value="The quick brown fox jumps over the lazy dog. This is a test of client-side translation." placeholder="Enter English text">
+      <button onclick="translateText('input3', 'result3')">Translate</button>
+      <div id="result3" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-case">
+      <h3>✅ Test 4: Custom Text</h3>
+      <input type="text" id="input4" placeholder="Enter your own English text">
+      <button onclick="translateText('input4', 'result4')">Translate</button>
+      <div id="result4" class="result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+
+    // Configure Transformers.js
+    env.allowLocalModels = false;
+    env.useBrowserCache = true;
+
+    let translator = null;
+    let isModelLoading = false;
+
+    // Update status display
+    function updateStatus(message, type = 'loading') {
+      const statusEl = document.getElementById('status');
+      statusEl.className = `status ${type}`;
+      statusEl.textContent = message;
+    }
+
+    // Update model status
+    function updateModelStatus(message) {
+      document.getElementById('modelStatus').innerHTML = `<strong>Model Status:</strong> ${message}`;
+    }
+
+    // Load the translation model
+    async function loadModel(modelName) {
+      if (translator || isModelLoading) {
+        return translator;
+      }
+
+      isModelLoading = true;
+      updateModelStatus('Loading model (~270MB, first download may take a while)...');
+
+      try {
+        console.log('[POC] Loading model:', modelName);
+        const startTime = Date.now();
+
+        translator = await pipeline('translation', modelName);
+
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        updateModelStatus(`✅ Model loaded in ${duration}s (cached for future use)`);
+        console.log('[POC] Model loaded successfully in', duration, 'seconds');
+
+        isModelLoading = false;
+        return translator;
+      } catch (error) {
+        console.error('[POC] Failed to load model:', error);
+        updateModelStatus('❌ Failed to load model: ' + error.message);
+        updateStatus('Failed to load model. Check console for details.', 'error');
+        isModelLoading = false;
+        throw error;
+      }
+    }
+
+    // Translate text
+    window.translateText = async function(inputId, resultId) {
+      const inputEl = document.getElementById(inputId);
+      const resultEl = document.getElementById(resultId);
+      const text = inputEl.value.trim();
+
+      if (!text) {
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = '<strong style="color: red;">Please enter some text to translate.</strong>';
+        return;
+      }
+
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = '<strong style="color: blue;">Translating...</strong>';
+
+      try {
+        // Wait for model if needed
+        if (!translator && !isModelLoading) {
+          updateModelStatus('Loading model on-demand...');
+          await loadModel('Xenova/opus-mt-en-es');
+        }
+
+        // Wait for model to finish loading
+        let attempts = 0;
+        while (!translator && attempts < 120) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          attempts++;
+        }
+
+        if (!translator) {
+          throw new Error('Model failed to load in time');
+        }
+
+        console.log('[POC] Translating:', text);
+        const startTime = Date.now();
+
+        const result = await translator(text);
+
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        console.log('[POC] Translation complete in', duration, 'seconds:', result);
+
+        resultEl.innerHTML = `
+          <strong>Input:</strong> "${text}"<br>
+          <strong>Output (Spanish):</strong> "${result.translation_text}"<br>
+          <strong>Time:</strong> ${duration}s
+        `;
+
+        updateStatus('✅ Translation working!', 'success');
+
+      } catch (error) {
+        console.error('[POC] Translation error:', error);
+        resultEl.innerHTML = `<strong style="color: red;">Translation failed: ${error.message}</strong>`;
+        updateStatus('Translation failed. Check console for details.', 'error');
+      }
+    };
+
+    // Initialize - pre-load the model
+    async function init() {
+      console.log('[POC] Initializing...');
+      updateStatus('Initializing Transformers.js...');
+
+      try {
+        await loadModel('Xenova/opus-mt-en-es');
+        updateStatus('✅ Ready! Click Translate to test.', 'success');
+      } catch (error) {
+        updateStatus('❌ Initialization failed', 'error');
+      }
+    }
+
+    // Start initialization
+    init();
+  </script>
+</body>
+</html>

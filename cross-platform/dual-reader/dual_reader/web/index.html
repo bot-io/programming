@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="dual_reader">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>dual_reader</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Transformers.js for client-side translation -->
+  <!-- Using Helsinki-NLP/opus-mt-en-es model (~270MB) for English→Spanish translation -->
+  <script type="module">
+    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0';
+
+    // Configure Transformers.js
+    env.allowLocalModels = false;
+    env.useBrowserCache = true;
+
+    // Global pipeline reference
+    let translator = null;
+    let isModelLoading = false;
+
+    // Load the translation model
+    async function loadModel(modelName) {
+      if (translator || isModelLoading) {
+        return translator;
+      }
+
+      isModelLoading = true;
+      console.log('[Transformers.js] Loading model:', modelName);
+
+      try {
+        translator = await pipeline('translation', modelName);
+        console.log('[Transformers.js] Model loaded successfully');
+        isModelLoading = false;
+        return translator;
+      } catch (error) {
+        console.error('[Transformers.js] Failed to load model:', error);
+        isModelLoading = false;
+        throw error;
+      }
+    }
+
+    // Translate text using the loaded model
+    async function translate(text) {
+      if (!translator) {
+        throw new Error('Translator not loaded. Call loadModel first.');
+      }
+
+      console.log('[Transformers.js] Translating:', text.length, 'characters');
+      const result = await translator(text);
+      console.log('[Transformers.js] Translation complete:', result.length, 'characters');
+      return result;
+    }
+
+    // Global variable for text input (workaround for parameter passing bug)
+    // Using a closure to protect the text variable from being cleared
+    (function() {
+      let _savedText = null;
+
+      // Also set a global variable as backup
+      window.transformersText = null;
+
+      // Setter function for text
+      window.setText = function(text) {
+        console.log('[Transformers.js] setText called with:', text);
+        console.log('[Transformers.js] Text type:', typeof text);
+        console.log('[Transformers.js] Text length:', text?.length);
+
+        // Parameter is undefined, but we can read from the global variable
+        // that was set by js.context['transformersText'] = text
+        const globalText = window.transformersText;
+        console.log('[Transformers.js] Read from window.transformersText:', globalText?.substring(0, 50));
+
+        if (globalText && globalText.length > 0) {
+          _savedText = globalText;
+          console.log('[Transformers.js] Saved text from global variable, length:', _savedText.length);
+        } else {
+          _savedText = text;
+          console.log('[Transformers.js] Saved text from parameter, length:', _savedText?.length || 0);
+        }
+      };
+
+      // Getter function for text
+      window.getText = function() {
+        return _savedText;
+      };
+
+      // Expose simple global functions for Dart to call
+      // These bypass the complex JS interop parameter passing issues
+      window.transformersTranslate = async function(textParam) {
+        console.log('[Transformers.js] transformersTranslate called');
+        console.log('[Transformers.js] textParam:', textParam);
+        console.log('[Transformers.js] typeof textParam:', typeof textParam);
+        console.log('[Transformers.js] _savedText:', _savedText?.substring(0, 50));
+        console.log('[Transformers.js] _savedText length:', _savedText?.length || 0);
+
+        // Use closure variable if parameter is undefined
+        const text = textParam || _savedText;
+        console.log('[Transformers.js] Using text with', text?.length || 0, 'characters');
+        console.log('[Transformers.js] Text preview:', text?.substring(0, 100));
+
+        try {
+          // Wait for model to be loaded if needed
+          if (!translator && !isModelLoading) {
+            console.log('[Transformers.js] Loading model on-demand...');
+            await loadModel('Helsinki-NLP/opus-mt-en-es');
+          }
+
+          // Wait for model to finish loading
+          let attempts = 0;
+          while (!translator && attempts < 120) { // Wait up to 2 minutes
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            attempts++;
+          }
+
+          if (!translator) {
+            console.error('[Transformers.js] Model failed to load in time');
+            return null;
+          }
+
+          const result = await translate(text);
+          return result;
+        } catch (error) {
+          console.error('[Transformers.js] Translation error:', error);
+          return null;
+        }
+      };
+    })();
+
+    // Also expose the helpers object for compatibility
+    window.transformersHelpers = {
+      callPipeline: async function(task, model) {
+        console.log('[Transformers.js] callPipeline:', task, model);
+        return await loadModel(model);
+      },
+      callTranslate: async function(pipelineObj, text, targetLang, sourceLang) {
+        console.log('[Transformers.js] callTranslate');
+        const options = {};
+        if (targetLang) {
+          options.targetLang = targetLang;
+        }
+        if (sourceLang) {
+          options.sourceLang = sourceLang;
+        }
+        return await pipelineObj(text, options);
+      },
+      getTranslationText: function(result) {
+        return result?.translation_text || null;
+      }
+    };
+
+    window.transformers = {
+      ready: true
+    };
+
+    // Set ready flag
+    window.transformersReady = true;
+    console.log('[Transformers.js] transformersReady set to true');
+
+    // Pre-load the model on page load
+    console.log('[Transformers.js] Pre-loading Helsinki-NLP/opus-mt-en-es model...');
+    loadModel('Helsinki-NLP/opus-mt-en-es').catch(err => {
+      console.error('[Transformers.js] Pre-load failed:', err);
+    });
+
+    console.log('[Transformers.js] Initialized - Client-side English→Spanish translation ready');
+  </script>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

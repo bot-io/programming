@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter test:*)",
+      "Bash(dart run build_runner build:*)",
+      "Bash(flutter run:*)",
+      "Bash(timeout:*)",
+      "Bash(flutter pub get:*)",
+      "WebSearch",
+      "Bash(dir:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter pub deps:*)",
+      "Bash(find:*)",
+      "Bash(flutter pub add:*)",
+      "Bash(nc:*)",
+      "Bash(cat:*)",
+      "Bash(start test/integration/translation_poc.html)",
+      "Bash(flutter devices:*)",
+      "Bash(flutter clean:*)",
+      "Bash(./gradlew:*)",
+      "Bash(cmd /c start tooltest_translation.html)"
+    ]
+  }
+}
