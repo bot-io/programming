@@ -59,17 +59,27 @@ Dual Reader 3.2 is a cross-platform ebook reader application built with Flutter.
 
 ### 2. Dual-Panel Display
 - **Layout**: Side-by-side panels (original and translated)
-- **Orientation Support**: 
+- **Orientation Support**:
   - Portrait: Stacked panels (original on top, translated below)
   - Landscape: Side-by-side panels
-- **Synchronized Scrolling**: Both panels scroll together
+- **Scrolling Behavior**:
+  - **Original Text Panel**: NON-SCROLLABLE - text fits exactly on the page without scrolling
+  - **Translated Text Panel**: Independently SCROLLABLE - can scroll to read longer translations
+  - No synchronized scrolling - panels operate independently
 - **Responsive Design**: Adapts to screen size
 
 ### 3. Translation
 - **Translation Service**: Hybrid approach with client-side and server-side options
-  - **Mobile (Android/iOS)**: Google ML Kit On-Device Translation
-    - Uses `google_mlkit_translation` package
-    - Completely offline - no internet required
+  - **Mobile (Android/iOS)**: Google ML Kit On-Device Translation with LibreTranslate API fallback
+    - Uses `google_mlkit_translation` package as primary
+    - Falls back to LibreTranslate API if ML Kit fails or times out
+    - LibreTranslate endpoints tried sequentially:
+      - `https://translate.argosopentech.com/translate`
+      - `https://libretranslate.com/translate`
+      - `https://translate.terraprint.co/translate`
+    - 30-second timeout for ML Kit model download and translation
+    - 10-second timeout for each LibreTranslate endpoint
+    - Completely offline after ML Kit model download - no internet required
     - Supports 50+ languages via `TranslateLanguage` enum
     - Fast, private, and free
   - **Web**: Transformers.js v3
@@ -78,8 +88,8 @@ Dual Reader 3.2 is a cross-platform ebook reader application built with Flutter.
     - Supports 200+ languages via FLORES-200 codes
     - Loaded via CDN in `web/index.html`
   - **Fallback (Optional)**: Server-based translation APIs
+    - LibreTranslate (completely free, open-source) - used as mobile fallback
     - Google Translate API (free tier: 500,000 characters/month)
-    - LibreTranslate (completely free, open-source)
     - MyMemory Translation API (10,000 words/day free)
   - **Mock Service**: For testing without API calls
 - **Supported Languages**:
@@ -109,16 +119,30 @@ Dual Reader 3.2 is a cross-platform ebook reader application built with Flutter.
   - Uses Hive for persistent caching
   - Cache key based on text + target language
   - Improves performance for repeated translations
+  - Granular caching: each paragraph/sentence cached separately for reuse across pages
+- **Translation Strategy**: Paragraph/sentence-based translation for better quality
+  - Text split into sentences before translation to maintain sentence structure
+  - Each sentence translated as a complete unit (no mid-sentence breaks)
+  - Translated sentences rejoined with proper spacing
+  - Prevents translation quality issues from page boundaries cutting sentences
 - **Text Selection**: Both original and translated text must be selectable and copyable
 
 ### 4. Smart Pagination
-- **Dynamic Pagination**: Text fits screen without scrolling within a page
-- **Page Calculation**: Based on:
-  - Screen dimensions
-  - Font size
-  - Line height
-  - Margins
-- **Boundary Respect**: Split at paragraph/sentence boundaries
+- **Dynamic Pagination**: Page size calculated dynamically based on actual text area capacity
+  - Uses `PaginationService` with `TextPainter` to measure text dimensions
+  - Binary search algorithm to find maximum characters that fit on a page
+  - Accounts for actual screen dimensions, font size, line height, and margins
+  - Page height calculation subtracts: appbar, status bar, margins, bottom nav, panel label
+  - Original text pages fit exactly in allocated space (no scrolling)
+  - Safety timeout (5 seconds) to prevent infinite loops on malformed content
+- **Boundary Respect**: Prefers splitting at sentence boundaries
+  - Searches backwards for sentence endings (. ! ?) when breaking content
+  - Falls back to word boundaries (spaces) if no sentence boundary found
+  - Ensures better readability and translation quality
+- **Chapter Title Handling**: Chapter titles removed from content before pagination
+  - Heading tags (h1-h6) stripped from HTML
+  - Chapter titles (from EPUB metadata) stripped from start of text content
+  - Prevents chapter titles from appearing as weird sentences in body text
 - **Page Navigation**: Previous/Next buttons, page slider, direct page input
 
 ### 5. Library Management
