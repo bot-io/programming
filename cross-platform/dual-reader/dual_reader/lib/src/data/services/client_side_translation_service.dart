@@ -58,6 +58,16 @@ class ClientSideTranslationService implements TranslationService {
   Future<void> close() async {
     await _delegate.close();
   }
+
+  /// Check if a language model is downloaded and ready
+  Future<bool> isLanguageModelReady(String languageCode) async {
+    return _delegate.isLanguageModelReady(languageCode);
+  }
+
+  /// Download and prepare a language model
+  Future<bool> downloadLanguageModel(String languageCode, {void Function(String)? onProgress}) async {
+    return _delegate.downloadLanguageModel(languageCode, onProgress: onProgress);
+  }
 }
 
 /// Public interface for platform-specific implementations
@@ -71,6 +81,12 @@ abstract class ClientSideTranslationDelegate {
   Future<String> detectLanguage(String text);
 
   Future<void> close();
+
+  /// Check if a language model is downloaded and ready
+  Future<bool> isLanguageModelReady(String languageCode);
+
+  /// Download and prepare a language model
+  Future<bool> downloadLanguageModel(String languageCode, {void Function(String)? onProgress});
 }
 
 /// Factory function to create platform-specific delegate

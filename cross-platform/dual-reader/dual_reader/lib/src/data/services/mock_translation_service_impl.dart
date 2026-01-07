@@ -560,4 +560,17 @@ class MockTranslationServiceImpl implements TranslationService {
     debugPrint('MockTranslation: Detected English (default)');
     return 'en';
   }
+
+  @override
+  Future<bool> isLanguageModelReady(String languageCode) async {
+    // Mock service doesn't use models
+    return true;
+  }
+
+  @override
+  Future<bool> downloadLanguageModel(String languageCode, {void Function(String)? onProgress}) async {
+    // Mock service doesn't use models
+    onProgress?.call('Mock service - no download needed');
+    return true;
+  }
 }

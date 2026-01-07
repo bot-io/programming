@@ -2,7 +2,7 @@ name: dual_reader
 description: "A dual-language ebook reader built with Flutter."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.2.0+3
 
 environment:
   sdk: ^3.5.4

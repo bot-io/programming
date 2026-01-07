@@ -42,6 +42,7 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> {
   int _totalOriginalPages = 0;
   bool _isLoading = true;
   String? _currentLanguage; // Track current language to detect changes
+  SettingsEntity? _previousSettings; // Track previous settings to detect layout changes
 
   final ScrollController _scrollController = ScrollController();
 
@@ -390,6 +391,49 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> {
     final settings = ref.watch(settingsProvider);
     final newLanguage = settings.targetTranslationLanguageCode;
 
+    // Check if layout-related settings changed (font size, margin, line height, font family)
+    final layoutChanged = _previousSettings != null &&
+        (_previousSettings!.fontSize != settings.fontSize ||
+         _previousSettings!.margin != settings.margin ||
+         _previousSettings!.lineHeight != settings.lineHeight ||
+         _previousSettings!.fontlFamily != settings.fontlFamily);
+
+    if (layoutChanged) {
+      debugPrint('[DualReaderScreen] Layout settings changed - repaginating book');
+      debugPrint('[DualReaderScreen] Font: ${_previousSettings!.fontSize}->${settings.fontSize}, Margin: ${_previousSettings!.margin}->${settings.margin}, LineHeight: ${_previousSettings!.lineHeight}->${settings.lineHeight}');
+
+      // Save the first visible character of the current page to restore position after repagination
+      final currentText = _originalTextPages.elementAtOrNull(_currentOriginalPage) ?? '';
+      final firstChar = currentText.isNotEmpty ? currentText[0] : '';
+
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // Clear cache for this book since pagination changed
+        await _bookTranslationCache.clearBook(widget.bookId);
+
+        // Repaginate with new settings
+        await _loadBookAndPaginate();
+
+        // Try to find the page containing the first character from before the change
+        for (int i = 0; i < _originalTextPages.length; i++) {
+          if (_originalTextPages[i].isNotEmpty && _originalTextPages[i][0] == firstChar) {
+            setState(() {
+              _currentOriginalPage = i;
+            });
+            debugPrint('[DualReaderScreen] Restored position to page $i (first char: $firstChar)');
+            break;
+          }
+        }
+
+        // Clear translations and retranslate current page
+        _translatedTextPages.clear();
+        _translateCurrentVisiblePage();
+      });
+
+      _previousSettings = settings;
+    } else if (_previousSettings == null) {
+      _previousSettings = settings;
+    }
+
     // Detect language change and refresh translations
     if (_currentLanguage != null && _currentLanguage != newLanguage) {
       debugPrint('[DualReaderScreen] Language changed from $_currentLanguage to $newLanguage, clearing translations');
@@ -567,10 +611,13 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> {
           Expanded(
             child: SingleChildScrollView(
               controller: _scrollController,
-              child: SelectableText(
-                content,
-                textAlign: settings.textAlign,
-                style: textStyle,
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: SelectableText(
+                  content,
+                  textAlign: settings.textAlign,
+                  style: textStyle,
+                ),
               ),
             ),
           ),

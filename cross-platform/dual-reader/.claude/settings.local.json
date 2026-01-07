@@ -6,7 +6,7 @@
       "Bash(flutter run:*)",
       "Bash(timeout:*)",
       "Bash(flutter pub get:*)",
-      "WebSearch",
+      "Bash(cd:*)",
       "Bash(dir:*)",
       "Bash(flutter analyze:*)",
       "Bash(flutter pub deps:*)",
@@ -25,8 +25,18 @@
       "Bash(git add:*)",
       "Bash(git rm:*)",
       "Bash(git commit:*)",
-      "Bash(git push)",
-      "Bash(flutter pub run build_runner build:*)"
+      "Bash(flutter pub run build_runner build:*)",
+      "Bash(findstr:*)",
+      "Bash(if:*)",
+      "Bash(then rm -rf .idea)",
+      "Bash(else echo \"No .idea directory found\")",
+      "Bash(fi:*)",
+      "Bash(then rm -rf .cursor)",
+      "Bash(else echo \"No .cursor directory found\")",
+      "Bash(flutter attach:*)",
+      "Bash(adb shell rm:*)",
+      "Bash(adb shell:*)",
+      "Bash(flutter build:*)"
     ]
   }
 }

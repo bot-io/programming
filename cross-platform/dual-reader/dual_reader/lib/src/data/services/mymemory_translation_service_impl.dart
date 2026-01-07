@@ -149,4 +149,17 @@ class MyMemoryTranslationServiceImpl implements TranslationService {
     debugPrint('[MyMemory] Detected English (default)');
     return 'en';
   }
+
+  @override
+  Future<bool> isLanguageModelReady(String languageCode) async {
+    // API-based service, no model download needed
+    return true;
+  }
+
+  @override
+  Future<bool> downloadLanguageModel(String languageCode, {void Function(String)? onProgress}) async {
+    // API-based service, no model download needed
+    onProgress?.call('Using API - no download needed');
+    return true;
+  }
 }

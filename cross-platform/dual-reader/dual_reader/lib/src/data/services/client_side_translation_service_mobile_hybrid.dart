@@ -30,19 +30,19 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
         sourceLanguage ?? 'en',
         targetLanguage,
       ).timeout(
-        const Duration(seconds: 30),
+        const Duration(minutes: 3),
         onTimeout: () {
-          debugPrint('[HybridTranslation] ML Kit translator creation timed out after 30s');
-          throw TimeoutException('ML Kit translator creation timeout (30s)');
+          debugPrint('[HybridTranslation] ML Kit translator creation timed out after 3 minutes');
+          throw TimeoutException('ML Kit translator creation timeout (3 minutes). The language model may still be downloading in the background. Please try again in a minute.');
         },
       );
 
       debugPrint('[HybridTranslation] Step 2: Translating text with ML Kit...');
       final translated = await translator.translateText(text).timeout(
-        const Duration(seconds: 30),
+        const Duration(seconds: 60),
         onTimeout: () {
-          debugPrint('[HybridTranslation] ML Kit translation timed out after 30s');
-          throw TimeoutException('ML Kit translation timeout (30s)');
+          debugPrint('[HybridTranslation] ML Kit translation timed out after 60s');
+          throw TimeoutException('ML Kit translation timeout (60s)');
         },
       );
 
@@ -57,7 +57,7 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
         return await _translateWithLibre(text, sourceLanguage ?? 'en', targetLanguage);
       } catch (apiError) {
         debugPrint('[HybridTranslation] API fallback also failed: $apiError');
-        throw Exception('Translation failed for language "$targetLanguage". ML Kit error: $e. API error: $apiError.\n\nTip: First-time translation for a language requires downloading ML Kit models (can take 1-3 minutes on emulator). Please try again or wait for model download to complete.');
+        throw Exception('Translation failed for language "$targetLanguage".\n\nML Kit error: $e\n\nAPI fallback also failed: $apiError\n\n💡 Tips:\n• First-time translation for a language requires downloading ML Kit models (can take 1-3 minutes on emulator)\n• Try again - the model may still be downloading in the background\n• Some LibreTranslate API endpoints may be temporarily unavailable\n• Check your internet connection if using API fallback');
       }
     }
   }
@@ -257,6 +257,80 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
     }
 
     return 'en';
+  }
+
+  /// Check if a language model is downloaded and ready
+  /// Returns true if the model is already cached, false otherwise
+  Future<bool> isLanguageModelReady(String languageCode) async {
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      return false;
+    }
+
+    final key = 'en-$languageCode';
+    if (_translators.containsKey(key)) {
+      debugPrint('[HybridTranslation] Model already cached for $languageCode');
+      return true;
+    }
+
+    // Quick check: just return false if not cached, don't try to download
+    // The download will happen when explicitly requested
+    debugPrint('[HybridTranslation] Model not cached for $languageCode');
+    return false;
+  }
+
+  /// Download and prepare a language model
+  /// Returns true if successful, false otherwise
+  Future<bool> downloadLanguageModel(String languageCode, {void Function(String)? onProgress}) async {
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      throw UnsupportedError('ML Kit translation is only supported on Android and iOS');
+    }
+
+    // Check if already cached
+    final key = 'en-$languageCode';
+    if (_translators.containsKey(key)) {
+      onProgress?.call('Model already available');
+      debugPrint('[HybridTranslation] Model already available for $languageCode');
+      return true;
+    }
+
+    try {
+      onProgress?.call('Starting model download...');
+      debugPrint('[HybridTranslation] Downloading model for $languageCode');
+
+      final sourceLang = _toTranslateLanguage('en');
+      final targetLang = _toTranslateLanguage(languageCode);
+
+      onProgress?.call('Initializing translator...');
+
+      final translator = OnDeviceTranslator(
+        sourceLanguage: sourceLang,
+        targetLanguage: targetLang,
+      );
+
+      onProgress?.call('Downloading language model (this may take 1-3 minutes)...');
+
+      // Translate a test phrase to trigger model download
+      final result = await translator.translateText('Hello').timeout(
+        const Duration(minutes: 3),
+        onTimeout: () {
+          onProgress?.call('Download timeout - please check your connection');
+          throw TimeoutException('Model download timeout (3 minutes)');
+        },
+      );
+
+      debugPrint('[HybridTranslation] Test translation result: $result');
+      onProgress?.call('Model downloaded successfully!');
+
+      // Cache the translator (keep it open for future use)
+      _translators[key] = translator;
+
+      debugPrint('[HybridTranslation] Model downloaded and cached for $languageCode');
+      return true;
+    } catch (e) {
+      debugPrint('[HybridTranslation] Model download failed for $languageCode: $e');
+      onProgress?.call('Download failed: $e');
+      return false;
+    }
   }
 
   @override

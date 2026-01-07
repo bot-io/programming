@@ -40,7 +40,7 @@ class MyApp extends ConsumerWidget {
         useMaterial3: true,
         textTheme: GoogleFonts.getTextTheme(
           settings.fontlFamily,
-          Theme.of(context).textTheme.apply(
+          ThemeData.dark().textTheme.apply(
             fontSizeFactor: settings.fontSize / 16.0,
           ),
         ),

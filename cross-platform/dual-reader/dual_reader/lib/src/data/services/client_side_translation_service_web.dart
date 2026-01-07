@@ -54,6 +54,19 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
     // No cleanup needed - API is stateless
     debugPrint('[WebTranslation] Web service closed');
   }
+
+  @override
+  Future<bool> isLanguageModelReady(String languageCode) async {
+    // Web uses API, no model download needed
+    return true;
+  }
+
+  @override
+  Future<bool> downloadLanguageModel(String languageCode, {void Function(String)? onProgress}) async {
+    // Web uses API, no model download needed
+    onProgress?.call('Using web API - no download needed');
+    return true;
+  }
 }
 
 /// No-op cache service for API calls (caching handled by LibreTranslateServiceImpl)
