@@ -8,6 +8,7 @@ import 'package:dual_reader/src/data/services/google_translate_service_impl.dart
 import 'package:dual_reader/src/data/services/client_side_translation_service.dart';
 import 'package:dual_reader/src/data/services/mock_translation_service_impl.dart';
 import 'package:dual_reader/src/data/services/translation_cache_service.dart';
+import 'package:dual_reader/src/data/services/book_translation_cache_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:dual_reader/src/domain/services/pagination_service.dart';
@@ -58,6 +59,9 @@ Future<void> init() async {
   final translationCacheService = TranslationCacheService();
   await translationCacheService.init();
   sl.registerLazySingleton<TranslationCacheService>(() => translationCacheService);
+  final bookTranslationCacheService = BookTranslationCacheService();
+  await bookTranslationCacheService.init();
+  sl.registerLazySingleton<BookTranslationCacheService>(() => bookTranslationCacheService);
   sl.registerLazySingleton<http.Client>(() => http.Client());
 
   // Register translation service based on configuration

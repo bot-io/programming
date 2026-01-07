@@ -86,6 +86,23 @@ class BookTranslationCacheService {
     debugPrint('[BookTranslationCache] Cleared $keysToDelete.length translations for book $bookId, language $language');
   }
 
+  /// Clear all cached translations
+  Future<void> clearAll() async {
+    try {
+      if (!Hive.isBoxOpen(_boxName)) {
+        debugPrint('[BookTranslationCache] Box not open, nothing to clear');
+        return;
+      }
+      final box = Hive.box<String>(_boxName);
+      final count = box.length;
+      await box.clear();
+      debugPrint('[BookTranslationCache] Cleared all $count translations');
+    } catch (e) {
+      debugPrint('[BookTranslationCache] Error clearing cache: $e');
+      rethrow;
+    }
+  }
+
   /// Get cache statistics
   Future<Map<String, int>> getStats() async {
     if (!Hive.isBoxOpen(_boxName)) {

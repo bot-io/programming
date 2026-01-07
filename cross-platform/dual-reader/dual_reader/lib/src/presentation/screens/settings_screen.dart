@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dual_reader/src/presentation/providers/settings_notifier.dart';
 import 'package:dual_reader/src/domain/entities/settings_entity.dart';
+import 'package:dual_reader/src/data/services/book_translation_cache_service.dart';
+import 'package:get_it/get_it.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -146,6 +148,56 @@ class SettingsScreen extends ConsumerWidget {
                 );
               }).toList(),
             ),
+          ),
+          const Divider(),
+          ListTile(
+            title: const Text('Clear Translation Cache'),
+            subtitle: const Text('Remove all cached translations'),
+            trailing: const Icon(Icons.delete_sweep, color: Colors.red),
+            onTap: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Clear Translation Cache'),
+                  content: const Text('Are you sure you want to clear all cached translations? This will make translations slower until they are cached again.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text('Clear'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed == true) {
+                try {
+                  final cache = GetIt.I<BookTranslationCacheService>();
+                  await cache.clearAll();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Translation cache cleared successfully'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to clear cache: $e'),
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
+              }
+            },
           ),
         ],
       ),
