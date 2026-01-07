@@ -58,20 +58,50 @@ class PaginationServiceImpl implements PaginationService {
 
       int end = bestEnd;
       if (end < text.length) {
-        // Search backwards for a safe break point (space or newline)
-        // limit lookback to avoid expensive searches
-        int lookbackLimit = (end - start > 1000) ? end - 1000 : start;
+        // Priority 1: Break at sentence endings (., !, ?) to preserve sentence context
+        // This ensures translations have complete sentences
+        int lookbackLimit = (end - start > 500) ? end - 500 : start;
         bool foundBreak = false;
+
+        // First, look for sentence-ending punctuation followed by space
         for (int i = end - 1; i >= lookbackLimit; i--) {
-          final char = text[i];
-          if (char == ' ' || char == '\n') {
-            end = i + 1;
-            foundBreak = true;
-            break;
+          if (i + 1 < text.length) {
+            final char = text[i];
+            final nextChar = text[i + 1];
+            // Check for sentence ending (. ! ?) followed by space and capital letter
+            if ((char == '.' || char == '!' || char == '?') &&
+                (nextChar == ' ' || nextChar == '\n')) {
+              end = i + 1;
+              foundBreak = true;
+              break;
+            }
           }
         }
-        
-        // If no space/newline found, try punctuation
+
+        // Priority 2: If no sentence boundary found, break at paragraph (double newline)
+        if (!foundBreak) {
+          for (int i = end - 1; i >= lookbackLimit; i--) {
+            if (i + 1 < text.length && text[i] == '\n' && text[i + 1] == '\n') {
+              end = i;
+              foundBreak = true;
+              break;
+            }
+          }
+        }
+
+        // Priority 3: Break at space/newline (word boundary)
+        if (!foundBreak) {
+          for (int i = end - 1; i >= lookbackLimit; i--) {
+            final char = text[i];
+            if (char == ' ' || char == '\n') {
+              end = i + 1;
+              foundBreak = true;
+              break;
+            }
+          }
+        }
+
+        // Fallback: If nothing else works, break at punctuation mid-word
         if (!foundBreak) {
           for (int i = end - 1; i >= lookbackLimit; i--) {
             final char = text[i];

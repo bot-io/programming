@@ -275,6 +275,23 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> {
       final bookId = widget.bookId;
       final translatedParagraphs = <String>[];
 
+      // Get the last sentence from the previous page for context (if available)
+      String? contextSentence;
+      if (index > 0 && _pageParagraphs.containsKey(index - 1)) {
+        final prevParagraphs = _pageParagraphs[index - 1]!;
+        if (prevParagraphs.isNotEmpty) {
+          final lastParagraph = prevParagraphs.last;
+          // Extract the last sentence from the previous paragraph
+          final lastSentenceEnd = lastParagraph.lastIndexOf(RegExp(r'[.!?]\s'));
+          if (lastSentenceEnd != -1 && lastSentenceEnd < lastParagraph.length - 2) {
+            contextSentence = lastParagraph.substring(lastSentenceEnd + 1).trim();
+            if (contextSentence.isNotEmpty) {
+              debugPrint('[DualReaderScreen] Using context from previous page: "$contextSentence"');
+            }
+          }
+        }
+      }
+
       // Translate each paragraph separately
       for (int i = 0; i < paragraphs.length; i++) {
         final paragraph = paragraphs[i];
@@ -292,21 +309,41 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> {
           debugPrint('[DualReaderScreen] Using cached translation for paragraph $cacheKey');
           translatedParagraphs.add(cachedTranslation);
         } else {
+          // Add context to the first paragraph of the page for better translation
+          String textToTranslate = paragraph;
+          if (i == 0 && contextSentence != null && contextSentence.isNotEmpty) {
+            textToTranslate = '$contextSentence $paragraph';
+            debugPrint('[DualReaderScreen] Translating with context (${textToTranslate.length} chars)');
+          }
+
           debugPrint('[DualReaderScreen] Translating paragraph $cacheKey (${paragraph.length} chars) to $targetLanguage');
           final translated = await _translationService.translate(
-            text: paragraph,
+            text: textToTranslate,
             targetLanguage: targetLanguage,
           );
+
+          // If we added context, remove it from the translation before storing
+          String translationToStore = translated;
+          if (i == 0 && contextSentence != null && contextSentence.isNotEmpty) {
+            // Try to remove the context from the beginning of the translation
+            // This is a simple approach - the translator might not preserve the exact context
+            final contextEnd = translated.indexOf(' ');
+            if (contextEnd > 0 && contextEnd < translated.length / 3) {
+              // The first word is likely the translated context, remove it
+              translationToStore = translated.substring(contextEnd + 1).trim();
+              debugPrint('[DualReaderScreen] Removed context from translation');
+            }
+          }
 
           // Cache this paragraph translation
           await _bookTranslationCache.cacheTranslation(
             bookId,
             cacheKey.hashCode,
             targetLanguage,
-            translated,
+            translationToStore,
           );
 
-          translatedParagraphs.add(translated);
+          translatedParagraphs.add(translationToStore);
         }
       }
 
