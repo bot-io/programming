@@ -38,8 +38,6 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> {
   List<ChapterDisplayData> _chaptersDisplayData = [];
   List<String> _originalTextPages = [];
   final Map<int, String> _translatedTextPages = {};
-  // Store paragraphs with their original indices for better translation
-  final Map<int, List<String>> _pageParagraphs = {};
   int _currentOriginalPage = 0;
   int _totalOriginalPages = 0;
   bool _isLoading = true;
@@ -164,7 +162,6 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> {
             constraints,
             textStyle,
             EdgeInsets.all(settings.margin),
-            _pageParagraphs,
           );
 
           _totalOriginalPages = _originalTextPages.length;
@@ -178,19 +175,16 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> {
 
           // Convert paragraph-based chapter indices to page-based indices
           _chaptersDisplayData = [];
+          int accumulatedParagraphs = 0;
+          int currentPageIndex = 0;
+          int paragraphCountInCurrentPage = 0;
+
+          // Estimate paragraphs per page to find chapter starting pages
+          final estimatedParagraphsPerPage = (allParagraphs.length / _originalTextPages.length).ceil();
+
           for (final chapter in tempChapters) {
-            // Find which page contains this paragraph index
-            int accumulatedParagraphs = 0;
-            int targetPageIndex = 0;
-            for (int i = 0; i < _pageParagraphs.length; i++) {
-              final paragraphsOnPage = _pageParagraphs[i]!.length;
-              if (chapter.startingPageIndex >= accumulatedParagraphs &&
-                  chapter.startingPageIndex < accumulatedParagraphs + paragraphsOnPage) {
-                targetPageIndex = i;
-                break;
-              }
-              accumulatedParagraphs += paragraphsOnPage;
-            }
+            // Calculate which page this chapter starts on
+            final targetPageIndex = (chapter.startingPageIndex / estimatedParagraphsPerPage).floor().clamp(0, _totalOriginalPages - 1);
 
             _chaptersDisplayData.add(ChapterDisplayData(
               title: chapter.title,
@@ -215,7 +209,6 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> {
     BoxConstraints constraints,
     TextStyle textStyle,
     EdgeInsets padding,
-    Map<int, List<String>> pageParagraphsMap,
   ) {
     final List<String> pages = [];
     final double pageWidth = constraints.maxWidth - padding.horizontal;
@@ -233,16 +226,8 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> {
       padding: EdgeInsets.zero,
     );
 
-    // For each page, extract which paragraphs it contains and preserve structure
-    for (int i = 0; i < paginatedPages.length; i++) {
-      final pageText = paginatedPages[i];
-      pages.add(pageText);
-
-      // Track paragraphs per page for translation
-      // Split by double newlines to preserve paragraph structure
-      final pageParagraphs = pageText.split(RegExp(r'\n\n+')).where((p) => p.trim().isNotEmpty).toList();
-      pageParagraphsMap[i] = pageParagraphs;
-    }
+    // Return the paginated pages directly
+    pages.addAll(paginatedPages);
 
     debugPrint('[DualReaderScreen] Paginated into ${pages.length} pages');
     return pages;
@@ -266,89 +251,44 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> {
     }
 
     try {
-      final paragraphs = _pageParagraphs[index];
-      if (paragraphs == null || paragraphs.isEmpty) {
-        debugPrint('[DualReaderScreen] No paragraphs found for page $index');
+      // Get the full page text that's currently displayed
+      final pageText = _originalTextPages[index];
+      if (pageText.isEmpty) {
+        debugPrint('[DualReaderScreen] Page $index is empty');
         return;
       }
 
       final bookId = widget.bookId;
-      final translatedParagraphs = <String>[];
 
-      // Get the last sentence from the previous page for context (if available)
-      String? contextSentence;
-      if (index > 0 && _pageParagraphs.containsKey(index - 1)) {
-        final prevParagraphs = _pageParagraphs[index - 1]!;
-        if (prevParagraphs.isNotEmpty) {
-          final lastParagraph = prevParagraphs.last;
-          // Extract the last sentence from the previous paragraph
-          final lastSentenceEnd = lastParagraph.lastIndexOf(RegExp(r'[.!?]\s'));
-          if (lastSentenceEnd != -1 && lastSentenceEnd < lastParagraph.length - 2) {
-            contextSentence = lastParagraph.substring(lastSentenceEnd + 1).trim();
-            if (contextSentence.isNotEmpty) {
-              debugPrint('[DualReaderScreen] Using context from previous page: "$contextSentence"');
-            }
-          }
-        }
-      }
+      // Check cache for this page
+      final cacheKey = index;
+      final cachedTranslation = _bookTranslationCache.getCachedTranslation(
+        bookId,
+        cacheKey,
+        targetLanguage,
+      );
 
-      // Translate each paragraph separately
-      for (int i = 0; i < paragraphs.length; i++) {
-        final paragraph = paragraphs[i];
-        // Create unique cache key by combining page and paragraph indices
-        final cacheKey = '${index}_$i';
-
-        // Check cache for this specific paragraph
-        final cachedTranslation = _bookTranslationCache.getCachedTranslation(
-          bookId,
-          cacheKey.hashCode,
-          targetLanguage,
+      String translatedPage;
+      if (cachedTranslation != null) {
+        debugPrint('[DualReaderScreen] Using cached translation for page $index');
+        translatedPage = cachedTranslation;
+      } else {
+        debugPrint('[DualReaderScreen] Translating page $index (${pageText.length} chars) to $targetLanguage');
+        translatedPage = await _translationService.translate(
+          text: pageText,
+          targetLanguage: targetLanguage,
         );
+        debugPrint('[DualReaderScreen] Translation complete for page $index, result length: ${translatedPage.length}');
 
-        if (cachedTranslation != null) {
-          debugPrint('[DualReaderScreen] Using cached translation for paragraph $cacheKey');
-          translatedParagraphs.add(cachedTranslation);
-        } else {
-          // Add context to the first paragraph of the page for better translation
-          String textToTranslate = paragraph;
-          if (i == 0 && contextSentence != null && contextSentence.isNotEmpty) {
-            textToTranslate = '$contextSentence $paragraph';
-            debugPrint('[DualReaderScreen] Translating with context (${textToTranslate.length} chars)');
-          }
-
-          debugPrint('[DualReaderScreen] Translating paragraph $cacheKey (${paragraph.length} chars) to $targetLanguage');
-          final translated = await _translationService.translate(
-            text: textToTranslate,
-            targetLanguage: targetLanguage,
-          );
-
-          // If we added context, remove it from the translation before storing
-          String translationToStore = translated;
-          if (i == 0 && contextSentence != null && contextSentence.isNotEmpty) {
-            // Try to remove the context from the beginning of the translation
-            // This is a simple approach - the translator might not preserve the exact context
-            final contextEnd = translated.indexOf(' ');
-            if (contextEnd > 0 && contextEnd < translated.length / 3) {
-              // The first word is likely the translated context, remove it
-              translationToStore = translated.substring(contextEnd + 1).trim();
-              debugPrint('[DualReaderScreen] Removed context from translation');
-            }
-          }
-
-          // Cache this paragraph translation
-          await _bookTranslationCache.cacheTranslation(
-            bookId,
-            cacheKey.hashCode,
-            targetLanguage,
-            translationToStore,
-          );
-
-          translatedParagraphs.add(translationToStore);
-        }
+        // Cache the translation for future use
+        await _bookTranslationCache.cacheTranslation(
+          bookId,
+          cacheKey,
+          targetLanguage,
+          translatedPage,
+        );
       }
 
-      // Join translated paragraphs with double newlines to preserve structure
-      final translatedPage = translatedParagraphs.join('\n\n');
       _translatedTextPages[index] = translatedPage;
 
       if (mounted) {
