@@ -60,17 +60,13 @@ __pycache__/
 *.so
 .Python
 
-# Distribution / packaging
-build/
-develop-eggs/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
+# Ignore Python lib/ but not Flutter/Dart projects lib/
+# Don't ignore dual_reader's lib folder
+!dual_reader/lib/
+!dual_reader_temp/lib/
+# Ignore lib/ directories only at root level (Python venvs typically)
+/lib/
+/lib64/
 wheels/
 *.egg-info/
 .installed.cfg
@@ -219,6 +215,25 @@ Temporary Items
 htmlcov/
 .tox/
 .nox/
+
+
+# ============================================
+# Flutter / Dart
+# ============================================
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+
+# Flutter temp folders
+dual_reader_temp/
+temp_reader/
+test_hive/
 
 # ============================================
 # Project-Specific
