@@ -77,7 +77,7 @@ Dual Reader 3.2 is a cross-platform ebook reader application built with Flutter.
       - `https://translate.argosopentech.com/translate`
       - `https://libretranslate.com/translate`
       - `https://translate.terraprint.co/translate`
-    - 30-second timeout for ML Kit model download and translation
+    - 5-minute timeout for ML Kit model download and translation (increased for emulator performance)
     - 10-second timeout for each LibreTranslate endpoint
     - Completely offline after ML Kit model download - no internet required
     - Supports 50+ languages via `TranslateLanguage` enum
@@ -168,8 +168,61 @@ Dual Reader 3.2 is a cross-platform ebook reader application built with Flutter.
 - **Persistence**: Save progress automatically
 - **Resume Reading**: Open book at last read position
 - **Progress Indicator**: Visual progress bar per book
+- **Persistent Page Indicator**: Always-visible page number and progress percentage at bottom of reading screen
+- **Automatic Progress Saving**: Progress saved on every page navigation
 
-### 7. Navigation
+### 7. Full Screen Immersive Mode
+- **True Full Screen**: System navigation, status bar, and time/battery indicators hidden when reading
+- **Immersive Sticky Mode**: Uses `SystemUiMode.immersiveSticky` for full screen experience
+- **Automatic Full Screen**: Enters full screen mode when opening a book
+- **Exit Full Screen**: Automatically exits full screen when closing book or leaving app
+- **Lifecycle Management**: Restores full screen mode when app is resumed
+
+### 8. Touch Navigation Controls
+- **Tap Zones for Navigation**:
+  - Left 20% of screen: Previous page
+  - Right 20% of screen: Next page
+  - Middle 60% of screen: Toggle controls visibility
+- **Show/Hide Controls**: Tap middle of screen to show or hide navigation and settings controls
+- **Animated Controls**: Smooth slide-in/slide-out animations for controls bar
+- **Independent Chapter Drawer**: Separate toggle state for table of contents drawer
+- **Overlay Drawer**: Custom drawer implementation that overlays content in full screen mode
+
+### 9. Dynamic Layout Adaptation
+- **Repagination on Settings Changes**: When font size, margin, line height, or font family changes:
+  - Automatic repagination of entire book
+  - Cache invalidated for affected book
+  - Reading position restored by finding first character match
+  - Current page retranslated with new layout
+- **Settings Change Detection**: Tracks layout-related settings changes separately from other settings
+- **Position Restoration Algorithm**: Finds page containing first character from previous page after layout change
+
+### 10. Translation Management
+- **Clear Translation Cache**: Settings option to clear all cached translations
+- **Clear Downloaded Models**: Settings option to clear downloaded language models
+- **Translation Timeout**: 5-minute timeout for translation operations (especially for German and emulator performance)
+- **Translation Refresh**: Manual refresh button to retranslate current page
+- **Progress Dialog**: Shows download progress for language models
+- **Background Model Download**: Automatic download of Spanish language model on app startup
+  - Downloads Spanish ML Kit model in background when app launches (mobile only)
+  - Shows progress banner in library screen during download
+  - Non-blocking download - user can browse library while download progresses
+  - Model cached after first download - subsequent app launches skip download
+  - Improves first translation experience by pre-loading default language model
+  - **Implementation**:
+    - [library_screen.dart:22-33](dual_reader/lib/src/presentation/screens/library_screen.dart:22-33) - Download trigger and UI banners
+    - [library_screen.dart:64-178](dual_reader/lib/src/presentation/screens/library_screen.dart:64-178) - Progress/success/error UI banners
+    - [spanish_model_notifier.dart](dual_reader/lib/src/presentation/providers/spanish_model_notifier.dart) - State management
+  - **Testing**:
+    - [spanish_model_notifier_test.dart](dual_reader/test/src/presentation/providers/spanish_model_notifier_test.dart) - Unit tests for state management (16 tests, all passing)
+    - [library_screen_spanish_download_test.dart](dual_reader/test/src/presentation/screens/library_screen_spanish_download_test.dart) - Widget tests for download UI (10 tests)
+    - [spanish_model_download_integration_test.dart](dual_reader/test/integration/spanish_model_download_integration_test.dart) - Integration tests for download flow (run on device: `flutter test test/integration/spanish_model_download_integration_test.dart --device-id emulator-5554`)
+  - **State Management**: Uses Riverpod StateNotifier with four states (notStarted, inProgress, completed, failed)
+  - **Error Handling**: Retry button available if download fails
+  - **Platform Detection**: Only activates on Android/iOS using `Platform.isAndroid || Platform.isIOS`
+  - **Note**: Integration tests require Android/iOS device due to ML Kit platform dependencies
+
+### 11. Navigation
 - **Quick Navigation**: 
   - Page slider (seek to any page)
   - Chapter navigation (if available)
@@ -177,22 +230,23 @@ Dual Reader 3.2 is a cross-platform ebook reader application built with Flutter.
 - **Bookmarks**: Save bookmarks for quick access
 - **History**: Recent reading history
 
-### 8. Customization
-- **Themes**: 
+### 12. Customization
+- **Themes**:
   - Dark theme (default)
   - Light theme
   - Sepia theme
   - Custom color themes
-- **Font Options**: 
+  - **Dark Mode Text Fix**: Dark mode text is white (uses `ThemeData.dark().textTheme`)
+- **Font Options**:
   - 5-7 font families (system fonts + web fonts)
   - 5 font sizes (adjustable)
   - Line height adjustment
-- **Layout Options**: 
+- **Layout Options**:
   - 5 margin size options
-  - Text alignment (left, justify, center)
+  - Text alignment (justified by default for better reading experience)
   - Panel width ratio (adjustable in landscape)
 
-### 9. Settings
+### 13. Settings
 - **In-Context Settings**: Settings accessible while reading (settings button in reading screen)
   - Change translation language while reading
   - Adjust font size while reading
@@ -317,6 +371,12 @@ Dual Reader 3.2 is a cross-platform ebook reader application built with Flutter.
 - Translation service calls and results logged
 - UI rebuild cycles logged
 - All logs use `debugPrint` for proper Flutter logging
+- **Log Export Feature**: Users can export app logs for debugging
+  - Export via Settings → Export Logs
+  - Generates timestamped text file with all log entries
+  - Shares via system share sheet (email, cloud storage, etc.)
+  - Includes timestamps, log levels, components, errors, and stack traces
+  - Collects logs from all 5 rotated log files (complete history)
 
 ### Integration Tests
 - Book import flow

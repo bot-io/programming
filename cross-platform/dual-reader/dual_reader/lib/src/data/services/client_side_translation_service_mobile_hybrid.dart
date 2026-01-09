@@ -26,25 +26,22 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
     // Try ML Kit first with longer timeout for model download
     try {
       debugPrint('[HybridTranslation] Step 1: Creating/Loading ML Kit translator...');
+      debugPrint('[HybridTranslation] Note: First-time translation for a language requires downloading ML Kit models (can take 3-5 minutes on emulator, 30-60 seconds on device). Please be patient...');
       final translator = await _getTranslator(
         sourceLanguage ?? 'en',
         targetLanguage,
       ).timeout(
-        const Duration(minutes: 3),
+        const Duration(minutes: 5), // Increased from 3 to 5 minutes for emulator
         onTimeout: () {
-          debugPrint('[HybridTranslation] ML Kit translator creation timed out after 3 minutes');
-          throw TimeoutException('ML Kit translator creation timeout (3 minutes). The language model may still be downloading in the background. Please try again in a minute.');
+          debugPrint('[HybridTranslation] ML Kit translator creation timed out after 5 minutes');
+          throw TimeoutException('ML Kit translator creation timeout (5 minutes). The language model may still be downloading in the background. Please try again in a minute.');
         },
       );
 
       debugPrint('[HybridTranslation] Step 2: Translating text with ML Kit...');
-      final translated = await translator.translateText(text).timeout(
-        const Duration(seconds: 60),
-        onTimeout: () {
-          debugPrint('[HybridTranslation] ML Kit translation timed out after 60s');
-          throw TimeoutException('ML Kit translation timeout (60s)');
-        },
-      );
+
+      // Preserve paragraph structure by translating each paragraph separately
+      final translated = await _translatePreservingStructure(translator, text, targetLanguage);
 
       debugPrint('[HybridTranslation] ML Kit translation successful!');
       return translated;
@@ -57,7 +54,7 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
         return await _translateWithLibre(text, sourceLanguage ?? 'en', targetLanguage);
       } catch (apiError) {
         debugPrint('[HybridTranslation] API fallback also failed: $apiError');
-        throw Exception('Translation failed for language "$targetLanguage".\n\nML Kit error: $e\n\nAPI fallback also failed: $apiError\n\n💡 Tips:\n• First-time translation for a language requires downloading ML Kit models (can take 1-3 minutes on emulator)\n• Try again - the model may still be downloading in the background\n• Some LibreTranslate API endpoints may be temporarily unavailable\n• Check your internet connection if using API fallback');
+        throw Exception('Translation failed for language "$targetLanguage".\n\nML Kit error: $e\n\nAPI fallback also failed: $apiError\n\n💡 Tips:\n• First-time translation for a language requires downloading ML Kit models (can take 3-5 minutes on emulator, 30-60 seconds on device)\n• Try again - the model may still be downloading in the background\n• Consider using "MyMemory" translation service in Settings (more reliable on emulator)\n• Some LibreTranslate API endpoints may be temporarily unavailable\n• Check your internet connection if using API fallback');
       }
     }
   }
@@ -114,6 +111,42 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
     }
 
     throw Exception('LibreTranslate API failed for language "$targetLanguage". Errors: ${errors.join('; ')}.\nNote: LibreTranslate may not support all languages. ML Kit models will work after download completes.');
+  }
+
+  /// Translate text while preserving paragraph structure
+  /// Splits text into paragraphs, translates each separately, then reassembles
+  Future<String> _translatePreservingStructure(OnDeviceTranslator translator, String text, String targetLanguage) async {
+    // Split into paragraphs (double newlines indicate paragraph breaks)
+    final paragraphs = text.split(RegExp(r'\n\s*\n'));
+
+    debugPrint('[HybridTranslation] Preserving structure - ${paragraphs.length} paragraph(s) to translate');
+
+    final translatedParagraphs = <String>[];
+
+    for (int i = 0; i < paragraphs.length; i++) {
+      final paragraph = paragraphs[i].trim();
+
+      if (paragraph.isEmpty) {
+        // Preserve empty paragraphs
+        translatedParagraphs.add('');
+        continue;
+      }
+
+      // Translate this paragraph with timeout
+      final translated = await translator.translateText(paragraph).timeout(
+        const Duration(minutes: 5), // Increased from 3 to 5 minutes
+        onTimeout: () {
+          debugPrint('[HybridTranslation] Paragraph $i translation timed out');
+          throw TimeoutException('Paragraph translation timeout (5 minutes)');
+        },
+      );
+
+      translatedParagraphs.add(translated);
+      debugPrint('[HybridTranslation] Translated paragraph $i/${paragraphs.length}');
+    }
+
+    // Reassemble with paragraph breaks (double newlines)
+    return translatedParagraphs.join('\n\n');
   }
 
   /// Get or create ML Kit translator for source and target languages
@@ -307,18 +340,24 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
         targetLanguage: targetLang,
       );
 
-      onProgress?.call('Downloading language model (this may take 1-3 minutes)...');
+      onProgress?.call('Downloading language model...');
+
+      debugPrint('[HybridTranslation] Starting model download test translation...');
+      final stopwatch = Stopwatch()..start();
 
       // Translate a test phrase to trigger model download
       final result = await translator.translateText('Hello').timeout(
-        const Duration(minutes: 3),
+        const Duration(minutes: 10),
         onTimeout: () {
-          onProgress?.call('Download timeout - please check your connection');
-          throw TimeoutException('Model download timeout (3 minutes)');
+          stopwatch.stop();
+          onProgress?.call('Download timeout');
+          debugPrint('[HybridTranslation] Model download timeout after ${stopwatch.elapsed.inMinutes}:${stopwatch.elapsed.inSeconds % 60}');
+          throw TimeoutException('Model download timeout (10 minutes)');
         },
       );
 
-      debugPrint('[HybridTranslation] Test translation result: $result');
+      stopwatch.stop();
+      debugPrint('[HybridTranslation] Test translation result: $result (took ${stopwatch.elapsed.inSeconds} seconds)');
       onProgress?.call('Model downloaded successfully!');
 
       // Cache the translator (keep it open for future use)

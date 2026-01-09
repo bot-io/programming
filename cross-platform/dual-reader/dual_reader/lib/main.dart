@@ -8,11 +8,26 @@ import 'package:dual_reader/src/presentation/screens/settings_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:dual_reader/src/presentation/providers/settings_notifier.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:dual_reader/src/core/utils/logging_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Hive FIRST before LoggingService (which depends on Hive)
   await Hive.initFlutter();
+
+  // Now initialize logging
+  await LoggingService.instance.init();
+
   await di.init();
+
+  // Add global error handler to catch crashes
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    // Log to our logging service
+    LoggingService.error('FlutterError', details.exception.toString(), error: details.exception, stackTrace: details.stack);
+  };
+
   runApp(const ProviderScope(child: MyApp()));
 }
 

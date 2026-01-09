@@ -46,29 +46,41 @@ class MockTranslationServiceImpl implements TranslationService {
     return 'en'; // Fallback to English
   }
 
-  /// Split text into sentences for better translation
-  List<String> _splitIntoSentences(String text) {
-    // Split on sentence boundaries while keeping the delimiters
-    final sentences = <String>[];
-    final buffer = StringBuffer();
+  /// Split text into paragraphs, then sentences for better translation
+  List<List<String>> _splitIntoParagraphsAndSentences(String text) {
+    // First split into paragraphs (by double newlines)
+    final paragraphs = text.split(RegExp(r'\n\s*\n'));
+    final result = <List<String>>[];
 
-    for (int i = 0; i < text.length; i++) {
-      buffer.write(text[i]);
-      if (text[i] == '.' || text[i] == '!' || text[i] == '?') {
-        // Check if next char is whitespace or end of string
-        if (i == text.length - 1 || text[i + 1] == ' ' || text[i + 1] == '\n') {
-          sentences.add(buffer.toString().trim());
-          buffer.clear();
+    for (final paragraph in paragraphs) {
+      final trimmed = paragraph.trim();
+      if (trimmed.isEmpty) continue;
+
+      // Split each paragraph into sentences
+      final sentences = <String>[];
+      final buffer = StringBuffer();
+
+      for (int i = 0; i < trimmed.length; i++) {
+        buffer.write(trimmed[i]);
+        if (trimmed[i] == '.' || trimmed[i] == '!' || trimmed[i] == '?') {
+          // Check if next char is whitespace or end of string
+          if (i == trimmed.length - 1 || trimmed[i + 1] == ' ' || trimmed[i + 1] == '\n') {
+            sentences.add(buffer.toString().trim());
+            buffer.clear();
+          }
         }
       }
+
+      // Add any remaining text as a sentence
+      if (buffer.isNotEmpty) {
+        sentences.add(buffer.toString().trim());
+      }
+
+      // Filter out empty sentences
+      result.add(sentences.where((s) => s.isNotEmpty).toList());
     }
 
-    // Add any remaining text
-    if (buffer.isNotEmpty) {
-      sentences.add(buffer.toString().trim());
-    }
-
-    return sentences.where((s) => s.isNotEmpty).toList();
+    return result;
   }
 
   /// Comprehensive word replacements for better translation quality
@@ -402,6 +414,7 @@ class MockTranslationServiceImpl implements TranslationService {
   }
 
   /// Improved context-aware mock translation that processes sentence by sentence
+  /// Preserves paragraph structure by maintaining paragraph breaks
   String _mockTranslateText(String text, String targetLanguage) {
     if (targetLanguage == 'en') {
       return text; // No translation needed for English
@@ -423,36 +436,44 @@ class MockTranslationServiceImpl implements TranslationService {
       return '[${langNames[targetLanguage] ?? targetLanguage}] $text';
     }
 
-    // Split into sentences and translate each sentence
-    final sentences = _splitIntoSentences(text);
-    final translatedSentences = <String>[];
+    // Split into paragraphs, then sentences
+    final paragraphs = _splitIntoParagraphsAndSentences(text);
+    final translatedParagraphs = <String>[];
 
-    for (final sentence in sentences) {
-      String translated = sentence;
+    for (final paragraph in paragraphs) {
+      final translatedSentences = <String>[];
 
-      // Apply replacements in order of length (longer phrases first)
-      final sortedKeys = replacements.keys.toList()
-        ..sort((a, b) => b.length.compareTo(a.length));
+      for (final sentence in paragraph) {
+        String translated = sentence;
 
-      for (final key in sortedKeys) {
-        translated = translated.replaceAllMapped(
-          RegExp('\\b${RegExp.escape(key)}\\b', caseSensitive: false),
-          (match) {
-            // Preserve capitalization
-            final matched = match.group(0)!;
-            final replacement = replacements[key]!;
-            if (matched[0].toUpperCase() == matched[0]) {
-              return replacement[0].toUpperCase() + replacement.substring(1);
-            }
-            return replacement;
-          },
-        );
+        // Apply replacements in order of length (longer phrases first)
+        final sortedKeys = replacements.keys.toList()
+          ..sort((a, b) => b.length.compareTo(a.length));
+
+        for (final key in sortedKeys) {
+          translated = translated.replaceAllMapped(
+            RegExp('\\b${RegExp.escape(key)}\\b', caseSensitive: false),
+            (match) {
+              // Preserve capitalization
+              final matched = match.group(0)!;
+              final replacement = replacements[key]!;
+              if (matched[0].toUpperCase() == matched[0]) {
+                return replacement[0].toUpperCase() + replacement.substring(1);
+              }
+              return replacement;
+            },
+          );
+        }
+
+        translatedSentences.add(translated);
       }
 
-      translatedSentences.add(translated);
+      // Join sentences with spaces within a paragraph
+      translatedParagraphs.add(translatedSentences.join(' '));
     }
 
-    final result = translatedSentences.join(' ');
+    // Join paragraphs with double newlines to preserve structure
+    final result = translatedParagraphs.join('\n\n');
     return result;
   }
 

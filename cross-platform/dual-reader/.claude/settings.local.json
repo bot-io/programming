@@ -36,7 +36,17 @@
       "Bash(flutter attach:*)",
       "Bash(adb shell rm:*)",
       "Bash(adb shell:*)",
-      "Bash(flutter build:*)"
+      "Bash(flutter build:*)",
+      "Bash(flutter install:*)",
+      "Bash(adb logcat:*)",
+      "Bash(adb:*)",
+      "Bash(flutter logs:*)",
+      "Bash(taskkill:*)",
+      "Bash(tasklist:*)",
+      "Bash(Select-String -Pattern \"error|exception|fatal|crash\")",
+      "Bash(Select-Object:*)",
+      "Bash(flutter pub:*)",
+      "Bash(flutter:*)"
     ]
   }
 }

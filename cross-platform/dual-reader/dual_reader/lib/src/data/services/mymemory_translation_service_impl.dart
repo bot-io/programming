@@ -20,6 +20,34 @@ class MyMemoryTranslationServiceImpl implements TranslationService {
     required String targetLanguage,
     String? sourceLanguage,
   }) async {
+    // Preserve paragraph structure by translating each paragraph separately
+    final paragraphs = text.split(RegExp(r'\n\s*\n'));
+
+    debugPrint('[MyMemory] Preserving structure - ${paragraphs.length} paragraph(s) to translate');
+
+    final translatedParagraphs = <String>[];
+
+    for (int i = 0; i < paragraphs.length; i++) {
+      final paragraph = paragraphs[i].trim();
+
+      if (paragraph.isEmpty) {
+        // Preserve empty paragraphs
+        translatedParagraphs.add('');
+        continue;
+      }
+
+      // Translate this paragraph
+      final translated = await _translateParagraph(paragraph, targetLanguage, sourceLanguage);
+      translatedParagraphs.add(translated);
+      debugPrint('[MyMemory] Translated paragraph $i/${paragraphs.length}');
+    }
+
+    // Reassemble with paragraph breaks (double newlines)
+    return translatedParagraphs.join('\n\n');
+  }
+
+  /// Translate a single paragraph
+  Future<String> _translateParagraph(String text, String targetLanguage, String? sourceLanguage) async {
     // Try cache first
     final cachedTranslation = _cacheService.getCachedTranslation(text, targetLanguage);
     if (cachedTranslation != null) {
@@ -53,9 +81,18 @@ class MyMemoryTranslationServiceImpl implements TranslationService {
           return translatedText;
         } else {
           // MyMemory returns matches array even if status is not 200
-          final matches = data['matches'] as List?;
-          if (matches != null && matches.isNotEmpty) {
-            final translatedText = matches[0]['translation'];
+          // Handle both List and String response formats
+          final matches = data['matches'];
+          if (matches != null) {
+            String translatedText;
+            if (matches is List && matches.isNotEmpty) {
+              translatedText = matches[0]['translation'] as String;
+            } else if (matches is String) {
+              // Sometimes matches is just a string
+              translatedText = matches;
+            } else {
+              throw Exception('Translation failed: ${data['responseDetails']}');
+            }
             debugPrint('[MyMemory] Got translation from matches: "$translatedText"');
 
             // Cache the result
