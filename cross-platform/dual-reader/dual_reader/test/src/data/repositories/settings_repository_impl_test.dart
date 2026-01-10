@@ -23,6 +23,23 @@ class ThemeModeAdapter extends TypeAdapter<ThemeMode> {
   }
 }
 
+// TextAlign adapter for Hive
+class TextAlignAdapter extends TypeAdapter<TextAlign> {
+  @override
+  final int typeId = 3; // Unique typeId
+
+  @override
+  TextAlign read(BinaryReader reader) {
+    final index = reader.readByte();
+    return TextAlign.values[index];
+  }
+
+  @override
+  void write(BinaryWriter writer, TextAlign obj) {
+    writer.writeByte(obj.index);
+  }
+}
+
 void main() {
   group('SettingsRepositoryImpl', () {
     late SettingsRepositoryImpl repository;
@@ -33,6 +50,7 @@ void main() {
       // Register adapters in the correct order
       Hive.registerAdapter(BookEntityAdapter());
       Hive.registerAdapter(ThemeModeAdapter());
+      Hive.registerAdapter(TextAlignAdapter());
       Hive.registerAdapter(SettingsEntityAdapter());
     });
 

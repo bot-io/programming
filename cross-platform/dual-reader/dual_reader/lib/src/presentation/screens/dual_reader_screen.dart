@@ -12,6 +12,9 @@ import 'package:dual_reader/src/domain/services/epub_parser_service.dart';
 import 'package:dual_reader/src/domain/services/pagination_service.dart';
 import 'package:dual_reader/src/domain/services/translation_service.dart';
 import 'package:dual_reader/src/data/services/book_translation_cache_service.dart';
+import 'package:dual_reader/src/data/services/chunk_translation_service.dart';
+import 'package:dual_reader/src/data/services/chunk_cache_service.dart';
+import 'package:dual_reader/src/data/services/client_side_translation_service.dart';
 import 'package:dual_reader/src/domain/usecases/update_book_progress_usecase.dart';
 import 'package:dual_reader/src/domain/usecases/get_book_by_id_usecase.dart';
 import 'package:dual_reader/src/presentation/providers/settings_notifier.dart';
@@ -59,6 +62,8 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
   final PaginationService _paginationService = sl<PaginationService>();
   final TranslationService _translationService = sl<TranslationService>();
   final BookTranslationCacheService _bookTranslationCache = BookTranslationCacheService();
+  final ChunkCacheService _chunkCacheService = sl<ChunkCacheService>();
+  late final ChunkTranslationService _chunkTranslationService;
   final UpdateBookProgressUseCase _updateBookProgressUseCase = sl<UpdateBookProgressUseCase>();
   final GetBookByIdUseCase _getBookByIdUseCase = sl<GetBookByIdUseCase>();
 
@@ -68,8 +73,19 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
     LoggingService.info(_componentName, 'Screen initialized - bookId: ${widget.bookId}');
     WidgetsBinding.instance.addObserver(this);
     _bookTranslationCache.init();
+    _initializeChunkServices();
     _setFullScreen(true);
     _loadBookAndPaginate();
+  }
+
+  Future<void> _initializeChunkServices() async {
+    final clientSideTranslationService = _translationService as ClientSideTranslationService;
+    _chunkTranslationService = ChunkTranslationService(
+      cacheService: _chunkCacheService,
+      translationService: clientSideTranslationService,
+    );
+
+    LoggingService.info(_componentName, 'Chunk translation services initialized');
   }
 
   @override
@@ -129,8 +145,12 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
       _translatedTextPages.clear();
       LoggingService.info(_componentName, 'Cleared $translationsCleared in-memory translations');
 
-      // Clear disk cache for current book
+      // Clear disk cache for current book (old page-based cache)
       await _bookTranslationCache.clearBook(widget.bookId);
+
+      // Clear chunk cache for current book and new language
+      await _chunkTranslationService.clearBook(widget.bookId);
+      LoggingService.info(_componentName, 'Cleared chunk cache for book ${widget.bookId}');
 
       // Validate cache was cleared
       final statsAfter = await _bookTranslationCache.getStats();
@@ -754,7 +774,11 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
     }
   }
 
-  /// Translate page by paragraphs to maintain paragraph structure
+  /// Translate page using chunk-based translation for better quality.
+  ///
+  /// This method groups multiple pages into chunks (3000-5000 characters) for
+  /// translation, providing better context to the translation model while
+  /// maintaining display parity between original and translated pages.
   Future<void> _translatePageByParagraphs(int index, String targetLanguage) async {
     if (_translatedTextPages.containsKey(index)) {
       LoggingService.debug(_componentName, 'Page already translated - page: $index, skipping');
@@ -768,7 +792,6 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
     final stopwatch = Stopwatch()..start();
 
     try {
-      // Get the full page text that's currently displayed
       final pageText = _originalTextPages[index];
       if (pageText.isEmpty) {
         LoggingService.warning(_componentName, 'Page is empty - page: $index');
@@ -776,63 +799,34 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
       }
 
       final bookId = widget.bookId;
-      LoggingService.info(_componentName, 'Translating page - book: $bookId, page: $index, text length: ${pageText.length} chars, target: $targetLanguage');
+      LoggingService.info(_componentName, 'Translating page (chunk-based) - book: $bookId, page: $index, text length: ${pageText.length} chars, target: $targetLanguage');
 
-      // Check cache for this page
-      final cacheKey = index;
-      final cachedTranslation = _bookTranslationCache.getCachedTranslation(
-        bookId,
-        cacheKey,
-        targetLanguage,
-      );
-
-      String translatedPage;
-      if (cachedTranslation != null) {
-        // Check if cached translation is an error message
-        if (cachedTranslation.startsWith('Translation failed:') ||
-            cachedTranslation.startsWith('[Exception:') ||
-            cachedTranslation.contains('ML Kit error')) {
-          LoggingService.debug(_componentName, 'Cached translation is an error, retranslating - page: $index');
-          // Don't use the cached error, proceed to retranslate
-        } else {
-          LoggingService.info(_componentName, 'Using cached translation - page: $index, result length: ${cachedTranslation.length} chars');
-          translatedPage = cachedTranslation;
-          _translatedTextPages[index] = translatedPage;
-          if (mounted) {
-            setState(() {});
-          }
-          return;
-        }
-      }
-
-      LoggingService.debug(_componentName, 'Starting translation service call - page: $index');
-      translatedPage = await _translationService.translate(
-        text: pageText,
+      // Use chunk-based translation service
+      final translatedPage = await _chunkTranslationService.getPageTranslation(
+        bookId: bookId,
+        pageIndex: index,
+        originalPageText: pageText,
         targetLanguage: targetLanguage,
+        allPages: _originalTextPages,
       );
 
       stopwatch.stop();
       LoggingService.info(_componentName, 'Translation complete - page: $index, result length: ${translatedPage.length} chars, duration: ${stopwatch.elapsed.inMilliseconds}ms');
-
-      // Only cache successful translations (not error messages)
-      if (!translatedPage.startsWith('Translation failed:') &&
-          !translatedPage.startsWith('[Exception:') &&
-          !translatedPage.contains('ML Kit error')) {
-        // Cache the translation for future use
-        await _bookTranslationCache.cacheTranslation(
-          bookId,
-          cacheKey,
-          targetLanguage,
-          translatedPage,
-        );
-        LoggingService.debug(_componentName, 'Translation cached - page: $index, language: $targetLanguage');
-      }
 
       _translatedTextPages[index] = translatedPage;
 
       if (mounted) {
         setState(() {});
       }
+
+      // Trigger pre-translation of nearby chunks (non-blocking)
+      // Use microtask to ensure it runs after current UI update
+      Future.microtask(() => _chunkTranslationService.preTranslateNearbyChunks(
+        bookId: bookId,
+        currentPageIndex: index,
+        targetLanguage: targetLanguage,
+        allPages: _originalTextPages,
+      ));
     } catch (e, stackTrace) {
       stopwatch.stop();
       LoggingService.error(_componentName, 'Translation failed - page: $index, duration: ${stopwatch.elapsed.inMilliseconds}ms', error: e, stackTrace: stackTrace);

@@ -333,11 +333,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Find and tap clear cache option
-      final clearCacheTile = find.ancestor(
-        of: find.text('Clear Translation Cache'),
-        matching: find.byType(InkWell),
-      );
-
+      final clearCacheTile = find.widgetWithText(ListTile, 'Clear Translation Cache');
       await tester.tap(clearCacheTile);
       await tester.pumpAndSettle();
 
@@ -368,11 +364,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap clear cache
-      final clearCacheTile = find.ancestor(
-        of: find.text('Clear Translation Cache'),
-        matching: find.byType(InkWell),
-      );
-
+      final clearCacheTile = find.widgetWithText(ListTile, 'Clear Translation Cache');
       await tester.tap(clearCacheTile);
       await tester.pumpAndSettle();
 
@@ -408,11 +400,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap clear cache
-      final clearCacheTile = find.ancestor(
-        of: find.text('Clear Translation Cache'),
-        matching: find.byType(InkWell),
-      );
-
+      final clearCacheTile = find.widgetWithText(ListTile, 'Clear Translation Cache');
       await tester.tap(clearCacheTile);
       await tester.pumpAndSettle();
 
@@ -511,11 +499,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap clear cache
-      final clearCacheTile = find.ancestor(
-        of: find.text('Clear Translation Cache'),
-        matching: find.byType(InkWell),
-      );
-
+      final clearCacheTile = find.widgetWithText(ListTile, 'Clear Translation Cache');
       await tester.tap(clearCacheTile);
       await tester.pumpAndSettle();
 

@@ -14,9 +14,12 @@ void main() {
     late TranslationCacheService baseCacheService;
     late String testBoxName;
 
-    setUp(() async {
+    setUpAll(() async {
       // Initialize Hive for testing
       await setUpHive();
+    });
+
+    setUp(() async {
       testBoxName = 'test_book_translation_cache_${DateTime.now().millisecondsSinceEpoch}';
 
       cacheService = BookTranslationCacheService();
@@ -36,6 +39,9 @@ void main() {
         await Hive.box<String>('translationCache').clear();
         await Hive.box<String>('translationCache').close();
       }
+    });
+
+    tearDownAll(() async {
       await tearDownHive();
     });
 

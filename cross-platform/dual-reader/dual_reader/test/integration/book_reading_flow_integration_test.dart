@@ -27,9 +27,12 @@ void main() {
     late DeleteBookUseCase deleteBookUseCase;
     late BookTranslationCacheService translationCache;
 
-    setUp(() async {
+    setUpAll(() async {
       // Initialize Hive for testing
       await setUpHive();
+    });
+
+    setUp(() async {
       await Hive.openBox<BookEntity>('books');
       await Hive.openBox<String>('test_book_translation_cache');
 
@@ -60,6 +63,9 @@ void main() {
         await Hive.box<String>('test_book_translation_cache').clear();
         await Hive.box<String>('test_book_translation_cache').close();
       }
+    });
+
+    tearDownAll(() async {
       await tearDownHive();
     });
 

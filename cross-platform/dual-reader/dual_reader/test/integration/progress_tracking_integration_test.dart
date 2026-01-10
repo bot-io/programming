@@ -16,9 +16,12 @@ void main() {
     late BookRepository bookRepository;
     late UpdateBookProgressUseCase updateBookProgressUseCase;
 
-    setUp(() async {
+    setUpAll(() async {
       // Initialize Hive for testing
       await setUpHive();
+    });
+
+    setUp(() async {
       await Hive.openBox<BookEntity>('books');
 
       // Register dependencies
@@ -35,18 +38,21 @@ void main() {
         await Hive.box<BookEntity>('books').clear();
         await Hive.box<BookEntity>('books').close();
       }
+    });
+
+    tearDownAll(() async {
       await tearDownHive();
     });
 
     test('Update book progress saves current page', () async {
-      final book = BookEntity(
+      final book = BookEntity(coverPath: "" 
         id: 'test-book-1',
         title: 'Test Book',
         author: 'Test Author',
         filePath: '/path/to/book.epub',
         totalPages: 100,
         currentPage: 0,
-        addedDate: DateTime.now().toIso8601String(),
+        importedDate: DateTime.now(),
       );
 
       // Add book to repository
@@ -68,14 +74,14 @@ void main() {
     });
 
     test('Update progress multiple times for same book', () async {
-      final book = BookEntity(
+      final book = BookEntity(coverPath: "" 
         id: 'test-book-2',
         title: 'Test Book 2',
         author: 'Test Author',
         filePath: '/path/to/book.epub',
         totalPages: 200,
         currentPage: 0,
-        addedDate: DateTime.now().toIso8601String(),
+        importedDate: DateTime.now(),
       );
 
       await bookRepository.addBook(book);
@@ -95,14 +101,14 @@ void main() {
     });
 
     test('Progress percentage calculation', () async {
-      final book = BookEntity(
+      final book = BookEntity(coverPath: "" 
         id: 'test-book-3',
         title: 'Test Book 3',
         author: 'Test Author',
         filePath: '/path/to/book.epub',
         totalPages: 100,
         currentPage: 0,
-        addedDate: DateTime.now().toIso8601String(),
+        importedDate: DateTime.now(),
       );
 
       await bookRepository.addBook(book);
@@ -141,14 +147,14 @@ void main() {
       ];
 
       for (final testBook in testBooks) {
-        final book = BookEntity(
+        final book = BookEntity(coverPath: "" 
           id: testBook['id'] as String,
           title: 'Book',
           author: 'Author',
           filePath: '/path/to/book.epub',
           totalPages: testBook['totalPages'] as int,
           currentPage: 0,
-          addedDate: DateTime.now().toIso8601String(),
+          importedDate: DateTime.now(),
         );
 
         await bookRepository.addBook(book);
@@ -166,14 +172,14 @@ void main() {
     });
 
     test('Progress updates preserve other book properties', () async {
-      final book = BookEntity(
+      final book = BookEntity(coverPath: "" 
         id: 'test-book-4',
         title: 'Original Title',
         author: 'Original Author',
         filePath: '/path/to/book.epub',
         totalPages: 100,
         currentPage: 0,
-        addedDate: '2024-01-01T00:00:00.000Z',
+        importedDate: DateTime.parse('2024-01-01'),
       );
 
       await bookRepository.addBook(book);
@@ -196,32 +202,32 @@ void main() {
 
     test('Multiple books track progress independently', () async {
       final books = [
-        BookEntity(
+        BookEntity(coverPath: "" 
           id: 'book-a',
           title: 'Book A',
           author: 'Author',
           filePath: '/path/a.epub',
           totalPages: 100,
           currentPage: 0,
-          addedDate: DateTime.now().toIso8601String(),
+          importedDate: DateTime.now(),
         ),
-        BookEntity(
+        BookEntity(coverPath: "" 
           id: 'book-b',
           title: 'Book B',
           author: 'Author',
           filePath: '/path/b.epub',
           totalPages: 100,
           currentPage: 0,
-          addedDate: DateTime.now().toIso8601String(),
+          importedDate: DateTime.now(),
         ),
-        BookEntity(
+        BookEntity(coverPath: "" 
           id: 'book-c',
           title: 'Book C',
           author: 'Author',
           filePath: '/path/c.epub',
           totalPages: 100,
           currentPage: 0,
-          addedDate: DateTime.now().toIso8601String(),
+          importedDate: DateTime.now(),
         ),
       ];
 
@@ -245,14 +251,14 @@ void main() {
     });
 
     test('Progress persistence across repository queries', () async {
-      final book = BookEntity(
+      final book = BookEntity(coverPath: "" 
         id: 'test-book-5',
         title: 'Test Book',
         author: 'Test Author',
         filePath: '/path/to/book.epub',
         totalPages: 100,
         currentPage: 0,
-        addedDate: DateTime.now().toIso8601String(),
+        importedDate: DateTime.now(),
       );
 
       await bookRepository.addBook(book);
@@ -269,14 +275,14 @@ void main() {
     });
 
     test('Progress update handles edge cases', () async {
-      final book = BookEntity(
+      final book = BookEntity(coverPath: "" 
         id: 'test-book-6',
         title: 'Test Book',
         author: 'Test Author',
         filePath: '/path/to/book.epub',
         totalPages: 100,
         currentPage: 0,
-        addedDate: DateTime.now().toIso8601String(),
+        importedDate: DateTime.now(),
       );
 
       await bookRepository.addBook(book);
@@ -293,14 +299,14 @@ void main() {
     });
 
     test('Progress update with total pages change', () async {
-      final book = BookEntity(
+      final book = BookEntity(coverPath: "" 
         id: 'test-book-7',
         title: 'Test Book',
         author: 'Test Author',
         filePath: '/path/to/book.epub',
         totalPages: 100,
         currentPage: 50,
-        addedDate: DateTime.now().toIso8601String(),
+        importedDate: DateTime.now(),
       );
 
       await bookRepository.addBook(book);
@@ -318,14 +324,14 @@ void main() {
     });
 
     test('Progress tracking survives book retrieval', () async {
-      final book = BookEntity(
+      final book = BookEntity(coverPath: "" 
         id: 'test-book-8',
         title: 'Test Book',
         author: 'Test Author',
         filePath: '/path/to/book.epub',
         totalPages: 100,
         currentPage: 0,
-        addedDate: DateTime.now().toIso8601String(),
+        importedDate: DateTime.now(),
       );
 
       await bookRepository.addBook(book);
@@ -343,14 +349,14 @@ void main() {
     });
 
     test('Progress calculation for display', () async {
-      final book = BookEntity(
+      final book = BookEntity(coverPath: "" 
         id: 'test-book-9',
         title: 'Test Book',
         author: 'Test Author',
         filePath: '/path/to/book.epub',
         totalPages: 100,
         currentPage: 0,
-        addedDate: DateTime.now().toIso8601String(),
+        importedDate: DateTime.now(),
       );
 
       await bookRepository.addBook(book);
