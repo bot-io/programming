@@ -2,6 +2,7 @@ import 'package:dual_reader/src/core/utils/logging_service.dart';
 import 'package:dual_reader/src/data/services/chunk_cache_service.dart';
 import 'package:dual_reader/src/data/services/client_side_translation_service.dart';
 import 'package:dual_reader/src/domain/entities/translation_chunk.dart';
+import 'package:dual_reader/src/core/utils/page_markers.dart';
 
 /// Service for chunk-based translation.
 ///
@@ -203,6 +204,9 @@ class ChunkTranslationService {
   }
 
   /// Combine multiple pages into a single chunk string.
+  ///
+  /// Wraps each page with invisible markers before combining.
+  /// Markers are preserved during translation and used for exact page extraction.
   String _combinePagesToChunk(int startPage, int endPage, List<String> allPages) {
     final buffer = StringBuffer();
 
@@ -210,7 +214,9 @@ class ChunkTranslationService {
       if (i > startPage) {
         buffer.write('\n\n'); // Paragraph break between pages
       }
-      buffer.write(allPages[i]);
+      // Insert invisible page markers around the page text
+      final markedText = PageMarkers.insertMarkers(allPages[i], i);
+      buffer.write(markedText);
     }
 
     return buffer.toString();

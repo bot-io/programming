@@ -6,7 +6,9 @@ import 'package:dual_reader/src/domain/usecases/import_book_usecase.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dual_reader/src/domain/usecases/delete_book_usecase.dart';
 import 'package:dual_reader/src/presentation/providers/book_list_notifier.dart';
-import 'package:dual_reader/src/presentation/providers/spanish_model_notifier.dart';
+import 'package:dual_reader/src/presentation/providers/language_model_notifier.dart';
+import 'package:dual_reader/src/presentation/providers/settings_notifier.dart';
+import 'package:dual_reader/src/core/utils/language_utils.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:universal_io/io.dart';
 
@@ -16,18 +18,26 @@ class LibraryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final books = ref.watch(bookListProvider);
-    final modelState = ref.watch(spanishModelProvider);
+    final settings = ref.watch(settingsProvider);
+    final modelState = ref.watch(languageModelProvider);
+    final targetLanguage = settings.targetTranslationLanguageCode;
 
-    // Trigger Spanish model download on mobile platforms
+    // Trigger language model download check on mobile platforms
     if (Platform.isAndroid || Platform.isIOS) {
-      ref.listen(spanishModelProvider, (previous, next) {
-        // Just listening to state changes, download triggered in first frame
+      // Listen for state changes to rebuild UI when status changes
+      ref.listen(languageModelProvider, (previous, next) {
+        // State changes will trigger rebuild
       });
 
-      // Trigger download on first build
+      // Trigger model check on first build - checks readiness BEFORE showing download UI
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (modelState.status == ModelDownloadStatus.notStarted) {
-          ref.read(spanishModelProvider.notifier).downloadSpanishModel();
+        final notifier = ref.read(languageModelProvider.notifier);
+        final currentState = ref.read(languageModelProvider);
+
+        // Only trigger check if status is notStarted
+        // This prevents re-checking on every rebuild when status is already completed
+        if (currentState.status == ModelDownloadStatus.notStarted) {
+          notifier.checkAndDownloadRequiredModel(targetLanguage);
         }
       });
     }
@@ -76,7 +86,7 @@ class LibraryScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // Spanish model download progress banner
+          // Language model download progress banner
           if (modelState.status == ModelDownloadStatus.inProgress)
             Material(
               elevation: 4,
@@ -96,9 +106,9 @@ class LibraryScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
-                            'Downloading Spanish translation model...',
-                            style: TextStyle(
+                          Text(
+                            'Downloading ${LanguageUtils.getLanguageName(modelState.languageCode)} translation model...',
+                            style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
                             ),
@@ -118,35 +128,42 @@ class LibraryScreen extends ConsumerWidget {
                 ),
               ),
             ),
-          // Download success banner
-          if (modelState.status == ModelDownloadStatus.completed)
+          // Download success banner - only show after actual download, not on app startup
+          if (modelState.status == ModelDownloadStatus.completed && modelState.showNotification)
             Material(
               elevation: 4,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 color: Colors.green.shade50,
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.green, size: 20),
-                    SizedBox(width: 12),
+                    const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Spanish model ready! Translations will be faster.',
-                        style: TextStyle(
+                        '${LanguageUtils.getLanguageName(modelState.languageCode)} model ready! Translations will be faster.',
+                        style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                           color: Colors.green,
                         ),
                       ),
                     ),
-                    SizedBox(width: 8),
-                    Icon(Icons.close, size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 16),
+                      color: Colors.grey,
+                      onPressed: () {
+                        // Dismiss the notification by setting showNotification to false
+                        ref.read(languageModelProvider.notifier).dismissNotification();
+                      },
+                    ),
                   ],
                 ),
               ),
             ),
           // Download error banner
-          if (modelState.status == ModelDownloadStatus.failed)
+          if (modelState.status == ModelDownloadStatus.failed && modelState.showNotification)
             Material(
               elevation: 4,
               child: Container(
@@ -184,7 +201,7 @@ class LibraryScreen extends ConsumerWidget {
                     ),
                     TextButton(
                       onPressed: () {
-                        ref.read(spanishModelProvider.notifier).downloadSpanishModel();
+                        ref.read(languageModelProvider.notifier).downloadLanguageModel(modelState.languageCode);
                       },
                       child: const Text('Retry'),
                     ),

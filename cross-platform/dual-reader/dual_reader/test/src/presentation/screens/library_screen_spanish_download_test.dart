@@ -1,47 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dual_reader/src/presentation/providers/spanish_model_notifier.dart';
+import 'package:dual_reader/src/presentation/providers/language_model_notifier.dart';
 
 // Simplified widget tests focused on banner UI components
 void main() {
-  group('Spanish Model Download Banner Widget Tests', () {
+  group('Language Model Download Banner Widget Tests', () {
     testWidgets('should render progress banner components', (WidgetTester tester) async {
       final progressBanner = Material(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: const BoxDecoration(color: Color(0xffd1c4e9)),
-          child: const Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Downloading Spanish translation model...',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Text(
-                      'Initializing download...',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xff616161),
-                      ),
-                    ),
-                  ],
+        child: ColoredBox(
+          color: const Color(0xffd1c4e9),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Downloading Bulgarian translation model...',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        'Initializing download...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xff616161),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -49,33 +50,39 @@ void main() {
       await tester.pumpWidget(progressBanner);
       await tester.pumpAndSettle();
 
-      expect(find.text('Downloading Spanish translation model...'), findsOneWidget);
+      expect(find.text('Downloading Bulgarian translation model...'), findsOneWidget);
       expect(find.text('Initializing download...'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
     testWidgets('should render success banner components', (WidgetTester tester) async {
-      const successBanner = Material(
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: Color(0xffe8f5e9), // Colors.green.shade50
-          child: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 20),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Spanish model ready! Translations will be faster.',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: Colors.green,
+      final successBanner = Material(
+        child: ColoredBox(
+          color: const Color(0xffe8f5e9),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Bulgarian model ready! Translations will be faster.',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.green,
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(width: 8),
-              Icon(Icons.close, size: 16, color: Colors.grey),
-            ],
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 16),
+                  color: Colors.grey,
+                  onPressed: () {},
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -83,50 +90,52 @@ void main() {
       await tester.pumpWidget(successBanner);
       await tester.pumpAndSettle();
 
-      expect(find.text('Spanish model ready! Translations will be faster.'), findsOneWidget);
+      expect(find.text('Bulgarian model ready! Translations will be faster.'), findsOneWidget);
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
       expect(find.byIcon(Icons.close), findsOneWidget);
     });
 
     testWidgets('should render error banner components', (WidgetTester tester) async {
-      const errorBanner = Material(
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: Color(0xffffebee), // Colors.red.shade50
-          child: Row(
-            children: [
-              Icon(Icons.error, color: Colors.red, size: 20),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Model download failed',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: Colors.red,
-                    ),
-                    ),
-                    Text(
-                      'Network connection failed',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xff616161), // Colors.grey.shade700
+      final errorBanner = Material(
+        child: ColoredBox(
+          color: const Color(0xffffebee),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.red, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Model download failed',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: Colors.red,
+                        ),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                      Text(
+                        'Network connection failed',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xff616161),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              TextButton(
-                onPressed: null,
-                child: Text('Retry'),
-              ),
-            ],
+                TextButton(
+                  onPressed: () {},
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -143,41 +152,43 @@ void main() {
     testWidgets('progress banner should update with different messages', (WidgetTester tester) async {
       const customMessage = 'Downloading language model (50% complete)...';
 
-      const banner = Material(
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: Color(0xffd1c4e9),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Downloading Spanish translation model...',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Text(
-                      customMessage,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xff616161),
-                      ),
-                    ),
-                  ],
+      final banner = Material(
+        child: ColoredBox(
+          color: const Color(0xffd1c4e9),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Downloading Bulgarian translation model...',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        customMessage,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xff616161),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -191,44 +202,46 @@ void main() {
     testWidgets('error banner should display error message correctly', (WidgetTester tester) async {
       const longErrorMessage = 'Failed to download language model: Network timeout after 5 minutes. Please check your internet connection and try again.';
 
-      const banner = Material(
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: Color(0xffffebee),
-          child: Row(
-            children: [
-              Icon(Icons.error, color: Colors.red, size: 20),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Model download failed',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: Colors.red,
+      final banner = Material(
+        child: ColoredBox(
+          color: const Color(0xffffebee),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.red, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Model download failed',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: Colors.red,
+                        ),
                       ),
-                    ),
-                    Text(
-                      longErrorMessage,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xff616161),
+                      Text(
+                        longErrorMessage,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xff616161),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              TextButton(
-                onPressed: null,
-                child: Text('Retry'),
-              ),
-            ],
+                TextButton(
+                  onPressed: () {},
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -243,7 +256,7 @@ void main() {
     testWidgets('banners should use correct colors', (WidgetTester tester) async {
       // Test progress banner color
       const progressBanner = ColoredBox(
-        color: Color(0xffd1c4e9), // Colors.deepPurple.shade50
+        color: Color(0xffd1c4e9),
         child: SizedBox(height: 50),
       );
 
@@ -253,7 +266,7 @@ void main() {
 
       // Test success banner color
       const successBanner = ColoredBox(
-        color: Color(0xffe8f5e9), // Colors.green.shade50
+        color: Color(0xffe8f5e9),
         child: SizedBox(height: 50),
       );
 
@@ -263,7 +276,7 @@ void main() {
 
       // Test error banner color
       const errorBanner = ColoredBox(
-        color: Color(0xffffebee), // Colors.red.shade50
+        color: Color(0xffffebee),
         child: SizedBox(height: 50),
       );
 
@@ -273,17 +286,18 @@ void main() {
     });
   });
 
-  group('SpanishModelState Tests', () {
+  group('LanguageModelState Tests', () {
     test('should have correct initial state', () {
-      const state = SpanishModelState(status: ModelDownloadStatus.notStarted);
+      const state = LanguageModelState(status: ModelDownloadStatus.notStarted);
 
       expect(state.status, ModelDownloadStatus.notStarted);
       expect(state.progressMessage, isNull);
       expect(state.errorMessage, isNull);
+      expect(state.languageCode, 'en');
     });
 
     test('should copy state with new values', () {
-      const initialState = SpanishModelState(status: ModelDownloadStatus.notStarted);
+      const initialState = LanguageModelState(status: ModelDownloadStatus.notStarted);
 
       final newState = initialState.copyWith(
         status: ModelDownloadStatus.completed,
@@ -296,7 +310,7 @@ void main() {
     });
 
     test('should preserve values when copying with null', () {
-      const initialState = SpanishModelState(
+      const initialState = LanguageModelState(
         status: ModelDownloadStatus.inProgress,
         progressMessage: 'Downloading...',
         errorMessage: 'Error',

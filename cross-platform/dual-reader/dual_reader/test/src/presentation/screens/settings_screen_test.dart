@@ -332,6 +332,14 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      // Scroll to find the Clear Translation Cache button
+      await tester.dragUntilVisible(
+        find.text('Clear Translation Cache'),
+        find.byType(ListView),
+        const Offset(0, -50),
+      );
+      await tester.pumpAndSettle();
+
       // Find and tap clear cache option
       final clearCacheTile = find.widgetWithText(ListTile, 'Clear Translation Cache');
       await tester.tap(clearCacheTile);
@@ -361,6 +369,14 @@ void main() {
         ),
       );
 
+      await tester.pumpAndSettle();
+
+      // Scroll to find the Clear Translation Cache button
+      await tester.dragUntilVisible(
+        find.text('Clear Translation Cache'),
+        find.byType(ListView),
+        const Offset(0, -50),
+      );
       await tester.pumpAndSettle();
 
       // Tap clear cache
@@ -397,6 +413,14 @@ void main() {
         ),
       );
 
+      await tester.pumpAndSettle();
+
+      // Scroll to find the Clear Translation Cache button
+      await tester.dragUntilVisible(
+        find.text('Clear Translation Cache'),
+        find.byType(ListView),
+        const Offset(0, -50),
+      );
       await tester.pumpAndSettle();
 
       // Tap clear cache
@@ -496,6 +520,14 @@ void main() {
         ),
       );
 
+      await tester.pumpAndSettle();
+
+      // Scroll to find the Clear Translation Cache button
+      await tester.dragUntilVisible(
+        find.text('Clear Translation Cache'),
+        find.byType(ListView),
+        const Offset(0, -50),
+      );
       await tester.pumpAndSettle();
 
       // Tap clear cache

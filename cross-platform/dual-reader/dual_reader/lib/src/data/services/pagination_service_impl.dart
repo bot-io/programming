@@ -81,7 +81,9 @@ class PaginationServiceImpl implements PaginationService {
         // Priority 2: If no sentence boundary found, break at paragraph (double newline)
         if (!foundBreak) {
           for (int i = end - 1; i >= lookbackLimit; i--) {
-            if (i + 1 < text.length && text[i] == '\n' && text[i + 1] == '\n') {
+            // Look for the pattern \n\n (two consecutive newlines)
+            if (i + 2 < text.length && text.substring(i, i + 2) == '\n\n') {
+              // Break after the paragraph content, before the \n\n
               end = i;
               foundBreak = true;
               break;
@@ -120,6 +122,11 @@ class PaginationServiceImpl implements PaginationService {
 
       pages.add(text.substring(start, end));
       start = end;
+
+      // Skip leading paragraph breaks for the next page
+      while (start < text.length - 1 && text.substring(start, start + 2) == '\n\n') {
+        start += 2;
+      }
     }
 
     return pages;

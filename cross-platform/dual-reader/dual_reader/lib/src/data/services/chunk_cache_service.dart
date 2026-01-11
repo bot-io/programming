@@ -7,24 +7,62 @@ import 'package:dual_reader/src/domain/entities/translation_chunk.dart';
 ///
 /// Stores translated chunks and maintains page-to-chunk mappings for efficient lookup.
 /// Keys: {bookId}_chunk_{startPage}_{endPage}_{language}
+///
+/// Cache versioning:
+/// - Version 1: Initial implementation with paragraph-based extraction
+/// - Version 2: Marker-based page synchronization (invisible Unicode markers)
 class ChunkCacheService {
   static const String _boxName = 'translationChunkCache';
   static const String _mappingBoxName = 'translationChunkMapping';
+  static const String _metadataBoxName = 'translationChunkMetadata';
   static const String _componentName = 'ChunkCache';
+  static const String _cacheVersionKey = 'cacheVersion';
+  static const int _currentCacheVersion = 2;
 
   /// Initialize cache boxes
   Future<void> init() async {
     try {
+      // Open cache boxes
       if (!Hive.isBoxOpen(_boxName)) {
         await Hive.openBox<String>(_boxName);
       }
       if (!Hive.isBoxOpen(_mappingBoxName)) {
         await Hive.openBox<String>(_mappingBoxName);
       }
+      if (!Hive.isBoxOpen(_metadataBoxName)) {
+        await Hive.openBox<dynamic>(_metadataBoxName);
+      }
+
+      // Check cache version and invalidate if needed
+      await _checkAndInvalidateCache();
+
       _componentName.logInfo('Initialized chunk cache boxes');
     } catch (e) {
       _componentName.logError('Failed to initialize chunk cache boxes', error: e);
       rethrow;
+    }
+  }
+
+  /// Check cache version and invalidate if it's outdated
+  Future<void> _checkAndInvalidateCache() async {
+    try {
+      final metadataBox = Hive.box<dynamic>(_metadataBoxName);
+      final storedVersion = metadataBox.get(_cacheVersionKey) as int?;
+
+      if (storedVersion == null) {
+        _componentName.logInfo('No cache version found, setting to $_currentCacheVersion');
+        await metadataBox.put(_cacheVersionKey, _currentCacheVersion);
+      } else if (storedVersion < _currentCacheVersion) {
+        _componentName.logInfo(
+          'Cache version outdated ($storedVersion < $_currentCacheVersion), clearing cache'
+        );
+        await clearAll();
+        await metadataBox.put(_cacheVersionKey, _currentCacheVersion);
+        _componentName.logInfo('Cache cleared and updated to version $_currentCacheVersion');
+      }
+    } catch (e) {
+      _componentName.logError('Failed to check cache version', error: e);
+      // Don't rethrow - cache versioning is best-effort
     }
   }
 
@@ -40,6 +78,13 @@ class ChunkCacheService {
       return await Hive.openBox<String>(_mappingBoxName);
     }
     return Hive.box<String>(_mappingBoxName);
+  }
+
+  Future<Box<dynamic>> _getMetadataBox() async {
+    if (!Hive.isBoxOpen(_metadataBoxName)) {
+      return await Hive.openBox<dynamic>(_metadataBoxName);
+    }
+    return Hive.box<dynamic>(_metadataBoxName);
   }
 
   /// Generate mapping key from page info
@@ -245,14 +290,19 @@ class ChunkCacheService {
 
       final box = Hive.box<String>(_boxName);
       final mappingBox = await _getMappingBox();
+      final metadataBox = await _getMetadataBox();
 
       final chunkCount = box.length;
       final mappingCount = mappingBox.length;
+      final metadataCount = metadataBox.length;
 
       await box.clear();
       await mappingBox.clear();
+      await metadataBox.clear();
 
-      _componentName.logInfo('Cleared all $chunkCount chunks and $mappingCount mappings');
+      _componentName.logInfo(
+        'Cleared all $chunkCount chunks, $mappingCount mappings, and $metadataCount metadata entries'
+      );
     } catch (e) {
       _componentName.logError('Failed to clear all cache', error: e);
       rethrow;

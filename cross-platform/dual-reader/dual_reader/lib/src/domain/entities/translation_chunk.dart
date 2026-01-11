@@ -1,8 +1,13 @@
+import 'package:dual_reader/src/core/utils/page_markers.dart';
+
 /// Represents a multi-page translation chunk.
 ///
 /// Chunks contain original text from multiple pages that are translated together
 /// to provide better context for the translation model. Each chunk maintains
 /// metadata to map individual pages back to their translated segments.
+///
+/// Page synchronization is maintained using invisible Unicode markers
+/// that are preserved during translation and used for exact page extraction.
 class TranslationChunk {
   /// Unique identifier for this chunk: {bookId}_chunk_{startPage}_{endPage}_{lang}
   final String chunkId;
@@ -54,26 +59,28 @@ class TranslationChunk {
   /// Extracts the original text for a specific page within this chunk.
   ///
   /// [pageIndex] must be within [startPageIndex] and [endPageIndex].
+  ///
+  /// Returns the original text with markers stripped for display.
+  /// Markers are only used internally for page synchronization.
   String extractOriginalPage(int pageIndex) {
     if (pageIndex < startPageIndex || pageIndex > endPageIndex) {
       throw ArgumentError('Page $pageIndex is not in chunk ($startPageIndex-$endPageIndex)');
     }
 
-    final pageIndexInChunk = pageIndex - startPageIndex;
+    // Use marker-based extraction for exact page mapping
+    String extracted = PageMarkers.extractPage(originalText, pageIndex);
 
-    // Calculate offsets, accounting for \n\n separators between pages
-    final startOffset = pageIndexInChunk == 0
-        ? 0
-        : pageBreakOffsets[pageIndexInChunk - 1] + 2; // Add 2 for \n\n separator
-    final endOffset = pageBreakOffsets[pageIndexInChunk];
-
-    return originalText.substring(startOffset, endOffset);
+    // Strip markers from the extracted text for display
+    return PageMarkers.stripMarkers(extracted);
   }
 
   /// Extracts the translated text for a specific page within this chunk.
   ///
   /// Requires [translatedText] to be non-null.
   /// [pageIndex] must be within [startPageIndex] and [endPageIndex].
+  ///
+  /// Uses invisible Unicode markers to extract the exact page content,
+  /// ensuring 1:1 mapping between original and translated pages.
   String extractTranslatedPage(int pageIndex) {
     if (translatedText == null) {
       throw StateError('Chunk has not been translated yet');
@@ -83,69 +90,13 @@ class TranslationChunk {
       throw ArgumentError('Page $pageIndex is not in chunk ($startPageIndex-$endPageIndex)');
     }
 
-    final pageIndexInChunk = pageIndex - startPageIndex;
+    // Use marker-based extraction for exact page mapping
+    // Markers are preserved during translation and used for precise extraction
+    String extracted = PageMarkers.extractPage(translatedText!, pageIndex);
 
-    // Calculate offsets, accounting for \n\n separators between pages
-    final startOffset = pageIndexInChunk == 0
-        ? 0
-        : pageBreakOffsets[pageIndexInChunk - 1] + 2; // Add 2 for \n\n separator
-    final endOffset = pageBreakOffsets[pageIndexInChunk];
-
-    // Use paragraph-based extraction for better display parity
-    return _extractByParagraphs(
-      translatedText!,
-      pageIndexInChunk,
-      startOffset,
-      endOffset,
-    );
-  }
-
-  /// Extracts a segment from translated text using paragraph counting.
-  ///
-  /// This is the primary method for maintaining display parity.
-  /// It counts paragraphs in the original segment and extracts the same
-  /// number from the translation.
-  String _extractByParagraphs(
-    String fullTranslation,
-    int pageIndexInChunk,
-    int originalStartOffset,
-    int originalEndOffset,
-  ) {
-    // Count paragraphs in the original page segment
-    final originalSegment = originalText.substring(originalStartOffset, originalEndOffset);
-    final originalParagraphs = originalSegment.split(RegExp(r'\n\s*\n'));
-    final targetParagraphCount = originalParagraphs.length;
-
-    // Find position of this page within the full original text
-    final pagesBefore = pageIndexInChunk;
-
-    // Count total paragraphs before this page in the chunk
-    int paragraphCountBefore = 0;
-    for (int i = 0; i < pagesBefore; i++) {
-      final pageStart = i == 0 ? 0 : pageBreakOffsets[i - 1] + 2; // Add 2 for \n\n separator
-      final pageEnd = pageBreakOffsets[i];
-      final pageText = originalText.substring(pageStart, pageEnd);
-      paragraphCountBefore += pageText.split(RegExp(r'\n\s*\n')).length;
-    }
-
-    // Split translation into paragraphs
-    final translatedParagraphs = fullTranslation.split(RegExp(r'\n\s*\n'));
-
-    // Extract the same number of paragraphs
-    final startParagraph = paragraphCountBefore;
-    final endParagraph = startParagraph + targetParagraphCount;
-
-    if (startParagraph >= translatedParagraphs.length) {
-      // Fallback: return empty if we've run out of paragraphs
-      return '';
-    }
-
-    final actualEnd = endParagraph > translatedParagraphs.length
-        ? translatedParagraphs.length
-        : endParagraph;
-
-    final selectedParagraphs = translatedParagraphs.sublist(startParagraph, actualEnd);
-    return selectedParagraphs.join('\n\n');
+    // Strip markers from the extracted text for display
+    // Markers are only used internally for page synchronization
+    return PageMarkers.stripMarkers(extracted);
   }
 
   /// Creates a copy of this chunk with some fields replaced.

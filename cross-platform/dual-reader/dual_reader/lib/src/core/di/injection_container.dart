@@ -2,7 +2,6 @@ import 'package:get_it/get_it.dart';
 import 'package:dual_reader/src/domain/services/epub_parser_service.dart';
 import 'package:dual_reader/src/data/services/epub_parser_service_impl.dart';
 import 'package:dual_reader/src/domain/services/translation_service.dart';
-import 'package:dual_reader/src/data/services/libretranslate_service_impl.dart';
 import 'package:dual_reader/src/data/services/mymemory_translation_service_impl.dart';
 import 'package:dual_reader/src/data/services/google_translate_service_impl.dart';
 import 'package:dual_reader/src/data/services/client_side_translation_service.dart';
@@ -38,7 +37,6 @@ final sl = GetIt.instance;
 // 'mock' = Mock translation (for testing, no API needed)
 // 'google' = Google Translate API (requires API key, best quality, $20/1M chars)
 // 'mymemory' = MyMemory API (free, works on web, has daily limits)
-// 'libre' = LibreTranslate (may have CORS issues on web)
 const String _translationService = 'client';
 
 // Google Translate API Key - Get yours at: https://cloud.google.com/translate
@@ -95,10 +93,6 @@ Future<void> init() async {
     case 'mymemory':
       debugPrint('Using MyMemory translation API (free, web-compatible)');
       sl.registerLazySingleton<TranslationService>(() => MyMemoryTranslationServiceImpl(sl(), sl()));
-      break;
-    case 'libre':
-      debugPrint('Using LibreTranslate service');
-      sl.registerLazySingleton<TranslationService>(() => LibreTranslateServiceImpl(sl(), sl()));
       break;
     default:
       debugPrint('Unknown translation service: $_translationService, falling back to Mock');

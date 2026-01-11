@@ -73,6 +73,12 @@ void main() {
         textStyle: textStyle,
       );
 
+      // Debug output
+      print('DEBUG: Number of pages: ${pages.length}');
+      for (int i = 0; i < pages.length; i++) {
+        print('DEBUG: Page $i: "${pages[i]}"');
+      }
+
       // Then
       expect(pages.length, greaterThanOrEqualTo(2));
       expect(pages[0].contains('Paragraph one.'), isTrue);

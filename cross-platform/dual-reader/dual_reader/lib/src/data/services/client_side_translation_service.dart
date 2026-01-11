@@ -5,8 +5,8 @@ import 'client_side_translation_service_mobile_hybrid.dart'
     if (dart.library.html) 'client_side_translation_service_web.dart';
 
 /// Client-side translation service that uses:
-/// - LibreTranslate API on web (free, no API key)
-/// - Google ML Kit with LibreTranslate fallback on mobile (hybrid approach)
+/// - Google ML Kit on mobile (offline, free)
+/// - Transformers.js on web (runs in browser)
 /// This provides fast translation with offline capability after models download.
 class ClientSideTranslationService implements TranslationService {
   final TranslationCacheService _cacheService;
