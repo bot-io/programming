@@ -61,7 +61,6 @@
       "Bash(du:*)",
       "Bash(df:*)",
       "Bash(file:*)",
-
       "Bash(cat:*)",
       "Bash(less:*)",
       "Bash(more:*)",
@@ -72,7 +71,6 @@
       "Bash(wc:*)",
       "Bash(awk:*)",
       "Bash(sed:*)",
-
       "Bash(touch:*)",
       "Bash(mkdir:*)",
       "Bash(rmdir:*)",
@@ -81,14 +79,12 @@
       "Bash(chmod:*)",
       "Bash(chown:*)",
       "Bash(ln:*)",
-
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git show:*)",
       "Bash(git branch:*)",
       "Bash(git rev-parse:*)",
-
       "Bash(npm:*)",
       "Bash(yarn:*)",
       "Bash(pnpm:*)",
@@ -102,14 +98,12 @@
       "Bash(cargo:*)",
       "Bash(go:*)",
       "Bash(flutter:*)",
-
       "Bash(perl:*)",
       "Bash(xargs:*)",
       "Bash(tr:*)",
       "Bash(cut:*)",
       "Bash(sort:*)",
       "Bash(uniq:*)",
-
       "Bash(uname:*)",
       "Bash(whoami:*)",
       "Bash(id:*)",
@@ -119,7 +113,6 @@
       "Bash(ps:*)",
       "Bash(top:*)",
       "Bash(ulimit:*)",
-
       "Bash(curl:*)",
       "Bash(wget:*)",
       "Bash(ping:*)",
@@ -130,18 +123,23 @@
       "Bash(ss:*)",
       "Bash(netstat:*)",
       "Bash(lsof:*)",
-
       "Bash(docker:*)",
       "Bash(docker-compose:*)",
       "Bash(docker compose:*)",
       "Bash(kubectl:*)",
-
       "Bash(pytest:*)",
       "Bash(jest:*)",
       "Bash(vitest:*)",
       "Bash(time:*)",
       "Bash(strace:*)",
-      "Bash(ldd:*)"
+      "Bash(ldd:*)",
+      "Bash(tee:*)",
+      "Bash(for:*)",
+      "Bash(do echo:*)",
+      "Bash(done:*)",
+      "Bash(1)",
+      "Bash(flutter build apk:*)",
+      "Bash(flutter build appbundle:*)"
     ],
     "deny": [
       "Bash(git commit:*)",

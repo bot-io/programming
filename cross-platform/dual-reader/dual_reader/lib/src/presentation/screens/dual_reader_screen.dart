@@ -1321,6 +1321,9 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
 
   Widget _buildPaginationControls() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final progressPercentage = _totalOriginalPages > 0
+        ? ((_currentOriginalPage + 1) / _totalOriginalPages * 100).toStringAsFixed(1)
+        : '0.0';
 
     return Container(
       decoration: BoxDecoration(
@@ -1358,11 +1361,25 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
                         ? () => _goToPage(_currentOriginalPage - 1)
                         : null,
                   ),
-                  Text(
-                    'Page ${_currentOriginalPage + 1} of $_totalOriginalPages',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isDark ? Colors.white : Colors.black87,
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Page ${_currentOriginalPage + 1} of $_totalOriginalPages',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
                         ),
+                        Text(
+                          '$progressPercentage%',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: isDark ? Colors.white70 : Colors.black54,
+                                fontSize: 10,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
                   IconButton(
                     icon: Icon(Icons.arrow_forward_ios, size: 20),

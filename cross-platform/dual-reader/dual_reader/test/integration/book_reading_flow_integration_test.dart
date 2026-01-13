@@ -13,6 +13,7 @@ import 'package:hive/hive.dart';
 import 'package:hive_test/hive_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:file_picker/file_picker.dart';
+import '../helper/test_helpers.dart';
 
 /// Integration tests for the complete book reading flow
 /// Tests: Import → Parse → Read → Track Progress → Delete

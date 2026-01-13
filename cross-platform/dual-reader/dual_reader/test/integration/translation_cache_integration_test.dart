@@ -5,6 +5,7 @@ import 'package:hive/hive.dart';
 import 'package:hive_test/hive_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import '../helper/test_helpers.dart';
 
 /// Integration tests for translation caching functionality
 /// Tests the complete caching flow including initialization, storage, retrieval, and clearing

@@ -6,6 +6,7 @@ import 'package:dual_reader/src/data/repositories/book_repository_impl.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_test/hive_test.dart';
 import 'package:get_it/get_it.dart';
+import '../helper/test_helpers.dart';
 
 /// Integration tests for reading progress tracking functionality
 /// Tests progress saving, retrieval, and calculation across reading sessions

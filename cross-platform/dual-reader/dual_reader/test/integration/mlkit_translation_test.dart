@@ -422,8 +422,10 @@ void main() {
       }
 
     }, timeout: const Timeout(Duration(minutes: 3)));
+  });
 
-    tearDownAll(() {
+  group('ML Kit Integration Summary', () {
+    test('Summary', () {
       print('\n${'=' * 70}');
       print('ML KIT INTEGRATION TESTS COMPLETE');
       print('${'=' * 70}\n');

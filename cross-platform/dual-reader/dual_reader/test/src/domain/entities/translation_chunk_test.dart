@@ -1,17 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dual_reader/src/domain/entities/translation_chunk.dart';
+import 'package:dual_reader/src/core/utils/page_markers.dart';
 
 void main() {
   group('TranslationChunk', () {
     late TranslationChunk chunk;
 
     setUp(() {
+      // Use markers for page boundaries
+      final page0Marked = PageMarkers.insertMarkers('Page 0 text', 0);
+      final page1Marked = PageMarkers.insertMarkers('Page 1 text', 1);
+      final page2Marked = PageMarkers.insertMarkers('Page 2 text', 2);
+
       chunk = TranslationChunk(
         chunkId: 'test_chunk_0_2_es',
         bookId: 'test_book',
         startPageIndex: 0,
         endPageIndex: 2,
-        originalText: 'Page 0 text\n\nPage 1 text\n\nPage 2 text',
+        originalText: '$page0Marked\n\n$page1Marked\n\n$page2Marked',
         pageBreakOffsets: [11, 24, 37], // End of each page (before \n\n separator)
         targetLanguage: 'es',
       );
@@ -36,7 +42,7 @@ void main() {
         bookId: 'test',
         startPageIndex: 5,
         endPageIndex: 5,
-        originalText: 'Single page',
+        originalText: PageMarkers.insertMarkers('Single page', 5),
         pageBreakOffsets: [11],
         targetLanguage: 'es',
       );
@@ -79,22 +85,26 @@ void main() {
     });
 
     test('should extract translated page using paragraph counting', () {
-      // Set up a chunk with paragraphs
-      // Original: "Para 1\n\nPara 2\n\nPara 3\n\nPara 4"
-      // Page 0: "Para 1\n\nPara 2" = 14 chars
-      // Page 1: "Para 3\n\nPara 4" = 14 chars
+      // Set up a chunk with paragraphs using markers
+      // Page 0: "Para 1\n\nPara 2"
+      // Page 1: "Para 3\n\nPara 4"
+      final page0Marked = PageMarkers.insertMarkers('Para 1\n\nPara 2', 0);
+      final page1Marked = PageMarkers.insertMarkers('Para 3\n\nPara 4', 1);
+
       final chunkWithParagraphs = TranslationChunk(
         chunkId: 'para_test_0_1_es',
         bookId: 'test',
         startPageIndex: 0,
         endPageIndex: 1,
-        originalText: 'Para 1\n\nPara 2\n\nPara 3\n\nPara 4',
+        originalText: '$page0Marked\n\n$page1Marked',
         pageBreakOffsets: [14, 30], // Cumulative offsets: 14, 14+2+14=30
         targetLanguage: 'es',
       );
 
-      // Simulate translation with same paragraph structure
-      chunkWithParagraphs.translatedText = 'Trad 1\n\nTrad 2\n\nTrad 3\n\nTrad 4';
+      // Simulate translation with same paragraph structure and markers
+      final translatedPage0Marked = PageMarkers.insertMarkers('Trad 1\n\nTrad 2', 0);
+      final translatedPage1Marked = PageMarkers.insertMarkers('Trad 3\n\nTrad 4', 1);
+      chunkWithParagraphs.translatedText = '$translatedPage0Marked\n\n$translatedPage1Marked';
 
       // Extract page 0 (should get first 2 paragraphs)
       final page0Translation = chunkWithParagraphs.extractTranslatedPage(0);
@@ -140,12 +150,12 @@ void main() {
         bookId: 'test',
         startPageIndex: 0,
         endPageIndex: 0,
-        originalText: 'First paragraph\n\nSecond paragraph\n\nThird paragraph',
+        originalText: PageMarkers.insertMarkers('First paragraph\n\nSecond paragraph\n\nThird paragraph', 0),
         pageBreakOffsets: [50], // Total length of the text
         targetLanguage: 'es',
       );
 
-      multiParaChunk.translatedText = 'Primero\n\nSegundo\n\nTercero';
+      multiParaChunk.translatedText = PageMarkers.insertMarkers('Primero\n\nSegundo\n\nTercero', 0);
 
       final extracted = multiParaChunk.extractTranslatedPage(0);
       expect(extracted, 'Primero\n\nSegundo\n\nTercero');
@@ -157,12 +167,12 @@ void main() {
         bookId: 'test',
         startPageIndex: 0,
         endPageIndex: 0,
-        originalText: '',
+        originalText: PageMarkers.insertMarkers('', 0),
         pageBreakOffsets: [0],
         targetLanguage: 'es',
       );
 
-      emptyChunk.translatedText = '';
+      emptyChunk.translatedText = PageMarkers.insertMarkers('', 0);
       final extracted = emptyChunk.extractTranslatedPage(0);
       expect(extracted, '');
     });
@@ -178,17 +188,22 @@ void main() {
 
   group('TranslationChunk Edge Cases', () {
     test('should handle single paragraph pages', () {
+      final page0Marked = PageMarkers.insertMarkers('Single para page 0', 0);
+      final page1Marked = PageMarkers.insertMarkers('Single para page 1', 1);
+
       final chunk = TranslationChunk(
         chunkId: 'single_para_0_1_es',
         bookId: 'test',
         startPageIndex: 0,
         endPageIndex: 1,
-        originalText: 'Single para page 0\n\nSingle para page 1',
+        originalText: '$page0Marked\n\n$page1Marked',
         pageBreakOffsets: [18, 38], // End of each page content (before \n\n separator)
         targetLanguage: 'es',
       );
 
-      chunk.translatedText = 'Traduccion pagina 0\n\nTraduccion pagina 1';
+      final translatedPage0Marked = PageMarkers.insertMarkers('Traduccion pagina 0', 0);
+      final translatedPage1Marked = PageMarkers.insertMarkers('Traduccion pagina 1', 1);
+      chunk.translatedText = '$translatedPage0Marked\n\n$translatedPage1Marked';
 
       final page0 = chunk.extractTranslatedPage(0);
       final page1 = chunk.extractTranslatedPage(1);
@@ -199,22 +214,24 @@ void main() {
 
     test('should handle pages with varying paragraph counts', () {
       // Page 0: 3 paragraphs, Page 1: 1 paragraph, Page 2: 2 paragraphs
-      // Original: "P0-P1\n\nP0-P2\n\nP0-P3\n\nP1-P1\n\nP2-P1\n\nP2-P2"
-      // Page 0: "P0-P1\n\nP0-P2\n\nP0-P3" = 19 chars
-      // Page 1: "P1-P1" = 5 chars
-      // Page 2: "P2-P1\n\nP2-P2" = 12 chars
-      // Offsets are cumulative: [19, 26, 40]
+      final page0Marked = PageMarkers.insertMarkers('P0-P1\n\nP0-P2\n\nP0-P3', 0);
+      final page1Marked = PageMarkers.insertMarkers('P1-P1', 1);
+      final page2Marked = PageMarkers.insertMarkers('P2-P1\n\nP2-P2', 2);
+
       final chunk = TranslationChunk(
         chunkId: 'varying_0_2_es',
         bookId: 'test',
         startPageIndex: 0,
         endPageIndex: 2,
-        originalText: 'P0-P1\n\nP0-P2\n\nP0-P3\n\nP1-P1\n\nP2-P1\n\nP2-P2',
+        originalText: '$page0Marked\n\n$page1Marked\n\n$page2Marked',
         pageBreakOffsets: [19, 26, 40], // Cumulative offsets
         targetLanguage: 'es',
       );
 
-      chunk.translatedText = 'T0-1\n\nT0-2\n\nT0-3\n\nT1-1\n\nT2-1\n\nT2-2';
+      final translatedPage0Marked = PageMarkers.insertMarkers('T0-1\n\nT0-2\n\nT0-3', 0);
+      final translatedPage1Marked = PageMarkers.insertMarkers('T1-1', 1);
+      final translatedPage2Marked = PageMarkers.insertMarkers('T2-1\n\nT2-2', 2);
+      chunk.translatedText = '$translatedPage0Marked\n\n$translatedPage1Marked\n\n$translatedPage2Marked';
 
       final page0 = chunk.extractTranslatedPage(0);
       final page1 = chunk.extractTranslatedPage(1);
@@ -232,7 +249,7 @@ void main() {
         bookId: 'test',
         startPageIndex: 0,
         endPageIndex: 0,
-        originalText: longText,
+        originalText: PageMarkers.insertMarkers(longText, 0),
         pageBreakOffsets: [longText.length],
         targetLanguage: 'es',
       );

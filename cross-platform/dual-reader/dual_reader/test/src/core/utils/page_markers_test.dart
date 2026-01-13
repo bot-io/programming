@@ -10,7 +10,7 @@ void main() {
 
         expect(result, isNot(equals(text)));
         expect(result.startsWith('\uE000'), isTrue);
-        expect(result.endsWith('\uE100'), isTrue);
+        expect(result.endsWith('\uF000'), isTrue);
         expect(result, contains('Hello world'));
       });
 
@@ -20,7 +20,7 @@ void main() {
 
         expect(result, isNot(equals(text)));
         expect(result.startsWith('\uE005'), isTrue);
-        expect(result.endsWith('\uE105'), isTrue);
+        expect(result.endsWith('\uF005'), isTrue);
         expect(result, contains('Page five content'));
       });
 
@@ -29,7 +29,7 @@ void main() {
         final result = PageMarkers.insertMarkers(text, 0);
 
         expect(result, contains('\uE000'));
-        expect(result, contains('\uE100'));
+        expect(result, contains('\uF000'));
         expect(result, contains('Line 1\nLine 2\nLine 3'));
       });
 
@@ -37,7 +37,7 @@ void main() {
         const text = '';
         final result = PageMarkers.insertMarkers(text, 0);
 
-        expect(result, '\uE000\uE100');
+        expect(result, '\uE000\uF000');
       });
 
       test('should handle special characters in text', () {
@@ -46,7 +46,7 @@ void main() {
 
         expect(result, contains(text));
         expect(result.startsWith('\uE000'), isTrue);
-        expect(result.endsWith('\uE100'), isTrue);
+        expect(result.endsWith('\uF000'), isTrue);
       });
 
       test('should throw on negative page index', () {
@@ -56,9 +56,9 @@ void main() {
         );
       });
 
-      test('should throw on page index > 255', () {
+      test('should throw on page index > 3839', () {
         expect(
-          () => PageMarkers.insertMarkers('text', 256),
+          () => PageMarkers.insertMarkers('text', 3840),
           throwsArgumentError,
         );
       });
@@ -66,28 +66,28 @@ void main() {
 
     group('extractPage', () {
       test('should extract page 0 from single marked page', () {
-        const marked = '\uE000Hello world\uE100';
+        const marked = '\uE000Hello world\uF000';
         final result = PageMarkers.extractPage(marked, 0);
 
         expect(result, 'Hello world');
       });
 
       test('should extract page 0 from multiple marked pages', () {
-        const marked = '\uE000Page 0\uE100\n\uE001Page 1\uE101\n\uE002Page 2\uE102';
+        const marked = '\uE000Page 0\uF000\n\uE001Page 1\uF001\n\uE002Page 2\uF002';
         final result = PageMarkers.extractPage(marked, 0);
 
         expect(result, 'Page 0');
       });
 
       test('should extract page 1 from multiple marked pages', () {
-        const marked = '\uE000Page 0\uE100\n\uE001Page 1\uE101\n\uE002Page 2\uE102';
+        const marked = '\uE000Page 0\uF000\n\uE001Page 1\uF001\n\uE002Page 2\uF002';
         final result = PageMarkers.extractPage(marked, 1);
 
         expect(result, 'Page 1');
       });
 
       test('should extract page 2 from multiple marked pages', () {
-        const marked = '\uE000Page 0\uE100\n\uE001Page 1\uE101\n\uE002Page 2\uE102';
+        const marked = '\uE000Page 0\uF000\n\uE001Page 1\uF001\n\uE002Page 2\uF002';
         final result = PageMarkers.extractPage(marked, 2);
 
         expect(result, 'Page 2');
@@ -108,14 +108,14 @@ void main() {
       });
 
       test('should extract page with special characters', () {
-        const marked = '\uE000Special: !@#\$%\uE100';
+        const marked = '\uE000Special: !@#\$%\uF000';
         final result = PageMarkers.extractPage(marked, 0);
 
         expect(result, 'Special: !@#\$%');
       });
 
       test('should extract multiline content', () {
-        const marked = '\uE000Line 1\nLine 2\nLine 3\uE100';
+        const marked = '\uE000Line 1\nLine 2\nLine 3\uF000';
         final result = PageMarkers.extractPage(marked, 0);
 
         expect(result, 'Line 1\nLine 2\nLine 3');
@@ -128,9 +128,9 @@ void main() {
         );
       });
 
-      test('should throw on page index > 255', () {
+      test('should throw on page index > 3839', () {
         expect(
-          () => PageMarkers.extractPage('text', 256),
+          () => PageMarkers.extractPage('text', 3840),
           throwsArgumentError,
         );
       });
@@ -138,14 +138,14 @@ void main() {
 
     group('stripMarkers', () {
       test('should remove markers from single page', () {
-        const marked = '\uE000Hello world\uE100';
+        const marked = '\uE000Hello world\uF000';
         final result = PageMarkers.stripMarkers(marked);
 
         expect(result, 'Hello world');
       });
 
       test('should remove markers from multiple pages', () {
-        const marked = '\uE000Page 0\uE100\n\uE001Page 1\uE101\n\uE002Page 2\uE102';
+        const marked = '\uE000Page 0\uF000\n\uE001Page 1\uF001\n\uE002Page 2\uF002';
         final result = PageMarkers.stripMarkers(marked);
 
         expect(result, 'Page 0\nPage 1\nPage 2');
@@ -166,7 +166,7 @@ void main() {
       });
 
       test('should handle text with only markers', () {
-        const marked = '\uE000\uE100\uE001\uE101';
+        const marked = '\uE000\uF000\uE001\uF001';
         final result = PageMarkers.stripMarkers(marked);
 
         expect(result, '');
@@ -175,7 +175,7 @@ void main() {
 
     group('hasMarkers', () {
       test('should return true when start marker present', () {
-        const marked = '\uE000Hello\uE100';
+        const marked = '\uE000Hello\uF000';
         final result = PageMarkers.hasMarkers(marked);
 
         expect(result, isTrue);
@@ -203,21 +203,21 @@ void main() {
       });
 
       test('should count single marked page', () {
-        const marked = '\uE000Page 0\uE100';
+        const marked = '\uE000Page 0\uF000';
         final result = PageMarkers.countMarkedPages(marked);
 
         expect(result, 1);
       });
 
       test('should count multiple marked pages', () {
-        const marked = '\uE000P0\uE100\uE001P1\uE101\uE002P2\uE102\uE003P3\uE103';
+        const marked = '\uE000P0\uF000\uE001P1\uF001\uE002P2\uF002\uE003P3\uF003';
         final result = PageMarkers.countMarkedPages(marked);
 
         expect(result, 4);
       });
 
       test('should count non-consecutive page markers', () {
-        const marked = '\uE000P0\uE100\uE005P5\uE105\uE00AP10\uE10A';
+        const marked = '\uE000P0\uF000\uE005P5\uF005\uE00AP10\uF00A';
         final result = PageMarkers.countMarkedPages(marked);
 
         expect(result, 3);
@@ -232,21 +232,21 @@ void main() {
       });
 
       test('should extract single page index', () {
-        const marked = '\uE000Page 0\uE100';
+        const marked = '\uE000Page 0\uF000';
         final result = PageMarkers.extractPageIndices(marked);
 
         expect(result, [0]);
       });
 
       test('should extract multiple consecutive page indices', () {
-        const marked = '\uE000P0\uE100\uE001P1\uE101\uE002P2\uE102';
+        const marked = '\uE000P0\uF000\uE001P1\uF001\uE002P2\uF002';
         final result = PageMarkers.extractPageIndices(marked);
 
         expect(result, [0, 1, 2]);
       });
 
       test('should extract non-consecutive page indices', () {
-        const marked = '\uE000P0\uE100\uE005P5\uE105\uE00AP10\uE10A';
+        const marked = '\uE000P0\uF000\uE005P5\uF005\uE00AP10\uF00A';
         final result = PageMarkers.extractPageIndices(marked);
 
         expect(result, [0, 5, 10]);
@@ -322,10 +322,18 @@ void main() {
         expect(extracted, text);
       });
 
-      test('should handle page at max index (255)', () {
+      test('should handle page at max index (3839)', () {
         const text = 'Last page';
-        final marked = PageMarkers.insertMarkers(text, 255);
-        final extracted = PageMarkers.extractPage(marked, 255);
+        final marked = PageMarkers.insertMarkers(text, 3839);
+        final extracted = PageMarkers.extractPage(marked, 3839);
+
+        expect(extracted, text);
+      });
+
+      test('should handle high page index like 358', () {
+        const text = 'Page 358 content';
+        final marked = PageMarkers.insertMarkers(text, 358);
+        final extracted = PageMarkers.extractPage(marked, 358);
 
         expect(extracted, text);
       });

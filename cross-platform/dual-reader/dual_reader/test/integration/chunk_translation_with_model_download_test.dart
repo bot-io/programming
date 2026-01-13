@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -11,20 +12,19 @@ import 'package:dual_reader/src/data/services/client_side_translation_service.da
 /// Tests the complete flow from model download to translation.
 /// NOTE: These tests require a mobile device/emulator due to platform channel requirements.
 void main() {
-  // Skip integration tests on web/windows due to platform channel requirements
-  final skipIntegrationTests = kIsWeb || true; // Always skip for now - requires device
-
-  test('ML Kit Integration tests skipped - run on device/emulator', () {
-    if (skipIntegrationTests) {
-      print('ML Kit Integration Tests require a mobile device or emulator');
-      print('Run with: flutter test test/integration/chunk_translation_with_model_download_test.dart --device-id=<emulator-id>');
-    }
-  }, skip: !skipIntegrationTests);
+  // Skip integration tests on non-mobile platforms due to platform channel requirements
+  final isMobilePlatform = Platform.isAndroid || Platform.isIOS;
 
   group('Chunk Translation with Model Download Integration Tests', () {
     late ClientSideTranslationService translationService;
 
     setUpAll(() async {
+      if (!isMobilePlatform) {
+        debugPrint('ML Kit Integration Tests require a mobile device or emulator');
+        debugPrint('Run with: flutter test test/integration/chunk_translation_with_model_download_test.dart --device-id=<emulator-id>');
+        return;
+      }
+
       // Initialize Hive with test configuration
       await Hive.initFlutter();
 
@@ -35,21 +35,26 @@ void main() {
     });
 
     tearDownAll(() async {
+      if (!isMobilePlatform) return;
       await translationService.close();
       await Hive.close();
     });
 
     test('should check model readiness before translation', () async {
+      if (!isMobilePlatform) return;
+
       // Check if Spanish model is ready (may trigger download check)
       final isReady = await translationService.isLanguageModelReady('es');
 
       // Result should be a boolean
       expect(isReady, isA<bool>());
 
-      print('[Integration Test] Spanish model ready: $isReady');
-    });
+      debugPrint('[Integration Test] Spanish model ready: $isReady');
+    }, skip: !isMobilePlatform);
 
     test('should download language model when requested', () async {
+      if (!isMobilePlatform) return;
+
       final progressMessages = <String>[];
 
       // Attempt to download Spanish model
@@ -57,7 +62,7 @@ void main() {
         'es',
         onProgress: (message) {
           progressMessages.add(message);
-          print('[Integration Test] Progress: $message');
+          debugPrint('[Integration Test] Progress: $message');
         },
       );
 
@@ -67,18 +72,20 @@ void main() {
       // Should have received some progress messages
       expect(progressMessages, isNotEmpty);
 
-      print('[Integration Test] Download result: $result');
-      print('[Integration Test] Total progress messages: ${progressMessages.length}');
+      debugPrint('[Integration Test] Download result: $result');
+      debugPrint('[Integration Test] Total progress messages: ${progressMessages.length}');
       for (final msg in progressMessages) {
-        print('[Integration Test]   - $msg');
+        debugPrint('[Integration Test]   - $msg');
       }
 
       // Verify model is ready after download attempt
       final isReady = await translationService.isLanguageModelReady('es');
-      print('[Integration Test] Model ready after download: $isReady');
-    });
+      debugPrint('[Integration Test] Model ready after download: $isReady');
+    }, skip: !isMobilePlatform);
 
     test('should translate text after model download', () async {
+      if (!isMobilePlatform) return;
+
       // Ensure model is available
       await translationService.downloadLanguageModel('es');
 
@@ -92,36 +99,40 @@ void main() {
       expect(result, isNotEmpty);
       expect(result, isNot(equals('Hello world'))); // Should be translated
 
-      print('[Integration Test] Translation result: $result');
-    });
+      debugPrint('[Integration Test] Translation result: $result');
+    }, skip: !isMobilePlatform);
 
     test('should handle model download timeout gracefully', () async {
+      if (!isMobilePlatform) return;
+
       // Try to download a model with a timeout
       final stopwatch = Stopwatch()..start();
 
       final result = await translationService.downloadLanguageModel(
         'fr',
         onProgress: (message) {
-          print('[Integration Test] FR Progress: $message');
+          debugPrint('[Integration Test] FR Progress: $message');
         },
       ).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          print('[Integration Test] Download timeout after 10s');
+          debugPrint('[Integration Test] Download timeout after 10s');
           return false; // Indicate timeout
         },
       );
 
       stopwatch.stop();
 
-      print('[Integration Test] Download completed in ${stopwatch.elapsedMilliseconds}ms');
-      print('[Integration Test] Download result: $result');
+      debugPrint('[Integration Test] Download completed in ${stopwatch.elapsedMilliseconds}ms');
+      debugPrint('[Integration Test] Download result: $result');
 
       // Should complete without throwing
       expect(result, isA<bool>());
-    });
+    }, skip: !isMobilePlatform);
 
     test('should translate chunk with automatic model download', () async {
+      if (!isMobilePlatform) return;
+
       // This simulates the actual user flow:
       // 1. User opens book
       // 2. App requests translation
@@ -142,19 +153,21 @@ void main() {
       // Should complete successfully
       expect(result, isNotEmpty);
 
-      print('[Integration Test] Chunk translation completed in ${stopwatch.elapsedMilliseconds}ms');
-      print('[Integration Test] Original: $testText');
-      print('[Integration Test] Translated: $result');
-    });
+      debugPrint('[Integration Test] Chunk translation completed in ${stopwatch.elapsedMilliseconds}ms');
+      debugPrint('[Integration Test] Original: $testText');
+      debugPrint('[Integration Test] Translated: $result');
+    }, skip: !isMobilePlatform);
 
     test('should check multiple language models', () async {
+      if (!isMobilePlatform) return;
+
       final languages = ['es', 'fr', 'de', 'it'];
       final results = <String, bool>{};
 
       for (final lang in languages) {
         final isReady = await translationService.isLanguageModelReady(lang);
         results[lang] = isReady;
-        print('[Integration Test] $lang model ready: $isReady');
+        debugPrint('[Integration Test] $lang model ready: $isReady');
       }
 
       // All languages should be checked
@@ -162,9 +175,11 @@ void main() {
 
       // At least one should be ready (English is default)
       expect(results.values.any((ready) => ready), isTrue);
-    });
+    }, skip: !isMobilePlatform);
 
     test('should handle concurrent translation requests', () async {
+      if (!isMobilePlatform) return;
+
       // Simulate multiple pages being translated simultaneously
       final texts = [
         'First page content.',
@@ -187,13 +202,15 @@ void main() {
       expect(results, hasLength(3));
       expect(results.every((r) => r.isNotEmpty), isTrue);
 
-      print('[Integration Test] Concurrent translations completed in ${stopwatch.elapsedMilliseconds}ms');
+      debugPrint('[Integration Test] Concurrent translations completed in ${stopwatch.elapsedMilliseconds}ms');
       for (int i = 0; i < results.length; i++) {
-        print('[Integration Test] Page $i: ${results[i]}');
+        debugPrint('[Integration Test] Page $i: ${results[i]}');
       }
-    });
+    }, skip: !isMobilePlatform);
 
     test('should maintain model state across translations', () async {
+      if (!isMobilePlatform) return;
+
       // First translation
       final result1 = await translationService.translate(
         text: 'First translation',
@@ -214,7 +231,7 @@ void main() {
 
       expect(result2, isNotEmpty);
 
-      print('[Integration Test] Model state maintained across translations');
-    });
+      debugPrint('[Integration Test] Model state maintained across translations');
+    }, skip: !isMobilePlatform);
   });
 }

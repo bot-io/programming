@@ -4,28 +4,55 @@ import 'package:dual_reader/src/data/services/translation_cache_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:universal_io/io.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
+
+// Generate unique test directory
+String _getUniqueTestDir() {
+  return 'test_hive_${DateTime.now().millisecondsSinceEpoch}';
+}
 
 void main() {
   group('TranslationCacheService', () {
     late TranslationCacheService cacheService;
+    late String testDir;
 
     setUpAll(() async {
-      // Initialize Hive for testing
-      Hive.init('test_hive');
+      // Initialize Hive for testing with unique directory
+      testDir = _getUniqueTestDir();
+      debugPrint('[TranslationCacheService Test] Using test directory: $testDir');
+      Hive.init(testDir);
       cacheService = TranslationCacheService();
       await cacheService.init();
     });
 
     tearDown(() async {
       // Clear the cache after each test
-      final box = await Hive.openBox<String>('translationCache');
-      await box.clear();
-      await box.close();
+      try {
+        final box = await Hive.openBox<String>('translationCache');
+        await box.clear();
+        await box.close();
+      } catch (e) {
+        debugPrint('[TranslationCacheService Test] tearDown error: $e');
+      }
     });
 
     tearDownAll(() async {
-      await Hive.deleteBoxFromDisk('translationCache');
-      await Hive.close();
+      debugPrint('[TranslationCacheService Test] Cleaning up test directory: $testDir');
+      try {
+        await Hive.deleteBoxFromDisk('translationCache');
+        await Hive.close();
+        // Try to delete the test directory
+        try {
+          final dir = Directory(testDir);
+          if (await dir.exists()) {
+            await dir.delete(recursive: true);
+          }
+        } catch (e) {
+          debugPrint('[TranslationCacheService Test] Could not delete test directory: $e');
+        }
+      } catch (e) {
+        debugPrint('[TranslationCacheService Test] tearDownAll error: $e');
+      }
     });
 
     group('getCachedTranslation', () {

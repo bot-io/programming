@@ -357,6 +357,8 @@ class SettingsScreen extends ConsumerWidget {
       await Hive.deleteBoxFromDisk('app_logs');
       await Hive.deleteBoxFromDisk('settings');
       await Hive.deleteBoxFromDisk('translation_cache');
+      await Hive.deleteBoxFromDisk('translationCache'); // Translation cache box
+      await Hive.deleteBoxFromDisk('progress'); // Reading progress
 
       debugPrint('[SettingsScreen] Hive boxes cleared');
 
@@ -369,7 +371,28 @@ class SettingsScreen extends ConsumerWidget {
         debugPrint('[SettingsScreen] Book files deleted');
       }
 
-      // 3. Clear any additional Hive data
+      // 3. Attempt to clear ML Kit translation models
+      // Note: ML Kit stores models in internal directories that may not be directly accessible
+      // The models will be re-downloaded when needed
+      try {
+        // Delete any app-specific ML Kit model directories if they exist
+        final mlKitDirs = [
+          Directory('${appDocDir.path}/mlkit_models'),
+          Directory('${appDocDir.path}/google_mlkit'),
+        ];
+
+        for (final dir in mlKitDirs) {
+          if (await dir.exists()) {
+            await dir.delete(recursive: true);
+            debugPrint('[SettingsScreen] Deleted ML Kit directory: ${dir.path}');
+          }
+        }
+      } catch (e) {
+        debugPrint('[SettingsScreen] Could not delete ML Kit models (may be in system storage): $e');
+        // This is not critical - models will be re-downloaded as needed
+      }
+
+      // 4. Clear any additional Hive data
       await Hive.deleteFromDisk();
 
       debugPrint('[SettingsScreen] Factory reset complete');

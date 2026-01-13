@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:dual_reader/src/core/di/injection_container.dart' as di;
@@ -8,21 +9,20 @@ import 'package:dual_reader/src/presentation/providers/language_model_notifier.d
 import 'package:dual_reader/src/domain/services/translation_service.dart';
 
 void main() {
-  // Skip integration tests on web/windows due to platform channel requirements
-  final skipIntegrationTests = kIsWeb || true; // Always skip for now - requires device
-
-  test('Language Model Download tests skipped - run on device/emulator', () {
-    if (skipIntegrationTests) {
-      print('Language Model Download Tests require a mobile device or emulator');
-      print('Run with: flutter test test/integration/spanish_model_download_integration_test.dart --device-id=<emulator-id>');
-    }
-  }, skip: !skipIntegrationTests);
+  // Skip integration tests on non-mobile platforms due to platform channel requirements
+  final isMobilePlatform = Platform.isAndroid || Platform.isIOS;
 
   group('Language Model Download Integration Tests', () {
     late TranslationCacheService cacheService;
     late ClientSideTranslationService translationService;
 
     setUpAll(() async {
+      if (!isMobilePlatform) {
+        debugPrint('Language Model Download Tests require a mobile device or emulator');
+        debugPrint('Run with: flutter test test/integration/spanish_model_download_integration_test.dart --device-id=<emulator-id>');
+        return;
+      }
+
       // Initialize Hive for testing
       await Hive.initFlutter();
 
@@ -38,20 +38,25 @@ void main() {
     });
 
     tearDownAll(() async {
+      if (!isMobilePlatform) return;
       await translationService.close();
       await Hive.close();
     });
 
     test('should detect if model is already downloaded', () async {
+      if (!isMobilePlatform) return;
+
       // Check if Spanish model is ready
       const testLanguage = 'es';
       final isReady = await translationService.isLanguageModelReady(testLanguage);
 
       expect(isReady, isA<bool>());
       debugPrint('[Integration Test] $testLanguage model ready: $isReady');
-    });
+    }, skip: !isMobilePlatform);
 
     test('should download language model in background with state tracking', () async {
+      if (!isMobilePlatform) return;
+
       final notifier = LanguageModelNotifier();
       const testLanguage = 'es';
 
@@ -91,9 +96,11 @@ void main() {
       } else {
         debugPrint('[Integration Test] ⚠ Download still in progress after timeout');
       }
-    }, timeout: const Timeout(Duration(minutes: 2)));
+    }, timeout: const Timeout(Duration(minutes: 2)), skip: !isMobilePlatform);
 
     test('should provide progress updates during download attempt', () async {
+      if (!isMobilePlatform) return;
+
       final notifier = LanguageModelNotifier();
       const testLanguage = 'es';
 
@@ -131,9 +138,11 @@ void main() {
         isTrue,
         reason: 'Should have progress messages or complete quickly',
       );
-    }, timeout: const Timeout(Duration(minutes: 2)));
+    }, timeout: const Timeout(Duration(minutes: 2)), skip: !isMobilePlatform);
 
     test('should transition through correct state sequence', () async {
+      if (!isMobilePlatform) return;
+
       final notifier = LanguageModelNotifier();
       const testLanguage = 'es';
 
@@ -174,9 +183,11 @@ void main() {
       // Should have: notStarted → inProgress → (completed OR failed OR still inProgress)
       expect(states, contains(ModelDownloadStatus.notStarted));
       expect(states, contains(ModelDownloadStatus.inProgress));
-    }, timeout: const Timeout(Duration(minutes: 2)));
+    }, timeout: const Timeout(Duration(minutes: 2)), skip: !isMobilePlatform);
 
     test('should handle state immutability correctly', () async {
+      if (!isMobilePlatform) return;
+
       final notifier = LanguageModelNotifier();
       const testLanguage = 'es';
 
@@ -211,9 +222,11 @@ void main() {
         const Duration(seconds: 5),
         onTimeout: () {},
       );
-    }, timeout: const Timeout(Duration(minutes: 2)));
+    }, timeout: const Timeout(Duration(minutes: 2)), skip: !isMobilePlatform);
 
     test('should check model readiness before download', () async {
+      if (!isMobilePlatform) return;
+
       final notifier = LanguageModelNotifier();
       const testLanguage = 'es';
 
@@ -243,20 +256,24 @@ void main() {
         );
         debugPrint('[Integration Test] ✓ Download initiated');
       }
-    }, timeout: const Timeout(Duration(minutes: 2)));
+    }, timeout: const Timeout(Duration(minutes: 2)), skip: !isMobilePlatform);
   });
 
   group('Language Model Download Error Handling', () {
     setUpAll(() async {
+      if (!isMobilePlatform) return;
       await Hive.initFlutter();
       await di.init();
     });
 
     tearDownAll(() async {
+      if (!isMobilePlatform) return;
       await Hive.close();
     });
 
     test('should handle download errors gracefully', () async {
+      if (!isMobilePlatform) return;
+
       final notifier = LanguageModelNotifier();
       const testLanguage = 'es';
 
@@ -275,9 +292,11 @@ void main() {
       } else {
         debugPrint('[Integration Test] Download succeeded or still in progress');
       }
-    }, timeout: const Timeout(Duration(minutes: 2)));
+    }, timeout: const Timeout(Duration(minutes: 2)), skip: !isMobilePlatform);
 
     test('should allow retry after failed download', () async {
+      if (!isMobilePlatform) return;
+
       final notifier = LanguageModelNotifier();
       const testLanguage = 'es';
 
@@ -317,6 +336,6 @@ void main() {
       } else {
         debugPrint('[Integration Test] First download succeeded, nothing to retry');
       }
-    }, timeout: const Timeout(Duration(minutes: 2)));
+    }, timeout: const Timeout(Duration(minutes: 2)), skip: !isMobilePlatform);
   });
 }

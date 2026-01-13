@@ -1,0 +1,1055 @@
+00:00 +0: loading C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart
+00:00 +0: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests (setUpAll)
+Skipping integration tests: Hive requires platform channels
+00:00 +0: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests (setUpAll)
+00:00 +0: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests Complete flow: Book starts with zero progress
+Test skipped: Hive not initialized
+00:00 +1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests (setUpAll)
+00:00 +1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests Reading flow: Navigate pages and track progress
+Test skipped: Hive not initialized
+00:00 +2: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests (setUpAll)
+Skipping integration tests: Hive requires platform channels (run on device/emulator)
+00:00 +2: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests Translation caching during reading flow
+Test skipped: Hive not initialized
+00:00 +3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should cache and retrieve chunk with full metadata
+00:00 +3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests Clear translation cache during reading session
+Test skipped: Hive not initialized
+00:00 +4: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should cache and retrieve chunk with full metadata
+Test skipped: Hive not initialized
+00:00 +5: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests Multiple languages for same book
+Test skipped: Hive not initialized
+00:00 +6: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should persist cache across service instances
+Test skipped: Hive not initialized
+00:00 +7: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests Book deletion removes book but keeps other books
+Test skipped: Hive not initialized
+00:00 +8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should handle page-to-chunk mapping correctly
+Test skipped: Hive not initialized
+00:00 +9: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests Progress calculation throughout reading session
+Test skipped: Hive not initialized
+00:00 +10: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should provide accurate statistics
+Test skipped: Hive not initialized
+00:00 +11: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests Reading flow with repagination
+Test skipped: Hive not initialized
+00:00 +12: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should clear specific book cache
+00:00 +12: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests Complete reading session: Start to finish
+Test skipped: Hive not initialized
+00:00 +13: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should clear specific book cache
+Test skipped: Hive not initialized
+00:00 +14: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests Multiple books with independent progress
+Test skipped: Hive not initialized
+00:00 +15: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should clear specific book and language cache
+Test skipped: Hive not initialized
+00:00 +16: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests Book retrieval returns all books with correct progress
+Test skipped: Hive not initialized
+00:00 +17: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should handle untranslated chunks correctly
+Test skipped: Hive not initialized
+00:00 +18: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/book_reading_flow_integration_test.dart: Book Reading Flow Integration Tests (tearDownAll)
+00:00 +18: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should handle chunk with multiple pages
+Test skipped: Hive not initialized
+00:00 +19: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should overwrite existing chunk
+Test skipped: Hive not initialized
+00:00 +20: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should handle clear all correctly
+Test skipped: Hive not initialized
+00:00 +21: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests should handle complex chunk scenarios
+Test skipped: Hive not initialized
+00:00 +22: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_integration_test.dart: Chunk Cache Integration Tests (tearDownAll)
+00:01 +22: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_with_model_download_test.dart: Chunk Translation with Model Download Integration Tests (setUpAll)
+ML Kit Integration Tests require a mobile device or emulator
+Run with: flutter test test/integration/chunk_translation_with_model_download_test.dart --device-id=<emulator-id>
+00:01 +22: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_with_model_download_test.dart: Chunk Translation with Model Download Integration Tests should check model readiness before translation
+00:01 +22 ~1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_with_model_download_test.dart: Chunk Translation with Model Download Integration Tests should download language model when requested
+00:01 +22 ~2: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_with_model_download_test.dart: Chunk Translation with Model Download Integration Tests should translate text after model download
+00:01 +22 ~3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_with_model_download_test.dart: Chunk Translation with Model Download Integration Tests should handle model download timeout gracefully
+00:01 +22 ~4: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_with_model_download_test.dart: Chunk Translation with Model Download Integration Tests should translate chunk with automatic model download
+00:01 +22 ~5: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_with_model_download_test.dart: Chunk Translation with Model Download Integration Tests should check multiple language models
+00:01 +22 ~6: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_with_model_download_test.dart: Chunk Translation with Model Download Integration Tests should handle concurrent translation requests
+00:01 +22 ~7: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_with_model_download_test.dart: Chunk Translation with Model Download Integration Tests should maintain model state across translations
+00:01 +22 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/chunk_translation_with_model_download_test.dart: Chunk Translation with Model Download Integration Tests (tearDownAll)
+00:02 +22 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_translation_test.dart: Google ML Kit Translation - REAL Integration Tests (setUpAll)
+
+======================================================================
+GOOGLE ML KIT - REAL INTEGRATION TESTS
+======================================================================
+
+Platform: Unknown
+⚠️  WARNING: ML Kit tests can only run on Android/iOS!
+Run with: flutter test test/integration/mlkit_translation_test.dart --device-id <device-id>
+Example: flutter test test/integration/mlkit_translation_test.dart --device-id emulator-5554
+00:02 +22 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_translation_test.dart: Google ML Kit Translation - REAL Integration Tests REAL Test: Service is available on mobile platforms
+
+--- Test: Service Availability ---
+⚠️  Test skipped - ML Kit only works on Android/iOS
+00:02 +23 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_translation_test.dart: Google ML Kit Translation - REAL Integration Tests REAL Test: Translate simple English to Spanish
+
+--- Test: English → Spanish Translation ---
+Input: "Hello world"
+Expected: Spanish translation containing "hola" or "mundo"
+⚠️  Test skipped - ML Kit only works on Android/iOS
+00:02 +24 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_translation_test.dart: Google ML Kit Translation - REAL Integration Tests REAL Test: Translate English to French
+
+--- Test: English → French Translation ---
+Input: "Thank you"
+Expected: French translation
+⚠️  Test skipped - ML Kit only works on Android/iOS
+00:02 +25 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_translation_test.dart: Google ML Kit Translation - REAL Integration Tests REAL Test: Translate English to Bulgarian
+
+--- Test: English → Bulgarian Translation ---
+Input: "Hello"
+Expected: Bulgarian translation
+⚠️  Test skipped - ML Kit only works on Android/iOS
+00:02 +26 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_translation_test.dart: Google ML Kit Translation - REAL Integration Tests REAL Test: Translate longer text
+
+--- Test: Long Text Translation ---
+Input: "The quick brown fox jumps over the lazy dog."
+Expected: Spanish translation
+⚠️  Test skipped - ML Kit only works on Android/iOS
+00:02 +27 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_translation_test.dart: Google ML Kit Translation - REAL Integration Tests REAL Test: Multiple sequential translations
+
+--- Test: Sequential Translations ---
+Testing multiple translations in sequence...
+⚠️  Test skipped - ML Kit only works on Android/iOS
+00:02 +28 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_translation_test.dart: Google ML Kit Translation - REAL Integration Tests REAL Test: Translator caching
+
+--- Test: Translator Caching ---
+Testing that translators are cached for reuse...
+⚠️  Test skipped - ML Kit only works on Android/iOS
+00:02 +29 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_translation_test.dart: Google ML Kit Translation - REAL Integration Tests REAL Test: Auto-detect source language
+
+--- Test: Auto Language Detection ---
+Input: "Bonjour" (French)
+Expected: Auto-detect as French, translate to Spanish
+⚠️  Test skipped - ML Kit only works on Android/iOS
+00:02 +30 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_translation_test.dart: Google ML Kit Translation - REAL Integration Tests REAL Test: Performance benchmark
+
+--- Test: Performance Benchmark ---
+Running performance tests...
+⚠️  Test skipped - ML Kit only works on Android/iOS
+00:02 +31 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_translation_test.dart: Google ML Kit Translation - REAL Integration Tests (tearDownAll)
+
+Cleaning up ML Kit resources...
+[INFO] [ClientSideTranslation] Closing service - translators to close: 0
+[INFO] [ClientSideTranslation] Service closed - translators closed: 0, errors: 0
+Tests complete!
+00:02 +31 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_translation_test.dart: ML Kit Integration Summary Summary
+
+======================================================================
+ML KIT INTEGRATION TESTS COMPLETE
+======================================================================
+
+Summary:
+  ✓ ML Kit translation working
+  ✓ Multiple languages supported (es, fr, bg)
+  ✓ Translator caching functional
+  ✓ Performance acceptable
+
+Models are cached on device after first download.
+Subsequent runs will be much faster.
+======================================================================
+
+00:03 +32 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+00:03 +32 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/progress_tracking_integration_test.dart: Progress Tracking Integration Tests (setUpAll)
+Skipping integration tests: Hive requires platform channels
+00:03 +32 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+00:03 +32 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/progress_tracking_integration_test.dart: Progress Tracking Integration Tests Update book progress saves current page
+Test skipped: Hive not initialized
+00:03 +33 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+00:03 +33 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/progress_tracking_integration_test.dart: Progress Tracking Integration Tests Update progress multiple times for same book
+Test skipped: Hive not initialized
+00:03 +34 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+00:03 +34 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/progress_tracking_integration_test.dart: Progress Tracking Integration Tests Progress percentage calculation
+Test skipped: Hive not initialized
+00:03 +35 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+00:03 +35 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/progress_tracking_integration_test.dart: Progress Tracking Integration Tests Progress tracking with different total pages
+Test skipped: Hive not initialized
+00:03 +36 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+00:04 +36 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/progress_tracking_integration_test.dart: Progress Tracking Integration Tests Progress updates preserve other book properties
+Test skipped: Hive not initialized
+00:04 +37 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+00:04 +37 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/progress_tracking_integration_test.dart: Progress Tracking Integration Tests Multiple books track progress independently
+Test skipped: Hive not initialized
+00:04 +38 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+00:04 +38 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/progress_tracking_integration_test.dart: Progress Tracking Integration Tests Progress persistence across repository queries
+Test skipped: Hive not initialized
+00:04 +39 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+00:04 +39 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/progress_tracking_integration_test.dart: Progress Tracking Integration Tests Progress update handles edge cases
+Test skipped: Hive not initialized
+00:04 +40 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+00:04 +40 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/progress_tracking_integration_test.dart: Progress Tracking Integration Tests Progress update with total pages change
+Test skipped: Hive not initialized
+00:04 +41 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+00:04 +41 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/progress_tracking_integration_test.dart: Progress Tracking Integration Tests Progress tracking survives book retrieval
+Test skipped: Hive not initialized
+00:04 +42 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+00:04 +42 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/progress_tracking_integration_test.dart: Progress Tracking Integration Tests Progress calculation for display
+Test skipped: Hive not initialized
+00:04 +43 ~8: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test
+
+======================================================================
+GOOGLE ML KIT - WIDGET INTEGRATION TEST
+======================================================================
+
+Platform: Unknown
+Note: This test uses REAL ML Kit on device!
+
+--- Test 1: Service Availability ---
+✓ ML Kit service available
+
+--- Test 2: English to Spanish ---
+[ERROR] [ClientSideTranslation] Translation attempted on unsupported platform
+❌ Translation failed: Unsupported operation: ML Kit translation is only supported on Android and iOS
+Duration: 0s
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following UnsupportedError was thrown running a test:
+Unsupported operation: ML Kit translation is only supported on Android and iOS
+
+When the exception was thrown, this was the stack:
+#0      ClientSideTranslationDelegateImpl.translate (package:dual_reader/src/data/services/client_side_translation_service_mobile.dart:23:7)
+#1      main.<anonymous closure> (file:///C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart:41:36)
+<asynchronous suspension>
+#2      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:189:15)
+<asynchronous suspension>
+#3      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1032:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  ML Kit Real Translation Test
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:05 +43 ~8 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Integration Tests (setUpAll)
+00:05 +43 ~8 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/mlkit_widget_test.dart: ML Kit Real Translation Test [E]
+  Test failed. See exception logs above.
+  The test description was: ML Kit Real Translation Test
+  
+00:05 +43 ~8 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Integration Tests (setUpAll)
+Language Model Download Tests require a mobile device or emulator
+Run with: flutter test test/integration/spanish_model_download_integration_test.dart --device-id=<emulator-id>
+00:05 +43 ~8 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Integration Tests should detect if model is already downloaded
+00:05 +43 ~9 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Integration Tests should download language model in background with state tracking
+00:05 +43 ~10 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Integration Tests should provide progress updates during download attempt
+00:05 +43 ~11 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Integration Tests should transition through correct state sequence
+00:05 +43 ~12 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Integration Tests should handle state immutability correctly
+00:05 +43 ~13 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Integration Tests should check model readiness before download
+00:05 +43 ~14 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Integration Tests (tearDownAll)
+00:05 +43 ~14 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Error Handling (setUpAll)
+00:05 +43 ~14 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Error Handling should handle download errors gracefully
+00:05 +43 ~15 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Error Handling should allow retry after failed download
+00:05 +43 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/spanish_model_download_integration_test.dart: Language Model Download Error Handling (tearDownAll)
+00:06 +43 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests (setUpAll)
+Skipping integration tests: Hive requires platform channels
+00:06 +43 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Cache initialization opens Hive box
+Test skipped: Hive not initialized
+00:06 +44 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Cache and retrieve translation for a page
+Test skipped: Hive not initialized
+00:06 +45 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Cache returns null for non-existent translation
+Test skipped: Hive not initialized
+00:06 +46 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Cache stores translations for different pages separately
+Test skipped: Hive not initialized
+00:06 +47 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Cache stores translations for different languages separately
+Test skipped: Hive not initialized
+00:06 +48 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Cache stores translations for different books separately
+Test skipped: Hive not initialized
+00:06 +49 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Clear all translations removes all cached data
+Test skipped: Hive not initialized
+00:06 +50 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Clear book translations removes only that books translations
+Test skipped: Hive not initialized
+00:06 +51 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Clear book language translations removes only that language for that book
+Test skipped: Hive not initialized
+00:06 +52 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Cache handles large text translations
+Test skipped: Hive not initialized
+00:06 +53 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Cache handles special characters in translations
+Test skipped: Hive not initialized
+00:06 +54 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Cache handles Unicode characters
+Test skipped: Hive not initialized
+00:06 +55 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Get cache statistics returns correct data
+Test skipped: Hive not initialized
+00:06 +56 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Base cache service stores and retrieves translations
+Test skipped: Hive not initialized
+00:06 +57 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Base cache service handles different translations for same text
+Test skipped: Hive not initialized
+00:06 +58 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Clear all on base cache service removes all translations
+Test skipped: Hive not initialized
+00:06 +59 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Cache persistence - data survives cache service reset
+Test skipped: Hive not initialized
+00:06 +60 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests Cache handles rapid successive writes
+Test skipped: Hive not initialized
+00:06 +61 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/integration/translation_cache_integration_test.dart: Translation Cache Integration Tests (tearDownAll)
+00:06 +61 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers insertMarkers should insert markers around text for page 0
+00:06 +62 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers insertMarkers should insert markers around text for page 5
+00:06 +63 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers insertMarkers should insert markers around multiline text
+00:06 +64 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers insertMarkers should insert markers around empty text
+00:06 +65 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers insertMarkers should handle special characters in text
+00:06 +66 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers insertMarkers should throw on negative page index
+00:06 +67 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers insertMarkers should throw on page index > 255
+00:06 +68 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPage should extract page 0 from single marked page
+00:06 +69 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPage should extract page 0 from multiple marked pages
+00:06 +70 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPage should extract page 1 from multiple marked pages
+00:06 +71 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPage should extract page 2 from multiple marked pages
+00:06 +72 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPage should return empty string when start marker not found
+[PageMarkers] Start marker not found for page 0
+00:06 +73 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPage should return content after start marker if end marker missing
+[PageMarkers] End marker not found for page 0
+00:06 +74 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPage should extract page with special characters
+00:06 +75 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPage should extract multiline content
+00:06 +76 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPage should throw on negative page index
+00:06 +77 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPage should throw on page index > 255
+00:06 +78 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers stripMarkers should remove markers from single page
+00:06 +79 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers stripMarkers should remove markers from multiple pages
+00:06 +80 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers stripMarkers should return empty string when empty input
+00:06 +81 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers stripMarkers should return text unchanged when no markers present
+00:06 +82 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers stripMarkers should handle text with only markers
+00:06 +83 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers hasMarkers should return true when start marker present
+00:06 +84 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers hasMarkers should return false when no markers present
+00:06 +85 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers hasMarkers should return false for empty string
+00:06 +86 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers countMarkedPages should return 0 for text with no markers
+00:07 +87 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers countMarkedPages should count single marked page
+00:07 +88 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers countMarkedPages should count multiple marked pages
+00:07 +89 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers countMarkedPages should count non-consecutive page markers
+00:07 +90 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPageIndices should return empty list for text with no markers
+00:07 +91 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPageIndices should extract single page index
+00:07 +92 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPageIndices should extract multiple consecutive page indices
+00:07 +93 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers extractPageIndices should extract non-consecutive page indices
+00:07 +94 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers Round-trip Tests should preserve text through insert->extract cycle
+00:07 +95 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers Round-trip Tests should preserve text through insert->extract->strip cycle
+00:07 +96 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers Round-trip Tests should handle multiple pages through full cycle
+00:07 +97 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers Round-trip Tests should strip all markers from multiple pages
+00:07 +98 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers Edge Cases should handle very long text
+00:07 +99 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers Edge Cases should handle unicode text
+00:07 +100 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers Edge Cases should handle text with existing backslash u escapes
+00:07 +101 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/core/utils/page_markers_test.dart: PageMarkers Edge Cases should handle page at max index (255)
+00:07 +102 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl (setUpAll)
+00:07 +102 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl getAllBooks should return empty list when no books exist
+[DEBUG] [BookRepository] Retrieved all books - count: 0
+00:07 +103 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl getAllBooks should return all books when multiple books exist
+[INFO] [BookRepository] Book added - id: 1, title: "Book 1", author: "Author 1"
+[INFO] [BookRepository] Book added - id: 2, title: "Book 2", author: "Author 2"
+[DEBUG] [BookRepository] Retrieved all books - count: 2
+00:07 +104 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl getBookById should return null when book does not exist
+[WARNING] [BookRepository] Book not found - id: nonexistent
+00:07 +105 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl getBookById should return book when it exists
+[INFO] [BookRepository] Book added - id: test-id, title: "Test Book", author: "Test Author"
+[DEBUG] [BookRepository] Retrieved book by id - id: test-id, title: "Test Book"
+00:07 +106 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl addBook should add book to repository
+[INFO] [BookRepository] Book added - id: test-id, title: "Test Book", author: "Test Author"
+[DEBUG] [BookRepository] Retrieved book by id - id: test-id, title: "Test Book"
+00:07 +107 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl addBook should replace existing book with same id
+[INFO] [BookRepository] Book added - id: same-id, title: "Original Title", author: "Original Author"
+[INFO] [BookRepository] Book added - id: same-id, title: "Updated Title", author: "Updated Author"
+[DEBUG] [BookRepository] Retrieved book by id - id: same-id, title: "Updated Title"
+00:07 +108 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl updateBook should update existing book
+[INFO] [BookRepository] Book added - id: test-id, title: "Original Title", author: "Original Author"
+[INFO] [BookRepository] Book updated - id: test-id, title: "Updated Title", page: 10/0
+[DEBUG] [BookRepository] Retrieved book by id - id: test-id, title: "Updated Title"
+00:07 +109 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl deleteBook should delete existing book
+[INFO] [BookRepository] Book added - id: test-id, title: "Test Book", author: "Test Author"
+[INFO] [BookRepository] Deleting book - id: test-id, title: "Test Book"
+[DEBUG] [BookRepository] Deleted book bytes - id: test-id
+[INFO] [BookRepository] Book deleted successfully - id: test-id
+[WARNING] [BookRepository] Book not found - id: test-id
+00:07 +110 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl deleteBook should not throw error when deleting nonexistent book
+[WARNING] [BookRepository] Attempted to delete non-existent book - id: nonexistent
+00:07 +111 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl deleteBook should delete book bytes when deleting book
+[INFO] [BookRepository] Book added - id: test-id, title: "Test Book", author: "Test Author"
+[DEBUG] [BookRepository] Saved book bytes - id: test-id, size: 5 bytes (0.00 KB)
+[INFO] [BookRepository] Deleting book - id: test-id, title: "Test Book"
+[DEBUG] [BookRepository] Deleted book bytes - id: test-id
+[INFO] [BookRepository] Book deleted successfully - id: test-id
+[WARNING] [BookRepository] Book not found - id: test-id
+[WARNING] [BookRepository] Book bytes not found - id: test-id
+00:08 +112 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl saveBookBytes and getBookBytes should save and retrieve book bytes
+[DEBUG] [BookRepository] Saved book bytes - id: test-id, size: 5 bytes (0.00 KB)
+[WARNING] [BookRepository] Book not found - id: test-id
+[DEBUG] [BookRepository] Retrieved book bytes from cache - id: test-id, size: 5 bytes
+00:08 +113 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl saveBookBytes and getBookBytes should return null when bytes do not exist
+[WARNING] [BookRepository] Book not found - id: nonexistent
+[WARNING] [BookRepository] Book bytes not found - id: nonexistent
+00:08 +114 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl saveBookBytes and getBookBytes should overwrite existing bytes
+[DEBUG] [BookRepository] Saved book bytes - id: test-id, size: 3 bytes (0.00 KB)
+[DEBUG] [BookRepository] Saved book bytes - id: test-id, size: 3 bytes (0.00 KB)
+[WARNING] [BookRepository] Book not found - id: test-id
+[DEBUG] [BookRepository] Retrieved book bytes from cache - id: test-id, size: 3 bytes
+00:08 +115 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl saveBookBytes and getBookBytes should handle empty bytes
+[DEBUG] [BookRepository] Saved book bytes - id: test-id, size: 0 bytes (0.00 KB)
+[WARNING] [BookRepository] Book not found - id: test-id
+[DEBUG] [BookRepository] Retrieved book bytes from cache - id: test-id, size: 0 bytes
+00:08 +116 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl saveBookBytes and getBookBytes should handle large bytes
+[DEBUG] [BookRepository] Saved book bytes - id: test-id, size: 100000 bytes (97.66 KB)
+[WARNING] [BookRepository] Book not found - id: test-id
+[DEBUG] [BookRepository] Retrieved book bytes from cache - id: test-id, size: 100000 bytes
+00:08 +117 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl integration - complete book lifecycle should handle complete book lifecycle
+[INFO] [BookRepository] Book added - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d, title: "Test Book", author: "Test Author"
+[DEBUG] [BookRepository] Retrieved book by id - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d, title: "Test Book"
+[DEBUG] [BookRepository] Saved book bytes - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d, size: 5 bytes (0.00 KB)
+[DEBUG] [BookRepository] Retrieved book by id - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d, title: "Test Book"
+[DEBUG] [BookRepository] Retrieved book bytes from cache - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d, size: 5 bytes
+[INFO] [BookRepository] Book updated - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d, title: "Test Book", page: 50/100
+[DEBUG] [BookRepository] Retrieved book by id - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d, title: "Test Book"
+[DEBUG] [BookRepository] Retrieved book by id - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d, title: "Test Book"
+[DEBUG] [BookRepository] Retrieved book bytes from cache - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d, size: 5 bytes
+[INFO] [BookRepository] Deleting book - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d, title: "Test Book"
+[DEBUG] [BookRepository] Deleted book bytes - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d
+[INFO] [BookRepository] Book deleted successfully - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d
+[WARNING] [BookRepository] Book not found - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d
+[WARNING] [BookRepository] Book not found - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d
+[WARNING] [BookRepository] Book bytes not found - id: 8cbc9b7c-3009-4e6e-bb41-21c10413f10d
+00:08 +118 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl (setUpAll)
+00:08 +118 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/book_repository_impl_test.dart: BookRepositoryImpl integration - complete book lifecycle should handle multiple books independently
+[INFO] [BookRepository] Book added - id: book-1, title: "Book 1", author: "Author 1"
+[INFO] [BookRepository] Book added - id: book-2, title: "Book 2", author: "Author 2"
+[DEBUG] [BookRepository] Saved book bytes - id: book-1, size: 3 bytes (0.00 KB)
+[DEBUG] [BookRepository] Saved book bytes - id: book-2, size: 3 bytes (0.00 KB)
+[DEBUG] [BookRepository] Retrieved all books - count: 2
+[DEBUG] [BookRepository] Retrieved book by id - id: book-1, title: "Book 1"
+[DEBUG] [BookRepository] Retrieved book bytes from cache - id: book-1, size: 3 bytes
+[DEBUG] [BookRepository] Retrieved book by id - id: book-2, title: "Book 2"
+[DEBUG] [BookRepository] Retrieved book bytes from cache - id: book-2, size: 3 bytes
+[INFO] [BookRepository] Deleting book - id: book-1, title: "Book 1"
+[DEBUG] [BookRepository] Deleted book bytes - id: book-1
+[INFO] [BookRepository] Book deleted successfully - id: book-1
+[DEBUG] [BookRepository] Retrieved all books - count: 1
+[DEBUG] [BookRepository] Retrieved book by id - id: book-2, title: "Book 2"
+[DEBUG] [BookRepository] Retrieved book bytes from cache - id: book-2, size: 3 bytes
+00:08 +119 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl getSettings should return default settings when none exist
+[SettingsRepository] getSettings: targetLang=es
+00:08 +120 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl getSettings should return saved settings
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:08 +121 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl saveSettings should save settings successfully
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:08 +122 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl saveSettings should overwrite existing settings
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:08 +123 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl saveSettings should save partial settings and maintain defaults
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:08 +124 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle theme mode changes
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:08 +125 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle font family changes
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:08 +126 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle font size changes
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:08 +127 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_cache_service_test.dart: ChunkCacheService (setUpAll)
+00:08 +127 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle line height changes
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:08 +128 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_cache_service_test.dart: ChunkCacheService (setUpAll)
+00:08 +128 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle margin changes
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+00:08 +128 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_cache_service_test.dart: ChunkCacheService (setUpAll)
+Skipping tests: Hive requires platform channels
+00:08 +128 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle margin changes
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:08 +129 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_cache_service_test.dart: ChunkCacheService should initialize cache boxes successfully
+Test skipped: Hive not initialized
+00:08 +129 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle text align changes
+[SettingsRepository] saveSettings: targetLang=es
+00:08 +130 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle text align changes
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:08 +131 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_cache_service_test.dart: ChunkCacheService should cache a translation chunk
+Test skipped: Hive not initialized
+00:08 +132 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle panel width ratio changes
+00:08 +132 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_cache_service_test.dart: ChunkCacheService should return null for non-existent chunk
+Test skipped: Hive not initialized
+00:08 +133 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle panel width ratio changes
+[SettingsRepository] saveSettings: targetLang=es
+00:08 +133 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_cache_service_test.dart: ChunkCacheService should return null for non-existent page mapping
+Test skipped: Hive not initialized
+00:08 +133 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle panel width ratio changes
+[SettingsRepository] saveSettings completed
+00:08 +134 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle panel width ratio changes
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+00:08 +134 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_cache_service_test.dart: ChunkCacheService should clear all cached chunks
+Test skipped: Hive not initialized
+00:08 +135 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle panel width ratio changes
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:08 +136 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_cache_service_test.dart: ChunkCacheService Error Handling should handle cache miss gracefully
+00:08 +136 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle target language code changes
+[SettingsRepository] saveSettings: targetLang=en
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=en
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=fr
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=fr
+[SettingsRepository] saveSettings: targetLang=de
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=de
+00:08 +136 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_cache_service_test.dart: ChunkCacheService Error Handling should handle cache miss gracefully
+[WARNING] [ChunkCache] Box not open, returning null - chunk: non_existent
+00:08 +137 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl settings fields should handle target language code changes
+[SettingsRepository] saveSettings: targetLang=it
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=it
+[SettingsRepository] saveSettings: targetLang=pt
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=pt
+[SettingsRepository] saveSettings: targetLang=zh
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=zh
+[SettingsRepository] saveSettings: targetLang=ja
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=ja
+00:08 +138 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl integration - complete settings lifecycle should handle complete settings lifecycle with updates
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:08 +139 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl integration - complete settings lifecycle should preserve all settings when saving complex configuration
+[SettingsRepository] saveSettings: targetLang=fr
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=fr
+00:09 +140 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl edge cases should handle empty string font family
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:09 +141 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl edge cases should handle very small font size
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:09 +142 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl edge cases should handle very large font size
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:09 +143 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl edge cases should handle extreme line heights
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:09 +144 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl edge cases should handle zero and extreme margins
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:09 +145 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl edge cases should handle extreme panel ratios
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+[SettingsRepository] saveSettings: targetLang=es
+[SettingsRepository] saveSettings completed
+[SettingsRepository] getSettings: targetLang=es
+00:09 +146 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/repositories/settings_repository_impl_test.dart: SettingsRepositoryImpl (tearDownAll)
+00:09 +146 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService getPageTranslation should return cached translation if available
+[INFO] [ChunkTranslation] Getting translation for page 1 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache HIT - page 1
+00:09 +147 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService getPageTranslation should create and translate new chunk when not cached
+[INFO] [ChunkTranslation] Getting translation for page 0 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page 0, creating chunk
+[INFO] [ChunkTranslation] Created chunk book_chunk_0_2_es - pages: 0-2, size: 28 chars
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_2_es
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_2_es - size: 28 chars
+[INFO] [ChunkTranslation] Chunk translation complete - book_chunk_0_2_es, duration: 13ms
+00:09 +148 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService getPageTranslation should retranslate on cache extraction error
+[INFO] [ChunkTranslation] Getting translation for page 1 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache HIT - page 1
+00:09 +149 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Chunk Boundary Calculation should create chunk within target size range
+[INFO] [ChunkTranslation] Getting translation for page 5 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page 5, creating chunk
+[INFO] [ChunkTranslation] Created chunk book_chunk_5_6_es - pages: 5-6, size: 6006 chars
+[INFO] [ChunkTranslation] Translating chunk book_chunk_5_6_es
+[INFO] [ChunkTranslation] Translating chunk book_chunk_5_6_es - size: 6006 chars
+[INFO] [ChunkTranslation] Chunk translation complete - book_chunk_5_6_es, duration: 24ms
+00:09 +150 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Chunk Boundary Calculation should respect paragraph boundaries when possible
+[INFO] [ChunkTranslation] Getting translation for page 2 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page 2, creating chunk
+[INFO] [ChunkTranslation] Created chunk book_chunk_0_4_es - pages: 0-4, size: 160 chars
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_4_es
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_4_es - size: 160 chars
+[INFO] [ChunkTranslation] Chunk translation complete - book_chunk_0_4_es, duration: 8ms
+00:09 +151 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Pre-translation should pre-translate nearby chunks in background
+[INFO] [ChunkTranslation] Getting translation for page 5 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page 5, creating chunk
+[INFO] [ChunkTranslation] Created chunk book_chunk_0_19_es - pages: 0-19, size: 368 chars
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_19_es
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_19_es - size: 368 chars
+[INFO] [ChunkTranslation] Chunk translation complete - book_chunk_0_19_es, duration: 4ms
+00:09 +152 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Pre-translation should handle pre-translation errors gracefully
+[INFO] [ChunkTranslation] Getting translation for page 0 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page 0, creating chunk
+[INFO] [ChunkTranslation] Created chunk book_chunk_0_9_es - pages: 0-9, size: 98 chars
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_9_es
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_9_es - size: 98 chars
+[INFO] [ChunkTranslation] Chunk translation complete - book_chunk_0_9_es, duration: 1ms
+00:09 +153 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Cache Management should clear all chunks for a book
+[INFO] [ChunkTranslation] Cleared all chunks for book: book1
+00:09 +154 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Cache Management should clear chunks for specific book and language
+[INFO] [ChunkTranslation] Cleared chunks - book: book1, language: es
+00:09 +155 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Cache Management should clear all cached chunks
+[INFO] [ChunkTranslation] Cleared all cached chunks
+00:09 +156 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Cache Management should provide cache statistics
+00:09 +157 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Error Handling should handle empty page gracefully
+[INFO] [ChunkTranslation] Getting translation for page 0 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page 0, creating chunk
+[INFO] [ChunkTranslation] Created chunk book_chunk_0_2_es - pages: 0-2, size: 22 chars
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_2_es
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_2_es - size: 22 chars
+[INFO] [ChunkTranslation] Chunk translation complete - book_chunk_0_2_es, duration: 9ms
+00:09 +158 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Error Handling should handle invalid page index
+[INFO] [ChunkTranslation] Getting translation for page -1 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page -1, creating chunk
+[INFO] [ChunkTranslation] Getting translation for page 10 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page 10, creating chunk
+00:09 +159 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Error Handling should handle translation service errors
+[INFO] [ChunkTranslation] Getting translation for page 0 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page 0, creating chunk
+[INFO] [ChunkTranslation] Created chunk book_chunk_0_0_es - pages: 0-0, size: 8 chars
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_0_es
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_0_es - size: 8 chars
+[ERROR] [ChunkTranslation] Chunk translation failed - book_chunk_0_0_es, duration: 0ms
+[ERROR] Error: Exception: Translation failed
+[ERROR] StackTrace: #0      PostExpectation.thenThrow.<anonymous closure> (package:mockito/src/mock.dart:560:7)
+#1      Mock.noSuchMethod (package:mockito/src/mock.dart:186:47)
+#2      MockClientSideTranslationService.translate (file:///C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.mocks.dart:160:14)
+#3      ChunkTranslationService._translateChunk (package:dual_reader/src/data/services/chunk_translation_service.dart:258:52)
+#4      ChunkTranslationService.getPageTranslation (package:dual_reader/src/data/services/chunk_translation_service.dart:73:13)
+<asynchronous suspension>
+#5      Throws._matchFuture (package:matcher/src/expect/throws_matcher.dart:102:19)
+<asynchronous suspension>
+#6      _expect.<anonymous closure> (package:matcher/src/expect/expect.dart:123:26)
+<asynchronous suspension>
+#7      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+
+00:09 +160 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Integration Scenarios should handle multiple pages with varying lengths
+[INFO] [ChunkTranslation] Getting translation for page 0 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page 0, creating chunk
+[INFO] [ChunkTranslation] Created chunk book_chunk_0_4_es - pages: 0-4, size: 4090 chars
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_4_es
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_4_es - size: 4090 chars
+[INFO] [ChunkTranslation] Chunk translation complete - book_chunk_0_4_es, duration: 9ms
+[INFO] [ChunkTranslation] Getting translation for page 4 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page 4, creating chunk
+[INFO] [ChunkTranslation] Created chunk book_chunk_0_4_es - pages: 0-4, size: 4090 chars
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_4_es
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_4_es - size: 4090 chars
+[INFO] [ChunkTranslation] Chunk translation complete - book_chunk_0_4_es, duration: 9ms
+00:09 +161 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/chunk_translation_service_test.dart: ChunkTranslationService Integration Scenarios should maintain display parity across pages using markers
+[INFO] [ChunkTranslation] Getting translation for page 0 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page 0, creating chunk
+[INFO] [ChunkTranslation] Created chunk book_chunk_0_1_es - pages: 0-1, size: 89 chars
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_1_es
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_1_es - size: 89 chars
+[INFO] [ChunkTranslation] Chunk translation complete - book_chunk_0_1_es, duration: 3ms
+[INFO] [ChunkTranslation] Getting translation for page 1 - book: book, lang: es
+[DEBUG] [ChunkTranslation] Cache MISS - page 1, creating chunk
+[INFO] [ChunkTranslation] Created chunk book_chunk_0_1_es - pages: 0-1, size: 89 chars
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_1_es
+[INFO] [ChunkTranslation] Translating chunk book_chunk_0_1_es - size: 89 chars
+[INFO] [ChunkTranslation] Chunk translation complete - book_chunk_0_1_es, duration: 1ms
+00:10 +162 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl parseEpub should throw exception when bytes are empty
+00:10 +163 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl parseEpub should throw exception when bytes are null equivalent
+00:10 +164 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl parseEpub should throw exception for invalid EPUB data
+00:10 +165 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl parseEpub should throw exception for text data instead of EPUB
+00:10 +166 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl parseEpub should handle EPUB with minimal valid structure
+00:10 +167 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl parseEpub should propagate exceptions from epubx library
+00:10 +168 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl EPUB metadata extraction should extract title from valid EPUB (documented behavior)
+00:10 +169 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl EPUB metadata extraction should extract author from valid EPUB (documented behavior)
+00:10 +170 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl EPUB metadata extraction should extract cover image from valid EPUB (documented behavior)
+00:10 +171 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl EPUB content extraction should extract chapters from valid EPUB (documented behavior)
+00:10 +172 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl EPUB content extraction should preserve text formatting (documented behavior)
+00:10 +173 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl Error handling should handle corrupted EPUB gracefully
+00:10 +174 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl Error handling should handle truncated EPUB file
+00:10 +175 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl Error handling should handle EPUB with wrong file extension data
+00:10 +176 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/epub_parser_service_test.dart: EpubParserServiceImpl Memory and performance should handle large input without crashing
+00:11 +176 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should translate English to Spanish and cache result
+[TEST] Translating "hello world" to es...
+00:11 +177 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should translate English to Spanish and cache result
+00:11 +178 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should translate English to Spanish and cache result
+MockTranslation: Detected English (default)
+MockTranslation: [en -> es] (11 chars)
+[TEST] Translation result: "hola mundo"
+MockTranslation: Detected English (default)
+MockTranslation: Cache hit (11 chars)
+[TEST] Second translation took: 55ms (should be cached)
+00:11 +179 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/pagination_service_test.dart: PaginationServiceImpl should paginate text correctly based on constraints
+00:11 +179 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should use alternative language when source equals target
+[TEST] Testing source=language=en scenario...
+MockTranslation: Source (en) = target, using es
+00:11 +180 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should use alternative language when source equals target
+00:11 +181 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should use alternative language when source equals target
+00:11 +181 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/pagination_service_test.dart: PaginationServiceImpl should respect paragraph breaks
+DEBUG: Number of pages: 2
+DEBUG: Page 0: "Paragraph one."
+DEBUG: Page 1: "Paragraph two."
+00:11 +182 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should use alternative language when source equals target
+MockTranslation: [en -> es] (11 chars)
+[TEST] Alternative result: "hola mundo"
+00:12 +183 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should handle text with no common words
+[TEST] Testing unknown words...
+MockTranslation: Detected English (default)
+00:12 +184 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should handle text with no common words
+00:12 +185 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should handle text with no common words
+00:12 +186 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should handle text with no common words
+00:12 +187 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should handle text with no common words
+00:12 +188 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should handle text with no common words
+00:12 +189 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should handle text with no common words
+00:12 +190 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should handle text with no common words
+00:12 +191 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should handle text with no common words
+MockTranslation: [en -> es] (25 chars)
+00:12 +192 ~16 -1: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should handle text with no common words
+[TEST] Result for unknown words: "xyz abc def unknown words"
+00:12 +192 ~16 -2: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should handle text with no common words
+00:12 +192 ~16 -2: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/translation_cache_service_test.dart: TranslationCacheService cacheTranslation should handle multiline text [E]
+  PathAccessException: lock failed, path = 'test_hive\translationcache.lock' (OS Error: The process cannot access the file because another process has locked a portion of the file.
+  , errno = 33)
+  dart:io                                                                     _RandomAccessFile.lock
+  package:hive/src/backend/vm/storage_backend_vm.dart 81:19                   StorageBackendVm.initialize
+  ===== asynchronous gap ===========================
+  dart:async                                                                  _CustomZone.registerUnaryCallback
+  package:hive/src/backend/vm/storage_backend_vm.dart 80:15                   StorageBackendVm.initialize
+  package:hive/src/box/box_base_impl.dart 94:20                               BoxBaseImpl.initialize
+  package:hive/src/hive_impl.dart 111:22                                      HiveImpl._openBox
+  ===== asynchronous gap ===========================
+  dart:async                                                                  _CustomZone.registerUnaryCallback
+  package:hive/src/hive_impl.dart 101:21                                      HiveImpl._openBox
+  package:hive/src/hive_impl.dart 142:18                                      HiveImpl.openBox
+  package:dual_reader/src/data/services/translation_cache_service.dart 17:25  TranslationCacheService._getBox
+  package:dual_reader/src/data/services/translation_cache_service.dart 36:23  TranslationCacheService.cacheTranslation
+  test\src\data\services\translation_cache_service_test.dart 162:28           main.<fn>.<fn>.<fn>
+  
+  PathAccessException: lock failed, path = 'test_hive\translationcache.lock' (OS Error: The process cannot access the file because another process has locked a portion of the file.
+  , errno = 33)
+  dart:io                                                                     _RandomAccessFile.lock
+  package:hive/src/backend/vm/storage_backend_vm.dart 81:19                   StorageBackendVm.initialize
+  ===== asynchronous gap ===========================
+  dart:async                                                                  _CustomZone.registerUnaryCallback
+  package:hive/src/backend/vm/storage_backend_vm.dart 80:15                   StorageBackendVm.initialize
+  package:hive/src/box/box_base_impl.dart 94:20                               BoxBaseImpl.initialize
+  package:hive/src/hive_impl.dart 111:22                                      HiveImpl._openBox
+  ===== asynchronous gap ===========================
+  dart:async                                                                  _CustomZone.registerUnaryCallback
+  package:hive/src/hive_impl.dart 101:21                                      HiveImpl._openBox
+  package:hive/src/hive_impl.dart 142:18                                      HiveImpl.openBox
+  package:dual_reader/src/data/services/translation_cache_service.dart 17:25  TranslationCacheService._getBox
+  package:dual_reader/src/data/services/translation_cache_service.dart 36:23  TranslationCacheService.cacheTranslation
+  test\src\data\services\translation_cache_service_test.dart 162:28           main.<fn>.<fn>.<fn>
+  
+00:12 +192 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should handle text with no common words [E]
+  PathAccessException: Cannot delete file, path = 'test_hive\translationcache.lock' (OS Error: The process cannot access the file because it is being used by another process.
+  , errno = 32)
+  dart:io                                                          FileSystemEntity.delete
+  package:hive/src/backend/vm/storage_backend_vm.dart 215:21       StorageBackendVm._closeInternal
+  ===== asynchronous gap ===========================
+  dart:async                                                       _CustomZone.registerUnaryCallback
+  package:hive/src/backend/vm/storage_backend_vm.dart 211:5        StorageBackendVm._closeInternal
+  package:hive/src/backend/vm/read_write_sync.dart 40:48           ReadWriteSync.syncReadWrite.<fn>.<fn>
+  ===== asynchronous gap ===========================
+  dart:async                                                       Future.then
+  package:hive/src/backend/vm/read_write_sync.dart 40:32           ReadWriteSync.syncReadWrite.<fn>
+  ===== asynchronous gap ===========================
+  dart:async                                                       Future.then
+  package:hive/src/backend/vm/read_write_sync.dart 39:29           ReadWriteSync.syncReadWrite
+  package:hive/src/backend/vm/storage_backend_vm.dart 220:18       StorageBackendVm.close
+  package:hive/src/box/box_base_impl.dart 173:19                   BoxBaseImpl.close
+  ===== asynchronous gap ===========================
+  dart:async                                                       _CustomZone.registerUnaryCallback
+  package:hive/src/box/box_base_impl.dart 170:5                    BoxBaseImpl.close
+  test\src\data\services\mock_translation_service_test.dart 24:17  main.<fn>.<fn>
+  ===== asynchronous gap ===========================
+  dart:async                                                       _CustomZone.registerUnaryCallback
+  test\src\data\services\mock_translation_service_test.dart 22:19  main.<fn>.<fn>
+  
+00:12 +192 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/translation_cache_service_test.dart: TranslationCacheService init should initialize the cache box
+00:12 +193 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should return text unchanged when translating to English
+[TEST] Translating to English (should be unchanged)...
+00:12 +194 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should return text unchanged when translating to English
+00:12 +195 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should return text unchanged when translating to English
+00:12 +196 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl translate - core functionality should return text unchanged when translating to English
+MockTranslation: [es -> en] (10 chars)
+[TEST] Result: "hola mundo"
+00:13 +197 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl detectLanguage should detect English as default
+[TEST] Detecting language for: "hello world this is a test"
+MockTranslation: Detected English (default)
+[TEST] Detected language: en
+00:13 +198 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl detectLanguage should detect Spanish
+[TEST] Detecting Spanish...
+MockTranslation: Detected Spanish
+[TEST] Detected: es
+00:13 +199 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/domain/entities/translation_chunk_test.dart: TranslationChunk should create chunk with correct properties
+00:13 +199 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl detectLanguage should detect Cyrillic as Bulgarian or Russian
+[TEST] Detecting Cyrillic...
+MockTranslation: Detected Bulgarian (Cyrillic)
+[TEST] Detected Cyrillic as: bg
+00:13 +200 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl detectLanguage should detect Cyrillic as Bulgarian or Russian
+00:13 +201 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl detectLanguage should detect Cyrillic as Bulgarian or Russian
+00:13 +202 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/domain/entities/translation_chunk_test.dart: TranslationChunk should indicate translated status correctly
+00:13 +203 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl detectLanguage should detect Chinese characters
+[TEST] Detecting Chinese characters...
+00:13 +204 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl detectLanguage should detect Chinese characters
+00:13 +205 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl detectLanguage should detect Chinese characters
+00:13 +206 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl detectLanguage should detect Chinese characters
+MockTranslation: Detected Chinese
+00:13 +207 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl detectLanguage should detect Chinese characters
+[TEST] Detected: zh
+00:13 +208 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl detectLanguage should detect Chinese characters
+00:13 +209 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/domain/entities/translation_chunk_test.dart: TranslationChunk should handle paragraphs with double newlines
+00:13 +210 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl caching should cache and reuse translations
+[TEST] Testing caching behavior...
+00:13 +211 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl caching should cache and reuse translations
+00:13 +212 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl caching should cache and reuse translations
+00:13 +213 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl caching should cache and reuse translations
+00:13 +214 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl caching should cache and reuse translations
+00:13 +215 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl caching should cache and reuse translations
+MockTranslation: Detected English (default)
+MockTranslation: [en -> es] (11 chars)
+MockTranslation: Detected English (default)
+MockTranslation: Cache hit (11 chars)
+[TEST] Both results identical: true
+00:13 +216 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl performance should translate within reasonable time
+MockTranslation: Detected English (default)
+MockTranslation: [en -> es] (26 chars)
+00:14 +217 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl performance should translate within reasonable time
+[TEST] Translation took: 367ms
+00:14 +218 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelNotifier Tests should update state to inProgress when starting download
+00:14 +219 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl (tearDownAll)
+00:14 +220 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/data/services/mock_translation_service_test.dart: MockTranslationServiceImpl (tearDownAll)
+00:14 +220 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelNotifier Tests should update state to completed without showNotification when model already exists
+00:14 +221 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelNotifier Tests should update state to failed with showNotification true on download error
+00:14 +222 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelNotifier Tests should reset to notStarted state
+00:14 +223 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelNotifier Tests should dismiss notification while keeping completed status
+00:14 +224 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelNotifier Tests should copy state correctly with copyWith method
+00:14 +225 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelNotifier Tests should handle multiple state transitions
+00:14 +226 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelNotifier Tests should preserve progress message during error state
+00:14 +227 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelNotifier Tests should handle copyWith with showNotification parameter
+00:14 +228 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelNotifier Tests should track different language codes
+00:14 +229 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: ModelDownloadStatus Enum Tests should have correct number of states
+00:14 +230 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: ModelDownloadStatus Enum Tests should contain all required states
+00:14 +231 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelState Tests should create state with all fields
+00:14 +232 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelState Tests should create state with error message and notification
+00:14 +233 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelState Tests should copy state preserving null fields
+00:14 +234 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelState Tests should handle copyWith with all parameters
+00:14 +235 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelState Tests should handle copyWith with partial parameters
+00:14 +236 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelState Tests should be immutable with copyWith
+00:14 +237 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelState Tests showNotification should default to false
+00:14 +238 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: LanguageModelState Tests languageCode should default to en
+00:14 +239 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: showNotification Behavior Tests should not show notification when model is already ready on startup
+00:14 +240 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: showNotification Behavior Tests should show notification after successful download
+00:14 +241 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: showNotification Behavior Tests should allow dismissing notification
+00:14 +242 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: showNotification Behavior Tests should not show notification during download
+00:14 +243 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/providers/language_model_notifier_test.dart: showNotification Behavior Tests should not show notification on API-based service
+00:15 +244 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_spanish_download_test.dart: Language Model Download Banner Widget Tests should render progress banner components
+00:16 +245 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen displays empty message when no books are present
+00:16 +246 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen displays empty message when no books are present
+00:17 +247 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen displays empty message when no books are present
+00:17 +248 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen displays empty message when no books are present
+00:17 +249 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen displays empty message when no books are present
+00:17 +250 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen displays empty message when no books are present
+00:17 +251 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen displays empty message when no books are present
+00:17 +252 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen displays empty message when no books are present
+00:17 +253 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen displays empty message when no books are present
+00:17 +254 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen displays empty message when no books are present
+00:17 +255 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen displays empty message when no books are present
+[SettingsNotifier] Loading settings...
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:18 +256 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests SettingsScreen renders all settings options
+00:18 +256 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen displays books in list
+[SettingsNotifier] Loading settings...
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:18 +257 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests SettingsScreen renders all settings options
+00:18 +257 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen shows progress percentage for books
+[SettingsNotifier] Loading settings...
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:18 +258 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests SettingsScreen renders all settings options
+00:19 +258 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen shows 1% for new books
+[SettingsNotifier] Loading settings...
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:19 +259 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests SettingsScreen renders all settings options
+00:19 +259 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen shows settings button in app bar
+[SettingsNotifier] Loading settings...
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:19 +260 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests SettingsScreen renders all settings options
+00:19 +260 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen has app bar with title
+[SettingsNotifier] Loading settings...
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:19 +261 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests SettingsScreen renders all settings options
+00:19 +261 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen handles multiple books with different progress
+[SettingsNotifier] Loading settings...
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:19 +262 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests SettingsScreen renders all settings options
+00:19 +262 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen shows progress indicator
+[SettingsNotifier] Loading settings...
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:19 +263 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests SettingsScreen renders all settings options
+00:20 +263 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/library_screen_test.dart: LibraryScreen Widget Tests LibraryScreen book cards are tappable
+[SettingsNotifier] Loading settings...
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:20 +264 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests SettingsScreen renders all settings options
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:20 +265 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests Theme mode dropdown shows and changes theme
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:21 +266 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests Font size slider changes value
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+[SettingsNotifier] Updating settings: themeMode=ThemeMode.system, targetLang=es, fontSize=22.0
+[SettingsNotifier] Settings saved to repository
+[SettingsNotifier] State updated, new state: targetLang=es
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+00:21 +267 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests Line height slider changes value
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+[SettingsNotifier] Updating settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+[SettingsNotifier] Settings saved to repository
+[SettingsNotifier] State updated, new state: targetLang=es
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+00:22 +268 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests Margins slider changes value
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+[SettingsNotifier] Updating settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+[SettingsNotifier] Settings saved to repository
+[SettingsNotifier] State updated, new state: targetLang=es
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+00:22 +269 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests Text alignment dropdown shows all options
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+00:22 +270 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests Language dropdown shows all supported languages
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=en, themeMode=ThemeMode.system
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+00:22 +271 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests Clear translation cache shows confirmation dialog
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:22 +272 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests Clear translation cache - cancel dismisses dialog
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:23 +273 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests Clear translation cache - confirm clears cache
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:23 +274 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests Language change with already downloaded model
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=en, themeMode=ThemeMode.system
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+00:23 +275 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests Settings screen handles different initial settings
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.dark
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+00:23 +276 ~16 -3: C:/Users/svetlin.chobanov/Documents/GitHub/programming/cross-platform/dual-reader/dual_reader/test/src/presentation/screens/settings_screen_test.dart: SettingsScreen Widget Tests Clear cache handles errors gracefully
+[SettingsNotifier] Loading settings...
+[SettingsScreen] BUILD: targetLang=es, themeMode=ThemeMode.system
+[SettingsNotifier] Loaded settings: themeMode=ThemeMode.system, targetLang=es, fontSize=16.0
+00:23 +277 ~16 -3: Some tests failed.

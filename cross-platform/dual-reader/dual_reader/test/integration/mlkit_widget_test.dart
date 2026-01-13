@@ -1,20 +1,30 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:dual_reader/src/data/services/client_side_translation_service_mobile.dart';
-import 'dart:io' show Platform;
 
 /// Widget-based integration test for Google ML Kit
 /// This runs on the actual device/emulator, not in the test VM
 ///
 /// Run with: flutter test test/integration/mlkit_widget_test.dart --device-id emulator-5554
 void main() {
-  testWidgets('ML Kit Real Translation Test', (WidgetTester tester) async {
-    print('\n${'=' * 70}');
-    print('GOOGLE ML KIT - WIDGET INTEGRATION TEST');
-    print('${'=' * 70}\n');
+  // Skip test on non-mobile platforms due to platform channel requirements
+  final isMobilePlatform = Platform.isAndroid || Platform.isIOS;
 
-    print('Platform: ${Platform.isAndroid ? "Android" : Platform.isIOS ? "iOS" : "Unknown"}');
-    print('Note: This test uses REAL ML Kit on device!\n');
+  testWidgets('ML Kit Real Translation Test', (WidgetTester tester) async {
+    if (!isMobilePlatform) {
+      debugPrint('ML Kit Widget Integration Tests require a mobile device or emulator');
+      debugPrint('Run with: flutter test test/integration/mlkit_widget_test.dart --device-id=<emulator-id>');
+      return;
+    }
+
+    debugPrint('\n${'=' * 70}');
+    debugPrint('GOOGLE ML KIT - WIDGET INTEGRATION TEST');
+    debugPrint('${'=' * 70}\n');
+
+    debugPrint('Platform: ${Platform.isAndroid ? "Android" : Platform.isIOS ? "iOS" : "Unknown"}');
+    debugPrint('Note: This test uses REAL ML Kit on device!\n');
 
     // Build a simple widget to test
     await tester.pumpWidget(
@@ -30,11 +40,11 @@ void main() {
     // Create the service
     final service = ClientSideTranslationDelegateImpl();
 
-    print('--- Test 1: Service Availability ---');
+    debugPrint('--- Test 1: Service Availability ---');
     expect(service, isNotNull);
-    print('✓ ML Kit service available\n');
+    debugPrint('✓ ML Kit service available\n');
 
-    print('--- Test 2: English to Spanish ---');
+    debugPrint('--- Test 2: English to Spanish ---');
     final stopwatch1 = Stopwatch()..start();
 
     try {
@@ -46,9 +56,9 @@ void main() {
 
       stopwatch1.stop();
 
-      print('Input: "Hello world"');
-      print('Output: "$result"');
-      print('Duration: ${stopwatch1.elapsed.inSeconds}s (${stopwatch1.elapsed.inMilliseconds}ms)');
+      debugPrint('Input: "Hello world"');
+      debugPrint('Output: "$result"');
+      debugPrint('Duration: ${stopwatch1.elapsed.inSeconds}s (${stopwatch1.elapsed.inMilliseconds}ms)');
 
       expect(result, isNotEmpty);
       expect(result.toLowerCase(), isNot(equals('hello world')));
@@ -57,18 +67,18 @@ void main() {
           result.toLowerCase().contains('mundo');
 
       if (hasSpanish) {
-        print('✓ Spanish translation successful\n');
+        debugPrint('✓ Spanish translation successful\n');
       } else {
-        print('⚠ Translation produced result but may not be Spanish\n');
+        debugPrint('⚠ Translation produced result but may not be Spanish\n');
       }
     } catch (e) {
       stopwatch1.stop();
-      print('❌ Translation failed: $e');
-      print('Duration: ${stopwatch1.elapsed.inSeconds}s\n');
+      debugPrint('❌ Translation failed: $e');
+      debugPrint('Duration: ${stopwatch1.elapsed.inSeconds}s\n');
       rethrow;
     }
 
-    print('--- Test 3: English to French ---');
+    debugPrint('--- Test 3: English to French ---');
     final stopwatch2 = Stopwatch()..start();
 
     try {
@@ -80,20 +90,20 @@ void main() {
 
       stopwatch2.stop();
 
-      print('Input: "Thank you"');
-      print('Output: "$result"');
-      print('Duration: ${stopwatch2.elapsed.inMilliseconds}ms');
+      debugPrint('Input: "Thank you"');
+      debugPrint('Output: "$result"');
+      debugPrint('Duration: ${stopwatch2.elapsed.inMilliseconds}ms');
 
       expect(result, isNotEmpty);
-      print('✓ French translation successful\n');
+      debugPrint('✓ French translation successful\n');
     } catch (e) {
       stopwatch2.stop();
-      print('❌ French translation failed: $e\n');
+      debugPrint('❌ French translation failed: $e\n');
       rethrow;
     }
 
-    print('--- Test 4: Translator Caching ---');
-    print('Translating again to test caching...');
+    debugPrint('--- Test 4: Translator Caching ---');
+    debugPrint('Translating again to test caching...');
 
     final stopwatch3 = Stopwatch()..start();
 
@@ -106,27 +116,27 @@ void main() {
 
       stopwatch3.stop();
 
-      print('Output: "$result"');
-      print('Duration: ${stopwatch3.elapsed.inMilliseconds}ms');
-      print('✓ Caching test successful (should be faster than first translation)\n');
+      debugPrint('Output: "$result"');
+      debugPrint('Duration: ${stopwatch3.elapsed.inMilliseconds}ms');
+      debugPrint('✓ Caching test successful (should be faster than first translation)\n');
     } catch (e) {
       stopwatch3.stop();
-      print('❌ Caching test failed: $e\n');
+      debugPrint('❌ Caching test failed: $e\n');
     }
 
     // Cleanup
     await service.close();
 
-    print('${'=' * 70}');
-    print('ML KIT INTEGRATION TESTS COMPLETE');
-    print('${'=' * 70}\n');
+    debugPrint('${'=' * 70}');
+    debugPrint('ML KIT INTEGRATION TESTS COMPLETE');
+    debugPrint('${'=' * 70}\n');
 
-    print('Summary:');
-    print('  ✓ ML Kit service available');
-    print('  ✓ English → Spanish working');
-    print('  ✓ English → French working');
-    print('  ✓ Translator caching functional');
-    print('\nModels are cached on device for future use.');
-    print('${'=' * 70}\n');
-  });
+    debugPrint('Summary:');
+    debugPrint('  ✓ ML Kit service available');
+    debugPrint('  ✓ English → Spanish working');
+    debugPrint('  ✓ English → French working');
+    debugPrint('  ✓ Translator caching functional');
+    debugPrint('\nModels are cached on device for future use.');
+    debugPrint('${'=' * 70}\n');
+  }, skip: !isMobilePlatform);
 }

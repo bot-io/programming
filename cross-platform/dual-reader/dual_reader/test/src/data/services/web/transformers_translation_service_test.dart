@@ -1,3 +1,5 @@
+@TestOn('browser')
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dual_reader/src/data/services/web/transformers_interop.dart';
 
@@ -9,6 +11,13 @@ import 'package:dual_reader/src/data/services/web/transformers_interop.dart';
 /// Note: This test will download the Helsinki-NLP/opus-mt-en-es model (~270MB) on first run.
 /// Subsequent runs will use the cached model.
 void main() {
+  // Skip on non-web platforms since dart:js is not available
+  if (!kIsWeb) {
+    print('Skipping Transformers.js tests - only available on web platform');
+    print('Run with: flutter test test/src/data/services/web/transformers_translation_service_test.dart --platform chrome');
+    return;
+  }
+
   print('=== Starting Transformers.js Integration Tests ===');
 
   group('Transformers.js Translation Integration Tests', () {

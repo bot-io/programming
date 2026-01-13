@@ -101,6 +101,14 @@ void main() {
     testWidgets('SettingsScreen renders all settings options', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            settingsProvider.overrideWith((ref) {
+              return SettingsNotifier(
+                fakeGetSettingsUseCase,
+                sl<UpdateSettingsUseCase>(),
+              )..state = const SettingsEntity();
+            }),
+          ],
           child: MaterialApp(
             home: SettingsScreen(),
           ),
@@ -109,13 +117,21 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify all main settings options are displayed
+      // Verify main settings options are displayed (without scrolling)
       expect(find.text('Theme Mode'), findsOneWidget);
       expect(find.text('Font Size'), findsOneWidget);
       expect(find.text('Line Height'), findsOneWidget);
       expect(find.text('Margins'), findsOneWidget);
       expect(find.text('Text Alignment'), findsOneWidget);
       expect(find.text('Target Translation Language'), findsOneWidget);
+
+      // Clear Translation Cache is further down, need to scroll to it
+      await tester.dragUntilVisible(
+        find.text('Clear Translation Cache'),
+        find.byType(ListView),
+        const Offset(0, -50),
+      );
+      await tester.pumpAndSettle();
       expect(find.text('Clear Translation Cache'), findsOneWidget);
     });
 
