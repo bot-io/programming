@@ -58,9 +58,17 @@ class FakeImportBookUseCase implements ImportBookUseCase {
   String? lastBookId;
 
   @override
-  Future<void> call({FilePickerResult? pickResult}) async {
+  Future<BookEntity?> call({FilePickerResult? pickResult}) async {
     importCalled = true;
     lastBookId = 'test-book-id';
+    return BookEntity(
+      id: 'test-book-id',
+      title: 'Test Book',
+      author: 'Test Author',
+      coverPath: '',
+      filePath: '/test/path.epub',
+      importedDate: DateTime.now(),
+    );
   }
 
   @override

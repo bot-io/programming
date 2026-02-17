@@ -25,13 +25,15 @@ class BookEntityAdapter extends TypeAdapter<BookEntity> {
       importedDate: fields[5] as DateTime,
       currentPage: fields[6] as int,
       totalPages: fields[7] as int,
+      paginationStatus: fields[8] as int?,
+      paginationProgress: fields[9] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, BookEntity obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +49,11 @@ class BookEntityAdapter extends TypeAdapter<BookEntity> {
       ..writeByte(6)
       ..write(obj.currentPage)
       ..writeByte(7)
-      ..write(obj.totalPages);
+      ..write(obj.totalPages)
+      ..writeByte(8)
+      ..write(obj.paginationStatus)
+      ..writeByte(9)
+      ..write(obj.paginationProgress);
   }
 
   @override

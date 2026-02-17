@@ -33,9 +33,28 @@ class BookRepositoryImpl implements BookRepository {
       final box = await _openBox();
       final books = box.values.toList();
 
-      _componentName.logDebug('Retrieved all books - count: ${books.length}');
+      // Migrate old books without paginationStatus/paginationProgress fields
+      final migratedBooks = books.map((book) {
+        if (book.paginationStatus == null) {
+          _componentName.logDebug('Migrating old book: ${book.id} - ${book.title}');
+          return book.copyWith(
+            paginationStatus: PaginationStatus.notStarted.index,
+            paginationProgress: 0.0,
+          );
+        }
+        return book;
+      }).toList();
 
-      return books;
+      // Update migrated books in storage
+      for (final book in migratedBooks) {
+        if (book.paginationStatus == null) {
+          await box.put(book.id, book);
+        }
+      }
+
+      _componentName.logDebug('Retrieved all books - count: ${migratedBooks.length}');
+
+      return migratedBooks;
     } catch (e) {
       _componentName.logError('Failed to get all books', error: e);
       rethrow;

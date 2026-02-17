@@ -13,7 +13,7 @@ class ImportBookUseCase {
 
   ImportBookUseCase(this._bookRepository, this._epubParserService);
 
-  Future<void> call({FilePickerResult? pickResult}) async {
+  Future<BookEntity?> call({FilePickerResult? pickResult}) async {
     FilePickerResult? result = pickResult;
     if (result == null) {
       result = await FilePicker.platform.pickFiles(
@@ -24,29 +24,29 @@ class ImportBookUseCase {
     }
 
     if (result == null || result.files.isEmpty) {
-      return;
+      return null;
     }
 
     final platformFile = result.files.first;
     final fileBytes = platformFile.bytes;
-    
+
     if (fileBytes == null) {
       if (!kIsWeb && platformFile.path != null) {
         final bytes = await File(platformFile.path!).readAsBytes();
-        await _processEpub(bytes, platformFile.name);
+        return await _processEpub(bytes, platformFile.name);
       } else {
         throw Exception('File data not available');
       }
     } else {
-      await _processEpub(fileBytes, platformFile.name);
+      return await _processEpub(fileBytes, platformFile.name);
     }
   }
 
-  Future<void> _processEpub(List<int> bytes, String fileName) async {
+  Future<BookEntity?> _processEpub(List<int> bytes, String fileName) async {
     final epubBook = await _epubParserService.parseEpub(bytes);
 
     final uniqueId = const Uuid().v4();
-    
+
     // Always save bytes to Hive for cross-platform retrieval
     await _bookRepository.saveBookBytes(uniqueId, bytes);
 
@@ -69,8 +69,13 @@ class ImportBookUseCase {
       coverPath: '', // Extraction to be added later
       filePath: filePath,
       importedDate: DateTime.now(),
+      paginationStatus: PaginationStatus.notStarted.index,
+      paginationProgress: 0.0,
     );
 
     await _bookRepository.addBook(book);
+    debugPrint('[ImportBook] Book imported: ${book.id} - ${book.title}');
+
+    return book;
   }
 }

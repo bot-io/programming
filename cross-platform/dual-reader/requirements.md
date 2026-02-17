@@ -149,16 +149,32 @@ Dual Reader 3.2 is a cross-platform ebook reader application built with Flutter.
 - **Local Storage**: Store imported books locally
   - Use `path_provider` for file system access
   - Use `shared_preferences` or `hive` for metadata
-- **Book Import**: 
+- **Book Import**:
   - File picker for EPUB/MOBI files
   - Drag-and-drop support (web)
   - Import from device storage
-- **Library View**: 
+  - **Automatic Pagination on Import**: Books are automatically paginated immediately after import
+    - Pagination starts in background when book is imported
+    - Books show "Preparing..." status with progress indicator during pagination
+    - Books are grayed out and not clickable while paginating
+    - Visual progress overlay on book cover shows percentage complete
+    - Progress bar below book shows pagination progress
+    - Once pagination completes, book becomes clickable and shows total page count
+    - **Implementation**: [library_screen.dart:56-84](dual_reader/lib/src/presentation/screens/library_screen.dart:56-84), [PaginateBookUseCase](dual_reader/lib/src/domain/usecases/paginate_book_usecase.dart)
+    - **State Management**: [PaginationProgressNotifier](dual_reader/lib/src/presentation/providers/pagination_progress_notifier.dart) tracks pagination status across app
+    - **Book Entity Updates**: [BookEntity](dual_reader/lib/src/domain/entities/book_entity.dart) includes paginationStatus and paginationProgress fields
+- **Library View**:
   - Grid/list view of all books
   - Book cover thumbnails
   - Title, author, progress display
+  - **Pagination Status Indicators**:
+    - Grayed out + "Preparing..." overlay during pagination
+    - Progress percentage on cover during pagination
+    - Linear progress bar below book during pagination
+    - "Not ready" label for books that haven't been paginated
+    - Normal progress bar for completed books
   - Search and filter functionality
-- **Book Management**: 
+- **Book Management**:
   - Delete books
   - View book details
   - Export books (optional)
@@ -223,8 +239,18 @@ Dual Reader 3.2 is a cross-platform ebook reader application built with Flutter.
   - **Note**: Integration tests require Android/iOS device due to ML Kit platform dependencies
 
 ### 11. Navigation
-- **Quick Navigation**: 
+- **Quick Navigation**:
   - Page slider (seek to any page)
+  - **Deferred Translation on Slider Drag**: Translation is only triggered when user lifts their finger
+    - During drag: Slider moves visually showing position, page content updates immediately, but translation is deferred
+    - During drag: Percentage value indicator shows current position (e.g., "45%")
+    - On drag end: Translation is triggered for the final selected page
+    - **Implementation**: [dual_reader_screen.dart:1368-1401](dual_reader/lib/src/presentation/screens/dual_reader_screen.dart:1368-1401)
+    - **Testing**: [slider_navigation_test.dart](dual_reader/test/src/presentation/widgets/slider_navigation_test.dart) - Widget tests for slider drag behavior (13 tests, all passing)
+      - Tests verify: onChangeStart, onChanged, onChangeEnd callback order
+      - Tests verify: Page updates during drag, translation only on release
+      - Tests verify: Percentage calculation for all page positions
+      - Tests verify: Complete drag cycle behavior
   - Chapter navigation (if available)
   - Table of contents (if available)
 - **Bookmarks**: Save bookmarks for quick access

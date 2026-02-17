@@ -17,6 +17,7 @@ import 'package:dual_reader/src/domain/entities/book_entity.dart';
 import 'package:dual_reader/src/domain/repositories/book_repository.dart';
 import 'package:dual_reader/src/data/repositories/book_repository_impl.dart';
 import 'package:dual_reader/src/domain/usecases/import_book_usecase.dart';
+import 'package:dual_reader/src/domain/usecases/paginate_book_usecase.dart';
 import 'package:dual_reader/src/domain/usecases/get_all_books_usecase.dart';
 import 'package:dual_reader/src/domain/usecases/get_book_by_id_usecase.dart';
 import 'package:dual_reader/src/domain/usecases/update_book_progress_usecase.dart';
@@ -105,6 +106,7 @@ Future<void> init() async {
 
   // Use cases
   sl.registerLazySingleton<ImportBookUseCase>(() => ImportBookUseCase(sl(), sl()));
+  sl.registerLazySingleton<PaginateBookUseCase>(() => PaginateBookUseCase(sl(), sl(), sl()));
   sl.registerLazySingleton<GetAllBooksUseCase>(() => GetAllBooksUseCase(sl()));
   sl.registerLazySingleton<GetBookByIdUseCase>(() => GetBookByIdUseCase(sl()));
   sl.registerLazySingleton<UpdateBookProgressUseCase>(() => UpdateBookProgressUseCase(sl()));

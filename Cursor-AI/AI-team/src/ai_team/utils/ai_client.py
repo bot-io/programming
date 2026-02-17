@@ -49,7 +49,7 @@ class AIClient:
             if cursor_key:
                 print(f"[AI_CLIENT] Found CURSOR_API_KEY - will use Cursor API endpoint")
                 return cursor_key
-            
+
             # Check OPENAI_API_KEY - could be OpenAI key or Cursor key
             openai_key = os.getenv("OPENAI_API_KEY")
             if openai_key:
@@ -63,6 +63,25 @@ class AIClient:
             return _settings_get("OPENAI_API_KEY") or _settings_get("CURSOR_API_KEY")
         elif self.provider == "anthropic":
             return os.getenv("ANTHROPIC_API_KEY") or _settings_get("ANTHROPIC_API_KEY")
+        return None
+
+    def _get_base_url(self) -> Optional[str]:
+        """Get custom base URL from settings (for custom LLM endpoints)"""
+        def _settings_get(name: str) -> Optional[str]:
+            try:
+                from .settings import get_setting
+                v = get_setting(name)
+                return str(v).rstrip('/') if v else None
+            except Exception:
+                return None
+
+        # Check for custom URLs in settings
+        if self.provider == "gemini":
+            return _settings_get("GEMINI_BASE_URL")
+        elif self.provider == "openai":
+            return _settings_get("OPENAI_BASE_URL")
+        elif self.provider == "anthropic":
+            return _settings_get("ANTHROPIC_BASE_URL")
         return None
     
     def _init_client(self):
@@ -79,8 +98,18 @@ class AIClient:
                 import openai
                 # Check if using Cursor API key (starts with "key_")
                 is_cursor = self.api_key.startswith("key_")
-                
-                if is_cursor:
+
+                # Get custom base URL from settings
+                custom_base_url = self._get_base_url()
+
+                if custom_base_url:
+                    print(f"[AI_CLIENT] Using custom OpenAI-compatible endpoint: {custom_base_url}")
+                    self.client = openai.OpenAI(
+                        api_key=self.api_key,
+                        base_url=custom_base_url
+                    )
+                    print(f"[AI_CLIENT] OpenAI-compatible client initialized successfully")
+                elif is_cursor:
                     # Cursor API keys may work with standard OpenAI endpoint
                     # Cursor's API is OpenAI-compatible, so try standard endpoint first
                     # If that doesn't work, we'll try Cursor-specific endpoints
@@ -89,7 +118,7 @@ class AIClient:
                         "https://api.cursor.sh/openai/v1",  # Cursor's OpenAI-compatible endpoint
                         "https://api.cursor.com/openai/v1",  # Alternative endpoint
                     ]
-                    
+
                     client_initialized = False
                     for base_url in cursor_endpoints:
                         try:
@@ -111,7 +140,7 @@ class AIClient:
                             else:
                                 print(f"[AI_CLIENT] Endpoint {base_url} failed: {e}")
                             continue
-                    
+
                     if not client_initialized:
                         print(f"[AI_CLIENT] WARNING: Cursor API key failed with all endpoints")
                         print(f"[AI_CLIENT] Note: Cursor API keys (starting with 'key_') are typically for Cursor's admin API,")
@@ -124,7 +153,16 @@ class AIClient:
                     print(f"[AI_CLIENT] OpenAI client initialized successfully")
             elif self.provider == "anthropic":
                 import anthropic
-                self.client = anthropic.Anthropic(api_key=self.api_key)
+                # Get custom base URL from settings
+                custom_base_url = self._get_base_url()
+                if custom_base_url:
+                    print(f"[AI_CLIENT] Using custom Anthropic-compatible endpoint: {custom_base_url}")
+                    self.client = anthropic.Anthropic(
+                        api_key=self.api_key,
+                        base_url=custom_base_url
+                    )
+                else:
+                    self.client = anthropic.Anthropic(api_key=self.api_key)
                 print(f"[AI_CLIENT] Anthropic client initialized successfully")
         except ImportError as e:
             print(f"[WARNING] {self.provider} package not installed. Install with: pip install {self.provider}")
@@ -243,10 +281,19 @@ Provide complete, working code that implements the requirements."""
         This avoids extra Python dependencies and keeps the AI-team stack lightweight.
         Env var:
           - GEMINI_API_KEY (or GOOGLE_API_KEY fallback)
+        Settings:
+          - GEMINI_BASE_URL (optional, for custom Gemini-compatible endpoints)
         """
-        # v1beta endpoint (Google AI Studio / Generative Language API)
-        # NOTE: We never log the key.
-        endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
+        # Support custom base URL from settings
+        base_url = self._get_base_url()
+        if base_url:
+            # Use custom endpoint
+            endpoint = f"{base_url}/v1beta/models/{model}:generateContent?key={self.api_key}"
+            print(f"[AI_CLIENT] Using custom Gemini endpoint: {base_url}")
+        else:
+            # v1beta endpoint (Google AI Studio / Generative Language API)
+            # NOTE: We never log the key.
+            endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
 
         system_text = (prompt_dict or {}).get("system", "")
         user_text = (prompt_dict or {}).get("user", "")

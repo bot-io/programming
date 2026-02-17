@@ -1,7 +1,7 @@
 # Setup script for Cursor AI API Key
 # Run this script to set the API key for the current PowerShell session
 
-$apiKey = "key_7a4d3336f35055d9410722baa2b3902b9e3c9ac1cd3a9123f8f0f729063418d8"
+$apiKey = "XXXXX"
 
 # Set environment variable for current session
 $env:OPENAI_API_KEY = $apiKey

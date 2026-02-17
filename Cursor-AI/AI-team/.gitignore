@@ -2,6 +2,7 @@
 
 .env
 .env.*
+ai_team_settings.local.json
 
 # Local locks/state
 .ai_team_locks/

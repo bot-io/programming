@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dual_reader/src/core/di/injection_container.dart';
 import 'package:dual_reader/src/domain/usecases/import_book_usecase.dart';
+import 'package:dual_reader/src/domain/entities/book_entity.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dual_reader/src/domain/usecases/delete_book_usecase.dart';
 import 'package:dual_reader/src/presentation/providers/book_list_notifier.dart';
@@ -64,12 +65,14 @@ class LibraryScreen extends ConsumerWidget {
 
                 if (result != null) {
                   final importBook = sl<ImportBookUseCase>();
-                  await importBook(pickResult: result);
+                  final book = await importBook(pickResult: result);
 
-                  if (context.mounted) {
+                  if (book != null && context.mounted) {
+                    // Refresh books to show the newly imported book
                     ref.read(bookListProvider.notifier).refreshBooks();
+
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Book imported successfully!')),
+                      const SnackBar(content: Text('Book imported successfully')),
                     );
                   }
                 }
@@ -226,6 +229,7 @@ class LibraryScreen extends ConsumerWidget {
                     itemCount: books.length,
                     itemBuilder: (context, index) {
                       final book = books[index];
+
                       return InkWell(
                         onTap: () => context.go('/read/${book.id}'),
                         onLongPress: () {
@@ -257,16 +261,21 @@ class LibraryScreen extends ConsumerWidget {
                           child: Column(
                             children: [
                               Expanded(
-                                child: book.coverPath.isNotEmpty && !kIsWeb
-                                    ? Image.file(
-                                        File(book.coverPath),
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                      )
-                                    : Container(
-                                        color: Colors.grey[300],
-                                        child: const Icon(Icons.book, size: 50, color: Colors.grey),
-                                      ),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    book.coverPath.isNotEmpty && !kIsWeb
+                                        ? Image.file(
+                                            File(book.coverPath),
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                          )
+                                        : Container(
+                                            color: Colors.grey[300],
+                                            child: const Icon(Icons.book, size: 50, color: Colors.grey),
+                                          ),
+                                  ],
+                                ),
                               ),
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
@@ -285,15 +294,6 @@ class LibraryScreen extends ConsumerWidget {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                    if (book.totalPages > 0)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 8.0),
-                                        child: LinearProgressIndicator(
-                                          value: book.currentPage / book.totalPages,
-                                          backgroundColor: Colors.grey[300],
-                                          color: Colors.deepPurpleAccent,
-                                        ),
-                                      ),
                                   ],
                                 ),
                               ),

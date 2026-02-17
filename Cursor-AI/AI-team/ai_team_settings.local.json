@@ -1,5 +1,6 @@
 {
-  "AI_PROVIDER": "gemini",
-  "GEMINI_API_KEY": "AIzaSyBVsLBhoEOS-NDwW7GvKbUGUgT9CitbolQ",
-  "GEMINI_MODEL": "gemini-1.5-pro"
+  "AI_PROVIDER": "anthropic",
+  "ANTHROPIC_API_KEY": "6e9240534b96486ea550b964e3a009cd.m7wroqx78sQyPyUU",
+  "ANTHROPIC_MODEL": "glm-4.7",
+  "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic"
 }

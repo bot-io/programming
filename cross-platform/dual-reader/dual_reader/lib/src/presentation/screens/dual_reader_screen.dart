@@ -55,6 +55,8 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
   bool _isPreTranslating = false; // Flag to prevent concurrent pre-translations
   String? _currentLanguage; // Track current language to detect changes
   SettingsEntity? _previousSettings; // Track previous settings to detect layout changes
+  bool _isSliderDragging = false; // Track if user is currently dragging the slider
+  int? _pendingPageDuringDrag; // Store the page number being selected during drag
 
   final ScrollController _scrollController = ScrollController();
 
@@ -1337,16 +1339,78 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Page slider
-            SizedBox(
-              height: 30,
-              child: Slider(
-                value: _currentOriginalPage.toDouble(),
-                min: 0,
-                max: (_totalOriginalPages > 0 ? _totalOriginalPages - 1 : 0).toDouble(),
-                divisions: _totalOriginalPages > 1 ? _totalOriginalPages : 1,
-                onChanged: (double value) => _goToPage(value.round()),
-              ),
+            // Page slider with value indicator
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Percentage indicator (shown during drag)
+                if (_isSliderDragging && _pendingPageDuringDrag != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.grey[800] : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${((_pendingPageDuringDrag! + 1) / _totalOriginalPages * 100).toStringAsFixed(0)}%',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isDark ? Colors.white : Colors.black87,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ),
+                  ),
+                // Page slider
+                SizedBox(
+                  height: 30,
+                  child: Slider(
+                    value: _isSliderDragging && _pendingPageDuringDrag != null
+                        ? _pendingPageDuringDrag!.toDouble()
+                        : _currentOriginalPage.toDouble(),
+                    min: 0,
+                    max: (_totalOriginalPages > 0 ? _totalOriginalPages - 1 : 0).toDouble(),
+                    divisions: _totalOriginalPages > 1 ? _totalOriginalPages : 1,
+                    label: _isSliderDragging && _pendingPageDuringDrag != null
+                        ? 'Page ${_pendingPageDuringDrag! + 1} of $_totalOriginalPages'
+                        : 'Page ${_currentOriginalPage + 1} of $_totalOriginalPages',
+                    onChangeStart: (double value) {
+                      LoggingService.debug(_componentName, 'Slider drag started at page ${value.round()}');
+                      setState(() {
+                        _isSliderDragging = true;
+                        _pendingPageDuringDrag = value.round();
+                      });
+                    },
+                    onChanged: (double value) {
+                      final newPage = value.round();
+                      // Update the page content immediately, but don't translate yet
+                      setState(() {
+                        _pendingPageDuringDrag = newPage;
+                        _currentOriginalPage = newPage;
+                        if (_scrollController.hasClients) _scrollController.jumpTo(0);
+                      });
+                    },
+                    onChangeEnd: (double value) {
+                      final finalPage = value.round();
+                      LoggingService.info(_componentName, 'Slider drag ended at page $finalPage - triggering translation');
+                      setState(() {
+                        _isSliderDragging = false;
+                        _pendingPageDuringDrag = null;
+                      });
+                      // Trigger translation only when user lifts finger
+                      Future.microtask(() async {
+                        try {
+                          await _translateCurrentVisiblePage();
+                        } catch (e, stackTrace) {
+                          LoggingService.error(_componentName, 'Error translating page after slider drag - page: $finalPage', error: e, stackTrace: stackTrace);
+                        }
+                      });
+                      _saveProgress();
+                    },
+                  ),
+                ),
+              ],
             ),
             // Navigation buttons
             Padding(
