@@ -32,6 +32,12 @@ class BookEntity extends Equatable {
   final int? paginationStatus; // Stored as int: 0=notStarted, 1=inProgress, 2=completed, 3=failed (nullable for migration)
   @HiveField(9)
   final double? paginationProgress; // 0.0 to 1.0 (nullable for migration)
+  @HiveField(10)
+  final String? detectedLanguage; // Auto-detected source language (e.g., 'en', 'es', 'fr')
+  @HiveField(11)
+  final int? languageDetectionConfidence; // Confidence score 0-100
+  @HiveField(12)
+  final DateTime? languageDetectionDate; // When language was detected
 
   const BookEntity({
     required this.id,
@@ -44,12 +50,29 @@ class BookEntity extends Equatable {
     this.totalPages = 0,
     this.paginationStatus = 0, // Default to notStarted
     this.paginationProgress = 0.0,
+    this.detectedLanguage,
+    this.languageDetectionConfidence,
+    this.languageDetectionDate,
   });
 
   PaginationStatus get status => PaginationStatus.values[paginationStatus ?? 0];
   bool get isPaginating => status == PaginationStatus.inProgress;
   bool get isPaginated => status == PaginationStatus.completed && totalPages > 0;
   bool get canBeOpened => isPaginated || status == PaginationStatus.notStarted;
+
+  /// Check if language has been detected with sufficient confidence
+  bool hasLanguageDetection(int minConfidence = 50) {
+    return detectedLanguage != null &&
+        detectedLanguage!.isNotEmpty &&
+        (languageDetectionConfidence ?? 0) >= minConfidence;
+  }
+
+  /// Check if language detection is recent (within 7 days)
+  bool hasRecentLanguageDetection() {
+    if (languageDetectionDate == null) return false;
+    final daysSinceDetection = DateTime.now().difference(languageDetectionDate!).inDays;
+    return daysSinceDetection < 7;
+  }
 
   BookEntity copyWith({
     String? id,
@@ -63,6 +86,10 @@ class BookEntity extends Equatable {
     int? paginationStatus,
     double? paginationProgress,
     PaginationStatus? status,
+    String? detectedLanguage,
+    int? languageDetectionConfidence,
+    DateTime? languageDetectionDate,
+    bool clearLanguageDetection = false,
   }) {
     return BookEntity(
       id: id ?? this.id,
@@ -75,6 +102,9 @@ class BookEntity extends Equatable {
       totalPages: totalPages ?? this.totalPages,
       paginationStatus: paginationStatus ?? (status?.index ?? this.paginationStatus),
       paginationProgress: paginationProgress ?? this.paginationProgress,
+      detectedLanguage: clearLanguageDetection ? null : (detectedLanguage ?? this.detectedLanguage),
+      languageDetectionConfidence: clearLanguageDetection ? null : (languageDetectionConfidence ?? this.languageDetectionConfidence),
+      languageDetectionDate: clearLanguageDetection ? null : (languageDetectionDate ?? this.languageDetectionDate),
     );
   }
 
@@ -90,6 +120,9 @@ class BookEntity extends Equatable {
         totalPages,
         paginationStatus,
         paginationProgress,
+        detectedLanguage,
+        languageDetectionConfidence,
+        languageDetectionDate,
       ];
 }
 

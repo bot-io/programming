@@ -1,0 +1,193 @@
+name: Smoke Tests
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: smoke-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke-tests-android:
+    name: Smoke Tests (Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: dual_reader
+        run: flutter pub get
+
+      - name: Run smoke tests (Android)
+        working-directory: dual_reader
+        run: |
+          bash ../scripts/run_smoke_tests.sh --platform android
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results-android
+          path: |
+            dual_reader/test_results/
+            dual_reader/test_screenshots/
+          retention-days: 7
+
+  smoke-tests-ios:
+    name: Smoke Tests (iOS)
+    runs-on: macos-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: dual_reader
+        run: flutter pub get
+
+      - name: Run smoke tests (iOS)
+        working-directory: dual_reader
+        run: |
+          bash ../scripts/run_smoke_tests.sh --platform ios
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results-ios
+          path: |
+            dual_reader/test_results/
+            dual_reader/test_screenshots/
+          retention-days: 7
+
+  smoke-tests-web:
+    name: Smoke Tests (Web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: dual_reader
+        run: flutter pub get
+
+      - name: Run smoke tests (Web)
+        working-directory: dual_reader
+        run: |
+          bash ../scripts/run_smoke_tests.sh --platform web
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results-web
+          path: |
+            dual_reader/test_results/
+            dual_reader/test_screenshots/
+          retention-days: 7
+
+  smoke-tests-report:
+    name: Generate Smoke Test Report
+    runs-on: ubuntu-latest
+    needs: [smoke-tests-android, smoke-tests-ios, smoke-tests-web]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Android results
+        uses: actions/download-artifact@v4
+        with:
+          name: smoke-test-results-android
+          path: results/android/
+
+      - name: Download iOS results
+        uses: actions/download-artifact@v4
+        with:
+          name: smoke-test-results-ios
+          path: results/ios/
+
+      - name: Download Web results
+        uses: actions/download-artifact@v4
+        with:
+          name: smoke-test-results-web
+          path: results/web/
+
+      - name: Generate test report
+        run: |
+          bash scripts/generate_test_report.sh \
+            --name "Smoke Tests" \
+            --results-dir results \
+            --output test-report.html
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-report
+          path: test-report.html
+          retention-days: 30
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('test-report.html', 'utf8');
+
+            // Extract summary from report
+            const summaryMatch = report.match(/<summary>(.*?)<\/summary>/s);
+            const summary = summaryMatch ? summaryMatch[1] : 'Test report generated';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Smoke Tests Results\n\n${summary}\n\n[View Full Report](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+            });
+
+  gatekeeper:
+    name: Gatekeeper Check
+    runs-on: ubuntu-latest
+    needs: [smoke-tests-android, smoke-tests-ios, smoke-tests-web]
+    if: always()
+
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.smoke-tests-android.result }}" != "success" ]] || \
+             [[ "${{ needs.smoke-tests-ios.result }}" != "success" ]] || \
+             [[ "${{ needs.smoke-tests-web.result }}" != "success" ]]; then
+            echo "::error::One or more smoke test jobs failed"
+            exit 1
+          fi
+          echo "All smoke tests passed successfully"

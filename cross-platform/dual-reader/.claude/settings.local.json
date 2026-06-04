@@ -139,7 +139,8 @@
       "Bash(done:*)",
       "Bash(1)",
       "Bash(flutter build apk:*)",
-      "Bash(flutter build appbundle:*)"
+      "Bash(flutter build appbundle:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [
       "Bash(git commit:*)",
@@ -149,5 +150,6 @@
       "WebSearch",
       "WebFetch"
     ]
-  }
+  },
+  "defaultMode": "acceptEdits"
 }

@@ -12,9 +12,11 @@ import 'package:dual_reader/src/presentation/providers/settings_notifier.dart';
 import 'package:dual_reader/src/presentation/providers/book_list_notifier.dart';
 import 'package:dual_reader/src/domain/entities/settings_entity.dart';
 import 'package:dual_reader/src/data/services/book_translation_cache_service.dart';
+import 'package:dual_reader/src/data/services/enhanced_translation_cache_service.dart';
 import 'package:dual_reader/src/domain/services/translation_service.dart';
 import 'package:dual_reader/src/core/utils/logging_service.dart';
 import 'package:get_it/get_it.dart';
+import 'package:dual_reader/src/presentation/screens/language_models_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -159,56 +161,21 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
           ListTile(
-            title: const Text('Clear Translation Cache'),
-            subtitle: const Text('Remove all cached translations'),
-            trailing: const Icon(Icons.delete_sweep, color: Colors.red),
-            onTap: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Clear Translation Cache'),
-                  content: const Text('Are you sure you want to clear all cached translations? This will make translations slower until they are cached again.'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      style: TextButton.styleFrom(foregroundColor: Colors.red),
-                      child: const Text('Clear'),
-                    ),
-                  ],
+            title: const Text('Downloaded Languages'),
+            subtitle: const Text('Manage language models for offline translation'),
+            trailing: const Icon(Icons.download, color: Colors.blue),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const LanguageModelsScreen(),
                 ),
               );
-
-              if (confirmed == true) {
-                try {
-                  final cache = GetIt.I<BookTranslationCacheService>();
-                  // Initialize the cache to ensure the box is open before clearing
-                  await cache.init();
-                  await cache.clearAll();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Translation cache cleared successfully'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to clear cache: $e'),
-                        duration: const Duration(seconds: 3),
-                      ),
-                    );
-                  }
-                }
-              }
             },
           ),
+          const Divider(),
+          // Enhanced Cache Management
+          _CacheManagementTile(),
+          const Divider(),
           const Divider(),
           ListTile(
             title: const Text('Factory Reset'),
@@ -722,5 +689,246 @@ class _LogViewerDialogState extends State<_LogViewerDialog> {
         ),
       ),
     );
+  }
+}
+
+/// Cache management tile with statistics and controls
+class _CacheManagementTile extends StatefulWidget {
+  @override
+  State<_CacheManagementTile> createState() => _CacheManagementTileState();
+}
+
+class _CacheManagementTileState extends State<_CacheManagementTile> {
+  EnhancedTranslationCacheService? _cacheService;
+  CacheStatistics? _statistics;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCache();
+  }
+
+  Future<void> _initializeCache() async {
+    try {
+      _cacheService = EnhancedTranslationCacheService.instance;
+      await _cacheService!.init();
+      await _loadStatistics();
+    } catch (e) {
+      debugPrint('[CacheManagement] Init error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadStatistics() async {
+    if (_cacheService == null) return;
+
+    final stats = await _cacheService!.getStatistics();
+    setState(() {
+      _statistics = stats;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const ListTile(
+        title: Text('Translation Cache'),
+        subtitle: LinearProgressIndicator(),
+        trailing: Icon(Icons.storage, color: Colors.blue),
+      );
+    }
+
+    return ExpansionTile(
+      leading: const Icon(Icons.storage, color: Colors.blue),
+      title: const Text('Translation Cache'),
+      subtitle: Text(
+        _statistics != null
+            ? '${_statistics!.entryCount} entries • ${_formatBytes(_statistics!.sizeBytes)}'
+            : 'Loading...',
+      ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Statistics
+              if (_statistics != null) ...[
+                _buildStatRow('Entries', '${_statistics!.entryCount}'),
+                _buildStatRow('Size', _formatBytes(_statistics!.sizeBytes)),
+                _buildStatRow('Hit Rate', '${(_statistics!.hitRate * 100).toStringAsFixed(1)}%'),
+                _buildStatRow('Hits', '${_statistics!.hits}'),
+                _buildStatRow('Misses', '${_statistics!.misses}'),
+                const SizedBox(height: 16),
+              ],
+
+              // Actions
+              Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Refresh'),
+                    onPressed: _loadStatistics,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade100,
+                      foregroundColor: Colors.blue.shade900,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.delete_sweep, size: 18),
+                    label: const Text('Clear Cache'),
+                    onPressed: () => _showClearCacheDialog(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade100,
+                      foregroundColor: Colors.red.shade900,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.file_download, size: 18),
+                    label: const Text('Export'),
+                    onPressed: () => _exportCache(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade100,
+                      foregroundColor: Colors.green.shade900,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Cache size slider
+              Text(
+                'Max Cache Size',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Slider(
+                      value: 50, // Default 50MB
+                      min: 10,
+                      max: 200,
+                      divisions: 19,
+                      label: '50 MB',
+                      onChanged: (value) {
+                        // Update cache size limit
+                        if (_cacheService != null) {
+                          _cacheService!.configure(
+                            maxCacheSizeBytes: (value * 1024 * 1024).toInt(),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('50 MB'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Text(value, style: const TextStyle(fontFamily: 'monospace')),
+        ],
+      ),
+    );
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  Future<void> _showClearCacheDialog(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Translation Cache'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('This will delete ${_statistics?.entryCount ?? 0} cached translations (${_formatBytes(_statistics?.sizeBytes ?? 0)}).'),
+            const SizedBox(height: 8),
+            const Text('Translations will be slower until cached again.', style: TextStyle(fontSize: 12)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && _cacheService != null) {
+      await _cacheService!.clearCache();
+      await _loadStatistics();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Translation cache cleared'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportCache(BuildContext context) async {
+    if (_cacheService == null) return;
+
+    try {
+      final cacheJson = await _cacheService!.exportCache();
+
+      await Clipboard.setData(ClipboardData(text: cacheJson));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cache exported to clipboard (${_formatBytes(cacheJson.length)})'),
+            duration: Duration(seconds: 3),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to export cache: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

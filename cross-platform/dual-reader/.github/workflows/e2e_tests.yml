@@ -1,0 +1,260 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [master, main, develop]
+  pull_request:
+    branches: [master, main, develop]
+  schedule:
+    # Run nightly tests at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to test (android/ios/web/all)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - android
+          - ios
+          - web
+
+env:
+  FLUTTER_VERSION: '3.24.5'
+  JAVA_VERSION: '17'
+
+jobs:
+  # Unit and Widget Tests
+  unit-tests:
+    name: Unit & Widget Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: ./dual_reader
+        run: flutter pub get
+
+      - name: Verify dependencies
+        working-directory: ./dual_reader
+        run: flutter pub deps
+
+      - name: Run unit tests
+        working-directory: ./dual_reader
+        run: |
+          flutter test \
+            --coverage \
+            --test-randomize-ordering-seed=random \
+            --reporter expanded
+
+      - name: Generate coverage report
+        working-directory: ./dual_reader
+        run: |
+          flutter pub global activate coverage
+          flutter pub global run coverage:format_coverage \
+            --lcov \
+            --in=coverage \
+            --out=coverage/lcov.info \
+            --packages=.dart_tool/package_config.json \
+            --report-on=lib
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./dual_reader/coverage/lcov.info
+          flags: unit-tests
+          name: unit-test-coverage
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: |
+            dual_reader/test/
+            dual_reader/coverage/
+
+  # Web E2E Tests
+  web-e2e-tests:
+    name: Web E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - name: Get dependencies
+        working-directory: ./dual_reader
+        run: flutter pub get
+
+      - name: Build web app for testing
+        working-directory: ./dual_reader
+        run: |
+          flutter build web --release --no-tree-shake-icons
+
+      - name: Run web integration tests
+        working-directory: ./dual_reader
+        run: |
+          flutter test integration_test \
+            --platform chrome \
+            --dart-define=TEST_MODE=true \
+            --dart-define=USE_MOCK_TRANSLATION=true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-e2e-test-results
+          path: |
+            dual_reader/test_integration/logs/
+            dual_reader/test_integration/screenshots/
+
+  # Android E2E Tests
+  android-e2e-tests:
+    name: Android E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: Nexus 6
+          script: |
+            cd dual_reader
+            flutter test integration_test \
+              --dart-define=TEST_MODE=true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-e2e-test-results
+          path: |
+            dual_reader/test_integration/logs/
+            dual_reader/test_integration/screenshots/
+
+  # iOS E2E Tests (macOS only)
+  ios-e2e-tests:
+    name: iOS E2E Tests
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: ./dual_reader
+        run: flutter pub get
+
+      - name: Start iOS Simulator
+        run: |
+          xcrun simctl boot "iPhone 15 Pro"
+          xcrun simctl list devices
+
+      - name: Run iOS integration tests
+        working-directory: ./dual_reader
+        run: |
+          flutter test integration_test \
+            --device-id=$(xcrun simctl list devices | grep "iPhone 15 Pro" | grep -E "Booted|Shutdown" | head -1 | grep -oE "\([0-9A-F-]+\)") \
+            --dart-define=TEST_MODE=true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-e2e-test-results
+          path: |
+            dual_reader/test_integration/logs/
+            dual_reader/test_integration/screenshots/
+
+  # Test Summary
+  test-summary:
+    name: Test Summary
+    needs: [unit-tests, web-e2e-tests, android-e2e-tests, ios-e2e-tests]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: test-results
+
+      - name: Generate test summary
+        run: |
+          echo "# Test Run Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Unit Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Web E2E Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.web-e2e-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Android E2E Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.android-e2e-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## iOS E2E Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.ios-e2e-tests.result }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check test results
+        if: |
+          needs.unit-tests.result == 'failure' ||
+          needs.web-e2e-tests.result == 'failure' ||
+          needs.android-e2e-tests.result == 'failure'
+        run: |
+          echo "One or more test suites failed!"
+          exit 1

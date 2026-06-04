@@ -1,0 +1,104 @@
+{
+  "android": {
+    "app_startup": {
+      "mean": 1200,
+      "median": 1150,
+      "p95": 1500,
+      "p99": 1800,
+      "unit": "ms"
+    },
+    "page_load": {
+      "mean": 140,
+      "median": 130,
+      "p95": 180,
+      "p99": 220,
+      "unit": "ms"
+    },
+    "translation": {
+      "mean": 750,
+      "median": 700,
+      "p95": 1100,
+      "p99": 1400,
+      "unit": "ms"
+    },
+    "pagination": {
+      "mean": 4800,
+      "median": 4600,
+      "p95": 7500,
+      "p99": 9500,
+      "unit": "ms"
+    },
+    "memory": {
+      "mean": 80,
+      "median": 78,
+      "p95": 110,
+      "unit": "MB"
+    }
+  },
+  "ios": {
+    "app_startup": {
+      "mean": 1100,
+      "median": 1050,
+      "p95": 1400,
+      "p99": 1700,
+      "unit": "ms"
+    },
+    "page_load": {
+      "mean": 130,
+      "median": 120,
+      "p95": 170,
+      "unit": "ms"
+    },
+    "translation": {
+      "mean": 700,
+      "median": 650,
+      "p95": 1000,
+      "unit": "ms"
+    },
+    "pagination": {
+      "mean": 4500,
+      "median": 4300,
+      "p95": 7000,
+      "unit": "ms"
+    },
+    "memory": {
+      "mean": 75,
+      "median": 73,
+      "p95": 100,
+      "unit": "MB"
+    }
+  },
+  "web": {
+    "app_startup": {
+      "mean": 1500,
+      "median": 1400,
+      "p95": 2000,
+      "p99": 2500,
+      "unit": "ms"
+    },
+    "page_load": {
+      "mean": 100,
+      "median": 90,
+      "p95": 150,
+      "unit": "ms"
+    },
+    "translation": {
+      "mean": 1200,
+      "median": 1100,
+      "p95": 1800,
+      "unit": "ms"
+    },
+    "pagination": {
+      "mean": 4000,
+      "median": 3800,
+      "p95": 6500,
+      "unit": "ms"
+    },
+    "memory": {
+      "mean": 60,
+      "median": 58,
+      "p95": 85,
+      "unit": "MB"
+    }
+  }
+}

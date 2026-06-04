@@ -1,6 +1,8 @@
 import 'package:get_it/get_it.dart';
 import 'package:dual_reader/src/domain/services/epub_parser_service.dart';
 import 'package:dual_reader/src/data/services/epub_parser_service_impl.dart';
+import 'package:dual_reader/src/domain/services/mobi_parser_service.dart';
+import 'package:dual_reader/src/data/services/mobi_parser_service_impl.dart';
 import 'package:dual_reader/src/domain/services/translation_service.dart';
 import 'package:dual_reader/src/data/services/mymemory_translation_service_impl.dart';
 import 'package:dual_reader/src/data/services/google_translate_service_impl.dart';
@@ -29,7 +31,11 @@ import 'package:dual_reader/src/domain/repositories/settings_repository.dart';
 import 'package:dual_reader/src/data/repositories/settings_repository_impl.dart';
 import 'package:dual_reader/src/core/adapters/theme_mode_adapter.dart';
 import 'package:dual_reader/src/core/adapters/text_align_adapter.dart';
+import 'package:dual_reader/src/core/platform/platform_features.dart';
 import 'package:flutter/foundation.dart';
+
+// Export TranslationService for use in other files
+export 'package:dual_reader/src/domain/services/translation_service.dart' show TranslationService;
 
 final sl = GetIt.instance;
 
@@ -56,6 +62,7 @@ Future<void> init() async {
 
   // Core
   sl.registerLazySingleton<EpubParserService>(() => EpubParserServiceImpl());
+  sl.registerLazySingleton<MobiParserService>(() => MobiParserServiceImpl());
   final translationCacheService = TranslationCacheService();
   await translationCacheService.init();
   sl.registerLazySingleton<TranslationCacheService>(() => translationCacheService);
@@ -105,7 +112,7 @@ Future<void> init() async {
   sl.registerLazySingleton<SettingsRepository>(() => SettingsRepositoryImpl());
 
   // Use cases
-  sl.registerLazySingleton<ImportBookUseCase>(() => ImportBookUseCase(sl(), sl()));
+  sl.registerLazySingleton<ImportBookUseCase>(() => ImportBookUseCase(sl(), sl(), sl()));
   sl.registerLazySingleton<PaginateBookUseCase>(() => PaginateBookUseCase(sl(), sl(), sl()));
   sl.registerLazySingleton<GetAllBooksUseCase>(() => GetAllBooksUseCase(sl()));
   sl.registerLazySingleton<GetBookByIdUseCase>(() => GetBookByIdUseCase(sl()));

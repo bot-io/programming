@@ -19,8 +19,9 @@
   <title>dual_reader</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- Transformers.js for client-side translation -->
-  <!-- Using Helsinki-NLP/opus-mt-en-es model (~270MB) for English→Spanish translation -->
+  <!-- Transformers.js v3 for client-side translation -->
+  <!-- Using NLLB-200 distilled model (600M parameters) for 200+ languages -->
+  <!-- FLORES-200 language codes: https://github.com/facebookresearch/flores/blob/main/flores200/README.md -->
   <script type="module">
     import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0';
 
@@ -28,155 +29,233 @@
     env.allowLocalModels = false;
     env.useBrowserCache = true;
 
-    // Global pipeline reference
-    let translator = null;
-    let isModelLoading = false;
+    // Global pipeline references - one per language pair for efficiency
+    const translators = new Map(); // key: "sourceLang-targetLang", value: pipeline
+    const loadingModels = new Map(); // Track models currently being loaded
 
-    // Load the translation model
-    async function loadModel(modelName) {
-      if (translator || isModelLoading) {
-        return translator;
-      }
+    // NLLB-200 distilled model (600M) - supports 200+ languages
+    const MODEL_NAME = 'facebook/nllb-200-distilled-600M';
 
-      isModelLoading = true;
-      console.log('[Transformers.js] Loading model:', modelName);
+    // FLORES-200 language code mapping (BCP 47 -> FLORES-200)
+    const FLORES_CODES = {
+      'en': 'eng_Latn',
+      'es': 'spa_Latn',
+      'fr': 'fra_Latn',
+      'de': 'deu_Latn',
+      'it': 'ita_Latn',
+      'pt': 'por_Latn',
+      'zh': 'zho_Hans',
+      'ja': 'jpn_Jpan',
+      'ko': 'kor_Hang',
+      'ru': 'rus_Cyrl',
+      'bg': 'bul_Cyrl',
+      'ar': 'arb_Arab',
+      'hi': 'hin_Deva',
+      'th': 'tha_Thai',
+      'vi': 'vie_Latn',
+      'tr': 'tur_Latn',
+      'nl': 'nld_Latn',
+      'pl': 'pol_Latn',
+      'sv': 'swe_Latn',
+      'da': 'dan_Latn',
+      'fi': 'fin_Latn',
+      'no': 'nob_Latn',
+      'uk': 'ukr_Cyrl',
+      'cs': 'ces_Latn',
+      'el': 'ell_Grek',
+      'he': 'heb_Hebr',
+      'id': 'ind_Latn',
+      'ms': 'zsm_Latn',
+      'ro': 'ron_Latn',
+      'hu': 'hun_Latn',
+      'bn': 'ben_Beng',
+      'ca': 'cat_Latn',
+      'fa': 'pes_Arab',
+      'fil': 'tgl_Latn',
+      'tl': 'tgl_Latn',
+      'hr': 'hrv_Latn',
+      'mt': 'mlt_Latn',
+      'sl': 'slv_Latn',
+      'af': 'afr_Latn',
+      'sq': 'sqi_Latn',
+      'be': 'bel_Cyrl',
+      'et': 'est_Latn',
+      'ga': 'gle_Latn',
+      'gl': 'glg_Latn',
+      'ka': 'kat_Geor',
+      'gu': 'guj_Gujr',
+      'ht': 'hat_Latn',
+      'is': 'isl_Latn',
+      'kn': 'kan_Knda',
+      'lv': 'lav_Latn',
+      'lt': 'lit_Latn',
+      'mk': 'mkd_Cyrl',
+      'mr': 'mar_Deva',
+      'sw': 'swh_Latn',
+      'ta': 'tam_Taml',
+      'te': 'tel_Telu',
+      'ur': 'urd_Arab',
+      'cy': 'cym_Latn',
+    };
 
-      try {
-        translator = await pipeline('translation', modelName);
-        console.log('[Transformers.js] Model loaded successfully');
-        isModelLoading = false;
-        return translator;
-      } catch (error) {
-        console.error('[Transformers.js] Failed to load model:', error);
-        isModelLoading = false;
-        throw error;
-      }
+    /**
+     * Convert BCP 47 language code to FLORES-200 code
+     */
+    function toFloresCode(langCode) {
+      return FLORES_CODES[langCode.toLowerCase()] || 'eng_Latn';
     }
 
-    // Translate text using the loaded model
-    async function translate(text) {
-      if (!translator) {
-        throw new Error('Translator not loaded. Call loadModel first.');
+    /**
+     * Load the NLLB-200 translation model for a specific language pair
+     */
+    async function loadModel(sourceLang, targetLang) {
+      const key = `${sourceLang}-${targetLang}`;
+
+      // Return cached translator if available
+      if (translators.has(key)) {
+        console.log(`[Transformers.js] Using cached translator for ${key}`);
+        return translators.get(key);
       }
 
-      console.log('[Transformers.js] Translating:', text.length, 'characters');
-      const result = await translator(text);
-      console.log('[Transformers.js] Translation complete:', result.length, 'characters');
+      // Check if already loading
+      if (loadingModels.has(key)) {
+        console.log(`[Transformers.js] Model for ${key} is already loading, waiting...`);
+        return loadingModels.get(key);
+      }
+
+      console.log(`[Transformers.js] Loading NLLB-200 model for ${sourceLang} -> ${targetLang}`);
+
+      const loadingPromise = (async () => {
+        try {
+          const floresSource = toFloresCode(sourceLang);
+          const floresTarget = toFloresCode(targetLang);
+
+          console.log(`[Transformers.js] FLORES codes: ${floresSource} -> ${floresTarget}`);
+
+          const translator = await pipeline('translation', MODEL_NAME, {
+            progress_callback: (progress) => {
+              if (progress.status === 'downloading') {
+                const percent = progress.progress ? Math.round(progress.progress) : 0;
+                console.log(`[Transformers.js] Downloading model: ${percent}%`);
+              } else if (progress.status === 'loading-model') {
+                console.log('[Transformers.js] Loading model into memory...');
+              }
+            }
+          });
+
+          console.log(`[Transformers.js] Model loaded successfully for ${key}`);
+          translators.set(key, translator);
+          loadingModels.delete(key);
+
+          return translator;
+        } catch (error) {
+          console.error(`[Transformers.js] Failed to load model for ${key}:`, error);
+          loadingModels.delete(key);
+          throw error;
+        }
+      })();
+
+      loadingModels.set(key, loadingPromise);
+      return loadingPromise;
+    }
+
+    /**
+     * Translate text using NLLB-200
+     */
+    async function translate(text, sourceLang, targetLang) {
+      const key = `${sourceLang}-${targetLang}`;
+      console.log(`[Transformers.js] Translating (${key}): ${text.length} characters`);
+
+      const translator = await loadModel(sourceLang, targetLang);
+
+      const floresSource = toFloresCode(sourceLang);
+      const floresTarget = toFloresCode(targetLang);
+
+      const result = await translator(text, {
+        src_lang: floresSource,
+        tgt_lang: floresTarget,
+      });
+
+      console.log(`[Transformers.js] Translation complete: ${result.length} characters`);
       return result;
     }
 
-    // Global variable for text input (workaround for parameter passing bug)
-    // Using a closure to protect the text variable from being cleared
+    // Global variable for text input
     (function() {
       let _savedText = null;
-
-      // Also set a global variable as backup
       window.transformersText = null;
 
-      // Setter function for text
       window.setText = function(text) {
-        console.log('[Transformers.js] setText called with:', text);
-        console.log('[Transformers.js] Text type:', typeof text);
-        console.log('[Transformers.js] Text length:', text?.length);
-
-        // Parameter is undefined, but we can read from the global variable
-        // that was set by js.context['transformersText'] = text
-        const globalText = window.transformersText;
-        console.log('[Transformers.js] Read from window.transformersText:', globalText?.substring(0, 50));
-
-        if (globalText && globalText.length > 0) {
-          _savedText = globalText;
-          console.log('[Transformers.js] Saved text from global variable, length:', _savedText.length);
+        if (window.transformersText && window.transformersText.length > 0) {
+          _savedText = window.transformersText;
         } else {
           _savedText = text;
-          console.log('[Transformers.js] Saved text from parameter, length:', _savedText?.length || 0);
         }
       };
 
-      // Getter function for text
       window.getText = function() {
         return _savedText;
       };
 
-      // Expose simple global functions for Dart to call
-      // These bypass the complex JS interop parameter passing issues
-      window.transformersTranslate = async function(textParam) {
-        console.log('[Transformers.js] transformersTranslate called');
-        console.log('[Transformers.js] textParam:', textParam);
-        console.log('[Transformers.js] typeof textParam:', typeof textParam);
-        console.log('[Transformers.js] _savedText:', _savedText?.substring(0, 50));
-        console.log('[Transformers.js] _savedText length:', _savedText?.length || 0);
-
-        // Use closure variable if parameter is undefined
+      /**
+       * Main translation function called from Dart
+       * @param {string} textParam - Text to translate
+       * @param {string} targetLang - Target language code (BCP 47)
+       * @param {string} sourceLang - Source language code (BCP 47), defaults to 'en'
+       */
+      window.transformersTranslate = async function(textParam, targetLang, sourceLang) {
         const text = textParam || _savedText;
-        console.log('[Transformers.js] Using text with', text?.length || 0, 'characters');
-        console.log('[Transformers.js] Text preview:', text?.substring(0, 100));
+        const source = sourceLang || 'en';
+        const target = targetLang || 'es';
+
+        console.log(`[Transformers.js] Translation request: ${source} -> ${target}`);
+        console.log(`[Transformers.js] Text length: ${text?.length || 0} characters`);
+
+        if (!text) {
+          console.error('[Transformers.js] No text provided for translation');
+          return null;
+        }
 
         try {
-          // Wait for model to be loaded if needed
-          if (!translator && !isModelLoading) {
-            console.log('[Transformers.js] Loading model on-demand...');
-            await loadModel('Helsinki-NLP/opus-mt-en-es');
-          }
-
-          // Wait for model to finish loading
-          let attempts = 0;
-          while (!translator && attempts < 120) { // Wait up to 2 minutes
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            attempts++;
-          }
-
-          if (!translator) {
-            console.error('[Transformers.js] Model failed to load in time');
-            return null;
-          }
-
-          const result = await translate(text);
+          const result = await translate(text, source, target);
           return result;
         } catch (error) {
           console.error('[Transformers.js] Translation error:', error);
           return null;
         }
       };
+
+      /**
+       * Check if a model is loaded for a language pair
+       */
+      window.transformersIsModelReady = function(sourceLang, targetLang) {
+        const key = `${sourceLang || 'en'}-${targetLang || 'es'}`;
+        return translators.has(key);
+      };
+
+      /**
+       * Pre-load a model for a language pair
+       */
+      window.transformersLoadModel = async function(sourceLang, targetLang) {
+        const source = sourceLang || 'en';
+        const target = targetLang || 'es';
+        await loadModel(source, target);
+        return true;
+      };
     })();
-
-    // Also expose the helpers object for compatibility
-    window.transformersHelpers = {
-      callPipeline: async function(task, model) {
-        console.log('[Transformers.js] callPipeline:', task, model);
-        return await loadModel(model);
-      },
-      callTranslate: async function(pipelineObj, text, targetLang, sourceLang) {
-        console.log('[Transformers.js] callTranslate');
-        const options = {};
-        if (targetLang) {
-          options.targetLang = targetLang;
-        }
-        if (sourceLang) {
-          options.sourceLang = sourceLang;
-        }
-        return await pipelineObj(text, options);
-      },
-      getTranslationText: function(result) {
-        return result?.translation_text || null;
-      }
-    };
-
-    window.transformers = {
-      ready: true
-    };
 
     // Set ready flag
     window.transformersReady = true;
-    console.log('[Transformers.js] transformersReady set to true');
+    window.transformersAPI = 'nllb-200';
 
-    // Pre-load the model on page load
-    console.log('[Transformers.js] Pre-loading Helsinki-NLP/opus-mt-en-es model...');
-    loadModel('Helsinki-NLP/opus-mt-en-es').catch(err => {
+    console.log('[Transformers.js] Initialized - NLLB-200 client-side translation ready');
+    console.log('[Transformers.js] Supports 200+ languages via FLORES-200 codes');
+
+    // Pre-load English -> Spanish model on startup for better UX
+    console.log('[Transformers.js] Pre-loading English -> Spanish model...');
+    loadModel('en', 'es').catch(err => {
       console.error('[Transformers.js] Pre-load failed:', err);
     });
-
-    console.log('[Transformers.js] Initialized - Client-side English→Spanish translation ready');
   </script>
 </head>
 <body>

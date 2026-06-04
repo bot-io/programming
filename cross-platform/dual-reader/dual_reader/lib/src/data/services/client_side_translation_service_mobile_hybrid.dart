@@ -1,13 +1,28 @@
 import 'dart:io' show Platform;
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:dual_reader/src/data/services/client_side_translation_service.dart';
+import 'package:dual_reader/src/data/services/libretranslate_service_impl.dart';
+import 'package:dual_reader/src/data/services/language_detection_service.dart';
 import 'package:dual_reader/src/core/utils/page_markers.dart';
+import 'package:dual_reader/src/core/utils/sentence_splitter.dart';
+import 'package:dual_reader/src/core/utils/text_processing_utils.dart';
+import 'package:http/http.dart' as http;
 
-// ML Kit-only implementation for mobile (offline translation)
+/// Hybrid mobile implementation with ML Kit primary and LibreTranslate fallback
+/// - Primary: Google ML Kit On-Device Translation (offline, free)
+/// - Fallback: LibreTranslate API (online, free) when ML Kit fails
+/// - Enhanced with sentence-based translation for better quality
 class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate {
+  static const String _componentName = 'ClientSideTranslation';
+
   // Lazy-loaded translators keyed by language code
   final Map<String, OnDeviceTranslator> _translators = {};
+
+  // Fallback API service
+  LibreTranslateServiceImpl? _fallbackService;
+  bool _useFallback = false;
 
   @override
   Future<String> translate({
@@ -16,141 +31,232 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
     String? sourceLanguage,
   }) async {
     if (!Platform.isAndroid && !Platform.isIOS) {
+      _componentName.logError('Translation attempted on unsupported platform');
       throw UnsupportedError('ML Kit translation is only supported on Android and iOS');
     }
 
-    debugPrint('[MLKitTranslation] Translating to $targetLanguage using ML Kit');
+    final stopwatch = Stopwatch()..start();
+    final source = sourceLanguage ?? 'en';
 
-    // Use ML Kit with longer timeout for model download
-    debugPrint('[MLKitTranslation] Step 1: Creating/Loading ML Kit translator...');
-    debugPrint('[MLKitTranslation] Note: First-time translation for a language requires downloading ML Kit models (can take 3-5 minutes on emulator, 30-60 seconds on device). Please be patient...');
-    final translator = await _getTranslator(
-      sourceLanguage ?? 'en',
-      targetLanguage,
-    ).timeout(
-      const Duration(minutes: 5), // Increased from 3 to 5 minutes for emulator
+    // Log translation request
+    final textPreview = text.length > 50 ? '${text.substring(0, 50)}...' : text;
+    _componentName.logInfo(
+      'Translation requested - source: $source, target: $targetLanguage, text: "$textPreview" (${text.length} chars)'
+    );
+
+    try {
+      // Try ML Kit first
+      final translated = await _translateWithMlKit(text, source, targetLanguage);
+
+      stopwatch.stop();
+      _componentName.logInfo(
+        'ML Kit translation complete - ${translated.length} chars, duration: ${stopwatch.elapsed.inMilliseconds}ms'
+      );
+
+      return translated;
+    } catch (e, stackTrace) {
+      stopwatch.stop();
+      _componentName.logWarning(
+        'ML Kit translation failed, trying LibreTranslate fallback - error: $e'
+      );
+
+      // Try fallback
+      try {
+        final fallbackTranslated = await _translateWithFallback(text, source, targetLanguage);
+        stopwatch.stop();
+        _componentName.logInfo(
+          'Fallback translation complete - ${fallbackTranslated.length} chars, total duration: ${stopwatch.elapsed.inMilliseconds}ms'
+        );
+        return fallbackTranslated;
+      } catch (fallbackError) {
+        _componentName.logError(
+          'All translation methods failed - ML Kit: $e, Fallback: $fallbackError',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        throw Exception('Translation failed: ML Kit error: $e, Fallback error: $fallbackError');
+      }
+    }
+  }
+
+  /// Translate using ML Kit (primary method)
+  Future<String> _translateWithMlKit(String text, String sourceLanguage, String targetLanguage) async {
+    debugPrint('[MLKitTranslation] Attempting translation with ML Kit');
+
+    final translator = await _getTranslator(sourceLanguage, targetLanguage).timeout(
+      const Duration(minutes: 5),
       onTimeout: () {
-        debugPrint('[MLKitTranslation] ML Kit translator creation timed out after 5 minutes');
-        throw TimeoutException('ML Kit translator creation timeout (5 minutes). The language model may still be downloading in the background. Please try again in a minute.');
+        debugPrint('[MLKitTranslation] Translator creation timed out');
+        throw TimeoutException('ML Kit translator creation timeout (5 minutes)');
       },
     );
 
-    debugPrint('[MLKitTranslation] Step 2: Translating text with ML Kit...');
+    return await _translatePreservingStructure(translator, text, targetLanguage);
+  }
 
-    // Preserve paragraph structure by translating each paragraph separately
-    final translated = await _translatePreservingStructure(translator, text, targetLanguage);
+  /// Translate using LibreTranslate API (fallback method)
+  Future<String> _translateWithFallback(String text, String sourceLanguage, String targetLanguage) async {
+    debugPrint('[FallbackTranslation] Using LibreTranslate API');
 
-    debugPrint('[MLKitTranslation] ML Kit translation successful!');
-    return translated;
+    _fallbackService ??= LibreTranslateServiceImpl(http.Client());
+
+    return await _fallbackService!.translate(
+      text: text,
+      targetLanguage: targetLanguage,
+      sourceLanguage: sourceLanguage,
+    );
   }
 
   /// Translate text while preserving paragraph structure and page markers
-  ///
-  /// This method:
-  /// 1. Extracts page markers before translation (ML Kit doesn't preserve PUA characters)
-  /// 2. Splits text into paragraphs, tracking which page each belongs to
-  /// 3. Translates each paragraph separately
-  /// 4. Reinserts page markers and reassembles with paragraph breaks
-  Future<String> _translatePreservingStructure(OnDeviceTranslator translator, String text, String targetLanguage) async {
+  /// Now uses sentence-based translation for improved quality
+  Future<String> _translatePreservingStructure(OnDeviceTranslator translator, String text, String targetLanguage) {
     // Extract all page indices to know which pages exist
     final pageIndices = PageMarkers.extractPageIndices(text);
     debugPrint('[MLKitTranslation] Found ${pageIndices.length} pages with markers to preserve');
 
     if (pageIndices.isEmpty) {
-      // No markers, fall back to simple paragraph-based translation
-      return await _translateParagraphsOnly(translator, text);
+      return _translateWithSentenceSplitting(translator, text);
     }
 
-    // For each page, split into paragraphs and translate
+    return _translateWithMarkers(translator, text, pageIndices);
+  }
+
+  /// Translate text with page markers preserved
+  Future<String> _translateWithMarkers(
+    OnDeviceTranslator translator,
+    String text,
+    List<int> pageIndices,
+  ) async {
     final translatedPages = <String>[];
 
     for (final pageIndex in pageIndices) {
-      // Extract the page text (without markers)
       final pageText = PageMarkers.extractPage(text, pageIndex);
 
       if (pageText.isEmpty) {
-        // Preserve empty pages
         translatedPages.add(PageMarkers.insertMarkers('', pageIndex));
         continue;
       }
 
-      // Split this page into paragraphs (double newlines)
-      final paragraphs = pageText.split(RegExp(r'\n\s*\n'));
-      final translatedParagraphs = <String>[];
+      // Use sentence-based translation for each page
+      final translated = await _translateWithSentenceSplitting(translator, pageText);
+      translatedPages.add(PageMarkers.insertMarkers(translated, pageIndex));
+      debugPrint('[MLKitTranslation] Translated page $pageIndex');
+    }
 
-      for (int i = 0; i < paragraphs.length; i++) {
-        final paragraph = paragraphs[i].trim();
+    return translatedPages.join('\n\n');
+  }
 
-        if (paragraph.isEmpty) {
-          // Preserve empty paragraphs
-          translatedParagraphs.add('');
-          continue;
-        }
+  /// Translate text using paragraph-level context for better quality
+  /// Handles abbreviations, decimals, URLs, and other edge cases
+  /// Groups sentences intelligently for context preservation
+  Future<String> _translateWithSentenceSplitting(OnDeviceTranslator translator, String text) async {
+    // Create contextual translation units
+    final units = TextProcessingUtils.createTranslationUnits(text);
+    debugPrint('[MLKitTranslation] Created ${units.length} translation units');
 
-        debugPrint('[MLKitTranslation] Translating page $pageIndex, paragraph $i (${paragraph.length} chars)');
+    final translations = <String>[];
 
-        // Translate this paragraph with timeout
-        final translated = await translator.translateText(paragraph).timeout(
+    for (int i = 0; i < units.length; i++) {
+      final unit = units[i];
+
+      debugPrint('[MLKitTranslation] Translating unit $i/${units.length} (${unit.sentenceCount} sentences, ${unit.length} chars)${unit.isDialogue ? " [dialogue]" : ""}');
+
+      try {
+        // Translate the entire unit (preserves context)
+        final translated = await translator.translateText(unit.text).timeout(
           const Duration(minutes: 5),
           onTimeout: () {
-            debugPrint('[MLKitTranslation] Page $pageIndex, paragraph $i translation timed out');
-            throw TimeoutException('Paragraph translation timeout (5 minutes)');
+            throw TimeoutException('Unit translation timeout (5 minutes)');
           },
         );
 
-        translatedParagraphs.add(translated);
+        translations.add(translated);
+        debugPrint('[MLKitTranslation] Unit $i translated successfully');
+      } catch (e) {
+        debugPrint('[MLKitTranslation] Unit $i translation failed: $e');
+        // Fallback: translate sentence by sentence
+        translations.add(await _fallbackToSentenceBySentence(translator, unit));
       }
-
-      // Reassemble paragraphs within this page with double newlines
-      final translatedPageText = translatedParagraphs.join('\n\n');
-
-      // Reinsert the page markers around the translated page text
-      translatedPages.add(PageMarkers.insertMarkers(translatedPageText, pageIndex));
-      debugPrint('[MLKitTranslation] Translated page $pageIndex (${paragraphs.length} paragraphs)');
     }
 
-    // Reassemble pages with paragraph breaks (double newlines)
-    final result = translatedPages.join('\n\n');
-    debugPrint('[MLKitTranslation] Reassembled ${translatedPages.length} pages into ${result.length} chars');
-    return result;
+    // Reassemble and post-process
+    final reassembled = TextProcessingUtils.reassembleTranslatedUnits(units, translations, 'en');
+
+    // Calculate quality score
+    final qualityScore = TextProcessingUtils.calculateQualityScore(text, reassembled, 'en');
+    debugPrint('[MLKitTranslation] Translation quality score: $qualityScore/100');
+
+    return reassembled;
   }
 
-  /// Simple paragraph-based translation (used when no page markers present)
-  Future<String> _translateParagraphsOnly(OnDeviceTranslator translator, String text) async {
-    // Split into paragraphs (double newlines indicate paragraph breaks)
-    final paragraphs = text.split(RegExp(r'\n\s*\n'));
+  /// Fallback to sentence-by-sentence translation when unit translation fails.
+  Future<String> _fallbackToSentenceBySentence(OnDeviceTranslator translator, ContextualTranslationUnit unit) async {
+    final translatedSentences = <String>[];
 
-    debugPrint('[MLKitTranslation] No markers - translating ${paragraphs.length} paragraph(s)');
-
-    final translatedParagraphs = <String>[];
-
-    for (int i = 0; i < paragraphs.length; i++) {
-      final paragraph = paragraphs[i].trim();
-
-      if (paragraph.isEmpty) {
-        translatedParagraphs.add('');
+    for (final sentence in unit.sentences) {
+      if (sentence.trim().length < 2) {
+        translatedSentences.add(sentence);
         continue;
       }
 
-      final translated = await translator.translateText(paragraph).timeout(
-        const Duration(minutes: 5),
-        onTimeout: () {
-          throw TimeoutException('Paragraph translation timeout (5 minutes)');
-        },
-      );
-
-      translatedParagraphs.add(translated);
+      try {
+        final translated = await translator.translateText(sentence).timeout(
+          const Duration(minutes: 5),
+          onTimeout: () {
+            throw TimeoutException('Sentence translation timeout (5 minutes)');
+          },
+        );
+        translatedSentences.add(translated);
+      } catch (e) {
+        debugPrint('[MLKitTranslation] Sentence translation failed: $e');
+        translatedSentences.add(sentence);
+      }
     }
 
-    return translatedParagraphs.join('\n\n');
+    return translatedSentences.join(' ');
+  }
+
+  /// Reconstruct a paragraph from translated sentences
+  /// Preserves original spacing and punctuation
+  String _reconstructParagraph(List<String> translatedSentences, SentenceGroup originalGroup) {
+    if (translatedSentences.isEmpty) return '';
+
+    // Join sentences with proper spacing
+    // The translated sentences already have their ending punctuation
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < translatedSentences.length; i++) {
+      final sentence = translatedSentences[i].trim();
+
+      if (sentence.isEmpty) continue;
+
+      buffer.write(sentence);
+
+      // Add space between sentences if next one starts with lowercase
+      // (some translations might not preserve sentence boundaries perfectly)
+      if (i < translatedSentences.length - 1) {
+        final nextSentence = translatedSentences[i + 1].trim();
+        if (nextSentence.isNotEmpty && !_startsWithCapitalLetter(nextSentence)) {
+          buffer.write(' ');
+        } else {
+          buffer.write(' ');
+        }
+      }
+    }
+
+    return buffer.toString().trim();
+  }
+
+  /// Check if a string starts with a capital letter
+  bool _startsWithCapitalLetter(String text) {
+    if (text.isEmpty) return false;
+    return RegExp(r'^[A-Z\u00C0-\u00DE]').hasMatch(text[0]);
   }
 
   /// Get or create ML Kit translator for source and target languages
   Future<OnDeviceTranslator> _getTranslator(String sourceLanguage, String targetLanguage) async {
-    // Create a composite key for the language pair
     final key = '$sourceLanguage-$targetLanguage';
 
-    // Check if translator already exists
     if (_translators.containsKey(key)) {
       debugPrint('[MLKitTranslation] Using cached ML Kit translator for $key');
       return _translators[key]!;
@@ -158,11 +264,9 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
 
     debugPrint('[MLKitTranslation] Creating ML Kit translator: $sourceLanguage -> $targetLanguage');
 
-    // Convert language codes to TranslateLanguage enum values
     final sourceLang = _toTranslateLanguage(sourceLanguage);
     final targetLang = _toTranslateLanguage(targetLanguage);
 
-    // Create the translator using the new API
     final translator = OnDeviceTranslator(
       sourceLanguage: sourceLang,
       targetLanguage: targetLang,
@@ -244,52 +348,21 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
 
   @override
   Future<String> detectLanguage(String text) async {
-    final lowerText = text.toLowerCase();
+    final detectionService = LanguageDetectionService.instance;
 
-    if (RegExp(r'[а-я]').hasMatch(text)) {
-      if (RegExp(r'[бгджзклмнптфцчшщъы]').hasMatch(text)) {
-        return 'bg';
-      }
-      return 'ru';
+    // Initialize if needed
+    if (!detectionService.isInitialized) {
+      await detectionService.init();
     }
 
-    if (RegExp(r'[\u4e00-\u9fff]').hasMatch(text)) {
-      return 'zh';
-    }
+    // Use enhanced detection service
+    final result = await detectionService.detectWithConfidence(text);
+    _componentName.logInfo('Language detected: ${result.languageCode} with ${result.confidence}% confidence');
 
-    if (RegExp(r'[\u3040-\u309f\u30a0-\u30ff]').hasMatch(text)) {
-      return 'ja';
-    }
-
-    if (RegExp(r'[\uac00-\ud7af]').hasMatch(text)) {
-      return 'ko';
-    }
-
-    if (RegExp(r'[\u0600-\u06ff]').hasMatch(text)) {
-      return 'ar';
-    }
-
-    if (lowerText.contains(' el ') || lowerText.contains(' la ') || lowerText.contains(' los ')) {
-      return 'es';
-    }
-    if (lowerText.contains(' le ') || lowerText.contains(' les ') || lowerText.contains(" d'")) {
-      return 'fr';
-    }
-    if (lowerText.contains(' der ') || lowerText.contains(' die ') || lowerText.contains(' das ')) {
-      return 'de';
-    }
-    if (lowerText.contains(' il ') || lowerText.contains(' lo ') || lowerText.contains(' la ')) {
-      return 'it';
-    }
-    if (lowerText.contains(' o ') || lowerText.contains(' um ') || lowerText.contains(' uma ')) {
-      return 'pt';
-    }
-
-    return 'en';
+    return result.languageCode;
   }
 
-  /// Check if a language model is downloaded and ready
-  /// Returns true if the model is already cached in memory or available on disk, false otherwise
+  @override
   Future<bool> isLanguageModelReady(String languageCode) async {
     if (!Platform.isAndroid && !Platform.isIOS) {
       return false;
@@ -301,33 +374,25 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
       return true;
     }
 
-    // Try to create a translator quickly to check if the model is available on disk
-    // If the model is already downloaded by ML Kit, creating the translator will be fast
     try {
       final sourceLang = _toTranslateLanguage('en');
       final targetLang = _toTranslateLanguage(languageCode);
 
       debugPrint('[MLKitTranslation] Checking if model is available on disk for $languageCode...');
 
-      // Create a temporary translator to check model availability
       final tempTranslator = OnDeviceTranslator(
         sourceLanguage: sourceLang,
         targetLanguage: targetLang,
       );
 
-      // Try a quick test translation to verify the model is ready
-      // Use a short timeout - if the model is already downloaded, this will be fast
-      // If the model needs to be downloaded, it will timeout
       final result = await tempTranslator.translateText('Hello').timeout(
         const Duration(seconds: 5),
         onTimeout: () {
-          // Timeout means the model is not ready (needs download)
           debugPrint('[MLKitTranslation] Model check timeout - model likely needs downloading');
           throw TimeoutException('Model check timeout');
         },
       );
 
-      // If we got here, the model is ready! Cache it for future use
       _translators[key] = tempTranslator;
       debugPrint('[MLKitTranslation] Model is available on disk for $languageCode (test translation: $result)');
       return true;
@@ -340,14 +405,12 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
     }
   }
 
-  /// Download and prepare a language model
-  /// Returns true if successful, false otherwise
+  @override
   Future<bool> downloadLanguageModel(String languageCode, {void Function(String)? onProgress}) async {
     if (!Platform.isAndroid && !Platform.isIOS) {
       throw UnsupportedError('ML Kit translation is only supported on Android and iOS');
     }
 
-    // Check if already cached
     final key = 'en-$languageCode';
     if (_translators.containsKey(key)) {
       onProgress?.call('Model already available');
@@ -374,13 +437,12 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
       debugPrint('[MLKitTranslation] Starting model download test translation...');
       final stopwatch = Stopwatch()..start();
 
-      // Translate a test phrase to trigger model download
       final result = await translator.translateText('Hello').timeout(
         const Duration(minutes: 10),
         onTimeout: () {
           stopwatch.stop();
           onProgress?.call('Download timeout');
-          debugPrint('[MLKitTranslation] Model download timeout after ${stopwatch.elapsed.inMinutes}:${stopwatch.elapsed.inSeconds % 60}');
+          debugPrint('[MLKitTranslation] Model download timeout');
           throw TimeoutException('Model download timeout (10 minutes)');
         },
       );
@@ -389,7 +451,6 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
       debugPrint('[MLKitTranslation] Test translation result: $result (took ${stopwatch.elapsed.inSeconds} seconds)');
       onProgress?.call('Model downloaded successfully!');
 
-      // Cache the translator (keep it open for future use)
       _translators[key] = translator;
 
       debugPrint('[MLKitTranslation] Model downloaded and cached for $languageCode');
@@ -403,14 +464,27 @@ class ClientSideTranslationDelegateImpl implements ClientSideTranslationDelegate
 
   @override
   Future<void> close() async {
-    for (final translator in _translators.values) {
+    _componentName.logInfo('Closing service - translators to close: ${_translators.length}');
+
+    int closedCount = 0;
+    int errorCount = 0;
+
+    for (final entry in _translators.entries) {
       try {
-        translator.close();
+        await entry.value.close();
+        closedCount++;
       } catch (e) {
-        debugPrint('[MLKitTranslation] Error closing translator: $e');
+        _componentName.logError('Error closing translator - key: ${entry.key}', error: e);
+        errorCount++;
       }
     }
+
     _translators.clear();
+
+    // Close fallback service
+    _fallbackService?.close();
+
+    _componentName.logInfo('Service closed - translators closed: $closedCount, errors: $errorCount');
   }
 }
 

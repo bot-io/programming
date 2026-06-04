@@ -10,6 +10,7 @@ import 'package:dual_reader/src/presentation/providers/book_list_notifier.dart';
 import 'package:dual_reader/src/presentation/providers/language_model_notifier.dart';
 import 'package:dual_reader/src/presentation/providers/settings_notifier.dart';
 import 'package:dual_reader/src/core/utils/language_utils.dart';
+import 'package:dual_reader/src/core/platform/platform_features.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:universal_io/io.dart';
 
@@ -23,8 +24,8 @@ class LibraryScreen extends ConsumerWidget {
     final modelState = ref.watch(languageModelProvider);
     final targetLanguage = settings.targetTranslationLanguageCode;
 
-    // Trigger language model download check on mobile platforms
-    if (Platform.isAndroid || Platform.isIOS) {
+    // Trigger language model download check on platforms that support it
+    if (platformFeatures.supportsModelDownload) {
       // Listen for state changes to rebuild UI when status changes
       ref.listen(languageModelProvider, (previous, next) {
         // State changes will trigger rebuild
@@ -264,7 +265,7 @@ class LibraryScreen extends ConsumerWidget {
                                 child: Stack(
                                   fit: StackFit.expand,
                                   children: [
-                                    book.coverPath.isNotEmpty && !kIsWeb
+                                    book.coverPath.isNotEmpty && platformFeatures.supportsFileAccess
                                         ? Image.file(
                                             File(book.coverPath),
                                             fit: BoxFit.cover,

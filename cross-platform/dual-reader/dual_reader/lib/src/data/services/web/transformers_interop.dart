@@ -2,72 +2,61 @@ import 'dart:js' as js;
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
-/// JS Interop layer for Transformers.js v3
+/// JS Interop layer for Transformers.js v3 with NLLB-200
 /// This allows Flutter Web to call Transformers.js for client-side translation
 /// Documentation: https://huggingface.co/docs/transformers.js
 ///
-/// Using Helsinki-NLP/opus-mt-en-es model (~270MB) for English→Spanish translation
+/// Using facebook/nllb-200-distilled-600M model for 200+ language support
+/// FLORES-200 language codes: https://github.com/facebookresearch/flores/blob/main/flores200/README.md
 ///
 /// WORKAROUND: Using dart:js (legacy) instead of dart:js_interop
 /// due to parameter passing issues with the newer package.
 
-/// Service class for managing Transformers.js translation pipelines
+/// Service class for managing Transformers.js NLLB-200 translation
 class TransformersJsService {
-  // Using Helsinki-NLP English→Spanish model (~270MB)
-  static const String _model = 'Helsinki-NLP/opus-mt-en-es';
-
-  /// Check if Transformers.js is available
+  /// Check if Transformers.js NLLB-200 is available
   bool get isAvailable {
     try {
       final hasTransformers = js.context.hasProperty('transformersTranslate');
-      debugPrint('[Transformers.js] isAvailable: $hasTransformers');
-      return hasTransformers;
+      final hasAPI = js.context['transformersAPI'];
+      debugPrint('[Transformers.js] isAvailable: $hasTransformers, API: $hasAPI');
+      return hasTransformers && hasAPI == 'nllb-200';
     } catch (e) {
       debugPrint('[Transformers.js] isAvailable check failed: $e');
       return false;
     }
   }
 
-  /// Translate text using Transformers.js
-  /// targetLanguage should be a BCP 47 language code (e.g., 'es')
-  Future<String> translate(String text, String targetLanguage) async {
+  /// Translate text using Transformers.js NLLB-200
+  /// targetLanguage and sourceLanguage should be BCP 47 codes (e.g., 'es', 'en')
+  Future<String> translate(
+    String text,
+    String targetLanguage, [
+    String sourceLanguage = 'en',
+  ]) async {
     try {
-      // For now, only support English→Spanish with the embedded model
-      if (targetLanguage != 'es') {
-        throw Exception('Currently only English→Spanish translation is supported with the embedded model.');
-      }
-
-      debugPrint('[Transformers.js] Translating to $targetLanguage');
+      debugPrint('[Transformers.js] Translating: $sourceLanguage -> $targetLanguage');
       debugPrint('[Transformers.js] Text length: ${text.length} characters');
       debugPrint('[Transformers.js] Text preview: "${text.substring(0, text.length > 50 ? 50 : text.length)}..."');
 
-      // WORKAROUND: Try multiple approaches to pass the text
-
-      // Approach 1: Call the setText function
+      // Set text using multiple approaches for compatibility
       if (js.context.hasProperty('setText')) {
-        debugPrint('[Transformers.js] Calling setText...');
         js.context.callMethod('setText', [text]);
-        debugPrint('[Transformers.js] setText called');
       }
-
-      // Approach 2: Set global variable directly
       js.context['transformersText'] = text;
-      debugPrint('[Transformers.js] Set global text variable');
 
-      // Verify by calling getText
-      if (js.context.hasProperty('getText')) {
-        final retrieved = js.context.callMethod('getText', []);
-        debugPrint('[Transformers.js] Retrieved text from getText: "$retrieved"');
-        debugPrint('[Transformers.js] Retrieved text length: ${retrieved?.toString().length ?? 0}');
-      }
-
-      // Check if the function exists
+      // Check if the translation function exists
       if (!js.context.hasProperty('transformersTranslate')) {
         throw Exception('transformersTranslate function not found on window object');
       }
 
       debugPrint('[Transformers.js] Calling transformersTranslate...');
-      final promise = js.context.callMethod('transformersTranslate', []);
+      // Call with source and target language parameters
+      final promise = js.context.callMethod('transformersTranslate', [
+        null, // textParam (use global variable)
+        targetLanguage,
+        sourceLanguage,
+      ]);
 
       // Convert the promise to a Future
       final result = await _promiseToFuture(promise);
@@ -87,6 +76,38 @@ class TransformersJsService {
     }
   }
 
+  /// Check if a model is ready for a language pair
+  bool isModelReady([String sourceLanguage = 'en', String targetLanguage = 'es']) {
+    try {
+      if (js.context.hasProperty('transformersIsModelReady')) {
+        final result = js.context.callMethod('transformersIsModelReady', [sourceLanguage, targetLanguage]);
+        debugPrint('[Transformers.js] Model ready for $sourceLanguage->$targetLanguage: $result');
+        return result == true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[Transformers.js] isModelReady check failed: $e');
+      return false;
+    }
+  }
+
+  /// Pre-load a model for a language pair
+  Future<bool> loadModel(String sourceLanguage, String targetLanguage) async {
+    try {
+      if (js.context.hasProperty('transformersLoadModel')) {
+        debugPrint('[Transformers.js] Loading model for $sourceLanguage->$targetLanguage');
+        final promise = js.context.callMethod('transformersLoadModel', [sourceLanguage, targetLanguage]);
+        await _promiseToFuture(promise);
+        debugPrint('[Transformers.js] Model loaded successfully');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[Transformers.js] loadModel failed: $e');
+      return false;
+    }
+  }
+
   /// Convert JavaScript Promise to Dart Future
   Future<dynamic> _promiseToFuture(dynamic promise) {
     if (promise == null) {
@@ -97,7 +118,7 @@ class TransformersJsService {
 
     // Use the promise's then method
     final then = js.context['Promise']['prototype']['then'];
-    final thenCall = then.callMethod('call', [promise, (result) {
+    then.callMethod('call', [promise, (result) {
       completer.complete(result);
       return null;
     }]);

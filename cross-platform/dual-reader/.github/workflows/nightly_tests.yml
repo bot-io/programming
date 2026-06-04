@@ -1,0 +1,344 @@
+name: Nightly Tests
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Run at 2 AM UTC
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-tests
+  cancel-in-progress: false
+
+jobs:
+  full-suite-android:
+    name: Full Suite (Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: dual_reader
+        run: flutter pub get
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run full test suite (Android)
+        working-directory: dual_reader
+        run: |
+          bash ../scripts/run_full_suite.sh \
+            --platform android \
+            --include-edge-cases \
+            --include-performance \
+            --timeout 120
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-results-android
+          path: |
+            dual_reader/test_results/
+            dual_reader/test_screenshots/
+            dual_reader/performance_results/
+          retention-days: 14
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-coverage-android
+          path: dual_reader/coverage/
+          retention-days: 14
+
+  full-suite-ios:
+    name: Full Suite (iOS)
+    runs-on: macos-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: dual_reader
+        run: flutter pub get
+
+      - name: Run full test suite (iOS)
+        working-directory: dual_reader
+        run: |
+          bash ../scripts/run_full_suite.sh \
+            --platform ios \
+            --include-edge-cases \
+            --include-performance \
+            --timeout 120
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-results-ios
+          path: |
+            dual_reader/test_results/
+            dual_reader/test_screenshots/
+            dual_reader/performance_results/
+          retention-days: 14
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-coverage-ios
+          path: dual_reader/coverage/
+          retention-days: 14
+
+  full-suite-web:
+    name: Full Suite (Web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: dual_reader
+        run: flutter pub get
+
+      - name: Run full test suite (Web)
+        working-directory: dual_reader
+        run: |
+          bash ../scripts/run_full_suite.sh \
+            --platform web \
+            --include-edge-cases \
+            --include-performance \
+            --timeout 120
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-results-web
+          path: |
+            dual_reader/test_results/
+            dual_reader/test_screenshots/
+            dual_reader/performance_results/
+          retention-days: 14
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-coverage-web
+          path: dual_reader/coverage/
+          retention-days: 14
+
+  large-book-tests:
+    name: Large Book Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: dual_reader
+        run: flutter pub get
+
+      - name: Download large test books
+        run: |
+          # Download test books from external storage
+          wget -P dual_reader/test_assets/books/ \
+            https://storage.example.com/test-books/large_book.epub || true
+
+      - name: Run large book tests
+        working-directory: dual_reader
+        run: |
+          flutter test integration_test/features/parsing/edge_cases_test.dart \
+            --tags=large-books \
+            --timeout=60m
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: large-book-test-results
+          path: dual_reader/test_results/
+          retention-days: 14
+
+  performance-benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: dual_reader
+        run: flutter pub get
+
+      - name: Run performance benchmarks
+        working-directory: dual_reader
+        run: |
+          bash ../scripts/run_performance_benchmarks.sh
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-benchmark-results
+          path: dual_reader/performance_results/
+          retention-days: 90
+
+      - name: Compare with baseline
+        run: |
+          bash scripts/compare_performance.sh \
+            --current dual_reader/performance_results/ \
+            --baseline .github/baselines/performance.json \
+            --threshold 10 \
+            --output performance-comparison.json
+
+      - name: Alert on performance regression
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const comparison = JSON.parse(fs.readFileSync('performance-comparison.json', 'utf8'));
+
+            if (comparison.regressions && comparison.regressions.length > 0) {
+              const body = '## Performance Regression Detected\n\n' +
+                comparison.regressions.map(r => `- **${r.metric}**: ${r.diff}% slower`).join('\n') +
+                '\n\nPlease review the performance changes.';
+
+              github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Performance Regression - ${new Date().toISOString().split('T')[0]}`,
+                body: body,
+                labels: ['performance', 'regression']
+              });
+            }
+
+  nightly-report:
+    name: Generate Nightly Report
+    runs-on: ubuntu-latest
+    needs: [full-suite-android, full-suite-ios, full-suite-web, large-book-tests, performance-benchmarks]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: nightly-results-*
+          path: results/
+          merge-multiple: true
+
+      - name: Download performance results
+        uses: actions/download-artifact@v4
+        with:
+          name: performance-benchmark-results
+          path: performance/
+
+      - name: Generate comprehensive report
+        run: |
+          bash scripts/generate_test_report.sh \
+            --name "Nightly Full Suite" \
+            --results-dir results/ \
+            --performance-dir performance/ \
+            --output nightly-report.html \
+            --trending
+
+      - name: Upload nightly report
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-test-report
+          path: nightly-report.html
+          retention-days: 90
+
+      - name: Update test trend data
+        run: |
+          bash scripts/update_test_trends.sh \
+            --results-dir results/ \
+            --trending-file .github/trends/test-trends.json
+
+      - name: Commit trend data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/trends/test-trends.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update test trend data [skip ci]"
+          git push
+
+      - name: Create issue on failures
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('nightly-report.html', 'utf8');
+
+            // Count failures
+            const failedMatches = report.match(/"failed":(\d+)/g);
+            const totalFailed = failedMatches ? failedMatches.reduce((acc, m) => acc + parseInt(m.match(/\d+/)[0]), 0) : 0;
+
+            if (totalFailed > 0) {
+              const body = `## Nightly Test Failures\n\n` +
+                `Total failures: ${totalFailed}\n\n` +
+                `[View Full Report](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n\n` +
+                `Please investigate and fix the failing tests.`;
+
+              github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Nightly Test Failures - ${new Date().toISOString().split('T')[0]}`,
+                body: body,
+                labels: ['nightly-tests', 'failures']
+              });
+            }
+
+      - name: Notify team on success
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Optional: Send to Slack, Discord, etc.
+            console.log('All nightly tests passed successfully');

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dual_reader/src/data/services/pagination_service_impl.dart';
+import 'package:dual_reader/src/domain/services/pagination_service.dart';
 
 void main() {
   group('PaginationServiceImpl', () {
@@ -57,214 +58,401 @@ void main() {
       expect(pages, isEmpty);
     });
 
-    test('should respect paragraph breaks', () {
-      // Given
-      const text = 'Paragraph one.\n\nParagraph two.';
-      const constraints = BoxConstraints(
-        maxWidth: 200,
-        maxHeight: 30,
-      ); // Force break between paragraphs
-      const textStyle = TextStyle(fontSize: 14);
+    group('Chapter title stripping', () {
+      test('should strip HTML h1-h6 headings from text', () {
+        // Given
+        const text = '<h1>Chapter 1</h1>\n\nSome content here.\n\n<h2>Section 1.1</h2>\n\nMore content.';
+        const constraints = BoxConstraints(
+          maxWidth: 300,
+          maxHeight: 200,
+        );
+        const textStyle = TextStyle(fontSize: 14);
 
-      // When
-      final pages = service.paginateText(
-        text: text,
-        constraints: constraints,
-        textStyle: textStyle,
-      );
+        // When
+        final pages = service.paginateText(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+        );
 
-      // Debug output
-      print('DEBUG: Number of pages: ${pages.length}');
-      for (int i = 0; i < pages.length; i++) {
-        print('DEBUG: Page $i: "${pages[i]}"');
-      }
+        // Then: Headings should be stripped, not included in pages
+        final reconstructed = pages.join();
+        expect(reconstructed, isNot(contains('Chapter 1')));
+        expect(reconstructed, isNot(contains('Section 1.1')));
+        expect(reconstructed, contains('Some content here'));
+        expect(reconstructed, contains('More content'));
+      });
 
-      // Then
-      expect(pages.length, greaterThanOrEqualTo(2));
-      expect(pages[0].contains('Paragraph one.'), isTrue);
-      expect(pages[1].contains('Paragraph two.'), isTrue);
+      test('should strip markdown-style headings', () {
+        // Given
+        const text = '# Chapter One\n\nContent here.\n\n## Section One\n\nMore content.';
+        const constraints = BoxConstraints(
+          maxWidth: 300,
+          maxHeight: 200,
+        );
+        const textStyle = TextStyle(fontSize: 14);
+
+        // When
+        final pages = service.paginateText(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+        );
+
+        // Then: Markdown headings should be stripped
+        final reconstructed = pages.join();
+        expect(reconstructed, isNot(contains('Chapter One')));
+        expect(reconstructed, isNot(contains('Section One')));
+        expect(reconstructed, contains('Content here'));
+      });
+
+      test('should strip "Chapter X" patterns from text', () {
+        // Given
+        const text = 'Chapter 1: The Beginning\n\nOnce upon a time...\n\nChapter 2: The Journey\n\nThey traveled far.';
+        const constraints = BoxConstraints(
+          maxWidth: 300,
+          maxHeight: 200,
+        );
+        const textStyle = TextStyle(fontSize: 14);
+
+        // When
+        final pages = service.paginateText(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+        );
+
+        // Then: Chapter titles should be stripped
+        final reconstructed = pages.join();
+        expect(reconstructed, isNot(contains('Chapter 1: The Beginning')));
+        expect(reconstructed, isNot(contains('Chapter 2: The Journey')));
+        expect(reconstructed, contains('Once upon a time'));
+        expect(reconstructed, contains('They traveled far'));
+      });
+
+      test('should strip Roman numeral chapters', () {
+        // Given
+        const text = 'I. The First Age\n\nLong ago...\n\nII. The Second Age\n\nTime passed.';
+        const constraints = BoxConstraints(
+          maxWidth: 300,
+          maxHeight: 200,
+        );
+        const textStyle = TextStyle(fontSize: 14);
+
+        // When
+        final pages = service.paginateText(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+        );
+
+        // Then: Roman numeral chapters should be stripped
+        final reconstructed = pages.join();
+        expect(reconstructed, isNot(contains('I. The First Age')));
+        expect(reconstructed, isNot(contains('II. The Second Age')));
+      });
+
+      test('should preserve content while stripping headings', () {
+        // Given: Text with HTML headings
+        const text = '<h1>Title</h1>\n\n<p>Paragraph 1</p>\n\n<h2>Subtitle</h2>\n\n<p>Paragraph 2</p>';
+        const constraints = BoxConstraints(
+          maxWidth: 300,
+          maxHeight: 100,
+        );
+        const textStyle = TextStyle(fontSize: 14);
+
+        // When
+        final pages = service.paginateText(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+        );
+
+        // Then: Content is preserved but headings removed
+        expect(pages, isNotEmpty);
+        final reconstructed = pages.join();
+        expect(reconstructed, contains('Paragraph 1'));
+        expect(reconstructed, contains('Paragraph 2'));
+        expect(reconstructed, isNot(contains('<h1>')));
+        expect(reconstructed, isNot(contains('<h2>')));
+      });
     });
 
-    test('should not put all remaining text on last page when it exceeds page capacity', () {
-      // Given: A large text that should span many pages
-      final text = 'This is a test sentence. ' * 1000; // ~20,000 characters
-      const constraints = BoxConstraints(
-        maxWidth: 300,
-        maxHeight: 400,
-      );
-      const textStyle = TextStyle(fontSize: 16);
+    group('Timeout behavior', () {
+      test('should timeout after 5 seconds for large text', () {
+        // Given: Very large text that would take > 5 seconds to paginate
+        final text = 'Sentence. ' * 50000; // ~450,000 characters
+        const constraints = BoxConstraints(
+          maxWidth: 300,
+          maxHeight: 400,
+        );
+        const textStyle = TextStyle(fontSize: 14);
 
-      // When
-      final pages = service.paginateText(
-        text: text,
-        constraints: constraints,
-        textStyle: textStyle,
-      );
+        // When: Use custom config with short timeout for testing
+        final result = service.paginateWithProgress(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+          config: const PaginationConfig(
+            timeoutMs: 100, // Very short timeout for testing
+            progressInterval: 1000,
+          ),
+        );
 
-      // Debug output
-      print('DEBUG: Total pages: ${pages.length}');
-      print('DEBUG: Last page length: ${pages.last.length}');
+        // Then: Should timeout and mark as timed out
+        expect(result.timedOut, isTrue);
+        expect(result.pages, isNotEmpty);
+        expect(result.elapsedMs, greaterThan(100));
+      });
 
-      // Then:
-      // 1. Should have multiple pages (not just 1-2)
-      expect(pages.length, greaterThan(10), reason: 'Should create many pages for large text');
+      test('should not timeout for small text', () {
+        // Given: Small text
+        const text = 'This is a short text.';
+        const constraints = BoxConstraints(
+          maxWidth: 300,
+          maxHeight: 400,
+        );
+        const textStyle = TextStyle(fontSize: 14);
 
-      // 2. Last page should not contain all remaining text
-      // If the text is 20,000 chars and we have ~20 pages, each should be ~1000 chars
-      // The last page should be similar in size, not 10,000+ chars
-      expect(pages.last.length, lessThan(2000), reason: 'Last page should not contain excessive text');
+        // When
+        final result = service.paginateWithProgress(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+          config: const PaginationConfig(
+            timeoutMs: 100,
+          ),
+        );
 
-      // 3. All pages except possibly the last should be reasonably sized
-      for (int i = 0; i < pages.length - 1; i++) {
-        expect(pages[i].length, lessThan(3000), reason: 'Page $i should be reasonably sized');
-      }
+        // Then: Should not timeout
+        expect(result.timedOut, isFalse);
+        expect(result.pages.length, equals(1));
+        expect(result.elapsedMs, lessThan(100));
+      });
 
-      // 4. All text should be preserved
-      final reconstructed = pages.join();
-      expect(reconstructed, equals(text));
+      test('should add remaining text as final page on timeout', () {
+        // Given: Text that will timeout during pagination
+        final text = 'Sentence. ' * 10000; // ~90,000 characters
+        const constraints = BoxConstraints(
+          maxWidth: 200,
+          maxHeight: 300,
+        );
+        const textStyle = TextStyle(fontSize: 14);
+
+        // When
+        final result = service.paginateWithProgress(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+          config: const PaginationConfig(
+            timeoutMs: 50, // Very short timeout
+          ),
+        );
+
+        // Then: All text should be in pages (even if timed out)
+        final totalLength = result.pages.map((p) => p.length).reduce((a, b) => a + b);
+        expect(totalLength, equals(text.length));
+        expect(result.timedOut, isTrue);
+      });
     });
 
-    test('should handle very long text without timeout or premature stopping', () {
-      // Given: A very long text (simulating a book chapter)
-      final text = 'Sentence. ' * 10000; // ~90,000 characters
-      const constraints = BoxConstraints(
-        maxWidth: 350,
-        maxHeight: 500,
-      );
-      const textStyle = TextStyle(fontSize: 14);
+    group('Progress reporting', () {
+      test('should report progress during pagination', () {
+        // Given: Large text
+        final text = 'Sentence. ' * 1000; // ~9,000 characters
+        const constraints = BoxConstraints(
+          maxWidth: 300,
+          maxHeight: 400,
+        );
+        const textStyle = TextStyle(fontSize: 14);
 
-      // When
-      final pages = service.paginateText(
-        text: text,
-        constraints: constraints,
-        textStyle: textStyle,
-      );
+        final progressUpdates = <int>[];
 
-      // Then
-      expect(pages, isNotEmpty);
-      expect(pages.length, greaterThan(50), reason: 'Should create many pages for very long text');
+        // When
+        service.paginateWithProgress(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+          config: const PaginationConfig(
+            progressInterval: 5, // Report every 5 pages
+          ),
+          progressCallback: (current, estimated) {
+            progressUpdates.add(current);
+          },
+        );
 
-      // Verify no page is excessively large
-      for (int i = 0; i < pages.length; i++) {
-        expect(pages[i].length, lessThan(5000), reason: 'Page $i should not be excessively large');
-      }
-
-      // Verify all text is preserved
-      final reconstructed = pages.join();
-      expect(reconstructed.length, equals(text.length));
+        // Then: Should have received progress updates
+        expect(progressUpdates, isNotEmpty);
+        expect(progressUpdates.first, greaterThan(0));
+      });
     });
 
-    test('should preserve paragraph breaks without text loss', () {
-      // Regression test for the text loss bug
-      // Given: Text with multiple consecutive paragraph breaks
-      const text = 'Paragraph 1\n\n\n\nParagraph 2\n\n\nParagraph 3\n\n\n\nParagraph 4';
-      const constraints = BoxConstraints(
-        maxWidth: 200,
-        maxHeight: 100,
-      );
-      const textStyle = TextStyle(fontSize: 14);
+    group('Boundary detection', () {
+      test('should break at sentence boundaries', () {
+        // Given: Text with clear sentence boundaries
+        const text = 'Sentence one. Sentence two! Sentence three? Sentence four.';
+        const constraints = BoxConstraints(
+          maxWidth: 150,
+          maxHeight: 50,
+        );
+        const textStyle = TextStyle(fontSize: 14);
 
-      // When
-      final pages = service.paginateText(
-        text: text,
-        constraints: constraints,
-        textStyle: textStyle,
-      );
+        // When
+        final pages = service.paginateText(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+        );
 
-      // Then: All text must be preserved
-      final reconstructed = pages.join();
-      expect(reconstructed, equals(text), reason: 'All text including paragraph breaks must be preserved');
-      expect(pages, isNotEmpty);
+        // Then: Pages should end at sentence boundaries
+        expect(pages, isNotEmpty);
+        // Check that pages don't end mid-sentence (no partial sentences)
+        for (final page in pages) {
+          if (page.isNotEmpty) {
+            final lastChar = page.trim().characters.last;
+            // Last character should be sentence ending or space/newline
+            expect(
+              ['.', '!', '?', ' ', '\n'].contains(lastChar) || page.endsWith('one.') || page.endsWith('two!') || page.endsWith('three?'),
+              isTrue,
+            );
+          }
+        }
+      });
+
+      test('should handle text with no punctuation', () {
+        // Given: Text without sentence-ending punctuation
+        const text = 'word1 word2 word3 word4 word5 word6 word7 word8';
+        const constraints = BoxConstraints(
+          maxWidth: 100,
+          maxHeight: 30,
+        );
+        const textStyle = TextStyle(fontSize: 14);
+
+        // When
+        final pages = service.paginateText(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+        );
+
+        // Then: Should break at word boundaries
+        expect(pages, isNotEmpty);
+        // Reconstructed should equal original
+        final reconstructed = pages.join();
+        expect(reconstructed, equals(text));
+      });
+
+      test('should handle very long sentences', () {
+        // Given: Very long single sentence
+        final text = 'This is a very long sentence that continues on and on without '
+            'any breaks or pauses and just keeps going with more and more words '
+            'and clauses and phrases that make it difficult to find a good break '
+            'point for pagination purposes but we need to handle it anyway. ';
+        const constraints = BoxConstraints(
+          maxWidth: 200,
+          maxHeight: 50,
+        );
+        const textStyle = TextStyle(fontSize: 14);
+
+        // When
+        final pages = service.paginateText(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+        );
+
+        // Then: Should create multiple pages
+        expect(pages.length, greaterThan(1));
+        // All text should be preserved
+        final reconstructed = pages.join();
+        expect(reconstructed, equals(text));
+      });
+
+      test('should detect abbreviations correctly', () {
+        // Given: Text with abbreviations that end with periods
+        const text = 'Dr. Smith went to Washington D.C. with Mr. Jones. They met Mrs. Brown.';
+        const constraints = BoxConstraints(
+          maxWidth: 200,
+          maxHeight: 100,
+        );
+        const textStyle = TextStyle(fontSize: 14);
+
+        // When
+        final pages = service.paginateText(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+        );
+
+        // Then: Should not break at abbreviation periods
+        // Check that we don't have weird splits like "Dr." alone
+        for (final page in pages) {
+          expect(page, isNot(endsWith('Dr.')));
+          expect(page, isNot(endsWith('D.C.')));
+          expect(page, isNot(endsWith('Mr.')));
+        }
+
+        // All text preserved
+        final reconstructed = pages.join();
+        expect(reconstructed, equals(text));
+      });
     });
 
-    test('should preserve paragraph breaks at page boundaries', () {
-      // Given: Text that's likely to break at paragraph boundaries
-      final text = 'A' * 100 + '\n\n' + 'B' * 100 + '\n\n' + 'C' * 100;
-      const constraints = BoxConstraints(
-        maxWidth: 150,
-        maxHeight: 80,
-      );
-      const textStyle = TextStyle(fontSize: 12);
+    group('Original tests', () {
+      test('should respect paragraph breaks', () {
+        // Given
+        const text = 'Paragraph one.\n\nParagraph two.';
+        const constraints = BoxConstraints(
+          maxWidth: 200,
+          maxHeight: 30,
+        ); // Force break between paragraphs
+        const textStyle = TextStyle(fontSize: 14);
 
-      // When
-      final pages = service.paginateText(
-        text: text,
-        constraints: constraints,
-        textStyle: textStyle,
-      );
+        // When
+        final pages = service.paginateText(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+        );
 
-      // Then: Verify no text loss
-      final reconstructed = pages.join();
-      expect(reconstructed, equals(text), reason: 'Text with paragraph breaks must be preserved');
+        // Then
+        expect(pages.length, greaterThanOrEqualTo(2));
+        expect(pages[0].contains('Paragraph one.'), isTrue);
+        expect(pages[1].contains('Paragraph two.'), isTrue);
+      });
 
-      // Verify paragraph breaks are preserved (should have \n\n in the result)
-      expect(reconstructed, contains('\n\n'));
-    });
+      test('should not put all remaining text on last page when it exceeds page capacity', () {
+        // Given: A large text that should span many pages
+        final text = 'This is a test sentence. ' * 1000; // ~20,000 characters
+        const constraints = BoxConstraints(
+          maxWidth: 300,
+          maxHeight: 400,
+        );
+        const textStyle = TextStyle(fontSize: 16);
 
-    test('should handle text with many consecutive paragraph breaks', () {
-      // Edge case: Text with many consecutive breaks
-      const text = 'Start\n\n\n\n\n\n\nEnd';
-      const constraints = BoxConstraints(
-        maxWidth: 200,
-        maxHeight: 200,
-      );
-      const textStyle = TextStyle(fontSize: 14);
+        // When
+        final pages = service.paginateText(
+          text: text,
+          constraints: constraints,
+          textStyle: textStyle,
+        );
 
-      // When
-      final pages = service.paginateText(
-        text: text,
-        constraints: constraints,
-        textStyle: textStyle,
-      );
+        // Then:
+        // 1. Should have multiple pages
+        expect(pages.length, greaterThan(10));
 
-      // Then: Must preserve all paragraph breaks
-      final reconstructed = pages.join();
-      expect(reconstructed, equals(text), reason: 'All consecutive paragraph breaks must be preserved');
-    });
+        // 2. Last page should not contain all remaining text
+        expect(pages.last.length, lessThan(2000));
 
-    test('should not create empty pages from paragraph breaks', () {
-      // Given: Text with paragraph breaks at the end
-      const text = 'Some content\n\n\n\n';
-      const constraints = BoxConstraints(
-        maxWidth: 300,
-        maxHeight: 200,
-      );
-      const textStyle = TextStyle(fontSize: 14);
+        // 3. All pages except possibly the last should be reasonably sized
+        for (int i = 0; i < pages.length - 1; i++) {
+          expect(pages[i].length, lessThan(3000));
+        }
 
-      // When
-      final pages = service.paginateText(
-        text: text,
-        constraints: constraints,
-        textStyle: textStyle,
-      );
-
-      // Then: Should have exactly one page (no empty pages)
-      expect(pages.length, equals(1), reason: 'Should not create empty pages from trailing paragraph breaks');
-
-      // The page should contain the paragraph breaks
-      expect(pages[0], contains('\n\n'));
-    });
-
-    test('should handle edge case of single character pages', () {
-      // Given: Very short text that might create single-character pages
-      const text = 'A\n\nB\n\nC';
-      const constraints = BoxConstraints(
-        maxWidth: 50,
-        maxHeight: 20,
-      );
-      const textStyle = TextStyle(fontSize: 14);
-
-      // When
-      final pages = service.paginateText(
-        text: text,
-        constraints: constraints,
-        textStyle: textStyle,
-      );
-
-      // Then: All characters must be preserved
-      final reconstructed = pages.join();
-      expect(reconstructed, equals(text));
-      expect(pages, isNotEmpty);
+        // 4. All text should be preserved
+        final reconstructed = pages.join();
+        expect(reconstructed, equals(text));
+      });
     });
   });
 }

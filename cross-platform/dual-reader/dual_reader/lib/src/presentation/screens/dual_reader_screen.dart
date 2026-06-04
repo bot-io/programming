@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -15,13 +16,26 @@ import 'package:dual_reader/src/data/services/book_translation_cache_service.dar
 import 'package:dual_reader/src/data/services/chunk_translation_service.dart';
 import 'package:dual_reader/src/data/services/chunk_cache_service.dart';
 import 'package:dual_reader/src/data/services/client_side_translation_service.dart';
+import 'package:dual_reader/src/data/services/full_screen_service.dart';
 import 'package:dual_reader/src/domain/usecases/update_book_progress_usecase.dart';
 import 'package:dual_reader/src/domain/usecases/get_book_by_id_usecase.dart';
 import 'package:dual_reader/src/presentation/providers/settings_notifier.dart';
+import 'package:dual_reader/src/presentation/providers/full_screen_provider.dart';
 import 'package:dual_reader/src/domain/entities/settings_entity.dart';
 import 'package:dual_reader/src/presentation/screens/settings_screen.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:dual_reader/src/core/utils/logging_service.dart';
+import 'package:dual_reader/src/core/utils/language_utils.dart';
+// UI Widgets
+import 'package:dual_reader/src/presentation/widgets/dual_panel_layout.dart';
+import 'package:dual_reader/src/presentation/widgets/touch_navigation_zones.dart';
+import 'package:dual_reader/src/presentation/widgets/tap_zone_detector.dart';
+import 'package:dual_reader/src/presentation/widgets/reader_top_controls.dart';
+import 'package:dual_reader/src/presentation/widgets/reader_controls_bar.dart';
+import 'package:dual_reader/src/presentation/widgets/pagination_controls.dart';
+import 'package:dual_reader/src/presentation/widgets/chapter_drawer.dart';
+import 'package:dual_reader/src/presentation/widgets/always_visible_progress.dart';
+import 'package:dual_reader/src/presentation/widgets/full_screen_toggle.dart';
 
 class ChapterDisplayData {
   final String title;
@@ -76,7 +90,7 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
     WidgetsBinding.instance.addObserver(this);
     _bookTranslationCache.init();
     _initializeChunkServices();
-    _setFullScreen(true);
+    _initializeFullScreen();
     _loadBookAndPaginate();
   }
 
@@ -90,6 +104,18 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
     LoggingService.info(_componentName, 'Chunk translation services initialized');
   }
 
+  /// Initialize full screen service and enter immersive mode
+  Future<void> _initializeFullScreen() async {
+    try {
+      final service = FullScreenService.instance;
+      await service.initialize();
+      await service.enterFullScreen();
+      LoggingService.info(_componentName, 'Full screen initialized');
+    } catch (e) {
+      LoggingService.error(_componentName, 'Failed to initialize full screen', error: e);
+    }
+  }
+
   @override
   void dispose() {
     _exitFullScreen();
@@ -98,22 +124,54 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
     super.dispose();
   }
 
+  /// Exit full screen mode
   Future<void> _exitFullScreen() async {
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    try {
+      final service = FullScreenService.instance;
+      await service.exitFullScreen();
+      LoggingService.info(_componentName, 'Full screen exited');
+    } catch (e) {
+      LoggingService.error(_componentName, 'Failed to exit full screen', error: e);
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _setFullScreen(true);
+    LoggingService.debug(_componentName, 'App lifecycle state changed: $state');
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        // Restore full screen when app is resumed
+        _handleAppResumed();
+        break;
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // Handle other lifecycle events if needed
+        break;
     }
   }
 
-  Future<void> _setFullScreen(bool value) async {
-    if (value) {
-      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    } else {
-      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  /// Handle app resumed event
+  Future<void> _handleAppResumed() async {
+    try {
+      final service = FullScreenService.instance;
+      await service.handleAppResumed();
+      LoggingService.info(_componentName, 'Full screen restored on resume');
+    } catch (e) {
+      LoggingService.error(_componentName, 'Failed to restore full screen on resume', error: e);
+    }
+  }
+
+  /// Toggle full screen mode
+  Future<void> _toggleFullScreen() async {
+    try {
+      final service = FullScreenService.instance;
+      await service.toggleFullScreen();
+      LoggingService.info(_componentName, 'Full screen toggled');
+    } catch (e) {
+      LoggingService.error(_componentName, 'Failed to toggle full screen', error: e);
     }
   }
 
@@ -992,223 +1050,107 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.white,
-      body: Stack(
+    return KeyboardHandler(
+      onPreviousPage: _currentOriginalPage > 0 ? _goToPreviousPage : null,
+      onNextPage: _currentOriginalPage < _totalOriginalPages - 1 ? _goToNextPage : null,
+      onEscape: () {
+        // Exit full screen or close book
+        if (_controlsVisible) {
+          Navigator.of(context).pop();
+        } else {
+          _toggleControls();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? Colors.black : Colors.white,
+        body: Stack(
         children: [
-          // Main content (no GestureDetector wrapper - allows text selection)
-          _isTwoPane()
-              ? Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: _buildOriginalTextPanel('Original', _originalTextPages.elementAtOrNull(_currentOriginalPage) ?? '', settings),
-                    ),
-                    Expanded(
-                      flex: 1,
-                      child: _buildTranslatedTextPanel('Translated', _translatedTextPages[_currentOriginalPage] ?? 'Translating...', settings),
-                    ),
-                  ],
-                )
-              : Column(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: _buildOriginalTextPanel('Original', _originalTextPages.elementAtOrNull(_currentOriginalPage) ?? '', settings),
-                    ),
-                    Expanded(
-                      flex: 1,
-                      child: _buildTranslatedTextPanel('Translated', _translatedTextPages[_currentOriginalPage] ?? 'Translating...', settings),
-                    ),
-                  ],
-                ),
-          // Middle zone (outside text areas) for toggling controls
-          Positioned(
-            left: MediaQuery.of(context).size.width * 0.25,
-            right: MediaQuery.of(context).size.width * 0.25,
-            top: 0,
-            bottom: 0,
-            child: GestureDetector(
-              onTap: () {
-                LoggingService.debug(_componentName, 'Middle area tapped - toggling controls');
-                _toggleControls();
-              },
-              behavior: HitTestBehavior.translucent, // Let taps pass through to text
-            ),
+          // Dual-panel layout (responsive)
+          DualPanelLayout(
+            originalText: _originalTextPages.elementAtOrNull(_currentOriginalPage) ?? '',
+            translatedText: _translatedTextPages[_currentOriginalPage] ?? 'Translating...',
+            settings: settings,
+            originalLanguageCode: _epubBook?.Language != null
+                ? LanguageUtils.getLanguageName(_epubBook!.Language!)
+                : null,
+            targetLanguageCode: LanguageUtils.getLanguageName(settings.targetTranslationLanguageCode),
+            showLabels: !_controlsVisible,
+            isTranslationLoading: !_translatedTextPages.containsKey(_currentOriginalPage),
+            translatedScrollController: _scrollController,
           ),
-          // Left margin zone for previous page navigation (25% of screen width)
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: MediaQuery.of(context).size.width * 0.25,
-            child: GestureDetector(
-              onTap: () {
-                LoggingService.debug(_componentName, 'Left margin tapped - navigating to previous page');
-                _goToPreviousPage();
-              },
-              behavior: HitTestBehavior.opaque,
+          // Touch navigation zones with advanced gesture detection
+          TapZoneDetector(
+            config: TapZoneConfig(
+              hapticFeedbackEnabled: true,
+              debugMode: false, // Set to true for debugging
             ),
-          ),
-          // Right margin zone for next page navigation (25% of screen width)
-          Positioned(
-            right: 0,
-            top: 0,
-            bottom: 0,
-            width: MediaQuery.of(context).size.width * 0.25,
-            child: GestureDetector(
-              onTap: () {
-                LoggingService.debug(_componentName, 'Right margin tapped - navigating to next page');
-                _goToNextPage();
-              },
-              behavior: HitTestBehavior.opaque,
-            ),
+            onLeftZoneTap: _goToPreviousPage,
+            onMiddleZoneTap: _toggleControls,
+            onRightZoneTap: _goToNextPage,
           ),
           // Top controls (app bar)
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            top: _controlsVisible ? 0 : -kToolbarHeight,
-            left: 0,
-            right: 0,
-            child: Container(
-              color: isDark
-                  ? (Theme.of(context).appBarTheme.backgroundColor?.withOpacity(0.9) ?? Colors.grey[900]?.withOpacity(0.9))
-                  : Colors.grey[100]?.withOpacity(0.95),
-              child: SafeArea(
-                bottom: false,
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.arrow_back,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    Expanded(
-                      child: Text(
-                        _book?.title ?? 'Dual Reader',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.refresh,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _translatedTextPages.clear();
-                          _translateCurrentVisiblePage();
-                        });
-                      },
-                      tooltip: 'Refresh Translation',
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.settings,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (context) => const SettingsScreen(),
-                          ),
-                        );
-                      },
-                      tooltip: 'Settings',
-                    ),
-                    if (_chaptersDisplayData.isNotEmpty)
-                      IconButton(
-                        icon: Icon(
-                          Icons.list_alt,
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
-                        onPressed: () => _toggleChapterDrawer(),
-                        tooltip: 'Table of Contents',
-                      ),
-                  ],
+          ReaderTopControls(
+            visible: _controlsVisible,
+            bookTitle: _book?.title,
+            onBack: () => Navigator.of(context).pop(),
+            onRefresh: () {
+              setState(() {
+                _translatedTextPages.clear();
+                _translateCurrentVisiblePage();
+              });
+            },
+            onSettings: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const SettingsScreen(),
                 ),
-              ),
-            ),
+              );
+            },
+            onTableOfContents: _chaptersDisplayData.isNotEmpty ? _toggleChapterDrawer : null,
+            hasChapters: _chaptersDisplayData.isNotEmpty,
           ),
           // Bottom pagination controls (syncs with top bar)
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            bottom: _controlsVisible ? 0 : -150,
-            left: 0,
-            right: 0,
-            child: _buildPaginationControls(),
+          ReaderControlsBar(
+            visible: _controlsVisible,
+            currentPage: _currentOriginalPage,
+            totalPages: _totalOriginalPages,
+            onPreviousPage: _currentOriginalPage > 0 ? _goToPreviousPage : null,
+            onNextPage: _currentOriginalPage < _totalOriginalPages - 1 ? _goToNextPage : null,
+            onPageChanged: (page) {
+              _goToPage(page);
+            },
+            onSettings: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+            },
+            onChapterDrawer: _chaptersDisplayData.isNotEmpty ? _toggleChapterDrawer : null,
+            onClose: () => Navigator.of(context).pop(),
+            hasChapters: _chaptersDisplayData.isNotEmpty,
+          ),
+          // Always-visible progress indicator
+          AlwaysVisibleProgress(
+            currentPage: _currentOriginalPage,
+            totalPages: _totalOriginalPages,
           ),
           // Chapter drawer overlay
           if (_chapterDrawerVisible && _chaptersDisplayData.isNotEmpty)
-            GestureDetector(
-              onTap: _toggleChapterDrawer,
-              child: Container(
-                color: isDark ? Colors.black.withOpacity(0.5) : Colors.black.withOpacity(0.3),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: GestureDetector(
-                    onTap: () {}, // Prevent tap from closing immediately
-                    child: Container(
-                      width: MediaQuery.of(context).size.width * 0.7,
-                      color: isDark
-                          ? (Theme.of(context).drawerTheme.backgroundColor ?? Colors.grey[900])
-                          : Colors.white,
-                      child: SafeArea(
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Table of Contents',
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      color: isDark ? Colors.white : Colors.black87,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.close,
-                                      color: isDark ? Colors.white : Colors.black87,
-                                    ),
-                                    onPressed: _toggleChapterDrawer,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Divider(),
-                            Expanded(
-                              child: ListView.builder(
-                                itemCount: _chaptersDisplayData.length,
-                                itemBuilder: (context, index) {
-                                  final chapter = _chaptersDisplayData[index];
-                                  return ListTile(
-                                    title: Text(chapter.title),
-                                    onTap: () {
-                                      _goToPage(chapter.startingPageIndex);
-                                      _toggleChapterDrawer();
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            ChapterDrawer(
+              chapters: _chaptersDisplayData.map((ch) => ChapterItem(
+                title: ch.title,
+                startingPageIndex: ch.startingPageIndex,
+              )).toList(),
+              currentPage: _currentOriginalPage,
+              onChapterSelected: (pageIndex) {
+                _goToPage(pageIndex);
+              },
+              onClose: _toggleChapterDrawer,
             ),
         ],
+      ),
+    ),
       ),
     );
   }

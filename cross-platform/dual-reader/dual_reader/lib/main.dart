@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dual_reader/src/core/di/injection_container.dart' as di;
-import 'package:dual_reader/src/presentation/screens/dual_reader_screen.dart';
-import 'package:dual_reader/src/presentation/screens/library_screen.dart';
+import 'package:dual_reader/src/core/router/app_router.dart';
 import 'package:dual_reader/src/presentation/screens/settings_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:dual_reader/src/presentation/providers/settings_notifier.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dual_reader/src/core/utils/logging_service.dart';
+import 'package:dual_reader/src/data/services/language_model_downloader.dart';
+import 'package:dual_reader/src/data/services/common_phrase_preloader.dart';
+import 'package:dual_reader/src/data/services/enhanced_translation_cache_service.dart';
+import 'package:dual_reader/src/domain/services/translation_service.dart';
+import 'package:dual_reader/src/core/platform/platform_features.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +24,40 @@ void main() async {
   await LoggingService.instance.init();
 
   await di.init();
+
+  // Initialize router
+  initAppRouter();
+
+  // Initialize enhanced translation cache
+  final cacheService = EnhancedTranslationCacheService.instance;
+  await cacheService.init();
+
+  // Background Spanish model download on platforms that support it
+  // This improves UX by pre-loading the most common translation model
+  if (platformFeatures.supportsModelDownload) {
+    final downloader = LanguageModelDownloader.getInstance(di.sl<TranslationService>());
+    // Start download in background without blocking app startup
+    downloader.downloadSpanishModelInBackground().catchError((e) {
+      LoggingService.warning('Main', 'Failed to start background Spanish model download');
+    });
+  }
+
+  // Preload common phrases for user's target language
+  // This runs in background and caches common translations
+  final preloader = CommonPhrasePreloader(cacheService);
+
+  // Get user's target language from settings (default to Spanish)
+  // Note: We'll preload after app starts to not block startup
+  Future.delayed(const Duration(milliseconds: 500), () async {
+    try {
+      // For now, preload common phrases for Spanish as default
+      // In production, this would use the user's actual target language
+      await preloader.preloadForUserLanguage('es');
+      LoggingService.info('Main', 'Common phrases preloaded for Spanish');
+    } catch (e) {
+      LoggingService.warning('Main', 'Failed to preload common phrases');
+    }
+  });
 
   // Add global error handler to catch crashes
   FlutterError.onError = (details) {
@@ -60,28 +98,7 @@ class MyApp extends ConsumerWidget {
           ),
         ),
       ),
-      routerConfig: _router,
+      routerConfig: appRouter.router,
     );
   }
 }
-
-final _router = GoRouter(
-  routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const LibraryScreen(),
-      routes: [
-        GoRoute(
-          path: 'read/:bookId',
-          builder: (context, state) => DualReaderScreen(
-            bookId: state.pathParameters['bookId']!,
-          ),
-        ),
-        GoRoute(
-          path: 'settings',
-          builder: (context, state) => const SettingsScreen(),
-        ),
-      ],
-    ),
-  ],
-);

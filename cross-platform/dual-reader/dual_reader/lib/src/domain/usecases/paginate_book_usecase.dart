@@ -1,7 +1,10 @@
+import 'package:epubx/epubx.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dual_reader/src/domain/entities/book_entity.dart';
+import 'package:dual_reader/src/domain/entities/chapter_entity.dart';
 import 'package:dual_reader/src/domain/repositories/book_repository.dart';
 import 'package:dual_reader/src/domain/services/epub_parser_service.dart';
+import 'package:dual_reader/src/domain/services/mobi_parser_service.dart';
 import 'package:dual_reader/src/domain/services/pagination_service.dart';
 import 'package:dual_reader/src/domain/entities/settings_entity.dart';
 import 'package:dual_reader/src/presentation/providers/pagination_progress_notifier.dart';
@@ -11,20 +14,37 @@ import 'package:flutter/widgets.dart';
 ///
 /// This handles the full pagination process:
 /// 1. Retrieves book bytes from storage
-/// 2. Parses EPUB and extracts text
-/// 3. Paginates text using PaginationService
-/// 4. Updates book entity with total pages
-/// 5. Reports progress through PaginationProgressNotifier (optional)
+/// 2. Detects format (EPUB or MOBI) and extracts text
+/// 3. Strips chapter titles from content (to avoid duplication)
+/// 4. Paginates text using PaginationService
+/// 5. Updates book entity with total pages
+/// 6. Reports progress through PaginationProgressNotifier (optional)
 class PaginateBookUseCase {
   final BookRepository _bookRepository;
   final EpubParserService _epubParserService;
+  final MobiParserService _mobiParserService;
   final PaginationService _paginationService;
 
   PaginateBookUseCase(
     this._bookRepository,
     this._epubParserService,
+    this._mobiParserService,
     this._paginationService,
   );
+
+  /// Detect book format from file path
+  EbookFormat _detectFormat(String filePath) {
+    final lowerPath = filePath.toLowerCase();
+    if (lowerPath.endsWith('.epub')) {
+      return EbookFormat.epub;
+    } else if (lowerPath.endsWith('.mobi') ||
+        lowerPath.endsWith('.azw') ||
+        lowerPath.endsWith('.azw3') ||
+        lowerPath.endsWith('.prc')) {
+      return EbookFormat.mobi;
+    }
+    return EbookFormat.unknown;
+  }
 
   /// Paginate a book with the given settings
   ///
@@ -40,33 +60,39 @@ class PaginateBookUseCase {
     debugPrint('[PaginateBook] Screen size: ${screenSize.width.toInt()}x${screenSize.height.toInt()}');
     progressNotifier?.startPagination(book.id);
 
+    // Update status to in progress
+    final inProgressBook = book.copyWith(
+      paginationStatus: PaginationStatus.inProgress.index,
+      paginationProgress: 0.0,
+    );
+    await _bookRepository.updateBook(inProgressBook);
+
     try {
       // Step 1: Retrieve book bytes
       debugPrint('[PaginateBook] Retrieving book bytes...');
-      onProgress?.call(0.1);
-      progressNotifier?.updateProgress(book.id, 0.1);
+      _updateProgress(0.1, book.id, progressNotifier, onProgress);
 
       final bookBytes = await _bookRepository.getBookBytes(book.id);
       if (bookBytes == null) {
         throw Exception('Book bytes not found for ${book.id}');
       }
 
-      // Step 2: Parse EPUB
-      debugPrint('[PaginateBook] Parsing EPUB...');
-      onProgress?.call(0.2);
-      progressNotifier?.updateProgress(book.id, 0.2);
+      // Detect format
+      final format = _detectFormat(book.filePath);
+      debugPrint('[PaginateBook] Detected format: $format');
 
-      final epubBook = await _epubParserService.parseEpub(bookBytes);
-
-      // Step 3: Extract all text content
+      // Step 2: Extract text based on format
       debugPrint('[PaginateBook] Extracting text content...');
-      onProgress?.call(0.3);
-      progressNotifier?.updateProgress(book.id, 0.3);
+      _updateProgress(0.2, book.id, progressNotifier, onProgress);
 
-      final fullText = _extractAllText(epubBook);
+      final fullText = await _extractFullText(bookBytes, format);
       debugPrint('[PaginateBook] Extracted ${fullText.length} characters');
 
-      // Step 4: Setup pagination constraints
+      if (fullText.isEmpty) {
+        throw Exception('No text content found in book');
+      }
+
+      // Step 3: Setup pagination constraints
       // Use the same calculations as DualReaderScreen for consistency
       const appBarHeight = 56.0; // kToolbarHeight
       const bottomNavHeight = 80.0; // Approximate height for pagination controls
@@ -92,41 +118,107 @@ class PaginateBookUseCase {
 
       final padding = EdgeInsets.all(settings.margin);
 
-      // Step 5: Paginate the text
+      // Step 4: Paginate the text with progress tracking
       debugPrint('[PaginateBook] Paginating text...');
-      onProgress?.call(0.5);
-      progressNotifier?.updateProgress(book.id, 0.5);
+      _updateProgress(0.3, book.id, progressNotifier, onProgress);
 
-      final pages = _paginationService.paginateText(
+      final result = _paginationService.paginateWithProgress(
         text: fullText,
         constraints: BoxConstraints.tight(pageSize),
         textStyle: textStyle,
         lineHeight: settings.lineHeight,
         padding: padding,
+        config: const PaginationConfig(
+          timeoutMs: 5000, // 5 second timeout as specified
+          progressInterval: 25, // Report progress every 25 pages
+        ),
+        progressCallback: (current, estimated) {
+          // Update progress during pagination (0.3 to 0.8)
+          final paginationProgress = 0.3 + (0.5 * (current / estimated.clamp(1, double.infinity)));
+          _updateProgress(
+            paginationProgress.clamp(0.3, 0.8),
+            book.id,
+            progressNotifier,
+            onProgress,
+          );
+        },
       );
 
-      final totalPages = pages.length;
-      debugPrint('[PaginateBook] Pagination complete: $totalPages pages');
+      final totalPages = result.pages.length;
 
-      // Step 6: Update book with total pages
-      onProgress?.call(0.9);
-      progressNotifier?.updateProgress(book.id, 0.9);
+      // Check if pagination timed out
+      if (result.timedOut) {
+        debugPrint('[PaginateBook] WARNING: Pagination timed out after ${result.elapsedMs}ms');
+        debugPrint('[PaginateBook] Generated $totalPages pages (may be incomplete)');
+      } else {
+        debugPrint('[PaginateBook] Pagination complete: $totalPages pages in ${result.elapsedMs}ms');
+      }
+
+      // Step 5: Update book with total pages
+      _updateProgress(0.9, book.id, progressNotifier, onProgress);
 
       final updatedBook = book.copyWith(
         totalPages: totalPages,
-        paginationStatus: PaginationStatus.completed.index,
+        paginationStatus: result.timedOut
+            ? PaginationStatus.failed.index // Mark as failed if timed out
+            : PaginationStatus.completed.index,
         paginationProgress: 1.0,
       );
 
       await _bookRepository.updateBook(updatedBook);
 
-      // Step 7: Mark as completed
-      onProgress?.call(1.0);
-      progressNotifier?.completePagination(book.id, totalPages);
+      // Step 6: Mark as completed or failed
+      if (result.timedOut) {
+        progressNotifier?.failPagination(book.id, 'Pagination timed out after 5 seconds');
+        debugPrint('[PaginateBook] Failed due to timeout: ${book.title}');
+        return 0;
+      } else {
+        _updateProgress(1.0, book.id, progressNotifier, onProgress);
+        progressNotifier?.completePagination(book.id, totalPages);
+        debugPrint('[PaginateBook] Successfully paginated ${book.title}: $totalPages pages');
+        return totalPages;
+      }
 
-      debugPrint('[PaginateBook] Successfully paginated ${book.title}: $totalPages pages');
-      return totalPages;
-
+    } on EpubDrmException catch (e) {
+      debugPrint('[PaginateBook] DRM Error: $e');
+      progressNotifier?.failPagination(book.id, 'DRM Protected: $e');
+      final failedBook = book.copyWith(
+        paginationStatus: PaginationStatus.failed.index,
+      );
+      await _bookRepository.updateBook(failedBook);
+      return 0;
+    } on MobiDrmException catch (e) {
+      debugPrint('[PaginateBook] DRM Error: $e');
+      progressNotifier?.failPagination(book.id, 'DRM Protected: $e');
+      final failedBook = book.copyWith(
+        paginationStatus: PaginationStatus.failed.index,
+      );
+      await _bookRepository.updateBook(failedBook);
+      return 0;
+    } on EpubParseException catch (e) {
+      debugPrint('[PaginateBook] Parse Error: $e');
+      progressNotifier?.failPagination(book.id, e.toString());
+      final failedBook = book.copyWith(
+        paginationStatus: PaginationStatus.failed.index,
+      );
+      await _bookRepository.updateBook(failedBook);
+      return 0;
+    } on MobiParseException catch (e) {
+      debugPrint('[PaginateBook] Parse Error: $e');
+      progressNotifier?.failPagination(book.id, e.toString());
+      final failedBook = book.copyWith(
+        paginationStatus: PaginationStatus.failed.index,
+      );
+      await _bookRepository.updateBook(failedBook);
+      return 0;
+    } on MobiFormatException catch (e) {
+      debugPrint('[PaginateBook] Format Error: $e');
+      progressNotifier?.failPagination(book.id, e.toString());
+      final failedBook = book.copyWith(
+        paginationStatus: PaginationStatus.failed.index,
+      );
+      await _bookRepository.updateBook(failedBook);
+      return 0;
     } catch (e, stackTrace) {
       debugPrint('[PaginateBook] Error paginating ${book.id}: $e');
       debugPrint('[PaginateBook] Stack trace: $stackTrace');
@@ -144,27 +236,83 @@ class PaginateBookUseCase {
     }
   }
 
+  /// Update progress via multiple channels
+  void _updateProgress(
+    double progress,
+    String bookId,
+    PaginationProgressNotifier? progressNotifier,
+    void Function(double)? onProgress,
+  ) {
+    onProgress?.call(progress);
+    progressNotifier?.updateProgress(bookId, progress);
+  }
+
+  /// Extract all text content based on format
+  Future<String> _extractFullText(List<int> bytes, EbookFormat format) async {
+    switch (format) {
+      case EbookFormat.epub:
+        final epubBookEntity = await _epubParserService.parseEpub(bytes);
+        final rawEpubBook = await EpubReader.readBook(bytes);
+        return await _extractEpubText(rawEpubBook, epubBookEntity);
+
+      case EbookFormat.mobi:
+        return await _mobiParserService.extractFullText(bytes);
+
+      case EbookFormat.unknown:
+        // Try EPUB first
+        try {
+          final epubBookEntity = await _epubParserService.parseEpub(bytes);
+          final rawEpubBook = await EpubReader.readBook(bytes);
+          return await _extractEpubText(rawEpubBook, epubBookEntity);
+        } catch (_) {
+          // Try MOBI
+          return await _mobiParserService.extractFullText(bytes);
+        }
+    }
+  }
+
   /// Extract all text content from EPUB chapters
-  String _extractAllText(dynamic epubBook) {
+  /// Strips chapter titles from content to avoid duplication in pagination
+  Future<String> _extractEpubText(
+    EpubBook rawEpubBook,
+    epubBookEntity,
+  ) async {
     final buffer = StringBuffer();
 
-    // Try to access chapters/content
     try {
-      // The epubBook structure depends on the EpubParserService implementation
-      // Assuming it has a Chapters list or similar
-      if (epubBook.Chapters != null) {
-        for (final chapter in epubBook.Chapters) {
-          if (chapter.Content != null) {
-            buffer.write(chapter.Content);
-            buffer.write('\n\n');
-          }
+      // Get chapters from the parsed entity
+      final chapters = epubBookEntity.chapters;
+
+      if (chapters.isEmpty) {
+        debugPrint('[PaginateBook] No chapters found in entity, using raw extraction');
+        // Fallback to raw extraction
+        return await _epubParserService.extractFullText(rawEpubBook);
+      }
+
+      // Combine content from all chapters
+      for (final chapter in chapters) {
+        final content = chapter.content;
+
+        if (content.isNotEmpty) {
+          // Add chapter title as a header (optional, for structure)
+          // buffer.writeln(chapter.title);
+          // buffer.writeln();
+
+          // Add the content (already stripped of its title by the parser)
+          buffer.write(content);
+          buffer.write('\n\n');
         }
       }
+
+      final text = buffer.toString().trim();
+      return text.isEmpty ? '' : text;
     } catch (e) {
       debugPrint('[PaginateBook] Error extracting chapters: $e');
+      // Fallback to using the service method
+      return await _epubParserService.extractFullText(rawEpubBook);
     }
-
-    final text = buffer.toString().trim();
-    return text.isEmpty ? '' : text;
   }
 }
+
+/// Supported ebook formats (internal use)
+enum EbookFormat { epub, mobi, unknown }
