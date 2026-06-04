@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:dual_reader/src/data/services/language_detection_service.dart';
 
 /// Tests for enhanced language detection service
@@ -17,12 +18,14 @@ void main() {
     late LanguageDetectionService service;
 
     setUp(() async {
+      Hive.init('test_hive_lang');
       service = LanguageDetectionService.instance;
       await service.init();
     });
 
     tearDown(() async {
       await service.close();
+      await Hive.deleteBoxFromDisk('language_detection_cache');
     });
 
     group('Script Detection', () {
@@ -441,7 +444,7 @@ void main() {
       });
 
       test('should handle text with punctuation only', () async {
-        final result = await service.detectWithConfidence('!@#$%^&*()');
+        final result = await service.detectWithConfidence(r'!@#$%^&*()');
         expect(result.languageCode, isNotEmpty);
       });
 

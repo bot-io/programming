@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:dual_reader/src/data/services/enhanced_translation_cache_service.dart';
+import 'package:dual_reader/src/core/utils/logging_service.dart';
 
 /// Service for preloading common translations on app startup.
 ///

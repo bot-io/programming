@@ -10,7 +10,6 @@ import 'package:dual_reader/src/domain/services/epub_parser_service.dart';
 import 'package:dual_reader/src/data/services/epub_parser_service_impl.dart';
 import 'package:dual_reader/src/data/services/book_translation_cache_service.dart';
 import 'package:hive/hive.dart';
-import 'package:hive_test/hive_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:file_picker/file_picker.dart';
 import '../helper/test_helpers.dart';

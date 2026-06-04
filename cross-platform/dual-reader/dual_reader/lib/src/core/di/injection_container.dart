@@ -31,7 +31,6 @@ import 'package:dual_reader/src/domain/repositories/settings_repository.dart';
 import 'package:dual_reader/src/data/repositories/settings_repository_impl.dart';
 import 'package:dual_reader/src/core/adapters/theme_mode_adapter.dart';
 import 'package:dual_reader/src/core/adapters/text_align_adapter.dart';
-import 'package:dual_reader/src/core/platform/platform_features.dart';
 import 'package:flutter/foundation.dart';
 
 // Export TranslationService for use in other files
@@ -113,7 +112,7 @@ Future<void> init() async {
 
   // Use cases
   sl.registerLazySingleton<ImportBookUseCase>(() => ImportBookUseCase(sl(), sl(), sl()));
-  sl.registerLazySingleton<PaginateBookUseCase>(() => PaginateBookUseCase(sl(), sl(), sl()));
+  sl.registerLazySingleton<PaginateBookUseCase>(() => PaginateBookUseCase(sl(), sl(), sl(), sl()));
   sl.registerLazySingleton<GetAllBooksUseCase>(() => GetAllBooksUseCase(sl()));
   sl.registerLazySingleton<GetBookByIdUseCase>(() => GetBookByIdUseCase(sl()));
   sl.registerLazySingleton<UpdateBookProgressUseCase>(() => UpdateBookProgressUseCase(sl()));

@@ -23,7 +23,7 @@ class LanguageModelsScreen extends ConsumerStatefulWidget {
 class _LanguageModelsScreenState extends ConsumerState<LanguageModelsScreen> {
   final LanguageModelManager _modelManager = LanguageModelManager.instance;
   // ConnectivityPlus instance (version 5.x doesn't require constructor call)
-  final ConnectivityPlus _connectivity = ConnectivityPlus();
+  final Connectivity _connectivity = Connectivity();
 
   List<LanguageModelInfo> _downloadedModels = [];
   List<LanguageModelInfo> _allModels = [];
@@ -71,7 +71,7 @@ class _LanguageModelsScreenState extends ConsumerState<LanguageModelsScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      LoggingService.error('Failed to load language models', error: e);
+      LoggingService.error('LanguageModelsScreen', 'Failed to load language models', error: e);
       setState(() {
         _isLoading = false;
       });
@@ -453,8 +453,8 @@ class _ModelDownloadDialogState extends State<_ModelDownloadDialog> {
   }
 
   Future<void> _startDownload() async {
-    final success = await modelManager.downloadModel(
-      languageCode,
+    final success = await widget.modelManager.downloadModel(
+      widget.languageCode,
       onProgress: (message) {
         if (mounted) {
           setState(() {
@@ -482,7 +482,7 @@ class _ModelDownloadDialogState extends State<_ModelDownloadDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Downloading $languageName'),
+      title: Text('Downloading ${widget.languageName}'),
       content: SizedBox(
         width: 300,
         child: Column(
@@ -530,7 +530,7 @@ class _DownloadButtonState extends State<_DownloadButton> {
     return TextButton.icon(
       icon: const Icon(Icons.download),
       label: const Text('Download'),
-      onPressed: onPressed,
+      onPressed: widget.onPressed,
       style: TextButton.styleFrom(
         foregroundColor: Colors.blue,
       ),

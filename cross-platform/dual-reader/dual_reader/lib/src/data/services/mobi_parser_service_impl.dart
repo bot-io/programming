@@ -53,7 +53,7 @@ class MobiParserServiceImpl implements MobiParserService {
 
       // Check for DRM protection
       if (_isDrmProtected(bytes)) {
-        throw const MobiDrmException(
+        throw MobiDrmException(
           'This MOBI file is DRM-protected and cannot be opened. '
           'Please use a DRM-free version of this eBook.'
         );
@@ -350,7 +350,7 @@ class MobiParserServiceImpl implements MobiParserService {
         return metadata;
       }
 
-      final headerLength = _readUint32(bytes, exthOffset + 4);
+      final exthHeaderLength = _readUint32(bytes, exthOffset + 4);
       final recordCount = _readUint32(bytes, exthOffset + 8);
 
       // Parse EXTH records

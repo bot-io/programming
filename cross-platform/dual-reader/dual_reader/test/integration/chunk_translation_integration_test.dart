@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:hive_test/hive_test.dart';
 import 'package:dual_reader/src/data/services/chunk_cache_service.dart';
 import 'package:dual_reader/src/domain/entities/translation_chunk.dart';
 import '../helper/test_helpers.dart';

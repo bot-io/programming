@@ -361,7 +361,7 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
     if (_book != null) {
       final fileBytes = await sl<BookRepository>().getBookBytes(_book!.id);
       if (fileBytes != null) {
-        _epubBook = await _epubParserService.parseEpub(fileBytes);
+        _epubBook = await EpubReader.readBook(fileBytes);
 
         if (_epubBook != null) {
           final unescape = HtmlUnescape();
@@ -1070,8 +1070,8 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
             originalText: _originalTextPages.elementAtOrNull(_currentOriginalPage) ?? '',
             translatedText: _translatedTextPages[_currentOriginalPage] ?? 'Translating...',
             settings: settings,
-            originalLanguageCode: _epubBook?.Language != null
-                ? LanguageUtils.getLanguageName(_epubBook!.Language!)
+            originalLanguageCode: _epubBook?.Schema?.Package?.Metadata?.Languages?.isNotEmpty == true
+                ? LanguageUtils.getLanguageName(_epubBook!.Schema!.Package!.Metadata!.Languages!.first)
                 : null,
             targetLanguageCode: LanguageUtils.getLanguageName(settings.targetTranslationLanguageCode),
             showLabels: !_controlsVisible,
@@ -1151,8 +1151,7 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
         ],
       ),
     ),
-      ),
-    );
+  );
   }
 
   Widget _buildTextPanel(String title, ScrollController controller, String content, SettingsEntity settings) {

@@ -1,4 +1,5 @@
 import 'package:dual_reader/src/domain/entities/epub_book_entity.dart';
+import 'package:dual_reader/src/domain/entities/chapter_entity.dart';
 import 'package:epubx/epubx.dart';
 
 /// Exception thrown when EPUB is DRM-protected

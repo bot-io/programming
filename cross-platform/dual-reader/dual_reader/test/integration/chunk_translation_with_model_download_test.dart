@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:hive_test/hive_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dual_reader/src/core/di/injection_container.dart' as di;
 import 'package:dual_reader/src/data/services/client_side_translation_service.dart';

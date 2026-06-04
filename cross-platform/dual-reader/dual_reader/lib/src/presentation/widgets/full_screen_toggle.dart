@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dual_reader/src/presentation/providers/full_screen_provider.dart';
+import 'package:dual_reader/src/data/services/full_screen_service.dart';
 import 'package:dual_reader/src/core/utils/logging_service.dart';
 
 /// Full screen toggle button widget.
@@ -232,7 +233,7 @@ class _FullScreenWrapperState extends ConsumerState<FullScreenWrapper>
 
     // Listen to state changes
     ref.listen<FullScreenState>(fullScreenProvider, (previous, next) {
-      if (previous.isFullScreen != next.isFullScreen) {
+      if (previous?.isFullScreen != next.isFullScreen) {
         widget.onFullScreenChanged?.call(next.isFullScreen);
       }
     });

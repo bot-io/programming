@@ -158,6 +158,7 @@ void main() {
     group('User Override', () {
       test('should use user-provided language override', () async {
         const userOverride = 'es';
+        when(mockBookRepository.updateBook(any)).thenAnswer((_) async {});
 
         final result = await service.detectLanguageForBook(
           testBook,
@@ -166,7 +167,7 @@ void main() {
         );
 
         expect(result, equals(userOverride));
-        verify(mockDetectionService.detectWithConfidence(any)).called(1); // Still caches it
+        verifyNever(mockDetectionService.detectWithConfidence(any));
         verify(mockBookRepository.updateBook(argThat(
           predicate((BookEntity b) => b.detectedLanguage == userOverride),
         ))).called(1);
@@ -273,22 +274,40 @@ void main() {
 
         when(mockDetectionService.detectMixedLanguages(any))
             .thenAnswer((_) async => detections);
+        // _splitTextByLanguageDetections calls detectWithConfidence for each sentence
+        when(mockDetectionService.detectWithConfidence(any))
+            .thenAnswer((invocation) async {
+              final text = invocation.positionalArguments[0] as String;
+              if (text.contains('Hello')) {
+                return LanguageDetectionResult(languageCode: 'en', confidence: 90, method: DetectionMethod.script);
+              } else if (text.contains('Cóm')) {
+                return LanguageDetectionResult(languageCode: 'es', confidence: 85, method: DetectionMethod.script);
+              } else if (text.contains('fine')) {
+                return LanguageDetectionResult(languageCode: 'en', confidence: 90, method: DetectionMethod.script);
+              } else if (text.contains('Merci')) {
+                return LanguageDetectionResult(languageCode: 'fr', confidence: 80, method: DetectionMethod.script);
+              }
+              return LanguageDetectionResult(languageCode: 'en', confidence: 50, method: DetectionMethod.unknown);
+            });
 
         final units = await service.detectMixedLanguagesForTranslation(
           text,
           targetLanguage,
         );
 
-        expect(units, hasLength(3));
+        expect(units, hasLength(4));
 
         // English segments should not need translation
-        final englishUnit = units.firstWhere((u) => u.detectedLanguage == 'en');
-        expect(englishUnit.needsTranslation, isFalse);
+        final englishUnits = units.where((u) => u.detectedLanguage == 'en');
+        for (final unit in englishUnits) {
+          expect(unit.needsTranslation, isFalse);
+        }
 
-        // Spanish and French should need translation
+        // Spanish should need translation
         final spanishUnit = units.firstWhere((u) => u.detectedLanguage == 'es');
         expect(spanishUnit.needsTranslation, isTrue);
 
+        // French should need translation
         final frenchUnit = units.firstWhere((u) => u.detectedLanguage == 'fr');
         expect(frenchUnit.needsTranslation, isTrue);
       });
@@ -554,8 +573,8 @@ void main() {
           languageDetectionConfidence: 75,
         );
 
-        expect(book.hasLanguageDetection(50), isTrue);
-        expect(book.hasLanguageDetection(80), isFalse);
+        expect(book.hasLanguageDetection(minConfidence: 50), isTrue);
+        expect(book.hasLanguageDetection(minConfidence: 80), isFalse);
       });
 
       test('should return false when no detection', () {

@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:dual_reader/src/domain/services/translation_service.dart';
+import 'package:dual_reader/src/core/utils/logging_service.dart';
 
 /// Service for managing background language model downloads
 /// Pre-downloads commonly used models on app startup for better UX

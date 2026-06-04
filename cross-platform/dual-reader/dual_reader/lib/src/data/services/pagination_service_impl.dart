@@ -3,36 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dual_reader/src/domain/services/pagination_service.dart';
 
-/// Pagination configuration
-class PaginationConfig {
-  final int timeoutMs;
-  final int progressInterval;
-  final int maxCharsPerPage;
-  final int lookbackChars;
-
-  const PaginationConfig({
-    this.timeoutMs = 5000, // 5 second timeout as specified
-    this.progressInterval = 50, // Report progress every 50 pages
-    this.maxCharsPerPage = 5000,
-    this.lookbackChars = 500,
-  });
-
-  static const defaultConfig = PaginationConfig();
-}
-
-/// Result of pagination operation
-class PaginationResult {
-  final List<String> pages;
-  final int elapsedMs;
-  final bool timedOut;
-
-  const PaginationResult({
-    required this.pages,
-    required this.elapsedMs,
-    required this.timedOut,
-  });
-}
-
 /// Service for paginating text content with smart boundary detection
 ///
 /// Features:
@@ -69,6 +39,7 @@ class PaginationServiceImpl implements PaginationService {
   }
 
   /// Paginate with progress reporting
+  @override
   PaginationResult paginateWithProgress({
     required String text,
     required BoxConstraints constraints,

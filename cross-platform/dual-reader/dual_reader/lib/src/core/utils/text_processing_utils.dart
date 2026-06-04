@@ -627,5 +627,5 @@ class ContextualTranslationUnit {
 
   int get sentenceCount => sentences.length;
   int get length => text.length;
-  bool hasFormatting => formatting.isNotEmpty;
+  bool get hasFormatting => formatting.isNotEmpty;
 }

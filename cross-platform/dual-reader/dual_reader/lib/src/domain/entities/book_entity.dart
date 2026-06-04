@@ -61,7 +61,7 @@ class BookEntity extends Equatable {
   bool get canBeOpened => isPaginated || status == PaginationStatus.notStarted;
 
   /// Check if language has been detected with sufficient confidence
-  bool hasLanguageDetection(int minConfidence = 50) {
+  bool hasLanguageDetection({int minConfidence = 50}) {
     return detectedLanguage != null &&
         detectedLanguage!.isNotEmpty &&
         (languageDetectionConfidence ?? 0) >= minConfidence;

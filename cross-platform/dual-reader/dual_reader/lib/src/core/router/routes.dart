@@ -20,7 +20,7 @@ class AppRoutes {
 
   // Reader routes
   static const String readerPath = '/read';
-  static String reader(String bookId) => '/read/$bookId';
+  static String reader({required String bookId}) => '/read/$bookId';
 
   // Settings routes
   static const String settings = '/settings';
@@ -98,7 +98,7 @@ class AppRoutes {
 /// These keys are used to preserve navigation state
 /// across app restarts and deep links.
 class NavStateKeys {
-  NavState._(); // Private constructor
+  NavStateKeys._(); // Private constructor
 
   static const String lastBookId = 'last_book_id';
   static const String lastPage = 'last_page';
@@ -110,7 +110,7 @@ class NavStateKeys {
 /// Route transition types
 enum RouteTransition {
   /// Default platform transition
-  default,
+  systemDefault,
 
   /// No transition (instant)
   none,

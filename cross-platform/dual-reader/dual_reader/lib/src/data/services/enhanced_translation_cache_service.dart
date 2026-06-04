@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:collection';
 import 'dart:typed_data';
 import 'package:hive/hive.dart';
 import 'package:crypto/crypto.dart';
@@ -52,7 +54,7 @@ class EnhancedTranslationCacheService {
     }
 
     _cacheBox = Hive.box<String>(_boxName);
-    _metadataBox = Hive.box<String>(_metadataBox);
+    _metadataBox = Hive.box<String>(_metadataBoxName);
 
     // Initialize metadata
     await _initializeMetadata();
@@ -73,7 +75,7 @@ class EnhancedTranslationCacheService {
     }
 
     // Load existing entries into LRU cache
-    final accessOrder = _metadataBox.get('accessOrder', defaultValue: '');
+    final accessOrder = _metadataBox.get('accessOrder') ?? '';
     if (accessOrder.isNotEmpty) {
       final keys = accessOrder.split(',');
       for (final key in keys) {
@@ -417,7 +419,7 @@ class EnhancedTranslationCacheService {
     for (final key in _cacheBox.keys) {
       if (key.endsWith('\$$targetLanguage') ||
           key.contains('\$$targetLanguage') ||
-          key.contains('$$sourceLanguage\$')) {
+          key.contains('\$${sourceLanguage}\$')) {
         keysToDelete.add(key as String);
       }
     }

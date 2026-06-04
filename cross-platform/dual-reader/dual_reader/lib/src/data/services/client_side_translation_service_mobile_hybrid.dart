@@ -8,6 +8,7 @@ import 'package:dual_reader/src/data/services/language_detection_service.dart';
 import 'package:dual_reader/src/core/utils/page_markers.dart';
 import 'package:dual_reader/src/core/utils/sentence_splitter.dart';
 import 'package:dual_reader/src/core/utils/text_processing_utils.dart';
+import 'package:dual_reader/src/core/utils/logging_service.dart';
 import 'package:http/http.dart' as http;
 
 /// Hybrid mobile implementation with ML Kit primary and LibreTranslate fallback

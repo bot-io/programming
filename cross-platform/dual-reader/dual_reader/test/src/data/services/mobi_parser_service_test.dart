@@ -30,15 +30,15 @@ void main() {
         );
       });
 
-      test('should throw MobiFormatException for invalid MOBI data', () async {
-        // Create random bytes that don't form a valid MOBI
+      test('should throw MobiParseException for invalid MOBI data', () async {
+        // Create random bytes that don't form a valid MOBI - fails at Palm header parsing
         final invalidBytes = Uint8List.fromList(
           List.generate(1000, (i) => i % 256),
         );
 
         expect(
           () => service.parseMobi(invalidBytes),
-          throwsA(isA<MobiFormatException>()),
+          throwsA(isA<MobiParseException>()),
         );
       });
 
@@ -47,32 +47,32 @@ void main() {
 
         expect(
           () => service.parseMobi(textBytes),
-          throwsA(isA<MobiFormatException>()),
+          throwsA(isA<MobiParseException>()),
         );
       });
 
-      test('should throw MobiFormatException for EPUB data', () async {
-        // EPUB starts with PK (ZIP signature)
+      test('should throw MobiParseException for EPUB data', () async {
+        // EPUB starts with PK (ZIP signature) - too small for Palm DB header
         final epubLikeBytes = Uint8List.fromList([0x50, 0x4B, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00]);
 
         expect(
           () => service.parseMobi(epubLikeBytes),
-          throwsA(isA<MobiFormatException>()),
+          throwsA(isA<MobiParseException>()),
         );
       });
     });
 
     group('DRM detection', () {
-      test('should throw MobiDrmException for DRM-protected MOBI', () async {
+      test('should throw MobiParseException for DRM-protected MOBI', () async {
         // Create a mock MOBI with DRM indicators in content
+        // Note: Won't have valid Palm DB header, so it throws MobiParseException first
         final drmedContent = 'Some content\nencryption.xml\nDRM version';
         final drmedBytes = Uint8List.fromList(drmedContent.codeUnits);
 
-        // Note: This won't have valid Palm DB header, so it will throw ParseException first
-        // The DRM check happens during parsing when the header is valid
+        // DRM check happens during parsing when the header is valid
         expect(
           () => service.parseMobi(drmedBytes),
-          throwsA(isA<MobiFormatException>()),
+          throwsA(isA<MobiParseException>()),
         );
       });
     });
@@ -108,12 +108,12 @@ void main() {
 
     group('Error handling', () {
       test('should handle corrupted MOBI gracefully', () async {
-        // Simulate a corrupted file
+        // Simulate a corrupted file - fails at Palm header parsing (MobiParseException)
         final corruptedBytes = Uint8List.fromList(List.generate(2000, (i) => (i * 7) % 256));
 
         expect(
           () => service.parseMobi(corruptedBytes),
-          throwsA(isA<MobiFormatException>()),
+          throwsA(isA<MobiParseException>()),
         );
       });
 
@@ -131,12 +131,12 @@ void main() {
       });
 
       test('should handle MOBI with wrong file extension data', () async {
-        // Data that looks like PDF or other format
+        // Data that looks like PDF or other format - too small for Palm header
         final pdfLikeBytes = Uint8List.fromList('%PDF-1.4'.codeUnits);
 
         expect(
           () => service.parseMobi(pdfLikeBytes),
-          throwsA(isA<MobiFormatException>()),
+          throwsA(isA<MobiParseException>()),
         );
       });
     });
@@ -151,7 +151,7 @@ void main() {
 
         expect(
           () => service.parseMobi(largeInvalidBytes),
-          throwsA(isA<MobiFormatException>()),
+          throwsA(isA<MobiParseException>()),
         );
       }, timeout: const Timeout(Duration(seconds: 30)));
 
@@ -179,7 +179,7 @@ void main() {
 
     group('Text extraction', () {
       test('should handle empty content', () async {
-        final emptyBytes = Uint8List.fromList('');
+        final List<int> emptyBytes = [];
 
         expect(
           () => service.extractFullText(emptyBytes),

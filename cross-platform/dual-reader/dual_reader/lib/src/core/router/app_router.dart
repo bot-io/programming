@@ -51,13 +51,6 @@ class AppRouter {
       redirect: _handleRedirect,
       errorBuilder: _handleError,
       routes: _routes,
-      // Platform-specific configuration
-      androidBackButtonPopEnabled: true, // Handle Android back button
-      // Web-specific configuration
-      webConfiguration: const WebConfiguration(
-        // Use URL hash for web routing
-        useFragment: false,
-      ),
     );
 
     LoggingService.info('AppRouter', 'Router initialized');

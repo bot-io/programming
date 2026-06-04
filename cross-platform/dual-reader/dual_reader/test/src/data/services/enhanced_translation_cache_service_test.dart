@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:hive_test/hive_test.dart';
 import 'package:dual_reader/src/data/services/enhanced_translation_cache_service.dart';
 
 void main() {

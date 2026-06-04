@@ -1,7 +1,6 @@
 import 'package:epubx/epubx.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dual_reader/src/domain/entities/book_entity.dart';
-import 'package:dual_reader/src/domain/entities/chapter_entity.dart';
 import 'package:dual_reader/src/domain/repositories/book_repository.dart';
 import 'package:dual_reader/src/domain/services/epub_parser_service.dart';
 import 'package:dual_reader/src/domain/services/mobi_parser_service.dart';

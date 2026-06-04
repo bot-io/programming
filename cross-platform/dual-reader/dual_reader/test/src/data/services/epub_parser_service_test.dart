@@ -44,7 +44,11 @@ void main() {
       });
 
       test('should throw EpubParseException for text data instead of EPUB', () async {
-        final textBytes = Uint8List.fromList('This is just plain text, not an EPUB file.'.codeUnits);
+        // Must be >= 100 bytes to pass the size check, then fails on parse
+        final textBytes = Uint8List.fromList(
+          'This is just plain text, not an EPUB file. Padding to reach 100 bytes minimum required length for the parser.'
+              .codeUnits,
+        );
 
         expect(
           () => service.parseEpub(textBytes),
@@ -56,7 +60,8 @@ void main() {
         // Test that exceptions from the underlying library are properly wrapped
         final malformedData = Uint8List.fromList([
           0x50, 0x4B, 0x03, 0x04, // ZIP local file header (partial)
-          // Incomplete ZIP/EPUB structure will cause epubx to throw
+          // Pad to >= 100 bytes
+          ...List.generate(96, (i) => 0),
         ]);
 
         expect(
@@ -68,8 +73,8 @@ void main() {
 
     group('DRM detection', () {
       test('should throw EpubDrmException for DRM-protected EPUB', () async {
-        // Create a mock EPUB with DRM indicators
-        final drmedContent = 'Some content\nencryption.xml\nAdobe DRM';
+        // Create bytes >= 100 with DRM indicators
+        final drmedContent = 'Some content encryption.xml Adobe DRM ${'x' * 80}';
         final drmedBytes = Uint8List.fromList(drmedContent.codeUnits);
 
         expect(
@@ -79,7 +84,8 @@ void main() {
       });
 
       test('should detect Adobe DRM in metadata', () async {
-        final adobeDrmContent = 'Some metadata\nAdobeContentServer4\nmore content';
+        // Must be >= 100 bytes
+        final adobeDrmContent = 'Some metadata AdobeContentServer4 more content ${'x' * 70}';
         final drmedBytes = Uint8List.fromList(adobeDrmContent.codeUnits);
 
         expect(
@@ -91,12 +97,11 @@ void main() {
 
     group('Cover image extraction', () {
       test('should return empty string when EPUB has no cover', () async {
-        // Create a minimal EPUB structure without cover
-        // This would require a valid EPUB structure, so we test the error path
-        final noCoverBytes = Uint8List.fromList('No EPUB structure'.codeUnits);
+        // Create an empty EpubBook with no cover image or content
+        final epubBook = EpubBook();
 
         final coverPath = await service.extractCoverImage(
-          EpubReader.readBook(noCoverBytes),
+          epubBook,
           'test-book-id',
         );
 
@@ -178,8 +183,10 @@ void main() {
       });
 
       test('should handle EPUB with wrong file extension data', () async {
-        // Data that looks like PDF or other format
-        final pdfLikeBytes = Uint8List.fromList('%PDF-1.4'.codeUnits);
+        // Data that looks like PDF or other format - need >= 100 bytes
+        final pdfLikeBytes = Uint8List.fromList(
+          ('%PDF-1.4' + 'x' * 100).codeUnits,
+        );
 
         expect(
           () => service.parseEpub(pdfLikeBytes),

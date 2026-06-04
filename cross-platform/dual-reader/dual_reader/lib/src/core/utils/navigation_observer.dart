@@ -220,6 +220,24 @@ class WebStateStorage extends NavigationStateStorage {
       }
     }
   }
+
+  @override
+  Future<void> clear() async {
+    if (kIsWeb) {
+      try {
+        LoggingService.debug(
+          'WebStateStorage',
+          'Clearing all state',
+        );
+      } catch (e) {
+        LoggingService.error(
+          'WebStateStorage',
+          'Failed to clear state',
+          error: e,
+        );
+      }
+    }
+  }
 }
 
 /// Navigation state storage interface

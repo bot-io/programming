@@ -196,7 +196,7 @@ class SettingsScreen extends ConsumerWidget {
                       onPressed: () => Navigator.of(context).pop(true),
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.red,
-                        backgroundColor: Colors.red.withOpacity(0.1),
+                        backgroundColor: const Color(0x1AF44336),
                       ),
                       child: const Text('Delete Everything'),
                     ),
@@ -913,9 +913,9 @@ class _CacheManagementTileState extends State<_CacheManagementTile> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Cache exported to clipboard (${_formatBytes(cacheJson.length)})'),
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
             backgroundColor: Colors.green,
           ),
         );

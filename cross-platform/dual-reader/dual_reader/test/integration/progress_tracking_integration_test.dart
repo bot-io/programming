@@ -4,7 +4,6 @@ import 'package:dual_reader/src/domain/usecases/update_book_progress_usecase.dar
 import 'package:dual_reader/src/domain/repositories/book_repository.dart';
 import 'package:dual_reader/src/data/repositories/book_repository_impl.dart';
 import 'package:hive/hive.dart';
-import 'package:hive_test/hive_test.dart';
 import 'package:get_it/get_it.dart';
 import '../helper/test_helpers.dart';
 

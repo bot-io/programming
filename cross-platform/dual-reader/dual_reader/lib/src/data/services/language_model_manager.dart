@@ -20,7 +20,7 @@ class LanguageModelManager {
   static const String _componentName = 'LanguageModelManager';
 
   // ConnectivityPlus instance (version 5.x doesn't require constructor call)
-  final ConnectivityPlus _connectivity = ConnectivityPlus();
+  final Connectivity _connectivity = Connectivity();
 
   // Model tracking
   final Map<String, LanguageModelInfo> _downloadedModels = {};
@@ -69,7 +69,7 @@ class LanguageModelManager {
         final targetLang = LanguageCodeMapper.toMlKitCode(lang);
         final translator = OnDeviceTranslator(
           sourceLanguage: TranslateLanguage.english,
-          targetLanguage: targetLang,
+          targetLanguage: _toTranslateLanguage(targetLang),
         );
 
         // If we got here, the model is either downloaded or will be downloaded
@@ -155,7 +155,7 @@ class LanguageModelManager {
     // Check WiFi requirement
     if (_wifiOnly || forceWiFi) {
       final connectivity = await _connectivity.checkConnectivity();
-      final hasWiFi = connectivity.contains(ConnectivityResult.wifi);
+      final hasWiFi = connectivity == ConnectivityResult.wifi;
 
       if (!hasWiFi) {
         _componentName.logWarning('WiFi required for model download');
@@ -185,7 +185,7 @@ class LanguageModelManager {
       final targetLang = LanguageCodeMapper.toMlKitCode(languageCode);
       final translator = OnDeviceTranslator(
         sourceLanguage: TranslateLanguage.english,
-        targetLanguage: targetLang,
+        targetLanguage: _toTranslateLanguage(targetLang),
       );
 
       // Trigger model download by translating test phrase
@@ -299,9 +299,9 @@ class LanguageModelManager {
     try {
       final connectivity = await _connectivity.checkConnectivity();
 
-      final hasWiFi = connectivity.contains(ConnectivityResult.wifi);
-      final hasMobile = connectivity.contains(ConnectivityResult.mobile);
-      final hasEthernet = connectivity.contains(ConnectivityResult.ethernet);
+      final hasWiFi = connectivity == ConnectivityResult.wifi;
+      final hasMobile = connectivity == ConnectivityResult.mobile;
+      final hasEthernet = connectivity == ConnectivityResult.ethernet;
 
       return NetworkStatus(
         isConnected: hasWiFi || hasMobile || hasEthernet,
@@ -325,16 +325,16 @@ class LanguageModelManager {
   /// Stream of network status changes
   Stream<NetworkStatus> get networkStatusStream {
     return _connectivity.onConnectivityChanged
-        .map((results) => NetworkStatus(
-              isConnected: results.any((r) => r != ConnectivityResult.none),
-              isWiFi: results.contains(ConnectivityResult.wifi),
-              isMobile: results.contains(ConnectivityResult.mobile),
-              isEthernet: results.contains(ConnectivityResult.ethernet),
-              connectionType: results.contains(ConnectivityResult.wifi)
+        .map((result) => NetworkStatus(
+              isConnected: result != ConnectivityResult.none,
+              isWiFi: result == ConnectivityResult.wifi,
+              isMobile: result == ConnectivityResult.mobile,
+              isEthernet: result == ConnectivityResult.ethernet,
+              connectionType: result == ConnectivityResult.wifi
                   ? 'wifi'
-                  : results.contains(ConnectivityResult.mobile)
+                  : result == ConnectivityResult.mobile
                       ? 'mobile'
-                      : results.contains(ConnectivityResult.ethernet)
+                      : result == ConnectivityResult.ethernet
                           ? 'ethernet'
                           : 'none',
             ));
@@ -403,6 +403,7 @@ class LanguageModelManager {
       // Download in background without blocking
       downloadModel(lang).catchError((e) {
         _componentName.logWarning('Failed to preload model for $lang: $e');
+        return false;
       });
 
       // Don't wait for one to finish before starting the next
@@ -469,6 +470,18 @@ class LanguageModelManager {
   /// Get all supported language codes
   List<String> getSupportedLanguageCodes() {
     return LanguageUtils.getSupportedLanguageCodes();
+  }
+
+  /// Close the manager and clean up resources
+  /// Convert language name string to TranslateLanguage enum
+  TranslateLanguage _toTranslateLanguage(String langName) {
+    try {
+      return TranslateLanguage.values.firstWhere(
+        (lang) => lang.name.toLowerCase() == langName.toLowerCase(),
+      );
+    } catch (_) {
+      return TranslateLanguage.english;
+    }
   }
 
   /// Close the manager and clean up resources

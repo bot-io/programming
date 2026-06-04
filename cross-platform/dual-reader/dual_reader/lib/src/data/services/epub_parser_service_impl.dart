@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:epubx/epubx.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -20,8 +19,6 @@ import 'package:html_unescape/html_unescape.dart';
 class EpubParserServiceImpl implements EpubParserService {
   static const String _componentName = 'EpubParserService';
   static const int _maxCoverSizeBytes = 1024 * 1024; // 1MB max cover size
-  static const int _maxCoverDimension = 2000; // 2000px max dimension
-
   final HtmlUnescape _htmlUnescape = HtmlUnescape();
 
   @override
@@ -36,7 +33,7 @@ class EpubParserServiceImpl implements EpubParserService {
 
       // Check for encrypted/malicious patterns
       if (_isEncryptedEpub(bytes)) {
-        throw const EpubDrmException(
+        throw EpubDrmException(
           'This EPUB is DRM-protected and cannot be opened. '
           'Please use a DRM-free version of this eBook.'
         );
@@ -51,14 +48,15 @@ class EpubParserServiceImpl implements EpubParserService {
         // Some EPUBs have no chapters but have spine content
       }
 
-      // Extract metadata
+      // Extract metadata from Schema.Package.Metadata
+      final metadata = epubBook.Schema?.Package?.Metadata;
       final title = epubBook.Title ?? 'Unknown Title';
       final author = epubBook.Author ?? 'Unknown Author';
-      final publisher = epubBook.Publisher;
-      final description = _sanitizeHtmlText(epubBook.Description ?? '');
-      final language = epubBook.Language;
+      final publisher = metadata?.Publishers?.join(', ');
+      final description = _sanitizeHtmlText(metadata?.Description ?? '');
+      final language = metadata?.Languages?.firstOrNull;
       final isbn = _extractIsbn(epubBook);
-      final publishDate = epubBook.PublishDate;
+      final publishDate = metadata?.Dates?.firstOrNull?.Date;
       final tags = _extractTags(epubBook);
 
       _componentName.logDebug(
@@ -110,7 +108,8 @@ class EpubParserServiceImpl implements EpubParserService {
       // Method 2: Search in Content.Images for cover
       final content = epubBook.Content;
       if (content != null && content.Images != null) {
-        for (final entry in content.Images.entries) {
+        final images = content.Images!;
+        for (final entry in images.entries) {
           final fileName = entry.key.toLowerCase();
           final fileNameWithoutPath = fileName.split('/').last;
 
@@ -126,15 +125,16 @@ class EpubParserServiceImpl implements EpubParserService {
         }
 
         // If no cover found by name, try the first image
-        if (coverImage == null && content.Images.isNotEmpty) {
-          coverImage = content.Images.values.first;
+        if (coverImage == null && images.isNotEmpty) {
+          coverImage = images.values.first;
           _componentName.logDebug('Using first image as cover');
         }
       }
 
       // Method 3: Search in AllFiles for cover (fallback)
-      if (coverImage == null && content?.AllFiles != null) {
-        for (final entry in content.AllFiles.entries) {
+      if (coverImage == null && content != null && content.AllFiles != null) {
+        final allFiles = content.AllFiles!;
+        for (final entry in allFiles.entries) {
           final file = entry.value;
           if (file is EpubByteContentFile) {
             final fileName = entry.key.toLowerCase();
@@ -158,13 +158,15 @@ class EpubParserServiceImpl implements EpubParserService {
         return '';
       }
 
-      // Get image bytes - epubx uses Content property
-      final imageBytes = coverImage.Content as Uint8List?;
-
-      if (imageBytes == null || imageBytes.isEmpty) {
+      // Get image bytes - epubx EpubByteContentFile uses Content property (List<int>?)
+      final rawContent = coverImage.Content;
+      if (rawContent == null || rawContent.isEmpty) {
         _componentName.logWarning('Cover image has no content');
         return '';
       }
+
+      // Convert to Uint8List for optimization
+      final imageBytes = rawContent is Uint8List ? rawContent : Uint8List.fromList(rawContent);
 
       // Validate and optimize image
       final optimizedBytes = await _optimizeCoverImage(imageBytes);
@@ -188,7 +190,7 @@ class EpubParserServiceImpl implements EpubParserService {
       }
 
       // Determine file extension from content type
-      final contentType = coverImage.ContentTypeMimeType;
+      final contentType = coverImage.ContentMimeType;
       String extension = '.jpg';
       if (contentType != null && contentType.contains('png')) {
         extension = '.png';
@@ -223,9 +225,9 @@ class EpubParserServiceImpl implements EpubParserService {
         // Fallback to reading from content HTML files
         final content = epubBook.Content;
         if (content != null && content.Html != null) {
-          final htmlFiles = content.Html.values.toList();
+          final htmlFiles = content.Html!.values.toList();
           for (final htmlFile in htmlFiles) {
-            final htmlContent = htmlFile.HtmlContent;
+            final htmlContent = htmlFile.Content;
             if (htmlContent != null) {
               final text = _htmlToPlainText(htmlContent);
               buffer.write(text);
@@ -318,7 +320,7 @@ class EpubParserServiceImpl implements EpubParserService {
     try {
       final buffer = StringBuffer();
 
-      // Get chapter HTML content - epubx uses HtmlContent property
+      // Get chapter HTML content - EpubChapter uses HtmlContent property
       final htmlContent = chapter.HtmlContent;
       if (htmlContent != null) {
         final text = _htmlToPlainText(htmlContent);
@@ -339,19 +341,6 @@ class EpubParserServiceImpl implements EpubParserService {
       return buffer.toString().trim();
     } catch (e) {
       _componentName.logWarning('Error extracting chapter text: $e');
-      return '';
-    }
-  }
-
-  /// Synchronous version for TOC parsing
-  String _extractChapterTextSync(EpubChapter chapter) {
-    try {
-      final htmlContent = chapter.HtmlContent;
-      if (htmlContent != null) {
-        return _htmlToPlainText(htmlContent);
-      }
-      return '';
-    } catch (e) {
       return '';
     }
   }
@@ -469,11 +458,10 @@ class EpubParserServiceImpl implements EpubParserService {
   /// Extract ISBN from metadata
   String? _extractIsbn(EpubBook epubBook) {
     // Check identifiers if available
-    // epubx doesn't expose detailed identifier metadata in the main API
-    // We'll check if there's a custom property or use other methods
+    final metadata = epubBook.Schema?.Package?.Metadata;
 
     // Try to extract from Description or other metadata
-    final description = epubBook.Description ?? '';
+    final description = metadata?.Description ?? '';
     final isbnMatch = RegExp(r'ISBN[- ]?[\dX]{10,17}', caseSensitive: false)
         .firstMatch(description);
     if (isbnMatch != null) {
@@ -487,9 +475,19 @@ class EpubParserServiceImpl implements EpubParserService {
   List<String> _extractTags(EpubBook epubBook) {
     final tags = <String>[];
 
-    // epubx doesn't expose Subjects directly
-    // Try to extract from Description or other fields
-    final description = epubBook.Description ?? '';
+    // Try to get Subjects from metadata
+    final metadata = epubBook.Schema?.Package?.Metadata;
+    final subjects = metadata?.Subjects;
+    if (subjects != null && subjects.isNotEmpty) {
+      for (final subject in subjects) {
+        if (subject.isNotEmpty) {
+          tags.add(subject);
+        }
+      }
+    }
+
+    // Also try to extract from Description
+    final description = metadata?.Description ?? '';
 
     // Look for common tag patterns
     final tagMatches = RegExp(r'(?:Tags?|Genres?|Subjects?)[:\s]+([^\n.]+)', caseSensitive: false)

@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:dual_reader/src/data/services/book_translation_cache_service.dart';
 import 'package:dual_reader/src/data/services/translation_cache_service.dart';
 import 'package:hive/hive.dart';
-import 'package:hive_test/hive_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../helper/test_helpers.dart';

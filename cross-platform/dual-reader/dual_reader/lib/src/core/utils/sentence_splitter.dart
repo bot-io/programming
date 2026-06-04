@@ -50,7 +50,7 @@ class SentenceSplitter {
   };
 
   /// Patterns that should NOT be split even if they contain periods
-  static const List<RegExp> _protectedPatterns = [
+  static List<RegExp> get _protectedPatterns => [
     // URLs
     RegExp(r'https?://[^\s]+'),
     RegExp(r'www\.[^\s]+'),
@@ -77,7 +77,7 @@ class SentenceSplitter {
   ];
 
   /// Patterns that indicate a real sentence boundary
-  static const List<RegExp> _boundaryPatterns = [
+  static List<RegExp> get _boundaryPatterns => [
     // Sentence ending punctuation followed by space and capital letter
     RegExp(r'[.!?]+\s+[A-Z]'),
     // Sentence ending punctuation followed by quote and capital letter

@@ -47,7 +47,7 @@ class BookLanguageDetectionService {
     }
 
     // Check if book already has a recent, high-confidence detection
-    if (book.hasLanguageDetection(minConfidence) && book.hasRecentLanguageDetection()) {
+    if (book.hasLanguageDetection(minConfidence: minConfidence) && book.hasRecentLanguageDetection()) {
       _componentName.logInfo(
         'Using cached language detection: ${book.detectedLanguage} '
         '(${book.languageDetectionConfidence}% confidence, '
@@ -92,7 +92,7 @@ class BookLanguageDetectionService {
     }
 
     // Check if book has cached detection
-    if (book.hasLanguageDetection(minConfidence) && book.hasRecentLanguageDetection()) {
+    if (book.hasLanguageDetection(minConfidence: minConfidence) && book.hasRecentLanguageDetection()) {
       _componentName.logDebug('Using book-level cached language: ${book.detectedLanguage}');
       return book.detectedLanguage!;
     }
@@ -242,13 +242,13 @@ class BookLanguageDetectionService {
       confidence: book.languageDetectionConfidence,
       detectionDate: book.languageDetectionDate,
       isRecent: book.hasRecentLanguageDetection(),
-      isReliable: book.hasLanguageDetection(_defaultMinConfidence),
+      isReliable: book.hasLanguageDetection(minConfidence: _defaultMinConfidence),
     );
   }
 
   /// Recommend confirmation to user based on detection confidence.
   bool shouldRecommendUserConfirmation(BookEntity book) {
-    return !book.hasLanguageDetection(_defaultMinConfidence) ||
+    return !book.hasLanguageDetection(minConfidence: _defaultMinConfidence) ||
         !book.hasRecentLanguageDetection();
   }
 }
