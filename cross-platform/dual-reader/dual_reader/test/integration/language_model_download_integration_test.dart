@@ -201,7 +201,7 @@ void main() {
         final totalSize = modelManager.getTotalModelSize();
         final formattedSize = modelManager.getTotalModelSizeFormatted();
 
-        expect(totalSize, isGreaterThanOrEqualTo(0));
+        expect(totalSize, greaterThanOrEqualTo(0));
         expect(formattedSize, isNotEmpty);
         expect(formattedSize, contains(RegExp(r'[MBGB]')));
       });
@@ -278,7 +278,7 @@ void main() {
         final totalSize = modelManager.getTotalModelSize();
 
         expect(downloadedModels, isA<List<LanguageModelInfo>>());
-        expect(totalSize, isGreaterThanOrEqualTo(0));
+        expect(totalSize, greaterThanOrEqualTo(0));
       });
 
       test('should work with available models when offline', () async {
@@ -395,8 +395,8 @@ void main() {
         // Test a few common languages
         for (final lang in ['en', 'es', 'fr', 'de', 'zh']) {
           final size = modelManager.estimateModelSize(lang);
-          expect(size, isGreaterThanOrEqualTo(10 * 1024 * 1024)); // At least 10MB
-          expect(size, isLessThan(100 * 1024 * 1024)); // Less than 100MB
+          expect(size, greaterThanOrEqualTo(10 * 1024 * 1024)); // At least 10MB
+          expect(size, lessThan(100 * 1024 * 1024)); // Less than 100MB
         }
       });
     });

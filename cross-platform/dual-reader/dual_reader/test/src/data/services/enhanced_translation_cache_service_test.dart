@@ -1,25 +1,28 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 import 'package:dual_reader/src/data/services/enhanced_translation_cache_service.dart';
 
 void main() {
   group('EnhancedTranslationCacheService', () {
     late EnhancedTranslationCacheService cacheService;
 
-    setUp(() async {
-      // Initialize Hive for testing
-      await Hive.initFlutter();
-      await Hive.deleteBoxFromDisk('translationCache');
-      await Hive.deleteBoxFromDisk('translationCacheMetadata');
-
+    setUpAll(() async {
+      Hive.init('test_hive_data');
       cacheService = EnhancedTranslationCacheService.instance;
       await cacheService.init();
     });
 
-    tearDown(() async {
+    setUp(() async {
+      await cacheService.clearCache();
+      // Reset to default configuration
+      cacheService.configure(
+        maxCacheSizeBytes: 50 * 1024 * 1024,
+        maxEntries: 10000,
+      );
+    });
+
+    tearDownAll(() async {
       await cacheService.close();
-      await Hive.deleteBoxFromDisk('translationCache');
-      await Hive.deleteBoxFromDisk('translationCacheMetadata');
     });
 
     group('Basic Caching', () {
@@ -142,12 +145,12 @@ void main() {
         }
       });
 
-      test('retrieves cached sentence translations', () {
+      test('retrieves cached sentence translations', () async {
         const sentences = ['Hello world', 'How are you?'];
         const translations = ['Hola mundo', '¿Cómo estás?'];
 
         // Pre-cache one sentence
-        cacheService.cacheTranslation(
+        await cacheService.cacheTranslation(
           originalText: sentences[0],
           sourceLanguage: 'en',
           targetLanguage: 'es',

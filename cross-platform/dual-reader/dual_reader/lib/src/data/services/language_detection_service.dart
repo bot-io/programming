@@ -62,6 +62,9 @@ class LanguageDetectionService {
     _minConfidence = confidence.clamp(0, 100);
   }
 
+  /// Get current minimum confidence threshold
+  int get minConfidence => _minConfidence;
+
   /// Detect language with confidence score
   ///
   /// Returns [LanguageDetectionResult] with detected language and confidence.
@@ -159,7 +162,8 @@ class LanguageDetectionService {
     // Use first 100 chars + length for simple but effective cache key
     final sample = text.substring(0, 100.clamp(0, text.length));
     final bytes = utf8.encode(sample + text.length.toString());
-    return base64Encode(bytes).substring(0, 32);
+    final encoded = base64Encode(bytes);
+    return encoded.substring(0, encoded.length.clamp(0, 32));
   }
 
   /// Cache detection result
@@ -561,6 +565,9 @@ class LanguageDetectionService {
     'fr': [
       'le', 'de', 'un', 'être', 'et', 'à', 'il', 'avoir', 'ne', 'je',
       'son', 'que', 'se', 'qui', 'dans', 'ce', 'pour', 'pas', 'plus',
+      'nous', 'vous', 'sont', 'très', 'cette', 'avec', 'mais', 'oui',
+      'encore', 'aussi', 'beaucoup', 'toujours', 'jamais',
+      'bien', 'fait', 'aussi', 'entre', 'sans', 'alors', 'peut',
     ],
     'de': [
       'der', 'die', 'und', 'in', 'den', 'von', 'zu', 'das', 'mit', 'sich',
@@ -569,10 +576,14 @@ class LanguageDetectionService {
     'it': [
       'il', 'di', 'che', 'e', 'la', 'un', 'a', 'per', 'non', 'in',
       'una', 'si', 'è', 'da', 'del', 'lo', 'qua',
+      'siamo', 'nostro', 'molto', 'oggi', 'questo', 'questa', 'ancora',
+      'sempre', 'anche', 'bene', 'proprio', 'giorno', 'notte',
     ],
     'pt': [
       'o', 'de', 'a', 'e', 'do', 'da', 'em', 'um', 'para', 'é',
       'com', 'não', 'uma', 'os', 'no', 'se', 'na', 'por',
+      'nós', 'nosso', 'muito', 'hoje', 'este', 'esta', 'ainda',
+      'sempre', 'também', 'bem', 'então', 'dia', 'noite',
     ],
     'ru': [
       'и', 'в', 'не', 'на', 'я', 'быть', 'он', 'с', 'что', 'а',
@@ -635,8 +646,10 @@ class LanguageDetectionService {
       'ini', 'juga', 'orang', 'bisa', 'karena',
     ],
     'vi': [
-      'và', 'của', 'trong', 'là', 'một', 'cho', 'không', 'những', 'được',
-      'có', 'với', 'đó', 'như', 'này', 'đã',
+      'và', 'của', 'là', 'một', 'những', 'được', 'có', 'không', 'đã',
+      'cho', 'với', 'này', 'đó', 'rất', 'cũng', 'về', 'từ',
+      'chúng', 'muốn', 'biết', 'đi', 'làm', 'như', 'nhiều',
+      'trong', 'của', 'nhưng', 'mà', 'những', 'các', 'phải', 'nếu',
     ],
     'th': [
       'และ', 'ของ', 'ใน', 'ที่', 'เป็น', 'เขา', 'กับ', 'เป็น', 'ที่จะ',

@@ -122,6 +122,18 @@ class EnhancedTranslationCacheService {
 
       // Check if already cached (unless forced)
       if (!forceCache && _cacheBox.containsKey(key)) {
+        // Update the existing entry with the new translation
+        final oldValue = _cacheBox.get(key);
+        final cacheValue = await _prepareCacheValue(translatedText);
+        if (oldValue != cacheValue) {
+          final oldBytes = oldValue?.length ?? 0;
+          final newBytes = cacheValue.length;
+          await _cacheBox.put(key, cacheValue);
+          await _metadataBox.put(
+            'cacheSizeBytes',
+            (getCurrentCacheSizeBytes() - oldBytes + newBytes).toString(),
+          );
+        }
         // Update access time for LRU
         _lruCache._access(key);
         await _updateAccessOrder();
