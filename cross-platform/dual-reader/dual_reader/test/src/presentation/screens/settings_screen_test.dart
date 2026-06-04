@@ -266,112 +266,20 @@ void main() {
       expect(targetLangDropdown, findsOneWidget);
     });
 
-    // TODO: Re-enable after fixing TranslationCacheSection mock setup (Hive initialization)
-    // The _TranslationCacheSection widget requires Hive to be initialized and
-    // the EnhancedTranslationCacheService to load statistics, which doesn't work
-    // in widget tests without proper DI overrides.
     testWidgets('Clear translation cache shows confirmation dialog', (WidgetTester tester) async {
-      // Skip: Requires EnhancedTranslationCacheService mock with Hive box
-      return; // TODO: Implement proper mock
-
-      // Scroll to find the Translation Cache ExpansionTile
-      await tester.dragUntilVisible(
-        find.text('Translation Cache'),
-        find.byType(ListView),
-        const Offset(0, -50),
-      );
-      await boundedPumpAndSettle(tester);
-      // Wait for async loading to complete
-      await tester.pump(const Duration(seconds: 1));
-      await boundedPumpAndSettle(tester);
-
-      // Expand the Translation Cache ExpansionTile
-      final expansionTile = find.widgetWithText(ExpansionTile, 'Translation Cache');
-      await tester.tap(expansionTile);
-      await boundedPumpAndSettle(tester);
-
-      // Find and tap the Clear Cache button
-      final clearCacheButton = find.widgetWithText(ElevatedButton, 'Clear Cache');
-      await tester.tap(clearCacheButton);
-      await boundedPumpAndSettle(tester);
-
-      // Verify dialog appears
-      expect(find.text('Clear Translation Cache'), findsWidgets);
-      expect(find.text('Cancel'), findsOneWidget);
-      expect(find.text('Clear'), findsOneWidget);
-    });
+      // TODO: Requires mocking EnhancedTranslationCacheService singleton or
+      // making _CacheManagementTile accept an injected cache service.
+      // The widget uses EnhancedTranslationCacheService.instance directly,
+      // making it impossible to control loading state in widget tests.
+    }, skip: true);
 
     testWidgets('Clear translation cache - cancel dismisses dialog', (WidgetTester tester) async {
-      // TODO: Requires EnhancedTranslationCacheService mock with Hive box
-      return;
-
-      // Scroll to find the Translation Cache ExpansionTile
-      await tester.dragUntilVisible(
-        find.text('Translation Cache'),
-        find.byType(ListView),
-        const Offset(0, -50),
-      );
-      await boundedPumpAndSettle(tester);
-      // Wait for async loading to complete
-      await tester.pump(const Duration(seconds: 1));
-      await boundedPumpAndSettle(tester);
-
-      // Expand the Translation Cache ExpansionTile
-      final expansionTile = find.widgetWithText(ExpansionTile, 'Translation Cache');
-      await tester.tap(expansionTile);
-      await boundedPumpAndSettle(tester);
-
-      // Tap clear cache button
-      final clearCacheButton = find.widgetWithText(ElevatedButton, 'Clear Cache');
-      await tester.tap(clearCacheButton);
-      await boundedPumpAndSettle(tester);
-
-      // Tap cancel
-      await tester.tap(find.text('Cancel'));
-      await boundedPumpAndSettle(tester);
-
-      // Verify dialog is dismissed - the detailed text should no longer be visible
-      expect(find.text('Translations will be slower until cached again.'), findsNothing);
-
-      // Verify cache was not cleared
-      final cacheService = sl<BookTranslationCacheService>() as FakeBookTranslationCacheService;
-      expect(cacheService.clearCalled, isFalse);
-    });
+      // TODO: Same as above - needs EnhancedTranslationCacheService DI injection.
+    }, skip: true);
 
     testWidgets('Clear translation cache - confirm clears cache', (WidgetTester tester) async {
-      // TODO: Requires EnhancedTranslationCacheService mock with Hive box
-      return;
-
-      // Scroll to find the Translation Cache ExpansionTile
-      await tester.dragUntilVisible(
-        find.text('Translation Cache'),
-        find.byType(ListView),
-        const Offset(0, -50),
-      );
-      await boundedPumpAndSettle(tester);
-      // Wait for async loading to complete
-      await tester.pump(const Duration(seconds: 1));
-      await boundedPumpAndSettle(tester);
-
-      // Expand the Translation Cache ExpansionTile
-      final expansionTile = find.widgetWithText(ExpansionTile, 'Translation Cache');
-      await tester.tap(expansionTile);
-      await boundedPumpAndSettle(tester);
-
-      // Tap clear cache button
-      final clearCacheButton = find.widgetWithText(ElevatedButton, 'Clear Cache');
-      await tester.tap(clearCacheButton);
-      await boundedPumpAndSettle(tester);
-
-      // Tap clear button in dialog
-      final clearButton = find.text('Clear');
-      await tester.tap(clearButton);
-      await boundedPumpAndSettle(tester);
-
-      // Verify cache was cleared (the _CacheManagementTile uses EnhancedTranslationCacheService,
-      // not the FakeBookTranslationCacheService from GetIt, so we just verify no crash)
-      expect(find.byType(SettingsScreen), findsOneWidget);
-    });
+      // TODO: Same as above - needs EnhancedTranslationCacheService DI injection.
+    }, skip: true);
 
     testWidgets('Language change with already downloaded model', (WidgetTester tester) async {
       await pumpSettingsScreen(tester, initialSettings: const SettingsEntity(targetTranslationLanguageCode: 'en'));
@@ -406,36 +314,7 @@ void main() {
     });
 
     testWidgets('Clear cache handles errors gracefully', (WidgetTester tester) async {
-      // TODO: Requires EnhancedTranslationCacheService mock with Hive box
-      return;
-
-      // Scroll to find the Translation Cache ExpansionTile
-      await tester.dragUntilVisible(
-        find.text('Translation Cache'),
-        find.byType(ListView),
-        const Offset(0, -50),
-      );
-      await boundedPumpAndSettle(tester);
-      // Wait for async loading to complete
-      await tester.pump(const Duration(seconds: 1));
-      await boundedPumpAndSettle(tester);
-
-      // Expand the Translation Cache ExpansionTile
-      final expansionTile = find.widgetWithText(ExpansionTile, 'Translation Cache');
-      await tester.tap(expansionTile);
-      await boundedPumpAndSettle(tester);
-
-      // Tap clear cache button
-      final clearCacheButton = find.widgetWithText(ElevatedButton, 'Clear Cache');
-      await tester.tap(clearCacheButton);
-      await boundedPumpAndSettle(tester);
-
-      // Tap clear button in dialog
-      await tester.tap(find.text('Clear'));
-      await boundedPumpAndSettle(tester);
-
-      // Even with error, should not crash
-      expect(find.byType(SettingsScreen), findsOneWidget);
-    });
+      // TODO: Same as above - needs EnhancedTranslationCacheService DI injection.
+    }, skip: true);
   });
 }
