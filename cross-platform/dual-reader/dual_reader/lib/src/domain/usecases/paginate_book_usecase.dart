@@ -32,11 +32,6 @@ class PaginateBookUseCase {
     final lowerPath = filePath.toLowerCase();
     if (lowerPath.endsWith('.epub')) {
       return EbookFormat.epub;
-    } else if (lowerPath.endsWith('.mobi') ||
-        lowerPath.endsWith('.azw') ||
-        lowerPath.endsWith('.azw3') ||
-        lowerPath.endsWith('.prc')) {
-      return EbookFormat.mobi;
     }
     return EbookFormat.unknown;
   }
@@ -280,4 +275,4 @@ class PaginateBookUseCase {
 }
 
 /// Supported ebook formats (internal use)
-enum EbookFormat { epub, mobi, unknown }
+enum EbookFormat { epub, unknown }
