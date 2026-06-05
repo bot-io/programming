@@ -19,6 +19,12 @@ import 'package:dual_reader/src/data/services/client_side_translation_service.da
 import 'package:dual_reader/src/data/services/full_screen_service.dart';
 import 'package:dual_reader/src/domain/usecases/update_book_progress_usecase.dart';
 import 'package:dual_reader/src/domain/usecases/get_book_by_id_usecase.dart';
+import 'package:dual_reader/src/domain/usecases/add_reading_history_usecase.dart';
+import 'package:dual_reader/src/domain/entities/reading_history_entity.dart';
+import 'package:dual_reader/src/domain/usecases/add_bookmark_usecase.dart';
+import 'package:dual_reader/src/domain/entities/bookmark_entity.dart';
+import 'package:dual_reader/src/domain/usecases/get_bookmarks_usecase.dart';
+import 'package:dual_reader/src/domain/usecases/delete_bookmark_usecase.dart';
 import 'package:dual_reader/src/presentation/providers/settings_notifier.dart';
 import 'package:dual_reader/src/presentation/providers/full_screen_provider.dart';
 import 'package:dual_reader/src/domain/entities/settings_entity.dart';
@@ -82,6 +88,11 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
   late final ChunkTranslationService _chunkTranslationService;
   final UpdateBookProgressUseCase _updateBookProgressUseCase = sl<UpdateBookProgressUseCase>();
   final GetBookByIdUseCase _getBookByIdUseCase = sl<GetBookByIdUseCase>();
+  final AddReadingHistoryUseCase _addReadingHistoryUseCase = sl<AddReadingHistoryUseCase>();
+  final AddBookmarkUseCase _addBookmarkUseCase = sl<AddBookmarkUseCase>();
+  final GetBookmarksUseCase _getBookmarksUseCase = sl<GetBookmarksUseCase>();
+  final DeleteBookmarkUseCase _deleteBookmarkUseCase = sl<DeleteBookmarkUseCase>();
+  List<String> _bookmarks = []; // page-level bookmarks (page indices)
 
   @override
   void initState() {
@@ -702,6 +713,7 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
 
     if (mounted) {
       setState(() => _isLoading = false);
+      _loadBookmarks(); // Load bookmarks after book is ready
     }
 
     // Start translation AFTER loading is complete to avoid blocking UI
@@ -1098,6 +1110,8 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
                 _translateCurrentVisiblePage();
               });
             },
+            onBookmark: _toggleBookmark,
+            isBookmarked: _isCurrentPageBookmarked,
             onSettings: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -1448,10 +1462,59 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
           currentPage: _currentOriginalPage,
           totalPages: _totalOriginalPages,
         );
+        // Record reading history
+        final now = DateTime.now();
+        _addReadingHistoryUseCase(ReadingHistoryEntity(
+          id: '${_book!.id}_${now.millisecondsSinceEpoch}',
+          bookId: _book!.id,
+          bookTitle: _book!.title,
+          startPage: _currentOriginalPage,
+          endPage: _currentOriginalPage,
+          startedAtMillis: now.millisecondsSinceEpoch,
+          endedAtMillis: now.millisecondsSinceEpoch,
+        ));
         debugPrint('[DualReaderScreen] Saved progress: page $_currentOriginalPage/$_totalOriginalPages');
       } catch (e) {
         debugPrint('[DualReaderScreen] Error saving progress: $e');
       }
     }
+  }
+
+  /// Toggle bookmark on current page
+  Future<void> _toggleBookmark() async {
+    if (_book == null) return;
+    final pageKey = '${_book!.id}_$_currentOriginalPage';
+    if (_bookmarks.contains(pageKey)) {
+      // Find the bookmark entity to get its id for deletion
+      final marks = await _getBookmarksUseCase(_book!.id);
+      final target = marks.where((b) => b.pageIndex == _currentOriginalPage).firstOrNull;
+      if (target != null) {
+        await _deleteBookmarkUseCase(target.id);
+      }
+      setState(() { _bookmarks.remove(pageKey); });
+    } else {
+      await _addBookmarkUseCase(BookmarkEntity(
+        id: '${_book!.id}_p${_currentOriginalPage}_${DateTime.now().millisecondsSinceEpoch}',
+        bookId: _book!.id,
+        pageIndex: _currentOriginalPage,
+        label: 'Page ${_currentOriginalPage + 1}',
+        createdAtMillis: DateTime.now().millisecondsSinceEpoch,
+      ));
+      setState(() { _bookmarks.add(pageKey); });
+    }
+  }
+
+  /// Load bookmarks for current book
+  Future<void> _loadBookmarks() async {
+    if (_book == null) return;
+    final marks = await _getBookmarksUseCase(_book!.id);
+    setState(() {
+      _bookmarks = marks.map((b) => '${b.bookId}_${b.pageIndex}').toList();
+    });
+  }
+
+  bool get _isCurrentPageBookmarked {
+    if (_book == null) return false;
+    return _bookmarks.contains('${_book!.id}_$_currentOriginalPage');
   }
 }

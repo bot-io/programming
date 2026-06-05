@@ -41,6 +41,12 @@ class ReaderTopControls extends StatelessWidget {
   /// Whether to show the full screen toggle button
   final bool showFullScreenToggle;
 
+  /// Callback when bookmark button is pressed
+  final VoidCallback? onBookmark;
+
+  /// Whether the current page is bookmarked
+  final bool isBookmarked;
+
   const ReaderTopControls({
     super.key,
     this.bookTitle,
@@ -51,6 +57,8 @@ class ReaderTopControls extends StatelessWidget {
     this.onTableOfContents,
     this.hasChapters = false,
     this.showFullScreenToggle = true,
+    this.onBookmark,
+    this.isBookmarked = false,
   });
 
   @override
@@ -111,6 +119,19 @@ class ReaderTopControls extends StatelessWidget {
                   onRefresh?.call();
                 },
                 tooltip: 'Refresh Translation',
+              ),
+              IconButton(
+                icon: Icon(
+                  isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  color: isBookmarked
+                      ? Colors.amber
+                      : (isDark ? colorScheme.onSurface : colorScheme.onSurface),
+                ),
+                onPressed: () {
+                  LoggingService.debug('ReaderTopControls', 'Bookmark button pressed');
+                  onBookmark?.call();
+                },
+                tooltip: isBookmarked ? 'Remove Bookmark' : 'Add Bookmark',
               ),
               IconButton(
                 icon: Icon(

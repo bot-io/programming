@@ -17,6 +17,14 @@ import 'package:dual_reader/src/domain/usecases/get_settings_usecase.dart';
 import 'package:dual_reader/src/domain/usecases/update_settings_usecase.dart';
 import 'package:dual_reader/src/domain/usecases/get_book_by_id_usecase.dart';
 import 'package:dual_reader/src/domain/usecases/update_book_progress_usecase.dart';
+import 'package:dual_reader/src/domain/usecases/add_reading_history_usecase.dart';
+import 'package:dual_reader/src/domain/usecases/add_bookmark_usecase.dart';
+import 'package:dual_reader/src/domain/usecases/get_bookmarks_usecase.dart';
+import 'package:dual_reader/src/domain/usecases/delete_bookmark_usecase.dart';
+import 'package:dual_reader/src/domain/entities/reading_history_entity.dart';
+import 'package:dual_reader/src/domain/entities/bookmark_entity.dart';
+import 'package:dual_reader/src/domain/repositories/reading_history_repository.dart';
+import 'package:dual_reader/src/domain/repositories/bookmark_repository.dart';
 import 'package:dual_reader/src/domain/repositories/book_repository.dart';
 import 'package:dual_reader/src/domain/services/epub_parser_service.dart';
 import 'package:dual_reader/src/domain/services/pagination_service.dart';
@@ -237,6 +245,54 @@ class FakeChunkCacheService extends ChunkCacheService {
   Future<void> init() async {}
 }
 
+class FakeAddReadingHistoryUseCase extends AddReadingHistoryUseCase {
+  FakeAddReadingHistoryUseCase() : super(_FakeReadingHistoryRepo());
+  @override
+  Future<ReadingHistoryEntity> call(ReadingHistoryEntity entry) async => entry;
+}
+
+class FakeAddBookmarkUseCase extends AddBookmarkUseCase {
+  FakeAddBookmarkUseCase() : super(_FakeBookmarkRepo());
+  @override
+  Future<BookmarkEntity> call(BookmarkEntity bookmark) async => bookmark;
+}
+
+class FakeGetBookmarksUseCase extends GetBookmarksUseCase {
+  FakeGetBookmarksUseCase() : super(_FakeBookmarkRepo());
+  @override
+  Future<List<BookmarkEntity>> call(String bookId) async => [];
+}
+
+class FakeDeleteBookmarkUseCase extends DeleteBookmarkUseCase {
+  FakeDeleteBookmarkUseCase() : super(_FakeBookmarkRepo());
+  @override
+  Future<void> call(String bookmarkId) async {}
+}
+
+class _FakeReadingHistoryRepo implements ReadingHistoryRepository {
+  @override
+  Future<List<ReadingHistoryEntity>> getHistory({int limit = 50}) async => [];
+  @override
+  Future<List<ReadingHistoryEntity>> getHistoryForBook(String bookId) async => [];
+  @override
+  Future<ReadingHistoryEntity> addHistory(ReadingHistoryEntity entry) async => entry;
+  @override
+  Future<void> clearHistory() async {}
+  @override
+  Future<void> clearHistoryForBook(String bookId) async {}
+}
+
+class _FakeBookmarkRepo implements BookmarkRepository {
+  @override
+  Future<BookmarkEntity> addBookmark(BookmarkEntity bookmark) async => bookmark;
+  @override
+  Future<List<BookmarkEntity>> getBookmarks(String bookId) async => [];
+  @override
+  Future<void> deleteBookmark(String bookmarkId) async {}
+  @override
+  Future<BookmarkEntity> updateBookmark(BookmarkEntity bookmark) async => bookmark;
+}
+
 void main() {
   final sl = GetIt.instance;
   late FakeGetSettingsUseCase fakeGetSettingsUseCase;
@@ -297,6 +353,10 @@ void main() {
       () => fakeUpdateBookProgressUseCase,
     );
     sl.registerLazySingleton<BookRepository>(() => fakeBookRepository);
+    sl.registerLazySingleton<AddReadingHistoryUseCase>(() => FakeAddReadingHistoryUseCase());
+    sl.registerLazySingleton<AddBookmarkUseCase>(() => FakeAddBookmarkUseCase());
+    sl.registerLazySingleton<GetBookmarksUseCase>(() => FakeGetBookmarksUseCase());
+    sl.registerLazySingleton<DeleteBookmarkUseCase>(() => FakeDeleteBookmarkUseCase());
   });
 
   tearDown(() async {
