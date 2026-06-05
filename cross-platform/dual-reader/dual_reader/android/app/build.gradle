@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.dual_reader"
-    compileSdk = 34  // Using SDK 34
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
