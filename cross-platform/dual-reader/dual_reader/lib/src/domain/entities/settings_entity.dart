@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:hive/hive.dart';
 import 'package:flutter/material.dart';
+import 'dart:convert';
 
 part 'settings_entity.g.dart';
 
@@ -90,4 +91,41 @@ class SettingsEntity extends Equatable {
         targetTranslationLanguageCode,
         themePreset,
       ];
+
+  /// Serialize to JSON string
+  String toJson() {
+    return jsonEncode({
+      'themeMode': themeMode.name,
+      'fontFamily': fontlFamily,
+      'fontSize': fontSize,
+      'lineHeight': lineHeight,
+      'margin': margin,
+      'textAlign': textAlign.name,
+      'panelWidthRatio': panelWidthRatio,
+      'targetTranslationLanguageCode': targetTranslationLanguageCode,
+      'themePreset': themePreset,
+    });
+  }
+
+  /// Deserialize from JSON string
+  static SettingsEntity fromJson(String jsonStr) {
+    final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+    return SettingsEntity(
+      themeMode: ThemeMode.values.firstWhere(
+        (m) => m.name == map['themeMode'],
+        orElse: () => ThemeMode.system,
+      ),
+      fontlFamily: map['fontFamily'] as String? ?? 'Roboto',
+      fontSize: (map['fontSize'] as num?)?.toDouble() ?? 16.0,
+      lineHeight: (map['lineHeight'] as num?)?.toDouble() ?? 1.5,
+      margin: (map['margin'] as num?)?.toDouble() ?? 16.0,
+      textAlign: TextAlign.values.firstWhere(
+        (a) => a.name == map['textAlign'],
+        orElse: () => TextAlign.justify,
+      ),
+      panelWidthRatio: (map['panelWidthRatio'] as num?)?.toDouble() ?? 0.5,
+      targetTranslationLanguageCode: map['targetTranslationLanguageCode'] as String? ?? 'es',
+      themePreset: map['themePreset'] as String? ?? 'standard',
+    );
+  }
 }

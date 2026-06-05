@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:universal_io/io.dart';
@@ -17,6 +18,7 @@ import 'package:dual_reader/src/domain/services/translation_service.dart';
 import 'package:dual_reader/src/core/utils/logging_service.dart';
 import 'package:get_it/get_it.dart';
 import 'package:dual_reader/src/presentation/screens/language_models_screen.dart';
+import 'package:dual_reader/src/core/router/routes.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -284,6 +286,89 @@ class SettingsScreen extends ConsumerWidget {
                 await _performFactoryReset(context, ref);
               }
             },
+          ),
+          const Divider(),
+          // Settings export/import
+          ListTile(
+            leading: const Icon(Icons.upload_file),
+            title: const Text('Export Settings'),
+            subtitle: const Text('Save settings to clipboard'),
+            onTap: () async {
+              try {
+                final settings = ref.read(settingsProvider);
+                final json = settings.toJson();
+                final jsonStr = '{"settings": $json}';
+                await Clipboard.setData(ClipboardData(text: jsonStr));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Settings copied to clipboard')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Export failed: $e')),
+                  );
+                }
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.download),
+            title: const Text('Import Settings'),
+            subtitle: const Text('Paste settings from clipboard'),
+            onTap: () async {
+              try {
+                final data = await Clipboard.getData('text/plain');
+                if (data?.text == null) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('No text on clipboard')),
+                    );
+                  }
+                  return;
+                }
+                final text = data!.text!;
+                if (!text.contains('"settings"')) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Invalid settings format')),
+                    );
+                  }
+                  return;
+                }
+                // Extract JSON object after "settings":
+                final start = text.indexOf('{', text.indexOf('"settings"'));
+                var braceCount = 0;
+                var end = start;
+                for (var i = start; i < text.length; i++) {
+                  if (text[i] == '{') braceCount++;
+                  if (text[i] == '}') braceCount--;
+                  if (braceCount == 0) { end = i + 1; break; }
+                }
+                final jsonStr = text.substring(start, end);
+                final settings = SettingsEntity.fromJson(jsonStr);
+                await ref.read(settingsProvider.notifier).updateSettings(settings);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Settings imported successfully')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Import failed: $e')),
+                  );
+                }
+              }
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.info),
+            title: const Text('About'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go(AppRoutes.settingsAbout),
           ),
         ],
       ),

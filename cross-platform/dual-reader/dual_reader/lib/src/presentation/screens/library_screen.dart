@@ -94,6 +94,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         title: const Text('Your Library'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () => context.go('/history'),
+            tooltip: 'Reading History',
+          ),
+          IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => context.go('/settings'),
             tooltip: 'Settings',

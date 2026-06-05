@@ -27,10 +27,21 @@ import 'package:dual_reader/src/domain/usecases/delete_book_usecase.dart';
 import 'package:dual_reader/src/domain/usecases/get_settings_usecase.dart';
 import 'package:dual_reader/src/domain/usecases/update_settings_usecase.dart';
 import 'package:dual_reader/src/domain/entities/settings_entity.dart';
+import 'package:dual_reader/src/domain/entities/bookmark_entity.dart';
 import 'package:dual_reader/src/domain/repositories/settings_repository.dart';
 import 'package:dual_reader/src/data/repositories/settings_repository_impl.dart';
+import 'package:dual_reader/src/domain/repositories/bookmark_repository.dart';
+import 'package:dual_reader/src/data/repositories/bookmark_repository_impl.dart';
 import 'package:dual_reader/src/core/adapters/theme_mode_adapter.dart';
 import 'package:dual_reader/src/core/adapters/text_align_adapter.dart';
+import 'package:dual_reader/src/domain/usecases/add_bookmark_usecase.dart';
+import 'package:dual_reader/src/domain/usecases/get_bookmarks_usecase.dart';
+import 'package:dual_reader/src/domain/usecases/delete_bookmark_usecase.dart';
+import 'package:dual_reader/src/domain/entities/reading_history_entity.dart';
+import 'package:dual_reader/src/domain/repositories/reading_history_repository.dart';
+import 'package:dual_reader/src/data/repositories/reading_history_repository_impl.dart';
+import 'package:dual_reader/src/domain/usecases/add_reading_history_usecase.dart';
+import 'package:dual_reader/src/domain/usecases/get_reading_history_usecase.dart';
 import 'package:flutter/foundation.dart';
 
 // Export TranslationService for use in other files
@@ -56,6 +67,8 @@ Future<void> init() async {
   Hive.registerAdapter(ThemeModeAdapter());
   Hive.registerAdapter(TextAlignAdapter());
   Hive.registerAdapter(SettingsEntityAdapter());
+  Hive.registerAdapter(BookmarkEntityAdapter());
+  Hive.registerAdapter(ReadingHistoryEntityAdapter());
 
   // Features
 
@@ -109,6 +122,8 @@ Future<void> init() async {
   sl.registerLazySingleton<PaginationService>(() => PaginationServiceImpl());
   sl.registerLazySingleton<BookRepository>(() => BookRepositoryImpl());
   sl.registerLazySingleton<SettingsRepository>(() => SettingsRepositoryImpl());
+  sl.registerLazySingleton<BookmarkRepository>(() => BookmarkRepositoryImpl());
+  sl.registerLazySingleton<ReadingHistoryRepository>(() => ReadingHistoryRepositoryImpl());
 
   // Use cases
   sl.registerLazySingleton<ImportBookUseCase>(() => ImportBookUseCase(sl(), sl(), sl()));
@@ -119,6 +134,11 @@ Future<void> init() async {
   sl.registerLazySingleton<DeleteBookUseCase>(() => DeleteBookUseCase(sl()));
   sl.registerLazySingleton<GetSettingsUseCase>(() => GetSettingsUseCase(sl()));
   sl.registerLazySingleton<UpdateSettingsUseCase>(() => UpdateSettingsUseCase(sl()));
+  sl.registerLazySingleton<AddBookmarkUseCase>(() => AddBookmarkUseCase(sl()));
+  sl.registerLazySingleton<GetBookmarksUseCase>(() => GetBookmarksUseCase(sl()));
+  sl.registerLazySingleton<DeleteBookmarkUseCase>(() => DeleteBookmarkUseCase(sl()));
+  sl.registerLazySingleton<AddReadingHistoryUseCase>(() => AddReadingHistoryUseCase(sl()));
+  sl.registerLazySingleton<GetReadingHistoryUseCase>(() => GetReadingHistoryUseCase(sl()));
 
   // External
 }

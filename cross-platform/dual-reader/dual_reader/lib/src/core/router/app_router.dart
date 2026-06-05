@@ -6,6 +6,8 @@ import 'package:dual_reader/src/core/router/guards/route_guards.dart';
 import 'package:dual_reader/src/presentation/screens/library_screen.dart';
 import 'package:dual_reader/src/presentation/screens/dual_reader_screen.dart';
 import 'package:dual_reader/src/presentation/screens/settings_screen.dart';
+import 'package:dual_reader/src/presentation/screens/about_screen.dart';
+import 'package:dual_reader/src/presentation/screens/reading_history_screen.dart';
 import 'package:dual_reader/src/core/utils/navigation_observer.dart';
 import 'package:dual_reader/src/core/utils/logging_service.dart';
 
@@ -138,14 +140,21 @@ class AppRouter {
               path: 'settings',
               name: 'settings',
               builder: (context, state) => const SettingsScreen(),
-              // Future: Add sub-routes for specific settings tabs
-              // routes: [
-              //   GoRoute(
-              //     path: 'language',
-              //     name: 'language_settings',
-              //     builder: (context, state) => const SettingsScreen(initialTab: SettingsTab.language),
-              //   ),
-              // ],
+              routes: [
+                /// About route
+                GoRoute(
+                  path: 'about',
+                  name: 'about',
+                  builder: (context, state) => const AboutScreen(),
+                ),
+              ],
+            ),
+
+            /// Reading history route
+            GoRoute(
+              path: 'history',
+              name: 'history',
+              builder: (context, state) => const ReadingHistoryScreen(),
             ),
           ],
         ),
