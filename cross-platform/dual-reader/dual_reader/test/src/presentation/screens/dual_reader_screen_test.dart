@@ -363,7 +363,7 @@ void main() {
 
         expect(find.byType(Scaffold), findsWidgets);
         expect(find.byType(ErrorWidget), findsNothing);
-      }, skip: true);
+      });
 
     testWidgets(
       'shows a loading state initially',
@@ -373,7 +373,7 @@ void main() {
 
         expect(find.text('Loading...'), findsOneWidget);
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      }, skip: true);
+      }, skip: true); // Loading state resolves too fast with mocked DI
 
     testWidgets(
       'leaves loading state after async work completes',
@@ -383,14 +383,14 @@ void main() {
 
         expect(find.text('Loading...'), findsNothing);
         expect(find.byType(Scaffold), findsWidgets);
-      }, skip: true);
+      });
 
     testWidgets(
       'constructs with required bookId parameter',
       (WidgetTester tester) async {
         const screen = DualReaderScreen(bookId: 'my-book');
         expect(screen.bookId, 'my-book');
-      }, skip: true);
+      });
 
     testWidgets(
       'contains AlwaysVisibleProgress widget after loading',
@@ -399,7 +399,7 @@ void main() {
         await boundedPump(tester, iterations: 50);
 
         expect(find.byType(AlwaysVisibleProgress), findsOneWidget);
-      }, skip: true);
+      });
 
     testWidgets(
       'contains DualPanelLayout widget after loading',
@@ -408,7 +408,7 @@ void main() {
         await boundedPump(tester, iterations: 50);
 
         expect(find.byType(DualPanelLayout), findsOneWidget);
-      }, skip: true);
+      });
 
     testWidgets(
       'contains TapZoneDetector for page navigation',
@@ -417,7 +417,7 @@ void main() {
         await boundedPump(tester, iterations: 50);
 
         expect(find.byType(TapZoneDetector), findsOneWidget);
-      }, skip: true);
+      });
 
     testWidgets(
       'handles null book gracefully (no book found)',
@@ -433,7 +433,7 @@ void main() {
 
         expect(find.text('Loading...'), findsNothing);
         expect(find.byType(Scaffold), findsWidgets);
-      }, skip: true);
+      });
 
     testWidgets(
       'tapping middle zone toggles controls visibility',
@@ -457,7 +457,7 @@ void main() {
           find.byType(ReaderTopControls),
         );
         expect(updatedControls.visible, isTrue);
-      }, skip: true);
+      }, skip: true); // Tap zone interaction needs more pump iterations
 
     testWidgets(
       'shows book title in top controls when controls are visible',
@@ -471,7 +471,7 @@ void main() {
         await boundedPump(tester, iterations: 5);
 
         expect(find.text('Test Book'), findsOneWidget);
-      }, skip: true);
+      });
 
     testWidgets(
       'tapping middle zone twice hides controls again',
@@ -500,7 +500,7 @@ void main() {
               .visible,
           isFalse,
         );
-      }, skip: true);
+      }, skip: true); // Tap zone interaction needs more pump iterations
 
     testWidgets(
       'KeyboardHandler wraps the scaffold for keyboard navigation',
@@ -509,6 +509,6 @@ void main() {
         await boundedPump(tester, iterations: 50);
 
         expect(find.byType(KeyboardHandler), findsOneWidget);
-      }, skip: true);
+      });
   });
 }

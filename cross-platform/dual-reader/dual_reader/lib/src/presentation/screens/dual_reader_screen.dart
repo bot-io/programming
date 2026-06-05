@@ -95,10 +95,9 @@ class _DualReaderScreenState extends ConsumerState<DualReaderScreen> with Widget
   }
 
   Future<void> _initializeChunkServices() async {
-    final clientSideTranslationService = _translationService as ClientSideTranslationService;
     _chunkTranslationService = ChunkTranslationService(
       cacheService: _chunkCacheService,
-      translationService: clientSideTranslationService,
+      translationService: _translationService,
     );
 
     LoggingService.info(_componentName, 'Chunk translation services initialized');

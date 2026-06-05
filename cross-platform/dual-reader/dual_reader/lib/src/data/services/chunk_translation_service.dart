@@ -1,6 +1,6 @@
 import 'package:dual_reader/src/core/utils/logging_service.dart';
 import 'package:dual_reader/src/data/services/chunk_cache_service.dart';
-import 'package:dual_reader/src/data/services/client_side_translation_service.dart';
+import 'package:dual_reader/src/domain/services/translation_service.dart';
 import 'package:dual_reader/src/domain/entities/translation_chunk.dart';
 import 'package:dual_reader/src/core/utils/page_markers.dart';
 
@@ -12,7 +12,7 @@ class ChunkTranslationService {
   static const String _componentName = 'ChunkTranslation';
 
   final ChunkCacheService _cacheService;
-  final ClientSideTranslationService _translationService;
+  final TranslationService _translationService;
 
   // Chunk size configuration
   static const int _minChunkSize = 3000; // 3000 chars minimum
@@ -21,7 +21,7 @@ class ChunkTranslationService {
 
   ChunkTranslationService({
     required ChunkCacheService cacheService,
-    required ClientSideTranslationService translationService,
+    required TranslationService translationService,
   })  : _cacheService = cacheService,
         _translationService = translationService;
 
