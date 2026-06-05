@@ -1,12 +1,12 @@
 {
-    "name": "dual_reader",
-    "short_name": "dual_reader",
+    "name": "Dual Reader",
+    "short_name": "DualReader",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#1a1a2e",
+    "theme_color": "#16213e",
+    "description": "Bilingual ebook reader - read original and translated text side-by-side",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
