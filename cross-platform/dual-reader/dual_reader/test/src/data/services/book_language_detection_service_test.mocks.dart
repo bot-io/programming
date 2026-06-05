@@ -136,6 +136,12 @@ class MockLanguageDetectionService extends _i1.Mock
       ) as bool);
 
   @override
+  int get minConfidence => (super.noSuchMethod(
+        Invocation.getter(#minConfidence),
+        returnValue: 0,
+      ) as int);
+
+  @override
   _i4.Future<void> init() => (super.noSuchMethod(
         Invocation.method(
           #init,
