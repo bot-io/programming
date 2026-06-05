@@ -12,6 +12,7 @@ import 'package:dual_reader/src/presentation/providers/book_list_notifier.dart';
 import 'package:dual_reader/src/presentation/providers/language_model_notifier.dart';
 import 'package:dual_reader/src/presentation/providers/settings_notifier.dart';
 import 'package:dual_reader/src/presentation/providers/pagination_progress_notifier.dart';
+import 'package:dual_reader/src/presentation/widgets/file_drop_zone.dart';
 import 'package:dual_reader/src/core/utils/language_utils.dart';
 import 'package:dual_reader/src/core/platform/platform_features.dart';
 import 'package:file_picker/file_picker.dart';
@@ -134,7 +135,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: FileDropZone(
+        onFilesDropped: (filePaths) async {
+          // Handled via JS interop on web; no-op here as the actual
+          // import logic goes through the ImportBookUseCase
+        },
+        child: Column(
         children: [
           // Language model download progress banner
           if (modelState.status == ModelDownloadStatus.inProgress)
@@ -236,6 +242,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   ),
           ),
         ],
+      ),
       ),
     );
   }

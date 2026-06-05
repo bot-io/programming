@@ -260,5 +260,43 @@
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
+
+  <!-- File drag-and-drop handler for web -->
+  <script>
+    // Prevent default browser behavior for drag events on the whole page
+    document.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    document.addEventListener('dragenter', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    // Handle file drops - forward to Flutter via dart:js_interop
+    document.addEventListener('drop', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const files = e.dataTransfer.files;
+      if (files.length === 0) return;
+
+      // Read each dropped file and forward to Flutter
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+          // Send file data to Flutter via a custom event
+          if (window._flutterBuilder && window._flutterBuilder.onDroppedFile) {
+            window._flutterBuilder.onDroppedFile(file.name, event.target.result);
+          }
+        };
+
+        // Read as ArrayBuffer for binary files (epub, mobi)
+        reader.readAsArrayBuffer(file);
+      }
+    });
+  </script>
 </body>
 </html>
