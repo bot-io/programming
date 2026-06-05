@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:dual_reader/src/domain/entities/book_entity.dart';
 import 'package:dual_reader/src/domain/repositories/book_repository.dart';
 import 'package:dual_reader/src/domain/services/epub_parser_service.dart';
-import 'package:dual_reader/src/domain/services/mobi_parser_service.dart';
 import 'package:dual_reader/src/domain/services/pagination_service.dart';
 import 'package:dual_reader/src/domain/entities/settings_entity.dart';
 import 'package:dual_reader/src/presentation/providers/pagination_progress_notifier.dart';
@@ -12,7 +11,7 @@ import 'package:flutter/widgets.dart';
 ///
 /// This handles the full pagination process:
 /// 1. Retrieves book bytes from storage
-/// 2. Detects format (EPUB or MOBI) and extracts text
+/// 2. Detects format (EPUB) and extracts text
 /// 3. Strips chapter titles from content (to avoid duplication)
 /// 4. Paginates text using PaginationService
 /// 5. Updates book entity with total pages
@@ -20,13 +19,11 @@ import 'package:flutter/widgets.dart';
 class PaginateBookUseCase {
   final BookRepository _bookRepository;
   final EpubParserService _epubParserService;
-  final MobiParserService _mobiParserService;
   final PaginationService _paginationService;
 
   PaginateBookUseCase(
     this._bookRepository,
     this._epubParserService,
-    this._mobiParserService,
     this._paginationService,
   );
 
@@ -185,32 +182,8 @@ class PaginateBookUseCase {
       );
       await _bookRepository.updateBook(failedBook);
       return 0;
-    } on MobiDrmException catch (e) {
-      debugPrint('[PaginateBook] DRM Error: $e');
-      progressNotifier?.failPagination(book.id, 'DRM Protected: $e');
-      final failedBook = book.copyWith(
-        paginationStatus: PaginationStatus.failed.index,
-      );
-      await _bookRepository.updateBook(failedBook);
-      return 0;
     } on EpubParseException catch (e) {
       debugPrint('[PaginateBook] Parse Error: $e');
-      progressNotifier?.failPagination(book.id, e.toString());
-      final failedBook = book.copyWith(
-        paginationStatus: PaginationStatus.failed.index,
-      );
-      await _bookRepository.updateBook(failedBook);
-      return 0;
-    } on MobiParseException catch (e) {
-      debugPrint('[PaginateBook] Parse Error: $e');
-      progressNotifier?.failPagination(book.id, e.toString());
-      final failedBook = book.copyWith(
-        paginationStatus: PaginationStatus.failed.index,
-      );
-      await _bookRepository.updateBook(failedBook);
-      return 0;
-    } on MobiFormatException catch (e) {
-      debugPrint('[PaginateBook] Format Error: $e');
       progressNotifier?.failPagination(book.id, e.toString());
       final failedBook = book.copyWith(
         paginationStatus: PaginationStatus.failed.index,
@@ -252,17 +225,13 @@ class PaginateBookUseCase {
         final epubBookEntity = await _epubParserService.parseEpub(bytes);
         return await _extractEpubText(bytes, epubBookEntity);
 
-      case EbookFormat.mobi:
-        return await _mobiParserService.extractFullText(bytes);
-
       case EbookFormat.unknown:
-        // Try EPUB first
+        // Try EPUB
         try {
           final epubBookEntity = await _epubParserService.parseEpub(bytes);
           return await _extractEpubText(bytes, epubBookEntity);
         } catch (_) {
-          // Try MOBI
-          return await _mobiParserService.extractFullText(bytes);
+          throw Exception('Unsupported book format (only EPUB supported)');
         }
     }
   }

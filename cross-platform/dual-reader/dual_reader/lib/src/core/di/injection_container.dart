@@ -123,8 +123,8 @@ Future<void> init() async {
   sl.registerLazySingleton<ReadingHistoryRepository>(() => ReadingHistoryRepositoryImpl());
 
   // Use cases
-  sl.registerLazySingleton<ImportBookUseCase>(() => ImportBookUseCase(sl(), sl(), sl()));
-  sl.registerLazySingleton<PaginateBookUseCase>(() => PaginateBookUseCase(sl(), sl(), sl(), sl()));
+  sl.registerLazySingleton<ImportBookUseCase>(() => ImportBookUseCase(sl(), sl()));
+  sl.registerLazySingleton<PaginateBookUseCase>(() => PaginateBookUseCase(sl(), sl(), sl()));
   sl.registerLazySingleton<GetAllBooksUseCase>(() => GetAllBooksUseCase(sl()));
   sl.registerLazySingleton<GetBookByIdUseCase>(() => GetBookByIdUseCase(sl()));
   sl.registerLazySingleton<UpdateBookProgressUseCase>(() => UpdateBookProgressUseCase(sl()));
