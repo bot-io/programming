@@ -50,10 +50,13 @@ Dual Reader 3.2 is a cross-platform ebook reader application built with Flutter.
 ## Core Features
 
 ### 1. Ebook Support
-- **Formats**: EPUB and MOBI
+- **Formats**: EPUB (primary). MOBI support is planned but not yet implemented due to package ecosystem limitations.
 - **Parsing**: Client-side parsing using free libraries
   - EPUB: Use `epubx` or `flutter_epub` (free, open-source)
-  - MOBI: Use `mobi` or similar free library
+  - MOBI: **NOT YET IMPLEMENTED** - The Dart ecosystem lacks a well-tested MOBI parser compatible with epubx dependencies. Future work may include:
+    - Using dart_mobi package (marked as not thoroughly tested, has dependency conflicts)
+    - Converting MOBI to EPUB on the desktop before import (Calibre CLI)
+    - Using a native FFI wrapper around libmobi
 - **Metadata Extraction**: Title, author, cover image, chapters
 - **Content Extraction**: Full text content with formatting preservation
 

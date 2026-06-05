@@ -1,8 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:dual_reader/src/domain/services/epub_parser_service.dart';
 import 'package:dual_reader/src/data/services/epub_parser_service_impl.dart';
-import 'package:dual_reader/src/domain/services/mobi_parser_service.dart';
-import 'package:dual_reader/src/data/services/mobi_parser_service_impl.dart';
 import 'package:dual_reader/src/domain/services/translation_service.dart';
 import 'package:dual_reader/src/data/services/mymemory_translation_service_impl.dart';
 import 'package:dual_reader/src/data/services/google_translate_service_impl.dart';
@@ -74,7 +72,6 @@ Future<void> init() async {
 
   // Core
   sl.registerLazySingleton<EpubParserService>(() => EpubParserServiceImpl());
-  sl.registerLazySingleton<MobiParserService>(() => MobiParserServiceImpl());
   final translationCacheService = TranslationCacheService();
   await translationCacheService.init();
   sl.registerLazySingleton<TranslationCacheService>(() => translationCacheService);

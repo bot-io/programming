@@ -8,8 +8,6 @@ import 'package:dual_reader/src/domain/repositories/book_repository.dart';
 import 'package:dual_reader/src/data/repositories/book_repository_impl.dart';
 import 'package:dual_reader/src/domain/services/epub_parser_service.dart';
 import 'package:dual_reader/src/data/services/epub_parser_service_impl.dart';
-import 'package:dual_reader/src/domain/services/mobi_parser_service.dart';
-import 'package:dual_reader/src/data/services/mobi_parser_service_impl.dart';
 import 'package:dual_reader/src/data/services/book_translation_cache_service.dart';
 import 'package:hive/hive.dart';
 import 'package:get_it/get_it.dart';
@@ -52,12 +50,9 @@ void main() {
       if (!sl.isRegistered<EpubParserService>()) {
         sl.registerLazySingleton<EpubParserService>(() => EpubParserServiceImpl());
       }
-      if (!sl.isRegistered<MobiParserService>()) {
-        sl.registerLazySingleton<MobiParserService>(() => MobiParserServiceImpl());
-      }
 
       bookRepository = sl<BookRepository>();
-      importBookUseCase = ImportBookUseCase(bookRepository, sl<EpubParserService>(), sl<MobiParserService>());
+      importBookUseCase = ImportBookUseCase(bookRepository, sl<EpubParserService>());
       getBookByIdUseCase = GetBookByIdUseCase(bookRepository);
       updateBookProgressUseCase = UpdateBookProgressUseCase(bookRepository);
       deleteBookUseCase = DeleteBookUseCase(bookRepository);

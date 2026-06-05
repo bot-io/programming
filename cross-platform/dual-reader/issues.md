@@ -78,7 +78,8 @@ initializes Riverpod providers, GetIt DI, Hive, and epubx internally.
 Should be refactored to accept dependencies via constructor/providers.
 
 ### Missing features from requirements
-- Bookmarks for quick access
-- Reading history (recently opened)
+- ~~Bookmarks for quick access~~ (RESOLVED)
+- ~~Reading history (recently opened)~~ (RESOLVED)
 - Export/import settings
 - About page (app version, credits, license)
+- MOBI format support (NOT YET IMPLEMENTED - see requirements.md for details)

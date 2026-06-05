@@ -7,7 +7,6 @@ import 'package:dual_reader/src/domain/entities/epub_book_entity.dart';
 import 'package:dual_reader/src/domain/entities/chapter_entity.dart';
 import 'package:dual_reader/src/domain/repositories/book_repository.dart';
 import 'package:dual_reader/src/domain/services/epub_parser_service.dart';
-import 'package:dual_reader/src/domain/services/mobi_parser_service.dart';
 import 'package:dual_reader/src/domain/usecases/import_book_usecase.dart';
 
 /// Fake implementation of [BookRepository] for testing
@@ -106,56 +105,6 @@ class FakeEpubParserService implements EpubParserService {
   }
 }
 
-/// Fake implementation of [MobiParserService] for testing
-class FakeMobiParserService implements MobiParserService {
-  MobiBookEntity? _result;
-  String _coverPath = '/fake/covers/mobi_cover.jpg';
-  String _fullText = 'Full MOBI text content.';
-  bool _shouldThrowParse = false;
-  bool _shouldThrowDrm = false;
-  bool _shouldThrowFormat = false;
-
-  FakeMobiParserService({
-    MobiBookEntity? result,
-    String coverPath = '/fake/covers/mobi_cover.jpg',
-    String? fullText,
-  })  : _result = result,
-        _coverPath = coverPath,
-        _fullText = fullText ?? 'Full MOBI text content.';
-
-  void setParseError() => _shouldThrowParse = true;
-  void setDrmError() => _shouldThrowDrm = true;
-  void setFormatError() => _shouldThrowFormat = true;
-
-  @override
-  Future<MobiBookEntity> parseMobi(List<int> bytes) async {
-    if (_shouldThrowDrm) throw MobiDrmException('MOBI DRM protected');
-    if (_shouldThrowParse) throw MobiParseException('MOBI parse failed');
-    if (_shouldThrowFormat) throw MobiFormatException('MOBI format error');
-    return _result ??
-        MobiBookEntity(
-          title: 'Test MOBI',
-          author: 'MOBI Author',
-          chapters: [],
-        );
-  }
-
-  @override
-  Future<String> extractCoverImage(List<int> bytes, String bookId) async {
-    return _coverPath;
-  }
-
-  @override
-  Future<String> extractFullText(List<int> bytes) async {
-    return _fullText;
-  }
-
-  @override
-  Future<List<ChapterEntity>> parseTableOfContents(List<int> bytes) async {
-    return _result?.chapters ?? [];
-  }
-}
-
 /// Helper to create a mock FilePickerResult for EPUB files
 FilePickerResult createEpubPickResult({String fileName = 'test.epub'}) {
   // Create minimal PK ZIP header bytes for EPUB detection
@@ -168,20 +117,6 @@ FilePickerResult createEpubPickResult({String fileName = 'test.epub'}) {
     ),
   ]);
 }
-
-/// Helper to create a mock FilePickerResult for MOBI files
-FilePickerResult createMobiPickResult({String fileName = 'test.mobi'}) {
-  // Create bytes with MOBI-like magic
-  final bytes = List.filled(100, 0);
-  return FilePickerResult([
-    PlatformFile(
-      name: fileName,
-      size: bytes.length,
-      bytes: Uint8List.fromList(bytes),
-    ),
-  ]);
-}
-
 /// Helper to create an empty pick result
 FilePickerResult createEmptyPickResult() {
   return FilePickerResult([]);
@@ -202,17 +137,14 @@ void main() {
   group('ImportBookUseCase', () {
     late FakeBookRepository fakeBookRepository;
     late FakeEpubParserService fakeEpubParserService;
-    late FakeMobiParserService fakeMobiParserService;
     late ImportBookUseCase useCase;
 
     setUp(() {
       fakeBookRepository = FakeBookRepository();
       fakeEpubParserService = FakeEpubParserService();
-      fakeMobiParserService = FakeMobiParserService();
       useCase = ImportBookUseCase(
         fakeBookRepository,
         fakeEpubParserService,
-        fakeMobiParserService,
       );
     });
 
