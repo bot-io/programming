@@ -25,13 +25,14 @@ class SettingsEntityAdapter extends TypeAdapter<SettingsEntity> {
       textAlign: fields[5] as TextAlign,
       panelWidthRatio: fields[6] as double,
       targetTranslationLanguageCode: fields[7] as String,
+      themePreset: (fields[8] as String?) ?? 'standard',
     );
   }
 
   @override
   void write(BinaryWriter writer, SettingsEntity obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.themeMode)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class SettingsEntityAdapter extends TypeAdapter<SettingsEntity> {
       ..writeByte(6)
       ..write(obj.panelWidthRatio)
       ..writeByte(7)
-      ..write(obj.targetTranslationLanguageCode);
+      ..write(obj.targetTranslationLanguageCode)
+      ..writeByte(8)
+      ..write(obj.themePreset);
   }
 
   @override

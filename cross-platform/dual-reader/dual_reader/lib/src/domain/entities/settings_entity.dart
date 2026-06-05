@@ -4,6 +4,15 @@ import 'package:flutter/material.dart';
 
 part 'settings_entity.g.dart';
 
+/// Available theme presets
+enum ThemePreset {
+  standard,
+  sepia,
+  ocean,
+  forest,
+  midnight,
+}
+
 @HiveType(typeId: 1) // Using typeId 1, as 0 is for BookEntity
 class SettingsEntity extends Equatable {
   @HiveField(0)
@@ -22,6 +31,8 @@ class SettingsEntity extends Equatable {
   final double panelWidthRatio; // For dual-panel layout
   @HiveField(7)
   final String targetTranslationLanguageCode;
+  @HiveField(8, defaultValue: 'standard')
+  final String themePreset; // standard, sepia, ocean, forest, midnight
 
   const SettingsEntity({
     this.themeMode = ThemeMode.system,
@@ -32,7 +43,16 @@ class SettingsEntity extends Equatable {
     this.textAlign = TextAlign.justify,
     this.panelWidthRatio = 0.5,
     this.targetTranslationLanguageCode = 'es',
+    this.themePreset = 'standard',
   });
+
+  /// Get the ThemePreset enum value
+  ThemePreset get preset {
+    return ThemePreset.values.firstWhere(
+      (p) => p.name == themePreset,
+      orElse: () => ThemePreset.standard,
+    );
+  }
 
   SettingsEntity copyWith({
     ThemeMode? themeMode,
@@ -43,6 +63,7 @@ class SettingsEntity extends Equatable {
     TextAlign? textAlign,
     double? panelWidthRatio,
     String? targetTranslationLanguageCode,
+    String? themePreset,
   }) {
     return SettingsEntity(
       themeMode: themeMode ?? this.themeMode,
@@ -53,6 +74,7 @@ class SettingsEntity extends Equatable {
       textAlign: textAlign ?? this.textAlign,
       panelWidthRatio: panelWidthRatio ?? this.panelWidthRatio,
       targetTranslationLanguageCode: targetTranslationLanguageCode ?? this.targetTranslationLanguageCode,
+      themePreset: themePreset ?? this.themePreset,
     );
   }
 
@@ -66,6 +88,6 @@ class SettingsEntity extends Equatable {
         textAlign,
         panelWidthRatio,
         targetTranslationLanguageCode,
+        themePreset,
       ];
 }
-

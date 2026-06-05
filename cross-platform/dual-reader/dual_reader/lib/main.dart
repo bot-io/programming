@@ -6,6 +6,7 @@ import 'package:dual_reader/src/core/router/app_router.dart';
 import 'package:dual_reader/src/presentation/screens/settings_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:dual_reader/src/presentation/providers/settings_notifier.dart';
+import 'package:dual_reader/src/domain/entities/settings_entity.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dual_reader/src/core/utils/logging_service.dart';
 import 'package:dual_reader/src/data/services/language_model_downloader.dart';
@@ -72,32 +73,100 @@ void main() async {
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
+  /// Build ThemeData based on settings preset
+  ThemeData _buildTheme(SettingsEntity settings, Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    final preset = settings.preset;
+
+    ColorScheme colorScheme;
+    switch (preset) {
+      case ThemePreset.sepia:
+        colorScheme = isDark
+            ? const ColorScheme.dark(
+                surface: Color(0xFF2C2417),
+                onSurface: Color(0xFFE8D5B7),
+                primary: Color(0xFF8B6914),
+                onPrimary: Color(0xFFFFFFFF),
+                secondary: Color(0xFFA0793C),
+                background: Color(0xFF1E1810),
+              )
+            : const ColorScheme.light(
+                surface: Color(0xFFF4E8D1),
+                onSurface: Color(0xFF3E2C1C),
+                primary: Color(0xFF8B6914),
+                onPrimary: Color(0xFFFFFFFF),
+                secondary: Color(0xFFA0793C),
+                background: Color(0xFFF9F0E0),
+              );
+        break;
+      case ThemePreset.ocean:
+        colorScheme = isDark
+            ? const ColorScheme.dark(
+                surface: Color(0xFF0D1B2A),
+                onSurface: Color(0xFFE0E8F0),
+                primary: Color(0xFF1B9AAA),
+                secondary: Color(0xFF06D6A0),
+              )
+            : const ColorScheme.light(
+                surface: Color(0xFFE8F4F8),
+                onSurface: Color(0xFF0D1B2A),
+                primary: Color(0xFF1B9AAA),
+                secondary: Color(0xFF06D6A0),
+              );
+        break;
+      case ThemePreset.forest:
+        colorScheme = isDark
+            ? const ColorScheme.dark(
+                surface: Color(0xFF1A2E1A),
+                onSurface: Color(0xFFD4E8D4),
+                primary: Color(0xFF2E7D32),
+                secondary: Color(0xFF66BB6A),
+              )
+            : const ColorScheme.light(
+                surface: Color(0xFFF0F5F0),
+                onSurface: Color(0xFF1A2E1A),
+                primary: Color(0xFF2E7D32),
+                secondary: Color(0xFF66BB6A),
+              );
+        break;
+      case ThemePreset.midnight:
+        colorScheme = const ColorScheme.dark(
+          surface: Color(0xFF0A0A1A),
+          onSurface: Color(0xFFD0D0E0),
+          primary: Color(0xFF7C4DFF),
+          secondary: Color(0xFF536DFE),
+        );
+        break;
+      case ThemePreset.standard:
+        colorScheme = isDark
+            ? ColorScheme.fromSeed(seedColor: Colors.deepPurple, brightness: brightness)
+            : ColorScheme.fromSeed(seedColor: Colors.deepPurple);
+        break;
+    }
+
+    final baseTextTheme = isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme;
+
+    return ThemeData(
+      colorScheme: colorScheme,
+      useMaterial3: true,
+      brightness: brightness,
+      textTheme: GoogleFonts.getTextTheme(
+        settings.fontlFamily,
+        baseTextTheme.apply(
+          fontSizeFactor: settings.fontSize / 16.0,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     return MaterialApp.router(
       title: 'Dual Reader',
       themeMode: settings.themeMode,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-        textTheme: GoogleFonts.getTextTheme(
-          settings.fontlFamily,
-          Theme.of(context).textTheme.apply(
-            fontSizeFactor: settings.fontSize / 16.0,
-          ),
-        ),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple, brightness: Brightness.dark),
-        useMaterial3: true,
-        textTheme: GoogleFonts.getTextTheme(
-          settings.fontlFamily,
-          ThemeData.dark().textTheme.apply(
-            fontSizeFactor: settings.fontSize / 16.0,
-          ),
-        ),
-      ),
+      theme: _buildTheme(settings, Brightness.light),
+      darkTheme: _buildTheme(settings, Brightness.dark),
       routerConfig: appRouter.router,
     );
   }

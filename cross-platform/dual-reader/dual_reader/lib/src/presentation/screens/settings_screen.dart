@@ -71,6 +71,38 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           ListTile(
+            title: const Text('Color Theme'),
+            trailing: DropdownButton<ThemePreset>(
+              key: ValueKey('preset_${settings.themePreset}'),
+              value: settings.preset,
+              onChanged: (ThemePreset? newValue) {
+                if (newValue != null) {
+                  notifier.updateSettings(settings.copyWith(themePreset: newValue.name));
+                }
+              },
+              items: ThemePreset.values.map((ThemePreset preset) {
+                const labels = {
+                  ThemePreset.standard: 'Standard',
+                  ThemePreset.sepia: 'Sepia',
+                  ThemePreset.ocean: 'Ocean',
+                  ThemePreset.forest: 'Forest',
+                  ThemePreset.midnight: 'Midnight',
+                };
+                const icons = {
+                  ThemePreset.standard: '💜',
+                  ThemePreset.sepia: '📜',
+                  ThemePreset.ocean: '🌊',
+                  ThemePreset.forest: '🌲',
+                  ThemePreset.midnight: '🌙',
+                };
+                return DropdownMenuItem<ThemePreset>(
+                  value: preset,
+                  child: Text('${icons[preset]} ${labels[preset]}'),
+                );
+              }).toList(),
+            ),
+          ),
+          ListTile(
             title: const Text('Font Size'),
             subtitle: Slider(
               value: settings.fontSize,
