@@ -43,3 +43,4 @@ app.*.map.json
 /android/app/releasetest_hive_data/
 test_hive_integration/
 test_hive_data/
+books/

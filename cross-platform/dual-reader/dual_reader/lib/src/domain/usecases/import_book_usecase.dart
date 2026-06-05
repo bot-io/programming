@@ -1,4 +1,3 @@
-import 'package:epubx/epubx.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:file_picker/file_picker.dart';
@@ -112,10 +111,6 @@ class ImportBookUseCase {
       // Parse EPUB to get our enhanced entity
       final epubBookEntity = await _epubParserService.parseEpub(bytes);
 
-      // Also parse with epubx to get the raw book for cover extraction
-      // This is a temporary approach - ideally we'd refactor to avoid double parsing
-      final rawEpubBook = await EpubReader.readBook(bytes);
-
       final uniqueId = const Uuid().v4();
 
       // Always save bytes to Hive for cross-platform retrieval
@@ -135,7 +130,7 @@ class ImportBookUseCase {
 
       // Extract cover image
       final coverPath = await _epubParserService.extractCoverImage(
-        rawEpubBook,
+        bytes,
         uniqueId,
       );
 

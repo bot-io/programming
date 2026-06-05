@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:epubx/epubx.dart';
 import 'package:dual_reader/src/domain/entities/book_entity.dart';
 import 'package:dual_reader/src/domain/entities/epub_book_entity.dart';
 import 'package:dual_reader/src/domain/entities/chapter_entity.dart';
@@ -91,17 +91,17 @@ class FakeEpubParserService implements EpubParserService {
   }
 
   @override
-  Future<String> extractCoverImage(EpubBook epubBook, String bookId) async {
+  Future<String> extractCoverImage(List<int> bytes, String bookId) async {
     return _coverPath;
   }
 
   @override
-  Future<String> extractFullText(EpubBook epubBook) async {
+  Future<String> extractFullText(List<int> bytes) async {
     return _fullText;
   }
 
   @override
-  Future<List<ChapterEntity>> parseTableOfContents(EpubBook epubBook) async {
+  Future<List<ChapterEntity>> parseTableOfContents(List<int> bytes) async {
     return _result?.chapters ?? [];
   }
 }
@@ -188,6 +188,17 @@ FilePickerResult createEmptyPickResult() {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  // Mock path_provider channel for getApplicationDocumentsDirectory
+  const MethodChannel('plugins.flutter.io/path_provider')
+      .setMockMethodCallHandler((MethodCall methodCall) async {
+    if (methodCall.method == 'getApplicationDocumentsDirectory') {
+      return '.';
+    }
+    return null;
+  });
+
   group('ImportBookUseCase', () {
     late FakeBookRepository fakeBookRepository;
     late FakeEpubParserService fakeEpubParserService;
@@ -212,7 +223,7 @@ void main() {
         // When pickResult is null, FilePicker.platform.pickFiles() is called.
         // This test would need FilePicker mocking to work in test environment.
         // Tested by the "no files" test below instead.
-      }, skip: true);
+      });
 
       test('should return null when pick result has no files', () async {
         final emptyResult = createEmptyPickResult();
@@ -326,7 +337,7 @@ void main() {
         expect(result!.title, equals('Test EPUB'));
         expect(result.author, equals('Test Author'));
         expect(result.filePath, isNotEmpty);
-      }, skip: true);
+      });
 
       test('should import MOBI file and return book entity', () async {
         final pickResult = createMobiPickResult();
@@ -335,7 +346,7 @@ void main() {
         expect(result, isNotNull);
         expect(result!.title, equals('Test MOBI'));
         expect(result.author, equals('MOBI Author'));
-      }, skip: true);
+      });
 
       test('should save book bytes to repository', () async {
         final pickResult = createEpubPickResult();
@@ -343,7 +354,7 @@ void main() {
 
         expect(result, isNotNull);
         expect(fakeBookRepository.savedBytes.containsKey(result!.id), isTrue);
-      }, skip: true);
+      });
 
       test('should add book to repository', () async {
         final pickResult = createEpubPickResult();
@@ -352,7 +363,7 @@ void main() {
         expect(result, isNotNull);
         expect(fakeBookRepository.addedBooks.length, equals(1));
         expect(fakeBookRepository.addedBooks.first.id, equals(result!.id));
-      }, skip: true);
+      });
 
       test('should set paginationStatus to notStarted', () async {
         final pickResult = createEpubPickResult();
@@ -363,7 +374,7 @@ void main() {
           result!.paginationStatus,
           equals(PaginationStatus.notStarted.index),
         );
-      }, skip: true);
+      });
 
       test('should set importedDate', () async {
         final beforeCall = DateTime.now();
@@ -374,7 +385,7 @@ void main() {
         expect(result, isNotNull);
         expect(result!.importedDate.isAfter(beforeCall.subtract(const Duration(seconds: 1))), isTrue);
         expect(result.importedDate.isBefore(afterCall.add(const Duration(seconds: 1))), isTrue);
-      }, skip: true);
+      });
 
       test('should detect EPUB format from .epub extension', () async {
         // Even with non-PK magic bytes, .epub extension triggers EPUB processing
@@ -383,7 +394,7 @@ void main() {
 
         expect(result, isNotNull);
         expect(result!.title, equals('Test EPUB'));
-      }, skip: true);
+      });
 
       test('should detect MOBI format from .mobi extension', () async {
         final pickResult = createMobiPickResult(fileName: 'mybook.mobi');
@@ -391,7 +402,7 @@ void main() {
 
         expect(result, isNotNull);
         expect(result!.title, equals('Test MOBI'));
-      }, skip: true);
+      });
 
       test('should detect EPUB format from PK magic bytes', () async {
         // File with .bin extension but PK magic bytes should be detected as EPUB
@@ -407,7 +418,7 @@ void main() {
 
         expect(result, isNotNull);
         expect(result!.title, equals('Test EPUB'));
-      }, skip: true);
+      });
 
       test('should use cover path from parser', () async {
         fakeEpubParserService = FakeEpubParserService(
@@ -424,7 +435,7 @@ void main() {
 
         expect(result, isNotNull);
         expect(result!.coverPath, equals('/custom/cover/path.jpg'));
-      }, skip: true);
+      });
 
       test('should use custom epub metadata', () async {
         final customEpub = EpubBookEntity(
@@ -450,7 +461,7 @@ void main() {
         expect(result, isNotNull);
         expect(result!.title, equals('Custom Title'));
         expect(result.author, equals('Custom Author'));
-      }, skip: true);
+      });
 
       test('should use custom mobi metadata', () async {
         final customMobi = MobiBookEntity(
@@ -475,7 +486,7 @@ void main() {
         expect(result, isNotNull);
         expect(result!.title, equals('Custom MOBI Title'));
         expect(result.author, equals('Custom MOBI Author'));
-      }, skip: true);
+      });
     });
 
     group('EbookFormat', () {

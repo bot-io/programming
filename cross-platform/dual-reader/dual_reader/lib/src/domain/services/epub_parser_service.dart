@@ -1,6 +1,5 @@
 import 'package:dual_reader/src/domain/entities/epub_book_entity.dart';
 import 'package:dual_reader/src/domain/entities/chapter_entity.dart';
-import 'package:epubx/epubx.dart';
 
 /// Exception thrown when EPUB is DRM-protected
 class EpubDrmException implements Exception {
@@ -30,14 +29,13 @@ abstract class EpubParserService {
 
   /// Extract cover image from EPUB and save to local storage
   /// Returns the local path to the cover image, or empty string if no cover
-  Future<String> extractCoverImage(EpubBook epubBook, String bookId);
+  Future<String> extractCoverImage(List<int> bytes, String bookId);
 
   /// Extract full text content from all chapters
   /// Converts HTML to plain text while preserving paragraph structure
-  Future<String> extractFullText(EpubBook epubBook);
+  Future<String> extractFullText(List<int> bytes);
 
   /// Parse table of contents with nesting support
   /// Returns list of chapters with titles and content indices
-  Future<List<ChapterEntity>> parseTableOfContents(EpubBook epubBook);
+  Future<List<ChapterEntity>> parseTableOfContents(List<int> bytes);
 }
-

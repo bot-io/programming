@@ -97,11 +97,11 @@ void main() {
 
     group('Cover image extraction', () {
       test('should return empty string when EPUB has no cover', () async {
-        // Create an empty EpubBook with no cover image or content
-        final epubBook = EpubBook();
+        // Empty bytes - no valid EPUB structure
+        final emptyBytes = <int>[];
 
         final coverPath = await service.extractCoverImage(
-          epubBook,
+          emptyBytes,
           'test-book-id',
         );
 

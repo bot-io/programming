@@ -1,4 +1,3 @@
-import 'package:epubx/epubx.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dual_reader/src/domain/entities/book_entity.dart';
 import 'package:dual_reader/src/domain/repositories/book_repository.dart';
@@ -251,8 +250,7 @@ class PaginateBookUseCase {
     switch (format) {
       case EbookFormat.epub:
         final epubBookEntity = await _epubParserService.parseEpub(bytes);
-        final rawEpubBook = await EpubReader.readBook(bytes);
-        return await _extractEpubText(rawEpubBook, epubBookEntity);
+        return await _extractEpubText(bytes, epubBookEntity);
 
       case EbookFormat.mobi:
         return await _mobiParserService.extractFullText(bytes);
@@ -261,8 +259,7 @@ class PaginateBookUseCase {
         // Try EPUB first
         try {
           final epubBookEntity = await _epubParserService.parseEpub(bytes);
-          final rawEpubBook = await EpubReader.readBook(bytes);
-          return await _extractEpubText(rawEpubBook, epubBookEntity);
+          return await _extractEpubText(bytes, epubBookEntity);
         } catch (_) {
           // Try MOBI
           return await _mobiParserService.extractFullText(bytes);
@@ -273,7 +270,7 @@ class PaginateBookUseCase {
   /// Extract all text content from EPUB chapters
   /// Strips chapter titles from content to avoid duplication in pagination
   Future<String> _extractEpubText(
-    EpubBook rawEpubBook,
+    List<int> bytes,
     epubBookEntity,
   ) async {
     final buffer = StringBuffer();
@@ -285,7 +282,7 @@ class PaginateBookUseCase {
       if (chapters.isEmpty) {
         debugPrint('[PaginateBook] No chapters found in entity, using raw extraction');
         // Fallback to raw extraction
-        return await _epubParserService.extractFullText(rawEpubBook);
+        return await _epubParserService.extractFullText(bytes);
       }
 
       // Combine content from all chapters
@@ -308,7 +305,7 @@ class PaginateBookUseCase {
     } catch (e) {
       debugPrint('[PaginateBook] Error extracting chapters: $e');
       // Fallback to using the service method
-      return await _epubParserService.extractFullText(rawEpubBook);
+      return await _epubParserService.extractFullText(bytes);
     }
   }
 }

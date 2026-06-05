@@ -65,7 +65,7 @@ class EpubParserServiceImpl implements EpubParserService {
       );
 
       // Parse table of contents with nesting
-      final chapters = await parseTableOfContents(epubBook);
+      final chapters = await parseTableOfContents(bytes);
 
       return EpubBookEntity(
         title: title,
@@ -91,9 +91,11 @@ class EpubParserServiceImpl implements EpubParserService {
   }
 
   @override
-  Future<String> extractCoverImage(EpubBook epubBook, String bookId) async {
+  Future<String> extractCoverImage(List<int> bytes, String bookId) async {
     try {
       _componentName.logDebug('Extracting cover image for book: $bookId');
+
+      final epubBook = await EpubReader.readBook(bytes);
 
       // Try multiple methods to find the cover image
       EpubByteContentFile? coverImage;
@@ -212,9 +214,12 @@ class EpubParserServiceImpl implements EpubParserService {
   }
 
   @override
-  Future<String> extractFullText(EpubBook epubBook) async {
+  Future<String> extractFullText(List<int> bytes) async {
     try {
       _componentName.logInfo('Extracting full text content');
+
+      final epubBook = await EpubReader.readBook(bytes);
+
       final buffer = StringBuffer();
 
       // Get all chapters in order
@@ -256,9 +261,12 @@ class EpubParserServiceImpl implements EpubParserService {
   }
 
   @override
-  Future<List<ChapterEntity>> parseTableOfContents(EpubBook epubBook) async {
+  Future<List<ChapterEntity>> parseTableOfContents(List<int> bytes) async {
     try {
       _componentName.logInfo('Parsing table of contents');
+
+      final epubBook = await EpubReader.readBook(bytes);
+
       final chapters = <ChapterEntity>[];
 
       // epubx provides navigation through Chapters list

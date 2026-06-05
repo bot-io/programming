@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:epubx/epubx.dart';
 import 'package:dual_reader/src/domain/entities/book_entity.dart';
 import 'package:dual_reader/src/domain/entities/settings_entity.dart';
 import 'package:dual_reader/src/domain/entities/epub_book_entity.dart';
@@ -102,13 +101,13 @@ class FakeEpubParserService implements EpubParserService {
   }
 
   @override
-  Future<String> extractCoverImage(EpubBook epubBook, String bookId) async => _coverPath;
+  Future<String> extractCoverImage(List<int> bytes, String bookId) async => _coverPath;
 
   @override
-  Future<String> extractFullText(EpubBook epubBook) async => _fullText;
+  Future<String> extractFullText(List<int> bytes) async => _fullText;
 
   @override
-  Future<List<ChapterEntity>> parseTableOfContents(EpubBook epubBook) async => _epubResult?.chapters ?? [];
+  Future<List<ChapterEntity>> parseTableOfContents(List<int> bytes) async => _epubResult?.chapters ?? [];
 }
 
 /// Fake implementation of [MobiParserService] for testing
@@ -150,7 +149,12 @@ class FakeMobiParserService implements MobiParserService {
   Future<String> extractCoverImage(List<int> bytes, String bookId) async => _coverPath;
 
   @override
-  Future<String> extractFullText(List<int> bytes) async => _fullText;
+  Future<String> extractFullText(List<int> bytes) async {
+    if (_shouldThrowDrm) throw MobiDrmException('MOBI DRM');
+    if (_shouldThrowParse) throw MobiParseException('MOBI parse error');
+    if (_shouldThrowFormat) throw MobiFormatException('MOBI format error');
+    return _fullText;
+  }
 
   @override
   Future<List<ChapterEntity>> parseTableOfContents(List<int> bytes) async => [];
@@ -206,6 +210,7 @@ class FakePaginationService implements PaginationService {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('PaginateBookUseCase', () {
     late FakeBookRepository fakeBookRepository;
     late FakeEpubParserService fakeEpubParserService;
@@ -261,13 +266,13 @@ void main() {
         expect(firstUpdate.paginationStatus, equals(PaginationStatus.inProgress.index));
       });
 
-      test('should update book status to failed on error', () async {
-        // Act - will fail at EpubReader.readBook, caught by generic catch
+      test('should update book status to completed on success', () async {
+        // Act - EPUB path now succeeds via refactored parser service
         await useCase(testBook, settings: testSettings, screenSize: testScreenSize);
 
-        // Assert - final status should be failed
+        // Assert - final status should be completed
         final lastUpdate = fakeBookRepository.updatedBooks.last;
-        expect(lastUpdate.paginationStatus, equals(PaginationStatus.failed.index));
+        expect(lastUpdate.paginationStatus, equals(PaginationStatus.completed.index));
       });
     });
 
@@ -582,28 +587,28 @@ void main() {
         );
 
         expect(result, equals(3));
-      }, skip: true);
+      });
 
       test('should update book status to completed', () async {
         await useCase(testBook, settings: testSettings, screenSize: testScreenSize);
 
         final lastUpdate = fakeBookRepository.updatedBooks.last;
         expect(lastUpdate.paginationStatus, equals(PaginationStatus.completed.index));
-      }, skip: true);
+      });
 
       test('should set paginationProgress to 1.0', () async {
         await useCase(testBook, settings: testSettings, screenSize: testScreenSize);
 
         final lastUpdate = fakeBookRepository.updatedBooks.last;
         expect(lastUpdate.paginationProgress, equals(1.0));
-      }, skip: true);
+      });
 
       test('should update book totalPages', () async {
         await useCase(testBook, settings: testSettings, screenSize: testScreenSize);
 
         final lastUpdate = fakeBookRepository.updatedBooks.last;
         expect(lastUpdate.totalPages, equals(3));
-      }, skip: true);
+      });
     });
 
     group('MOBI error handling in pagination', () {
@@ -638,7 +643,7 @@ void main() {
         expect(result, equals(0));
         final lastUpdate = fakeBookRepository.updatedBooks.last;
         expect(lastUpdate.paginationStatus, equals(PaginationStatus.failed.index));
-      }, skip: true);
+      });
 
       test('should return 0 and mark failed on MobiParseException', () async {
         fakeMobiParserService.setParseError();
@@ -666,7 +671,7 @@ void main() {
         expect(result, equals(0));
         final lastUpdate = fakeBookRepository.updatedBooks.last;
         expect(lastUpdate.paginationStatus, equals(PaginationStatus.failed.index));
-      }, skip: true);
+      });
 
       test('should return 0 and mark failed on MobiFormatException', () async {
         fakeMobiParserService.setFormatError();
@@ -694,7 +699,7 @@ void main() {
         expect(result, equals(0));
         final lastUpdate = fakeBookRepository.updatedBooks.last;
         expect(lastUpdate.paginationStatus, equals(PaginationStatus.failed.index));
-      }, skip: true);
+      });
     });
 
     group('progress tracking', () {
@@ -715,7 +720,7 @@ void main() {
 
         // Assert - onProgress should have been called at least once
         expect(progressValues.isNotEmpty, isTrue);
-      }, skip: true);
+      });
 
       test('should handle pagination with progress notifier', () async {
         // Act - passing null progressNotifier (default behavior)
@@ -727,7 +732,7 @@ void main() {
 
         // Assert
         expect(result, equals(3));
-      }, skip: true);
+      });
 
       test('should handle empty page list', () async {
         // Arrange - pagination returns empty pages
@@ -744,7 +749,7 @@ void main() {
 
         // Assert - 0 pages means total is 0
         expect(result, equals(0));
-      }, skip: true);
+      });
     });
   });
 
