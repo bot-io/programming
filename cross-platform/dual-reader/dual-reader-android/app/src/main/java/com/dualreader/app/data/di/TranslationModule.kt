@@ -3,6 +3,7 @@ package com.dualreader.app.data.di
 import android.content.Context
 import android.net.ConnectivityManager
 import com.dualreader.app.data.translation.CloudTranslationServiceImpl
+import com.dualreader.app.data.translation.FallbackTranslationService
 import com.dualreader.app.data.translation.GlmTranslationServiceImpl
 import com.dualreader.app.data.translation.MlKitTranslationServiceImpl
 import com.dualreader.app.data.translation.ProxyTranslationApi
@@ -29,14 +30,7 @@ abstract class TranslationModule {
 
     companion object {
 
-        /**
-         * Cloudflare Worker proxy URL.
-         * After deploying the worker, update this to your workers.dev subdomain.
-         * Format: https://dual-reader-translate.<your-account>.workers.dev/
-         */
         private const val PROXY_BASE_URL = "https://dual-reader-translate.dualreader.workers.dev/"
-
-        /** Legacy direct GLM API base URL (for "bring your own key" mode). */
         private const val GLM_DIRECT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4/"
 
         @Provides
@@ -50,9 +44,9 @@ abstract class TranslationModule {
         @Singleton
         fun provideOkHttpClient(): OkHttpClient =
             OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(25, TimeUnit.SECONDS)
+                .writeTimeout(15, TimeUnit.SECONDS)
                 .build()
 
         @Provides
@@ -68,7 +62,6 @@ abstract class TranslationModule {
                 .build()
                 .create(ProxyTranslationApi::class.java)
 
-        /** Legacy direct GLM API (for "bring your own key" mode). */
         @Provides
         @Singleton
         fun provideTranslationApi(
@@ -91,18 +84,27 @@ abstract class TranslationModule {
 
         @Provides
         @Singleton
+        @Named("cloud")
+        fun provideCloudTranslationService(
+            proxyApi: ProxyTranslationApi,
+            connectivityManager: ConnectivityManager
+        ): TranslationService =
+            CloudTranslationServiceImpl(proxyApi, connectivityManager)
+
+        @Provides
+        @Singleton
         @Named("mlkit")
-        fun provideMlKitTranslationService(): MlKitTranslationServiceImpl =
+        fun provideMlKitTranslationService(): TranslationService =
             MlKitTranslationServiceImpl()
     }
 
     /**
-     * Binds [CloudTranslationServiceImpl] as the primary [TranslationService].
-     * This calls the Cloudflare Worker proxy — no API key in the APK.
+     * Binds [FallbackTranslationService] as the primary [TranslationService].
+     * Tries cloud first, falls back to on-device ML Kit.
      */
     @Binds
     @Singleton
     abstract fun bindTranslationService(
-        impl: CloudTranslationServiceImpl
+        impl: FallbackTranslationService
     ): TranslationService
 }

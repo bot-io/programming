@@ -6,9 +6,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,12 +18,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,25 +75,11 @@ fun readerColors(theme: ReaderTheme): ReaderColors = when (theme) {
     )
 }
 
-// ─── Layout Mode ─────────────────────────────────────────────────────────────
-
-enum class ReaderLayoutMode { COMPACT_TABS, SIDE_BY_SIDE }
-
-@Composable
-fun rememberLayoutMode(): ReaderLayoutMode {
-    val config = LocalConfiguration.current
-    return remember(config.screenWidthDp) {
-        if (config.screenWidthDp >= 600) ReaderLayoutMode.SIDE_BY_SIDE
-        else ReaderLayoutMode.COMPACT_TABS
-    }
-}
-
 // ─── Search Highlighting ─────────────────────────────────────────────────────
 
 fun highlightText(
     text: String,
     query: String,
-    baseColor: Color,
     highlightColor: Color,
 ): AnnotatedString {
     if (query.isBlank()) return AnnotatedString(text)
@@ -111,6 +97,20 @@ fun highlightText(
             }
             searchFrom = matchIndex + query.length
         }
+    }
+}
+
+// ─── Layout Mode ─────────────────────────────────────────────────────────────
+// Side-by-side on wide screens (≥600dp), top/bottom split on phones
+
+enum class ReaderLayoutMode { VERTICAL_SPLIT, SIDE_BY_SIDE }
+
+@Composable
+fun rememberLayoutMode(): ReaderLayoutMode {
+    val config = LocalConfiguration.current
+    return remember(config.screenWidthDp, config.screenHeightDp) {
+        if (config.screenWidthDp >= 600) ReaderLayoutMode.SIDE_BY_SIDE
+        else ReaderLayoutMode.VERTICAL_SPLIT
     }
 }
 
@@ -143,10 +143,14 @@ fun ReaderScreen(
         }
         is ReaderUiState.Error -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(24.dp)) {
                     Icon(Icons.Default.ErrorOutline, null, Modifier.size(48.dp), MaterialTheme.colorScheme.error)
                     Spacer(Modifier.height(16.dp))
-                    Text(uiState.message, style = MaterialTheme.typography.bodyLarge)
+                    SelectionContainer {
+                        Text(uiState.message, style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                    }
                     Spacer(Modifier.height(16.dp))
                     Button(onClick = onBack) { Text("Go Back") }
                 }
@@ -160,6 +164,7 @@ fun ReaderScreen(
                 settings = uiState.settings,
                 bookmarks = uiState.bookmarks,
                 isTranslating = uiState.isTranslating,
+                translationError = uiState.translationError,
                 onBack = onBack,
                 onNextPage = onNextPage,
                 onPreviousPage = onPreviousPage,
@@ -190,6 +195,7 @@ private fun ReaderContent(
     settings: ReadingSettings,
     bookmarks: List<Bookmark>,
     isTranslating: Boolean,
+    translationError: String? = null,
     onBack: () -> Unit,
     onNextPage: () -> Unit,
     onPreviousPage: () -> Unit,
@@ -212,15 +218,17 @@ private fun ReaderContent(
     var showBookmarkList by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
     var searchInput by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(colors.background)
-            .clickable { barsVisible = !barsVisible }
+            .windowInsetsPadding(WindowInsets.systemBars)
     ) {
-        Column(Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
             // ── Top Bar ──────────────────────────────────────────────
             AnimatedVisibility(
                 visible = barsVisible && !settings.isImmersiveMode,
@@ -342,41 +350,33 @@ private fun ReaderContent(
             }
 
             // ── Content Area (Adaptive) ──────────────────────────────
-            if (layoutMode == ReaderLayoutMode.SIDE_BY_SIDE) {
-                // Tablet / landscape: side by side
-                Row(Modifier.weight(1f).fillMaxWidth()) {
-                    TextPanel("Original", currentPage.originalText,
-                        settings.fontSize, settings.lineHeight, colors,
-                        searchQuery, Modifier.weight(1f))
-                    Box(Modifier.width(1.dp).fillMaxHeight().background(colors.divider))
-                    TranslationPanel(currentPage.translatedText, isTranslating,
-                        settings.fontSize, settings.lineHeight, colors,
-                        onTranslateCurrentPage, searchQuery, Modifier.weight(1f))
-                }
-            } else {
-                // Phone portrait: tabbed view
-                val pagerState = rememberPagerState(pageCount = { 2 })
-                val tabTitles = listOf("Original", "Translation")
-                TabRow(selectedTabIndex = pagerState.currentPage) {
-                    tabTitles.forEachIndexed { index, title ->
-                        Tab(selected = pagerState.currentPage == index,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                            text = { Text(title) })
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (layoutMode == ReaderLayoutMode.SIDE_BY_SIDE) {
+                    // Tablet / landscape: side by side
+                    Row(Modifier.fillMaxSize()) {
+                        TextPanel("Original", currentPage.originalText,
+                            settings.fontSize, settings.lineHeight, colors,
+                            searchQuery, Modifier.weight(1f))
+                        Box(Modifier.width(1.dp).fillMaxHeight().background(colors.divider))
+                        TranslationPanel(currentPage.translatedText, isTranslating, translationError,
+                            settings.fontSize, settings.lineHeight, colors,
+                            onTranslateCurrentPage, searchQuery, Modifier.weight(1f))
                     }
-                }
-                HorizontalPager(state = pagerState, Modifier.weight(1f)) { page ->
-                    when (page) {
-                        0 -> TextPanel("Original", currentPage.originalText,
+                } else {
+                    // Phone portrait: top/bottom split — both visible at once
+                    Column(Modifier.fillMaxSize()) {
+                        TextPanel("Original", currentPage.originalText,
                             settings.fontSize, settings.lineHeight, colors,
-                            searchQuery, Modifier.fillMaxSize())
-                        1 -> TranslationPanel(currentPage.translatedText, isTranslating,
+                            searchQuery, Modifier.weight(1f))
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(colors.divider))
+                        TranslationPanel(currentPage.translatedText, isTranslating, translationError,
                             settings.fontSize, settings.lineHeight, colors,
-                            onTranslateCurrentPage, searchQuery, Modifier.fillMaxSize())
+                            onTranslateCurrentPage, searchQuery, Modifier.weight(1f))
                     }
                 }
             }
 
-            // ── Bottom Bar ───────────────────────────────────────────
+            // ── Bottom Bar (with system nav insets) ──────────────────
             AnimatedVisibility(
                 visible = barsVisible && !settings.isImmersiveMode,
                 enter = fadeIn(), exit = fadeOut(),
@@ -447,11 +447,13 @@ private fun TextPanel(
         Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp)) {
             val displayText = if (searchQuery.isNotBlank())
-                highlightText(text, searchQuery, colors.text, colors.accent.copy(alpha = 0.35f))
+                highlightText(text, searchQuery, colors.accent.copy(alpha = 0.35f))
             else AnnotatedString(text)
-            Text(text = displayText, color = colors.text,
-                fontSize = fontSize.sp, lineHeight = (fontSize * lineHeight).sp,
-                fontFamily = FontFamily.Serif)
+            SelectionContainer {
+                Text(text = displayText, color = colors.text,
+                    fontSize = fontSize.sp, lineHeight = (fontSize * lineHeight).sp,
+                    fontFamily = FontFamily.Serif)
+            }
         }
     }
 }
@@ -462,6 +464,7 @@ private fun TextPanel(
 private fun TranslationPanel(
     translatedText: String?,
     isTranslating: Boolean,
+    translationError: String? = null,
     fontSize: Float,
     lineHeight: Float,
     colors: ReaderColors,
@@ -481,30 +484,50 @@ private fun TranslationPanel(
             when {
                 isTranslating -> {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Spacer(Modifier.height(32.dp))
+                        Spacer(Modifier.height(24.dp))
                         CircularProgressIndicator()
                         Spacer(Modifier.height(8.dp))
                         Text("Translating...", color = colors.textSecondary,
                             style = MaterialTheme.typography.bodyMedium)
                     }
                 }
+                translationError != null -> {
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Spacer(Modifier.height(24.dp))
+                        Icon(Icons.Default.ErrorOutline, null, Modifier.size(36.dp),
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f))
+                        Spacer(Modifier.height(8.dp))
+                        SelectionContainer {
+                            Text(translationError, color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        FilledTonalButton(onClick = onTranslate) {
+                            Icon(Icons.Default.Refresh, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Retry")
+                        }
+                    }
+                }
                 translatedText != null -> {
                     val displayText = if (searchQuery.isNotBlank())
-                        highlightText(translatedText, searchQuery, colors.text, colors.accent.copy(alpha = 0.35f))
+                        highlightText(translatedText, searchQuery, colors.accent.copy(alpha = 0.35f))
                     else AnnotatedString(translatedText)
-                    Text(text = displayText, color = colors.text,
-                        fontSize = fontSize.sp, lineHeight = (fontSize * lineHeight).sp,
-                        fontFamily = FontFamily.Serif)
+                    SelectionContainer {
+                        Text(text = displayText, color = colors.text,
+                            fontSize = fontSize.sp, lineHeight = (fontSize * lineHeight).sp,
+                            fontFamily = FontFamily.Serif)
+                    }
                 }
                 else -> {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Spacer(Modifier.height(32.dp))
-                        Icon(Icons.Default.Translate, null, Modifier.size(40.dp),
+                        Spacer(Modifier.height(24.dp))
+                        Icon(Icons.Default.Translate, null, Modifier.size(36.dp),
                             tint = colors.textSecondary.copy(alpha = 0.6f))
-                        Spacer(Modifier.height(12.dp))
-                        Text("Translation not available", color = colors.textSecondary,
+                        Spacer(Modifier.height(8.dp))
+                        Text("No translation yet", color = colors.textSecondary,
                             style = MaterialTheme.typography.bodyMedium)
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(12.dp))
                         FilledTonalButton(onClick = onTranslate) {
                             Icon(Icons.Default.Translate, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
@@ -528,26 +551,32 @@ private fun BottomReaderBar(
     onGoToPage: (Int) -> Unit,
     colors: ReaderColors,
 ) {
-    Surface(tonalElevation = 3.dp) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onPrevious, enabled = currentPage > 0) {
-                Icon(Icons.Default.NavigateBefore, "Previous page")
+    Surface(
+        tonalElevation = 3.dp
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+                IconButton(onClick = onPrevious, enabled = currentPage > 0) {
+                    Icon(Icons.Default.NavigateBefore, "Previous page")
+                }
+                Slider(
+                    value = if (totalPages > 1) currentPage.toFloat() / (totalPages - 1) else 0f,
+                    onValueChange = { fraction ->
+                        val page = (fraction * (totalPages - 1)).toInt().coerceIn(0, totalPages - 1)
+                        onGoToPage(page)
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+                Text("${currentPage + 1}/$totalPages", style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 8.dp))
+                IconButton(onClick = onNext, enabled = currentPage < totalPages - 1) {
+                    Icon(Icons.Default.NavigateNext, "Next page")
+                }
             }
-            Slider(
-                value = if (totalPages > 1) currentPage.toFloat() / (totalPages - 1) else 0f,
-                onValueChange = { fraction ->
-                    val page = (fraction * (totalPages - 1)).toInt().coerceIn(0, totalPages - 1)
-                    onGoToPage(page)
-                },
-                modifier = Modifier.weight(1f),
-            )
-            Text("${currentPage + 1}/$totalPages", style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(horizontal = 8.dp))
-            IconButton(onClick = onNext, enabled = currentPage < totalPages - 1) {
-                Icon(Icons.Default.NavigateNext, "Next page")
-            }
-        }
     }
 }
 
@@ -563,7 +592,9 @@ fun BookmarkListSheet(
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(bottom = 16.dp)) {
             Text("Bookmarks", style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(bottom = 16.dp))
 

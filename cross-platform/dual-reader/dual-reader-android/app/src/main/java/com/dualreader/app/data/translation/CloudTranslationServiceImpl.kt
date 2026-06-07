@@ -23,7 +23,7 @@ class CloudTranslationServiceImpl @Inject constructor(
     private val connectivityManager: ConnectivityManager
 ) : TranslationService {
 
-    override val providerName: String = "GLM-4-Flash (cloud)"
+    override val providerName: String = "Gemini 2.5 Flash / GLM-4.7-Flash (cloud)"
 
     companion object {
         /** Minimum delay between batch requests to respect worker rate limits. */
@@ -38,16 +38,10 @@ class CloudTranslationServiceImpl @Inject constructor(
         sourceLanguage: String?,
         context: String?
     ): String = withContext(Dispatchers.IO) {
-        requireNetwork()
-
-        val fullText = if (context != null) {
-            "Context: $context\n\n$text"
-        } else {
-            text
-        }
-
+        // Context is already formatted by TranslatePageUseCase with clear instructions.
+        // Just pass it through to the proxy — the worker adds it before the text.
         val request = ProxyTranslateRequest(
-            text = fullText,
+            text = if (context != null) "$context\n\n--- Text to translate ---\n$text" else text,
             sourceLang = sourceLanguage,
             targetLang = targetLanguage,
         )

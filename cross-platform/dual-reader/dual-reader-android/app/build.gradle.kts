@@ -19,10 +19,28 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Only include arm64 for release (ML Kit native libs are huge)
+    // x86/x86_64 only needed for emulator — use debug builds for that
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = false
+        }
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            // Use debug keystore for release too (no real keystore needed for dev)
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -104,6 +122,7 @@ dependencies {
     // EPUB parsing — exclude xmlpull (conflicts with Android's kxml2)
     implementation(libs.epub4j) {
         exclude(group = "xmlpull", module = "xmlpull")
+        exclude(group = "net.sf.kxml", module = "kxml2")
     }
     implementation(libs.jsoup)
 

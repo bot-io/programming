@@ -72,7 +72,7 @@ fun LibraryScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Dual Reader") },
+                title = { Text("Dual Reader v1.4.0") },
                 actions = {
                     IconButton(onClick = onSettingsClick) {
                         Icon(

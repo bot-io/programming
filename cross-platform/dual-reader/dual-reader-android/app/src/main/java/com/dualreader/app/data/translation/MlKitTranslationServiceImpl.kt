@@ -28,32 +28,46 @@ class MlKitTranslationServiceImpl @Inject constructor() : TranslationService {
         sourceLanguage: String?,
         context: String?,
     ): String = withContext(Dispatchers.IO) {
-        val src = sourceLanguage ?: detectLanguage(text)
-
-        val srcCode = TranslateLanguage.fromLanguageTag(src)
-            ?: throw TranslationException("Unsupported source language: $src")
-        val tgtCode = TranslateLanguage.fromLanguageTag(targetLanguage)
-            ?: throw TranslationException("Unsupported target language: $targetLanguage")
-
-        val options = TranslatorOptions.Builder()
-            .setSourceLanguage(srcCode)
-            .setTargetLanguage(tgtCode)
-            .build()
-        val translator = Translation.getClient(options)
-
         try {
-            // Download model if needed
-            try {
-                translator.downloadModelIfNeeded().await()
-            } catch (_: Exception) {
-                // May already be downloaded
-            }
+            val src = sourceLanguage ?: detectLanguage(text)
 
-            translator.translate(text).await()
+            val srcCode = TranslateLanguage.fromLanguageTag(src)
+                ?: throw TranslationException("Unsupported source language: $src")
+            val tgtCode = TranslateLanguage.fromLanguageTag(targetLanguage)
+                ?: throw TranslationException("Unsupported target language: $targetLanguage")
+
+            val options = TranslatorOptions.Builder()
+                .setSourceLanguage(srcCode)
+                .setTargetLanguage(tgtCode)
+                .build()
+            val translator = Translation.getClient(options)
+
+            try {
+                // Download model if needed (with timeout)
+                try {
+                    translator.downloadModelIfNeeded().await()
+                } catch (e: Exception) {
+                    // May already be downloaded, or download failed — try translating anyway
+                    android.util.Log.w("MlKit", "Model download issue: ${e.message}")
+                }
+
+                val result = translator.translate(text).await()
+                if (result.isNullOrBlank()) {
+                    throw TranslationException("ML Kit returned empty translation")
+                }
+                result
+            } catch (e: NullPointerException) {
+                // ML Kit internals can NPE if ProGuard stripped something or model didn't load
+                throw TranslationException("ML Kit internal error (model may not be downloaded)")
+            } catch (e: Exception) {
+                throw TranslationException("ML Kit failed: ${e.message}")
+            } finally {
+                try { translator.close() } catch (_: Exception) {}
+            }
+        } catch (e: TranslationException) {
+            throw e
         } catch (e: Exception) {
-            throw TranslationException("ML Kit translation failed: ${e.message}", e)
-        } finally {
-            translator.close()
+            throw TranslationException("ML Kit setup failed: ${e.message}", e)
         }
     }
 
@@ -75,7 +89,7 @@ class MlKitTranslationServiceImpl @Inject constructor() : TranslationService {
             }
             langCode
         } finally {
-            detector.close()
+            try { detector.close() } catch (_: Exception) {}
         }
     }
 

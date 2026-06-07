@@ -1,27 +1,36 @@
 /**
  * Dual Reader Translation Proxy — Cloudflare Worker
  *
- * Sits between the Android app and Z.AI's GLM API.
- * Keeps the API key server-side so it's never exposed in the APK.
+ * Multi-provider translation with automatic fallback:
+ *   Primary: Google Gemini 2.5 Flash (free tier, 250 RPD)
+ *   Fallback: Z.AI GLM-4.7-Flash (free, unlimited)
  *
- * Rate limits per IP using Cloudflare Cache API (no Durable Objects needed).
- * GLM-4.7-Flash is free ($0.00), so cost risk is low — this just prevents abuse.
+ * API keys live server-side — never exposed in the APK.
+ * Rate limits enforced per-IP using Cloudflare Cache API.
  */
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const CONFIG = {
-  // Z.AI API endpoint (GLM-4.7-Flash = free tier)
+  // Rate limiting (per IP)
+  maxTextLength: 10000,         // chars per request
+  dailyLimitPerIp: 500,        // requests per IP per day
+  cooldownMs: 3000,            // min 3s between requests from same IP
+
+  // Provider timeouts (CF Workers have 30s total)
+  geminiTimeoutMs: 25000,
+  glmTimeoutMs: 20000,
+
+  // Provider endpoints
+  geminiApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
   glmApiUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+
+  // Models
+  geminiModel: 'gemini-2.5-flash',
   glmModel: 'glm-4.7-flash',
 
-  // Rate limiting
-  maxTextLength: 5000,        // chars per request
-  dailyLimitPerIp: 200,       // requests per IP per day
-  cooldownMs: 2000,           // min 2s between requests from same IP
-
   // CORS
-  allowedOrigins: ['*'],      // Android app doesn't send Origin, but be safe
+  allowedOrigins: ['*'],
 };
 
 // ─── Main Handler ────────────────────────────────────────────────────────────
@@ -67,57 +76,58 @@ export default {
         }));
       }
 
-      // 3. Call Z.AI API
-      const apiKey = env.GLM_API_KEY;
-      if (!apiKey) {
-        console.error('GLM_API_KEY not configured');
-        return corsResponse(jsonResponse(500, { error: 'Translation service not configured' }));
-      }
-
       const systemPrompt = buildTranslationPrompt(source_lang || 'auto', target_lang);
 
-      const glmResponse = await fetch(CONFIG.glmApiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: CONFIG.glmModel,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: text },
-          ],
-          temperature: 0.3,
-          max_tokens: 4096,
-        }),
-      });
+      // 3. Try Gemini first, fall back to GLM
+      let translatedText = null;
+      let usedModel = null;
+      let geminiError = null;
 
-      if (!glmResponse.ok) {
-        const errorText = await glmResponse.text();
-        console.error(`Z.AI API error ${glmResponse.status}: ${errorText}`);
-        return corsResponse(jsonResponse(502, { error: 'Translation API error' }));
+      // ── Attempt 1: Gemini 2.5 Flash (free, high quality) ──────────────
+      const geminiKey = env.GEMINI_API_KEY;
+      if (geminiKey) {
+        try {
+          const geminiResult = await callGemini(geminiKey, systemPrompt, text);
+          if (geminiResult) {
+            translatedText = geminiResult;
+            usedModel = CONFIG.geminiModel;
+          }
+        } catch (err) {
+          geminiError = err.message || 'Unknown Gemini error';
+          console.warn(`Gemini failed, falling back to GLM: ${geminiError}`);
+        }
+      } else {
+        console.info('GEMINI_API_KEY not set, using GLM directly');
       }
 
-      const glmData = await glmResponse.json();
-      const message = glmData?.choices?.[0]?.message;
-      // GLM-4.7-Flash uses reasoning_content for chain-of-thought, content for the answer.
-      // If content is empty, the model may have spent all tokens on reasoning — try without CoT.
-      let translatedText = message?.content?.trim();
-      
-      // If content is empty but finish_reason is "length", the reasoning ate all the tokens.
-      // Try extracting from reasoning as last resort.
-      if (!translatedText && message?.reasoning_content) {
-        // The reasoning often contains the translation at the end
-        const reasoning = message.reasoning_content;
-        const lastLine = reasoning.split('\\n').filter(l => l.trim()).pop() || '';
-        // Clean up markdown formatting from reasoning
-        translatedText = lastLine.replace(/\*\*/g, '').replace(/^[-*]\s*/, '').trim();
+      // ── Attempt 2: GLM-4.7-Flash (free, unlimited) ────────────────────
+      if (!translatedText) {
+        const glmKey = env.GLM_API_KEY;
+        if (!glmKey) {
+          console.error('No translation API keys configured');
+          return corsResponse(jsonResponse(500, {
+            error: 'No translation service configured. Set GEMINI_API_KEY or GLM_API_KEY.'
+          }));
+        }
+
+        try {
+          const glmResult = await callGlm(glmKey, systemPrompt, text);
+          if (glmResult) {
+            translatedText = glmResult;
+            usedModel = CONFIG.glmModel;
+          }
+        } catch (err) {
+          console.error(`GLM also failed: ${err.message}`);
+          // Both providers failed
+          const geminiMsg = geminiError ? `Gemini: ${geminiError}. ` : '';
+          return corsResponse(jsonResponse(502, {
+            error: `${geminiMsg}GLM: ${err.message || 'Translation failed'}`
+          }));
+        }
       }
 
       if (!translatedText) {
-        console.error('Empty translation response:', JSON.stringify(glmData).slice(0, 500));
-        return corsResponse(jsonResponse(502, { error: 'Empty translation response' }));
+        return corsResponse(jsonResponse(502, { error: 'Empty translation response from all providers' }));
       }
 
       // 4. Record this request for rate limiting
@@ -125,17 +135,113 @@ export default {
 
       return corsResponse(jsonResponse(200, {
         translated_text: translatedText,
-        model: CONFIG.glmModel,
+        model: usedModel,
         source_lang: source_lang || 'auto',
         target_lang,
       }));
 
     } catch (err) {
       console.error('Worker error:', err);
-      return corsResponse(jsonResponse(500, { error: 'Internal server error' }));
+      const msg = err?.message || 'Internal server error';
+      return corsResponse(jsonResponse(500, { error: `Worker error: ${msg}` }));
     }
   },
 };
+
+// ─── Gemini Provider ─────────────────────────────────────────────────────────
+
+async function callGemini(apiKey, systemPrompt, userText) {
+  const url = `${CONFIG.geminiApiUrl}?key=${apiKey}`;
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      contents: [{
+        parts: [{ text: userText }]
+      }],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 8192,
+      },
+    }),
+    signal: AbortSignal.timeout(CONFIG.geminiTimeoutMs),
+  });
+
+  if (resp.status === 429) {
+    throw new Error('Gemini rate limited (free tier: 250 RPD)');
+  }
+
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '');
+    throw new Error(`Gemini API ${resp.status}: ${errText.slice(0, 200)}`);
+  }
+
+  const data = await resp.json();
+
+  // Extract text from Gemini response structure
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  if (!text) {
+    // Check if blocked by safety
+    const reason = data?.candidates?.[0]?.finishReason;
+    if (reason === 'SAFETY') {
+      throw new Error('Gemini blocked by safety filter');
+    }
+    throw new Error(`Gemini returned empty response: ${JSON.stringify(data).slice(0, 300)}`);
+  }
+
+  return text;
+}
+
+// ─── GLM Provider ────────────────────────────────────────────────────────────
+
+async function callGlm(apiKey, systemPrompt, userText) {
+  const resp = await fetch(CONFIG.glmApiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: CONFIG.glmModel,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userText },
+      ],
+      temperature: 0.4,
+      max_tokens: 4096,
+    }),
+    signal: AbortSignal.timeout(CONFIG.glmTimeoutMs),
+  });
+
+  if (resp.status === 429) {
+    throw new Error('GLM rate limited');
+  }
+
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '');
+    throw new Error(`GLM API ${resp.status}: ${errText.slice(0, 200)}`);
+  }
+
+  const data = await resp.json();
+  let text = data?.choices?.[0]?.message?.content?.trim();
+
+  // GLM-4.7-Flash may put output in reasoning_content if content is empty
+  if (!text && data?.choices?.[0]?.message?.reasoning_content) {
+    const reasoning = data.choices[0].message.reasoning_content;
+    const lastLine = reasoning.split('\n').filter(l => l.trim()).pop() || '';
+    text = lastLine.replace(/\*\*/g, '').replace(/^[-*]\s*/, '').trim();
+  }
+
+  if (!text) {
+    throw new Error(`GLM returned empty response: ${JSON.stringify(data).slice(0, 300)}`);
+  }
+
+  return text;
+}
 
 // ─── Translation Prompt ──────────────────────────────────────────────────────
 
@@ -155,11 +261,20 @@ function buildTranslationPrompt(sourceLang, targetLang) {
   const tgtName = langNames[targetLang] || targetLang;
 
   return [
-    `You are a professional literary translator.`,
-    `Translate the following text from ${srcName} to ${tgtName}.`,
-    `Preserve the tone, style, and literary quality of the original.`,
-    `Output ONLY the translation — no explanations, no notes, no quotation marks around the result.`,
-  ].join(' ');
+    `You are an expert literary translator specializing in ${srcName} to ${tgtName}.`,
+    `You have deep knowledge of both literary traditions and a gift for preserving the author's voice across languages.`,
+    ``,
+    `TRANSLATION PRINCIPLES:`,
+    `1. Prioritize natural, flowing ${tgtName} over word-for-word accuracy`,
+    `2. Preserve the author's tone — whether poetic, spare, humorous, or lyrical`,
+    `3. Adapt idioms and cultural references to ${tgtName} equivalents where a literal rendering would sound foreign`,
+    `4. Maintain the rhythm, cadence, and pacing of the original prose`,
+    `5. Use register and vocabulary appropriate to the text's literary genre and era`,
+    `6. When the original uses deliberate repetition, alliteration, or sound devices, recreate the effect in ${tgtName}`,
+    `7. Preserve ambiguity and subtext — do not over-explain or simplify`,
+    ``,
+    `OUTPUT: ONLY the translated text. No commentary, no notes, no quotation marks around the result. Same paragraph structure as the source.`,
+  ].join('\n');
 }
 
 // ─── Rate Limiting (Cache API) ───────────────────────────────────────────────
@@ -168,7 +283,6 @@ async function checkRateLimit(request, clientIp, env) {
   const cacheKey = getCacheKey(clientIp);
   const cache = caches.default;
 
-  // Check daily count
   const cached = await cache.match(cacheKey);
   if (cached) {
     const data = await cached.json();
@@ -178,7 +292,6 @@ async function checkRateLimit(request, clientIp, env) {
         retry_after_hours: 24,
       });
     }
-    // Check cooldown (min 2s between requests)
     const elapsed = Date.now() - data.lastRequest;
     if (elapsed < CONFIG.cooldownMs) {
       return jsonResponse(429, {
@@ -188,7 +301,7 @@ async function checkRateLimit(request, clientIp, env) {
     }
   }
 
-  return null; // OK to proceed
+  return null; // OK
 }
 
 async function recordRequest(request, clientIp, env) {
@@ -202,24 +315,17 @@ async function recordRequest(request, clientIp, env) {
     count = data.count + 1;
   }
 
-  // Store for 24 hours (Cache API respects max-age via response headers)
   const response = new Response(JSON.stringify({ count, lastRequest: Date.now() }), {
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 's-maxage=86400', // 24 hours
+      'Cache-Control': 's-maxage=86400',
     },
   });
 
-  // Use waitUntil so it doesn't block the response
-  try {
-    await cache.put(cacheKey, response);
-  } catch {
-    // Cache API might not be available in all environments
-  }
+  try { await cache.put(cacheKey, response); } catch {}
 }
 
 function getCacheKey(clientIp) {
-  // Use a fixed date (midnight UTC today) so the key rotates daily
   const today = new Date().toISOString().slice(0, 10);
   return new Request(`https://rate-limit.dualreader.internal/${today}/${clientIp}`);
 }
