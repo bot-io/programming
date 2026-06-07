@@ -6,7 +6,6 @@ import 'package:dual_reader/src/domain/entities/epub_book_entity.dart';
 import 'package:dual_reader/src/domain/entities/chapter_entity.dart';
 import 'package:dual_reader/src/domain/repositories/book_repository.dart';
 import 'package:dual_reader/src/domain/services/epub_parser_service.dart';
-import 'package:dual_reader/src/domain/services/mobi_parser_service.dart';
 import 'package:dual_reader/src/domain/services/pagination_service.dart';
 import 'package:dual_reader/src/domain/usecases/paginate_book_usecase.dart';
 
@@ -110,56 +109,6 @@ class FakeEpubParserService implements EpubParserService {
   Future<List<ChapterEntity>> parseTableOfContents(List<int> bytes) async => _epubResult?.chapters ?? [];
 }
 
-/// Fake implementation of [MobiParserService] for testing
-class FakeMobiParserService implements MobiParserService {
-  MobiBookEntity? _mobiResult;
-  late String _fullText;
-  String _coverPath = '';
-  bool _shouldThrowDrm = false;
-  bool _shouldThrowParse = false;
-  bool _shouldThrowFormat = false;
-
-  FakeMobiParserService({
-    MobiBookEntity? mobiResult,
-    String? fullText,
-    String coverPath = '',
-  })  : _mobiResult = mobiResult,
-        _coverPath = coverPath {
-    _fullText = fullText ?? 'MOBI chapter content for testing. ' * 50;
-  }
-
-  void setDrmError() => _shouldThrowDrm = true;
-  void setParseError() => _shouldThrowParse = true;
-  void setFormatError() => _shouldThrowFormat = true;
-
-  @override
-  Future<MobiBookEntity> parseMobi(List<int> bytes) async {
-    if (_shouldThrowDrm) throw MobiDrmException('MOBI DRM');
-    if (_shouldThrowParse) throw MobiParseException('MOBI parse error');
-    if (_shouldThrowFormat) throw MobiFormatException('MOBI format error');
-    return _mobiResult ??
-        MobiBookEntity(
-          title: 'Test MOBI',
-          author: 'Test Author',
-          chapters: [],
-        );
-  }
-
-  @override
-  Future<String> extractCoverImage(List<int> bytes, String bookId) async => _coverPath;
-
-  @override
-  Future<String> extractFullText(List<int> bytes) async {
-    if (_shouldThrowDrm) throw MobiDrmException('MOBI DRM');
-    if (_shouldThrowParse) throw MobiParseException('MOBI parse error');
-    if (_shouldThrowFormat) throw MobiFormatException('MOBI format error');
-    return _fullText;
-  }
-
-  @override
-  Future<List<ChapterEntity>> parseTableOfContents(List<int> bytes) async => [];
-}
-
 /// Fake implementation of [PaginationService] for testing
 class FakePaginationService implements PaginationService {
   List<String> _pages = ['Page 1 content', 'Page 2 content', 'Page 3 content'];
@@ -214,7 +163,6 @@ void main() {
   group('PaginateBookUseCase', () {
     late FakeBookRepository fakeBookRepository;
     late FakeEpubParserService fakeEpubParserService;
-    late FakeMobiParserService fakeMobiParserService;
     late FakePaginationService fakePaginationService;
     late PaginateBookUseCase useCase;
 
@@ -245,12 +193,10 @@ void main() {
         bytes: {'test-book-1': testBookBytes},
       );
       fakeEpubParserService = FakeEpubParserService();
-      fakeMobiParserService = FakeMobiParserService();
       fakePaginationService = FakePaginationService();
       useCase = PaginateBookUseCase(
         fakeBookRepository,
         fakeEpubParserService,
-        fakeMobiParserService,
         fakePaginationService,
       );
     });
@@ -267,7 +213,7 @@ void main() {
       });
 
       test('should update book status to completed on success', () async {
-        // Act - EPUB path now succeeds via refactored parser service
+        // Act - EPUB path succeeds via refactored parser service
         await useCase(testBook, settings: testSettings, screenSize: testScreenSize);
 
         // Assert - final status should be completed
@@ -291,7 +237,6 @@ void main() {
         useCase = PaginateBookUseCase(
           fakeBookRepository,
           fakeEpubParserService,
-          fakeMobiParserService,
           fakePaginationService,
         );
 
@@ -310,7 +255,6 @@ void main() {
         useCase = PaginateBookUseCase(
           fakeBookRepository,
           fakeEpubParserService,
-          fakeMobiParserService,
           fakePaginationService,
         );
 
@@ -329,7 +273,6 @@ void main() {
         useCase = PaginateBookUseCase(
           fakeBookRepository,
           fakeEpubParserService,
-          fakeMobiParserService,
           fakePaginationService,
         );
 
@@ -348,7 +291,6 @@ void main() {
         useCase = PaginateBookUseCase(
           fakeBookRepository,
           fakeEpubParserService,
-          fakeMobiParserService,
           fakePaginationService,
         );
 
@@ -378,7 +320,6 @@ void main() {
         useCase = PaginateBookUseCase(
           fakeBookRepository,
           fakeEpubParserService,
-          fakeMobiParserService,
           fakePaginationService,
         );
 
@@ -392,129 +333,12 @@ void main() {
       });
     });
 
-    group('MOBI format handling', () {
-      test('should handle MOBI format books', () async {
-        // Arrange - MOBI path does not call EpubReader.readBook
-        final mobiBook = BookEntity(
-          id: 'mobi-book',
-          title: 'MOBI Book',
-          author: 'Author',
-          coverPath: '',
-          filePath: 'test.mobi',
-          importedDate: DateTime(2024, 1, 1),
-        );
-        fakeBookRepository = FakeBookRepository(
-          books: [mobiBook],
-          bytes: {'mobi-book': List.filled(100, 0)},
-        );
-        useCase = PaginateBookUseCase(
-          fakeBookRepository,
-          fakeEpubParserService,
-          fakeMobiParserService,
-          fakePaginationService,
-        );
-
-        // Act
-        final result = await useCase(mobiBook, settings: testSettings, screenSize: testScreenSize);
-
-        // Assert
-        expect(result, equals(3));
-        final lastUpdate = fakeBookRepository.updatedBooks.last;
-        expect(lastUpdate.paginationStatus, equals(PaginationStatus.completed.index));
-      });
-
-      test('should handle AZW format as MOBI', () async {
-        // Arrange
-        final azwBook = BookEntity(
-          id: 'azw-book',
-          title: 'AZW Book',
-          author: 'Author',
-          coverPath: '',
-          filePath: 'test.azw',
-          importedDate: DateTime(2024, 1, 1),
-        );
-        fakeBookRepository = FakeBookRepository(
-          books: [azwBook],
-          bytes: {'azw-book': List.filled(100, 0)},
-        );
-        useCase = PaginateBookUseCase(
-          fakeBookRepository,
-          fakeEpubParserService,
-          fakeMobiParserService,
-          fakePaginationService,
-        );
-
-        // Act
-        final result = await useCase(azwBook, settings: testSettings, screenSize: testScreenSize);
-
-        // Assert
-        expect(result, equals(3));
-      });
-
-      test('should handle AZW3 format as MOBI', () async {
-        // Arrange
-        final azw3Book = BookEntity(
-          id: 'azw3-book',
-          title: 'AZW3 Book',
-          author: 'Author',
-          coverPath: '',
-          filePath: 'test.azw3',
-          importedDate: DateTime(2024, 1, 1),
-        );
-        fakeBookRepository = FakeBookRepository(
-          books: [azw3Book],
-          bytes: {'azw3-book': List.filled(100, 0)},
-        );
-        useCase = PaginateBookUseCase(
-          fakeBookRepository,
-          fakeEpubParserService,
-          fakeMobiParserService,
-          fakePaginationService,
-        );
-
-        // Act
-        final result = await useCase(azw3Book, settings: testSettings, screenSize: testScreenSize);
-
-        // Assert
-        expect(result, equals(3));
-      });
-
-      test('should handle PRC format as MOBI', () async {
-        // Arrange
-        final prcBook = BookEntity(
-          id: 'prc-book',
-          title: 'PRC Book',
-          author: 'Author',
-          coverPath: '',
-          filePath: 'test.prc',
-          importedDate: DateTime(2024, 1, 1),
-        );
-        fakeBookRepository = FakeBookRepository(
-          books: [prcBook],
-          bytes: {'prc-book': List.filled(100, 0)},
-        );
-        useCase = PaginateBookUseCase(
-          fakeBookRepository,
-          fakeEpubParserService,
-          fakeMobiParserService,
-          fakePaginationService,
-        );
-
-        // Act
-        final result = await useCase(prcBook, settings: testSettings, screenSize: testScreenSize);
-
-        // Assert
-        expect(result, equals(3));
-      });
-    });
-
     group('screen sizes and settings', () {
       test('should work with different screen sizes', () async {
         // Arrange
         const largeScreen = Size(1200.0, 1920.0);
 
-        // Act - main test book is EPUB, so it will fail at EpubReader.readBook
-        // but returns 0 (non-negative) via generic catch
+        // Act
         final result = await useCase(
           testBook,
           settings: testSettings,
@@ -547,8 +371,7 @@ void main() {
 
     group('unknown format fallback', () {
       test('should return pages for unknown format with EPUB magic bytes via fallback', () async {
-        // Arrange - unknown format triggers EPUB then MOBI fallback in _extractFullText
-        // EPUB path fails at EpubReader.readBook, catches, falls back to MOBI
+        // Arrange - unknown format triggers EPUB fallback in _extractFullText
         final unknownBook = BookEntity(
           id: 'unknown-book',
           title: 'Unknown Format',
@@ -564,19 +387,16 @@ void main() {
         useCase = PaginateBookUseCase(
           fakeBookRepository,
           fakeEpubParserService,
-          fakeMobiParserService,
           fakePaginationService,
         );
 
         // Act - unknown format triggers fallback
         final result = await useCase(unknownBook, settings: testSettings, screenSize: testScreenSize);
 
-        // Assert - fallback tries EPUB (fails at EpubReader), then MOBI (succeeds)
+        // Assert - fallback tries EPUB which succeeds
         expect(result, equals(3));
       });
     });
-
-    // --- Tests that require EpubReader.readBook for EPUB path (skipped) ---
 
     group('successful EPUB pagination', () {
       test('should return total pages for successful EPUB pagination', () async {
@@ -608,97 +428,6 @@ void main() {
 
         final lastUpdate = fakeBookRepository.updatedBooks.last;
         expect(lastUpdate.totalPages, equals(3));
-      });
-    });
-
-    group('MOBI error handling in pagination', () {
-      test('should return 0 and mark failed on MobiDrmException', () async {
-        // Arrange - MOBI book with DRM error set on the parser
-        // Note: The paginate use case MOBI path calls extractFullText, not parseMobi,
-        // so this tests error propagation if extractFullText were to throw.
-        fakeMobiParserService.setDrmError();
-        final mobiBook = BookEntity(
-          id: 'mobi-drm-book',
-          title: 'DRM MOBI',
-          author: 'Author',
-          coverPath: '',
-          filePath: 'test.mobi',
-          importedDate: DateTime(2024, 1, 1),
-        );
-        fakeBookRepository = FakeBookRepository(
-          books: [mobiBook],
-          bytes: {'mobi-drm-book': List.filled(100, 0)},
-        );
-        useCase = PaginateBookUseCase(
-          fakeBookRepository,
-          fakeEpubParserService,
-          fakeMobiParserService,
-          fakePaginationService,
-        );
-
-        // Act
-        final result = await useCase(mobiBook, settings: testSettings, screenSize: testScreenSize);
-
-        // Assert
-        expect(result, equals(0));
-        final lastUpdate = fakeBookRepository.updatedBooks.last;
-        expect(lastUpdate.paginationStatus, equals(PaginationStatus.failed.index));
-      });
-
-      test('should return 0 and mark failed on MobiParseException', () async {
-        fakeMobiParserService.setParseError();
-        final mobiBook = BookEntity(
-          id: 'mobi-parse-book',
-          title: 'Parse Error MOBI',
-          author: 'Author',
-          coverPath: '',
-          filePath: 'test.mobi',
-          importedDate: DateTime(2024, 1, 1),
-        );
-        fakeBookRepository = FakeBookRepository(
-          books: [mobiBook],
-          bytes: {'mobi-parse-book': List.filled(100, 0)},
-        );
-        useCase = PaginateBookUseCase(
-          fakeBookRepository,
-          fakeEpubParserService,
-          fakeMobiParserService,
-          fakePaginationService,
-        );
-
-        final result = await useCase(mobiBook, settings: testSettings, screenSize: testScreenSize);
-
-        expect(result, equals(0));
-        final lastUpdate = fakeBookRepository.updatedBooks.last;
-        expect(lastUpdate.paginationStatus, equals(PaginationStatus.failed.index));
-      });
-
-      test('should return 0 and mark failed on MobiFormatException', () async {
-        fakeMobiParserService.setFormatError();
-        final mobiBook = BookEntity(
-          id: 'mobi-format-book',
-          title: 'Format Error MOBI',
-          author: 'Author',
-          coverPath: '',
-          filePath: 'test.mobi',
-          importedDate: DateTime(2024, 1, 1),
-        );
-        fakeBookRepository = FakeBookRepository(
-          books: [mobiBook],
-          bytes: {'mobi-format-book': List.filled(100, 0)},
-        );
-        useCase = PaginateBookUseCase(
-          fakeBookRepository,
-          fakeEpubParserService,
-          fakeMobiParserService,
-          fakePaginationService,
-        );
-
-        final result = await useCase(mobiBook, settings: testSettings, screenSize: testScreenSize);
-
-        expect(result, equals(0));
-        final lastUpdate = fakeBookRepository.updatedBooks.last;
-        expect(lastUpdate.paginationStatus, equals(PaginationStatus.failed.index));
       });
     });
 
@@ -740,7 +469,6 @@ void main() {
         useCase = PaginateBookUseCase(
           fakeBookRepository,
           fakeEpubParserService,
-          fakeMobiParserService,
           fakePaginationService,
         );
 
@@ -754,10 +482,9 @@ void main() {
   });
 
   group('EbookFormat', () {
-    test('should have epub, mobi, and unknown values', () {
-      expect(EbookFormat.values.length, equals(3));
+    test('should have epub and unknown values', () {
+      expect(EbookFormat.values.length, equals(2));
       expect(EbookFormat.values, contains(EbookFormat.epub));
-      expect(EbookFormat.values, contains(EbookFormat.mobi));
       expect(EbookFormat.values, contains(EbookFormat.unknown));
     });
   });

@@ -117,6 +117,7 @@ FilePickerResult createEpubPickResult({String fileName = 'test.epub'}) {
     ),
   ]);
 }
+
 /// Helper to create an empty pick result
 FilePickerResult createEmptyPickResult() {
   return FilePickerResult([]);
@@ -149,8 +150,6 @@ void main() {
     });
 
     group('call', () {
-      // --- Tests that do NOT require EpubReader.readBook ---
-
       test('should return null when pickResult is null', () async {
         // When pickResult is null, FilePicker.platform.pickFiles() is called.
         // This test would need FilePicker mocking to work in test environment.
@@ -161,24 +160,6 @@ void main() {
         final emptyResult = createEmptyPickResult();
         final result = await useCase(pickResult: emptyResult);
         expect(result, isNull);
-      });
-
-      test('should throw for unsupported format', () async {
-        // Arrange - unknown format, no EPUB magic, no known extension
-        final bytes = List.filled(100, 0); // No PK magic
-        final pickResult = FilePickerResult([
-          PlatformFile(
-            name: 'book.txt',
-            size: bytes.length,
-            bytes: Uint8List.fromList(bytes),
-          ),
-        ]);
-
-        // Act & Assert
-        expect(
-          () => useCase(pickResult: pickResult),
-          throwsA(isA<Exception>()),
-        );
       });
 
       test('should throw Exception when file bytes are null and path is null', () async {
@@ -223,44 +204,6 @@ void main() {
         );
       });
 
-      test('should propagate MobiDrmException when MOBI is DRM protected', () async {
-        // Arrange
-        fakeMobiParserService.setDrmError();
-        final pickResult = createMobiPickResult();
-
-        // Act & Assert
-        expect(
-          () => useCase(pickResult: pickResult),
-          throwsA(isA<MobiDrmException>()),
-        );
-      });
-
-      test('should propagate MobiParseException when MOBI parsing fails', () async {
-        // Arrange
-        fakeMobiParserService.setParseError();
-        final pickResult = createMobiPickResult();
-
-        // Act & Assert
-        expect(
-          () => useCase(pickResult: pickResult),
-          throwsA(isA<MobiParseException>()),
-        );
-      });
-
-      test('should propagate MobiFormatException when MOBI has invalid format', () async {
-        // Arrange
-        fakeMobiParserService.setFormatError();
-        final pickResult = createMobiPickResult();
-
-        // Act & Assert
-        expect(
-          () => useCase(pickResult: pickResult),
-          throwsA(isA<MobiFormatException>()),
-        );
-      });
-
-      // --- Tests that DO require EpubReader.readBook (skipped) ---
-
       test('should import EPUB file and return book entity', () async {
         final pickResult = createEpubPickResult();
         final result = await useCase(pickResult: pickResult);
@@ -269,15 +212,6 @@ void main() {
         expect(result!.title, equals('Test EPUB'));
         expect(result.author, equals('Test Author'));
         expect(result.filePath, isNotEmpty);
-      });
-
-      test('should import MOBI file and return book entity', () async {
-        final pickResult = createMobiPickResult();
-        final result = await useCase(pickResult: pickResult);
-
-        expect(result, isNotNull);
-        expect(result!.title, equals('Test MOBI'));
-        expect(result.author, equals('MOBI Author'));
       });
 
       test('should save book bytes to repository', () async {
@@ -328,14 +262,6 @@ void main() {
         expect(result!.title, equals('Test EPUB'));
       });
 
-      test('should detect MOBI format from .mobi extension', () async {
-        final pickResult = createMobiPickResult(fileName: 'mybook.mobi');
-        final result = await useCase(pickResult: pickResult);
-
-        expect(result, isNotNull);
-        expect(result!.title, equals('Test MOBI'));
-      });
-
       test('should detect EPUB format from PK magic bytes', () async {
         // File with .bin extension but PK magic bytes should be detected as EPUB
         final bytes = [0x50, 0x4B, 0x03, 0x04]; // PK ZIP magic bytes
@@ -359,7 +285,6 @@ void main() {
         useCase = ImportBookUseCase(
           fakeBookRepository,
           fakeEpubParserService,
-          fakeMobiParserService,
         );
 
         final pickResult = createEpubPickResult();
@@ -384,7 +309,6 @@ void main() {
         useCase = ImportBookUseCase(
           fakeBookRepository,
           fakeEpubParserService,
-          fakeMobiParserService,
         );
 
         final pickResult = createEpubPickResult();
@@ -394,38 +318,12 @@ void main() {
         expect(result!.title, equals('Custom Title'));
         expect(result.author, equals('Custom Author'));
       });
-
-      test('should use custom mobi metadata', () async {
-        final customMobi = MobiBookEntity(
-          title: 'Custom MOBI Title',
-          author: 'Custom MOBI Author',
-          chapters: [
-            ChapterEntity(title: 'Part 1', content: 'MOBI content'),
-          ],
-          publisher: 'MOBI Publisher',
-          isbn: '978-0987654321',
-        );
-        fakeMobiParserService = FakeMobiParserService(result: customMobi);
-        useCase = ImportBookUseCase(
-          fakeBookRepository,
-          fakeEpubParserService,
-          fakeMobiParserService,
-        );
-
-        final pickResult = createMobiPickResult();
-        final result = await useCase(pickResult: pickResult);
-
-        expect(result, isNotNull);
-        expect(result!.title, equals('Custom MOBI Title'));
-        expect(result.author, equals('Custom MOBI Author'));
-      });
     });
 
     group('EbookFormat', () {
-      test('should have epub, mobi, and unknown values', () {
-        expect(EbookFormat.values.length, equals(3));
+      test('should have epub and unknown values', () {
+        expect(EbookFormat.values.length, equals(2));
         expect(EbookFormat.values, contains(EbookFormat.epub));
-        expect(EbookFormat.values, contains(EbookFormat.mobi));
         expect(EbookFormat.values, contains(EbookFormat.unknown));
       });
     });

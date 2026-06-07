@@ -1,0 +1,128 @@
+[versions]
+# Build tools — latest stable
+agp = "9.2.1"                          # Latest stable (requires JDK 21, Gradle 9.x)
+kotlin = "2.3.21"                      # Latest stable Kotlin
+ksp = "2.3.9"                          # Latest KSP for Kotlin 2.3.21
+
+# Compose
+compose-bom = "2026.05.01"             # Latest stable BOM
+
+# DI
+hilt = "2.59.2"                        # Latest stable (requires AGP 9+)
+hilt-navigation = "1.3.0"              # Latest stable
+
+# Database
+room = "2.8.4"                         # Latest stable Room 2.x
+
+# Networking
+retrofit = "3.0.0"                     # Latest stable
+okhttp = "5.3.2"                       # Latest stable OkHttp 5.x
+
+# Coroutines
+coroutines = "1.11.0"                  # Latest stable
+coroutines-play-services = "1.9.0"     # For ML Kit Task.await()
+
+# AndroidX — latest stable
+lifecycle = "2.10.0"
+navigation = "2.9.8"
+core-ktx = "1.19.0"
+activity-compose = "1.13.0"
+datastore = "1.2.1"
+
+# EPUB parsing
+epub4j = "4.2.3"                       # Latest stable
+jsoup = "1.22.2"                       # Latest stable
+
+# Image loading
+coil = "3.4.0"                         # Latest stable Coil 3
+
+# Serialization
+moshi = "1.15.2"                       # Latest stable
+
+# ML Kit (on-device translation)
+mlkit-translate = "17.0.3"
+mlkit-languageid = "17.0.5"
+
+# Testing
+mockk = "1.14.11"                      # Latest stable
+turbine = "1.2.1"                      # Latest stable
+truth = "1.4.4"                        # Latest stable
+robolectric = "4.14.1"                 # Latest stable
+
+[libraries]
+# AndroidX Core
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
+
+# Compose BOM (manages all compose-* versions)
+compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
+compose-ui = { group = "androidx.compose.ui", name = "ui" }
+compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+compose-material-icons = { group = "androidx.compose.material", name = "material-icons-extended" }
+
+# Lifecycle
+lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+
+# Navigation
+navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+
+# Hilt
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
+hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hilt-navigation" }
+
+# Room
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+
+# DataStore (preferences)
+datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+
+# Networking
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-moshi = { group = "com.squareup.retrofit2", name = "converter-moshi", version.ref = "retrofit" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+moshi = { group = "com.squareup.moshi", name = "moshi-kotlin", version.ref = "moshi" }
+
+# EPUB parsing
+epub4j = { group = "io.documentnode", name = "epub4j-core", version.ref = "epub4j" }
+jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
+
+# Image loading — Coil 3
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+
+# Coroutines
+coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines-play-services" }
+
+# ML Kit (on-device translation)
+mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "mlkit-translate" }
+mlkit-languageid = { group = "com.google.mlkit", name = "language-id", version.ref = "mlkit-languageid" }
+
+# GMS for ML Kit (required)
+play-services-base = { group = "com.google.android.gms", name = "play-services-base", version = "18.7.0" }
+
+# Desugaring (required for play-services)
+desugar = { group = "com.android.tools", name = "desugar_jdk_libs", version = "2.1.5" }
+
+# Testing
+junit = { group = "junit", name = "junit", version = "4.13.2" }
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+truth = { group = "com.google.truth", name = "truth", version.ref = "truth" }
+coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }

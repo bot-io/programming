@@ -400,14 +400,13 @@ class EpubParserServiceImpl implements EpubParserService {
   /// Clean up whitespace and formatting
   String _sanitizeText(String text) {
     // Replace multiple spaces with single space
-    text = text.replaceAll(RegExp(r'\s+'), ' ');
+    text = text.replaceAll(RegExp(r' {2,}'), ' ');
 
     // Replace multiple newlines with double newline (paragraph)
     text = text.replaceAll(RegExp(r'\n\s*\n\s*\n'), '\n\n');
 
     // Clean up spaces around newlines
     text = text.replaceAll(RegExp(r' *\n *'), '\n');
-    text = text.replaceAll(RegExp(r' *'), ' ');
 
     return text.trim();
   }

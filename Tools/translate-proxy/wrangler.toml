@@ -1,0 +1,15 @@
+name = "dual-reader-translate"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+# Rate limiting via Cloudflare (free tier: 100K req/day)
+# Uncomment after first deploy to add rate limiting rules:
+# [rate_limiting]
+# Alpine = [{ path = "/translate", threshold = 100, period = 60 }]
+
+# Secrets (set via `wrangler secret put GLM_API_KEY`):
+# GLM_API_KEY - your Z.AI API key
+#
+# Config vars (set via `wrangler secret put` or wrangler.toml):
+# MAX_TEXT_LENGTH - max chars per request (default 5000)
+# DAILY_LIMIT_PER_IP - max requests per IP per day (default 200)

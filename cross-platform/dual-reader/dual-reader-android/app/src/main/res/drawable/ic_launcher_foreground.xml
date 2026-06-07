@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Dual Reader foreground icon: an open book with two distinct halves.
+  Safe zone: 108dp x 108dp viewport, icon centered in 48dp area (30-78dp).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- === Book body (open book shape) === -->
+    <!-- Left page -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M30,36
+            L52,33
+            L52,76
+            L30,78
+            Z" />
+    <!-- Right page -->
+    <path
+        android:fillColor="#E8EAF6"
+        android:pathData="
+            M56,33
+            L78,36
+            L78,78
+            L56,76
+            Z" />
+
+    <!-- Book spine / center gutter -->
+    <path
+        android:fillColor="#C5CAE9"
+        android:strokeColor="#9FA8DA"
+        android:strokeWidth="0.5"
+        android:pathData="
+            M52,33
+            L56,33
+            L56,76
+            L52,76
+            Z" />
+
+    <!-- === Left page text lines (original language) === -->
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="
+            M35,41 L49,40 L49,42.5 L35,43.5 Z" />
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="
+            M35,46 L49,45 L49,47.5 L35,48.5 Z" />
+    <path
+        android:fillColor="#5C6BC0"
+        android:pathData="
+            M35,51 L49,50 L49,52.5 L35,53.5 Z" />
+    <path
+        android:fillColor="#5C6BC0"
+        android:pathData="
+            M35,56 L49,55 L49,57.5 L35,58.5 Z" />
+    <path
+        android:fillColor="#7986CB"
+        android:pathData="
+            M35,61 L49,60 L49,62.5 L35,63.5 Z" />
+    <path
+        android:fillColor="#7986CB"
+        android:pathData="
+            M35,66 L49,65 L49,67.5 L35,68.5 Z" />
+
+    <!-- === Right page text lines (translation) === -->
+    <path
+        android:fillColor="#303F9F"
+        android:pathData="
+            M59,40 L73,41 L73,43.5 L59,42.5 Z" />
+    <path
+        android:fillColor="#303F9F"
+        android:pathData="
+            M59,45 L73,46 L73,48.5 L59,47.5 Z" />
+    <path
+        android:fillColor="#3949AB"
+        android:pathData="
+            M59,50 L73,51 L73,53.5 L59,52.5 Z" />
+    <path
+        android:fillColor="#3949AB"
+        android:pathData="
+            M59,55 L73,56 L73,58.5 L59,57.5 Z" />
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="
+            M59,60 L73,61 L73,63.5 L59,62.5 Z" />
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="
+            M59,65 L73,66 L73,68.5 L59,67.5 Z" />
+
+    <!-- === Subtle translation indicator: two small arrows between pages === -->
+    <path
+        android:fillColor="#FFAB40"
+        android:pathData="
+            M49.5,73 L54,73 L54,71 L57,74.5 L54,78 L54,76 L49.5,76 Z" />
+    <path
+        android:fillColor="#FFAB40"
+        android:pathData="
+            M58.5,73 L54,73 L54,71 L51,74.5 L54,78 L54,76 L58.5,76 Z" />
+
+</vector>
