@@ -189,25 +189,28 @@ class ReaderViewModelTest {
 
     @Test
     fun `translateCurrentPage - updates page with translation`() = runTest(testDispatcher) {
-        coEvery { translatePageUseCase(any(), any(), any()) } returns Result.success("Превод")
+        coEvery {
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+        } returns Result.success(mapOf(0 to "Превод"))
         val vm = createViewModel()
         advanceUntilIdle()
 
         vm.translateCurrentPage()
         advanceUntilIdle()
 
-        // After translate, the combine collector updates _uiState with the translated page
-        // Wait for all coroutines to complete
+        // After translate, the page should have the translation
         val state = vm.uiState.value
         if (state is ReaderUiState.ReaderReady) {
             assertEquals("Превод", state.currentPage.translatedText)
+            assertEquals("bg", state.currentPage.translatedLang)  // matches testSettings.targetLanguage
         }
     }
 
     @Test
     fun `translateCurrentPage - sets Error on failure`() = runTest(testDispatcher) {
-        coEvery { translatePageUseCase(any(), any(), any()) } returns
-            Result.failure(RuntimeException("Network error"))
+        coEvery {
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+        } returns Result.failure(RuntimeException("Network error"))
         val vm = createViewModel()
         advanceUntilIdle()
 
@@ -215,7 +218,6 @@ class ReaderViewModelTest {
         advanceUntilIdle()
 
         val state = vm.uiState.value
-        // Translation failure sets Error state OR falls back to ready (combine re-emits)
         when (state) {
             is ReaderUiState.Error -> assertTrue(state.message.contains("Network error"))
             is ReaderUiState.ReaderReady -> assertFalse(state.isTranslating)
@@ -226,10 +228,12 @@ class ReaderViewModelTest {
     @Test
     fun `translateCurrentPage - prevents double translation`() = runTest(testDispatcher) {
         var callCount = 0
-        coEvery { translatePageUseCase(any(), any(), any()) } coAnswers {
+        coEvery {
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+        } coAnswers {
             callCount++
             kotlinx.coroutines.delay(1000)
-            Result.success("translated")
+            Result.success(mapOf(0 to "translated"))
         }
         val vm = createViewModel()
         advanceUntilIdle()
@@ -244,9 +248,11 @@ class ReaderViewModelTest {
 
     @Test
     fun `cancelTranslation - resets isTranslating`() = runTest(testDispatcher) {
-        coEvery { translatePageUseCase(any(), any(), any()) } coAnswers {
+        coEvery {
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+        } coAnswers {
             kotlinx.coroutines.delay(5000)
-            Result.success("translated")
+            Result.success(mapOf(0 to "translated"))
         }
         val vm = createViewModel()
         advanceUntilIdle()
@@ -307,7 +313,9 @@ class ReaderViewModelTest {
 
     @Test
     fun `translateCurrentPage - persists translated pages`() = runTest(testDispatcher) {
-        coEvery { translatePageUseCase(any(), any(), any()) } returns Result.success("превод")
+        coEvery {
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+        } returns Result.success(mapOf(0 to "превод"))
         val vm = createViewModel()
         advanceUntilIdle()
 

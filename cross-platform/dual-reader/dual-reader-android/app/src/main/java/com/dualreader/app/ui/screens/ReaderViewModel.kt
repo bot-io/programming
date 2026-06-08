@@ -11,6 +11,7 @@ import com.dualreader.app.domain.entities.ReadingSettings
 import com.dualreader.app.domain.repositories.BookRepository
 import com.dualreader.app.domain.repositories.BookmarkRepository
 import com.dualreader.app.domain.repositories.SettingsRepository
+import com.dualreader.app.domain.usecases.PageToTranslate
 import com.dualreader.app.domain.usecases.TranslatePageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -54,6 +55,9 @@ class ReaderViewModel @Inject constructor(
 
     companion object {
         private const val KEY_BOOK_ID = "bookId"
+
+        /** How many pages to translate around the current page when user taps "Translate". */
+        const val TRANSLATE_WINDOW_SIZE = 5
 
         /**
          * Visible for testing — allows unit tests to replace Dispatchers.IO
@@ -191,36 +195,65 @@ class ReaderViewModel @Inject constructor(
         goToPage(state.currentPage.index - 1)
     }
 
+    /**
+     * Translate current page + surrounding pages in a batch.
+     * Picks [TRANSLATE_WINDOW_SIZE] pages centered on the current page
+     * that haven't been translated to the current target language yet.
+     */
     fun translateCurrentPage() {
         // Cancel any ongoing translation first
         cancelTranslation()
 
         translationJob = viewModelScope.launch(ioDispatcher) {
             val state = _uiState.value as? ReaderUiState.ReaderReady ?: return@launch
+            val targetLang = state.settings.targetLanguage
 
             _isTranslating.value = true
             _translationError.value = null
 
             try {
-                // Get previous page for context (better translation quality)
-                val prevOriginal = state.pages.getOrNull(state.currentPage.index - 1)?.originalText
-                val prevTranslation = state.pages.getOrNull(state.currentPage.index - 1)?.translatedText
+                // Collect pages around the current page that need translation
+                val pagesToTranslate = collectTranslateWindow(
+                    allPages = state.pages,
+                    centerIndex = state.currentPage.index,
+                    targetLang = targetLang,
+                )
 
-                val result = withTimeoutOrNull(45_000L) {
-                    translatePageUseCase(
-                        text = state.currentPage.originalText,
-                        targetLanguage = state.settings.targetLanguage,
+                if (pagesToTranslate.isEmpty()) {
+                    // Current page already translated to this language
+                    _isTranslating.value = false
+                    return@launch
+                }
+
+                val pageTranslations = pagesToTranslate.map { page ->
+                    PageToTranslate(index = page.index, text = page.originalText)
+                }
+
+                val result = withTimeoutOrNull(60_000L) {
+                    translatePageUseCase.translateBatchWithContext(
+                        pages = pageTranslations,
+                        targetLanguage = targetLang,
                         sourceLanguage = _book?.language,
-                        previousOriginal = prevOriginal,
-                        previousTranslation = prevTranslation,
+                        onPageTranslated = { pageIndex, translation ->
+                            val updatedPages = _pages.value.map { page ->
+                                if (page.index == pageIndex)
+                                    page.copy(translatedText = translation, translatedLang = targetLang)
+                                else page
+                            }
+                            _pages.value = updatedPages
+                            viewModelScope.launch(ioDispatcher) {
+                                runCatching { bookRepository.savePages(updatedPages) }
+                            }
+                        },
                     )
                 } ?: Result.failure(Exception("Translation timed out. Tap Retry."))
 
                 result.fold(
-                    onSuccess = { translatedText ->
+                    onSuccess = { translations ->
                         val updatedPages = _pages.value.map { page ->
-                            if (page.index == state.currentPage.index)
-                                page.copy(translatedText = translatedText)
+                            val translation = translations[page.index]
+                            if (translation != null)
+                                page.copy(translatedText = translation, translatedLang = targetLang)
                             else page
                         }
                         _pages.value = updatedPages
@@ -257,32 +290,32 @@ class ReaderViewModel @Inject constructor(
 
         translationJob = viewModelScope.launch(ioDispatcher) {
             val state = _uiState.value as? ReaderUiState.ReaderReady ?: return@launch
+            val targetLang = state.settings.targetLanguage
 
-            val untranslated = state.pages.filter { it.translatedText == null }
+            // Only translate pages that don't have a translation in the current target language
+            val untranslated = state.pages.filter {
+                it.translatedText == null || it.translatedLang != targetLang
+            }
             if (untranslated.isEmpty()) return@launch
 
             _isTranslating.value = true
 
             try {
                 val pagesToTranslate = untranslated.map { page ->
-                    com.dualreader.app.domain.usecases.PageToTranslate(
-                        index = page.index,
-                        text = page.originalText,
-                    )
+                    PageToTranslate(index = page.index, text = page.originalText)
                 }
 
                 val result = translatePageUseCase.translateBatchWithContext(
                     pages = pagesToTranslate,
-                    targetLanguage = state.settings.targetLanguage,
+                    targetLanguage = targetLang,
                     sourceLanguage = _book?.language,
                     onPageTranslated = { pageIndex, translation ->
-                        // Save each page as it's translated so progress isn't lost on cancel
                         val updatedPages = _pages.value.map { page ->
-                            if (page.index == pageIndex) page.copy(translatedText = translation)
+                            if (page.index == pageIndex)
+                                page.copy(translatedText = translation, translatedLang = targetLang)
                             else page
                         }
                         _pages.value = updatedPages
-                        // Launch a coroutine to persist (callback is not suspend)
                         viewModelScope.launch(ioDispatcher) {
                             runCatching { bookRepository.savePages(updatedPages) }
                         }
@@ -293,7 +326,8 @@ class ReaderViewModel @Inject constructor(
                     onSuccess = { translations ->
                         val updatedPages = _pages.value.map { page ->
                             val translation = translations[page.index]
-                            if (translation != null) page.copy(translatedText = translation)
+                            if (translation != null)
+                                page.copy(translatedText = translation, translatedLang = targetLang)
                             else page
                         }
                         _pages.value = updatedPages
@@ -314,6 +348,63 @@ class ReaderViewModel @Inject constructor(
                 _translationError.value = e.message ?: "Batch translation failed"
             }
         }
+    }
+
+    /**
+     * Collect up to [TRANSLATE_WINDOW_SIZE] pages around [centerIndex] that need
+     * translation to [targetLang]. Prioritizes the current page, then pages after,
+     * then pages before.
+     */
+    private fun collectTranslateWindow(
+        allPages: List<Page>,
+        centerIndex: Int,
+        targetLang: String,
+    ): List<Page> {
+        val needsTranslation = allPages.filter { page ->
+            page.translatedText == null || page.translatedLang != targetLang
+        }
+
+        if (needsTranslation.isEmpty()) return emptyList()
+
+        // Build a window centered on the current page
+        val window = mutableListOf<Page>()
+        val added = mutableSetOf<Int>()
+
+        // Always include current page if it needs translation
+        val currentPage = allPages.getOrNull(centerIndex)
+        if (currentPage != null && (currentPage.translatedText == null || currentPage.translatedLang != targetLang)) {
+            window.add(currentPage)
+            added.add(centerIndex)
+        }
+
+        // Add pages after current
+        var i = centerIndex + 1
+        while (window.size < TRANSLATE_WINDOW_SIZE && i < allPages.size) {
+            val page = allPages[i]
+            if (page.translatedText == null || page.translatedLang != targetLang) {
+                if (i !in added) {
+                    window.add(page)
+                    added.add(i)
+                }
+            }
+            i++
+        }
+
+        // Add pages before current
+        i = centerIndex - 1
+        while (window.size < TRANSLATE_WINDOW_SIZE && i >= 0) {
+            val page = allPages[i]
+            if (page.translatedText == null || page.translatedLang != targetLang) {
+                if (i !in added) {
+                    window.add(page)
+                    added.add(i)
+                }
+            }
+            i--
+        }
+
+        // Sort by index for correct batch ordering
+        return window.sortedBy { it.index }
     }
 
     fun addBookmark(note: String) {

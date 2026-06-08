@@ -55,6 +55,7 @@ fun PageEntity.toDomain(): Page = Page(
     chapterIndex = chapterIndex,
     originalText = originalText,
     translatedText = translatedText,
+    translatedLang = translatedLang,
     startCharOffset = startCharOffset,
     endCharOffset = endCharOffset,
 )
@@ -65,6 +66,7 @@ fun Page.toEntity(): PageEntity = PageEntity(
     chapterIndex = chapterIndex,
     originalText = originalText,
     translatedText = translatedText,
+    translatedLang = translatedLang,
     startCharOffset = startCharOffset,
     endCharOffset = endCharOffset,
 )

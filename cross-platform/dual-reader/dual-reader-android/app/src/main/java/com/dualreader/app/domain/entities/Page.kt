@@ -13,6 +13,15 @@ data class Page(
     val chapterIndex: Int,
     val originalText: String,
     val translatedText: String? = null,
+    val translatedLang: String? = null,
     val startCharOffset: Int = 0,
     val endCharOffset: Int = 0,
-)
+) {
+    /**
+     * Returns the translated text only if it matches the requested target language.
+     * Returns null if no translation exists or if the translation is in a different language.
+     */
+    fun effectiveTranslation(targetLang: String): String? {
+        return if (translatedLang == targetLang) translatedText else null
+    }
+}

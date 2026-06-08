@@ -359,7 +359,7 @@ private fun ReaderContent(
                             settings.fontSize, settings.lineHeight, colors,
                             searchQuery, Modifier.weight(1f), showLabel = barsVisible)
                         Box(Modifier.width(2.dp).fillMaxHeight().background(colors.accent.copy(alpha = 0.5f)))
-                        TranslationPanel(currentPage.translatedText, isTranslating, translationError,
+                        TranslationPanel(currentPage.effectiveTranslation(settings.targetLanguage), isTranslating, translationError,
                             settings.fontSize, settings.lineHeight, colors,
                             onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible)
                     }
@@ -370,7 +370,7 @@ private fun ReaderContent(
                             settings.fontSize, settings.lineHeight, colors,
                             searchQuery, Modifier.weight(1f), showLabel = barsVisible)
                         Box(Modifier.fillMaxWidth().height(2.dp).background(colors.accent.copy(alpha = 0.5f)))
-                        TranslationPanel(currentPage.translatedText, isTranslating, translationError,
+                        TranslationPanel(currentPage.effectiveTranslation(settings.targetLanguage), isTranslating, translationError,
                             settings.fontSize, settings.lineHeight, colors,
                             onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible)
                     }
