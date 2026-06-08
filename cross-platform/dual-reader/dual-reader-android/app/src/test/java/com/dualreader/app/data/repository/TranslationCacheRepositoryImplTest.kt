@@ -316,4 +316,45 @@ class TranslationCacheRepositoryImplTest {
             })
         }
     }
+
+    // ─── Delete for texts (book deletion) ────────────────────────────────
+
+    @Test
+    fun `deleteForTexts removes cache entries by hash`() = runTest {
+        val texts = listOf("Page one text", "Page two text", "Page three text")
+        val hashes = texts.map { TranslationCacheRepositoryImpl.sha256(it) }
+
+        coEvery { dao.deleteByHash(any()) } just Runs
+
+        repository.deleteForTexts(texts)
+
+        coVerify(exactly = 3) { dao.deleteByHash(any()) }
+        coVerify { dao.deleteByHash(hashes[0]) }
+        coVerify { dao.deleteByHash(hashes[1]) }
+        coVerify { dao.deleteByHash(hashes[2]) }
+    }
+
+    @Test
+    fun `deleteForTexts with empty list does nothing`() = runTest {
+        repository.deleteForTexts(emptyList())
+        coVerify(exactly = 0) { dao.deleteByHash(any()) }
+    }
+
+    @Test
+    fun `deleteForTexts hashes match put hashes`() = runTest {
+        val text = "Some unique page content"
+        val hash = TranslationCacheRepositoryImpl.sha256(text)
+
+        coEvery { dao.get(any(), any(), any()) } returns null
+        coEvery { dao.upsert(any()) } just Runs
+        coEvery { dao.deleteByHash(any()) } just Runs
+
+        // Put a translation
+        repository.put(text, "en", "bg", "Някакъв превод")
+        coVerify { dao.upsert(match { it.textHash == hash }) }
+
+        // Delete by text should use the same hash
+        repository.deleteForTexts(listOf(text))
+        coVerify { dao.deleteByHash(hash) }
+    }
 }

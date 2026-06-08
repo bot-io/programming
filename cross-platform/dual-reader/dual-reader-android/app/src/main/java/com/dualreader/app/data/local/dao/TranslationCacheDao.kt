@@ -17,4 +17,7 @@ interface TranslationCacheDao {
 
     @Query("SELECT COUNT(*) FROM translation_cache")
     suspend fun count(): Int
+
+    @Query("DELETE FROM translation_cache WHERE textHash = :hash")
+    suspend fun deleteByHash(hash: String)
 }

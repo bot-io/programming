@@ -1,8 +1,6 @@
 package com.dualreader.app.ui.screens
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +23,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ImportContacts
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -32,6 +31,8 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -80,7 +81,7 @@ fun LibraryScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Dual Reader v1.0.3") },
+                title = { Text("Dual Reader") },
                 actions = {
                     IconButton(onClick = onSettingsClick) {
                         Icon(
@@ -239,7 +240,6 @@ private fun ErrorState(
 // Book Grid
 // ──────────────────────────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BookGrid(
     books: List<Book>,
@@ -250,6 +250,7 @@ private fun BookGrid(
 ) {
     var bookToDelete by remember { mutableStateOf<Book?>(null) }
 
+    // Delete confirmation dialog
     if (bookToDelete != null) {
         val book = bookToDelete!!
         AlertDialog(
@@ -288,32 +289,28 @@ private fun BookGrid(
                 book = book,
                 onClick = { onBookClick(book.id) },
                 onRetryPagination = { onRetryPagination(book) },
-                onDelete = { onDeleteBook(book.id) },
+                onDeleteRequest = { bookToDelete = book },
             )
         }
     }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Book Card
+// Book Card — tap to open, ⋮ menu for delete
 // ──────────────────────────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BookCard(
     book: Book,
     onClick: () -> Unit,
     onRetryPagination: () -> Unit,
-    onDelete: () -> Unit,
+    onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = { onDelete() },
-            ),
+        modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
     ) {
@@ -323,7 +320,8 @@ private fun BookCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(3f / 4f)
-                    .clip(MaterialTheme.shapes.medium),
+                    .clip(MaterialTheme.shapes.medium)
+                    .clickable(onClick = onClick),
                 contentAlignment = Alignment.Center,
             ) {
                 if (book.coverPath != null) {
@@ -356,9 +354,47 @@ private fun BookCard(
                     progress = book.paginationProgress,
                     onRetry = onRetryPagination,
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
+                        .align(Alignment.TopStart)
                         .padding(6.dp),
                 )
+
+                // Overflow menu button (top-right corner)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(2.dp),
+                ) {
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Book options",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            onClick = {
+                                showMenu = false
+                                onDeleteRequest()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                        )
+                    }
+                }
             }
 
             // ── Text info ──

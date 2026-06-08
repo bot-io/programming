@@ -30,4 +30,10 @@ interface TranslationCacheRepository {
      * Get the number of cached entries.
      */
     suspend fun count(): Int
+
+    /**
+     * Delete cache entries matching a list of source texts.
+     * Used when a book is deleted to clean up its translations.
+     */
+    suspend fun deleteForTexts(texts: List<String>)
 }

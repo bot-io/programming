@@ -9,6 +9,7 @@ import com.dualreader.app.data.local.mapper.toEntity
 import com.dualreader.app.domain.entities.Book
 import com.dualreader.app.domain.entities.Page
 import com.dualreader.app.domain.repositories.BookRepository
+import com.dualreader.app.domain.repositories.TranslationCacheRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -24,6 +25,7 @@ class BookRepositoryImpl @Inject constructor(
     private val bookDao: BookDao,
     private val pageDao: PageDao,
     private val bookmarkDao: BookmarkDao,
+    private val translationCacheRepository: TranslationCacheRepository,
 ) : BookRepository {
 
     override fun getAllBooks(): Flow<List<Book>> =
@@ -39,10 +41,21 @@ class BookRepositoryImpl @Inject constructor(
         bookDao.update(book.toEntity())
 
     override suspend fun deleteBook(id: String) {
-        // Cascade: delete pages, bookmarks, cover file, then book
+        // Cascade: get page texts first (for cache cleanup), then delete everything
+        val pages = pageDao.getPagesForBook(id)
+        val pageTexts = pages.map { it.originalText }
+
         pageDao.deletePagesForBook(id)
         bookmarkDao.deleteBookmarksForBook(id)
         bookDao.deleteById(id)
+
+        // Clear translation cache for this book's pages
+        if (pageTexts.isNotEmpty()) {
+            try {
+                translationCacheRepository.deleteForTexts(pageTexts)
+            } catch (_: Exception) { }
+        }
+
         // Delete cover file
         withContext(Dispatchers.IO) {
             val coversDir = File(context.filesDir, "covers")

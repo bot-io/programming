@@ -55,6 +55,12 @@ class TranslationCacheRepositoryImpl @Inject constructor(
 
     override suspend fun count(): Int = dao.count()
 
+    override suspend fun deleteForTexts(texts: List<String>) {
+        for (text in texts) {
+            dao.deleteByHash(sha256(text))
+        }
+    }
+
     companion object {
         fun sha256(text: String): String {
             val md = MessageDigest.getInstance("SHA-256")
