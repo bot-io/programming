@@ -65,4 +65,27 @@ class Converters {
 
     @TypeConverter
     fun toBookFormat(format: BookFormat): String = format.name
+
+    // ── Translations map (lang → translated text) ──────────────────────
+
+    @TypeConverter
+    fun fromTranslationsJson(value: String?): Map<String, String> {
+        if (value.isNullOrBlank() || value == "{}") return emptyMap()
+        val obj = JSONObject(value)
+        val map = mutableMapOf<String, String>()
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            map[key] = obj.getString(key)
+        }
+        return map
+    }
+
+    @TypeConverter
+    fun toTranslationsJson(map: Map<String, String>): String? {
+        if (map.isEmpty()) return null
+        val obj = JSONObject()
+        map.forEach { (k, v) -> obj.put(k, v) }
+        return obj.toString()
+    }
 }

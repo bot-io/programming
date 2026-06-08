@@ -201,8 +201,7 @@ class ReaderViewModelTest {
         // After translate, the page should have the translation
         val state = vm.uiState.value
         if (state is ReaderUiState.ReaderReady) {
-            assertEquals("Превод", state.currentPage.translatedText)
-            assertEquals("bg", state.currentPage.translatedLang)  // matches testSettings.targetLanguage
+            assertEquals("Превод", state.currentPage.effectiveTranslation("bg"))
         }
     }
 

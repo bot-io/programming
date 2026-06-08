@@ -49,24 +49,25 @@ fun Book.toEntity(): BookEntity = BookEntity(
 
 // --- Page ---
 
+private val converters = Converters()
+
 fun PageEntity.toDomain(): Page = Page(
     index = pageIndex,
     bookId = bookId,
     chapterIndex = chapterIndex,
     originalText = originalText,
-    translatedText = translatedText,
-    translatedLang = translatedLang,
+    translations = converters.fromTranslationsJson(translationsJson),
     startCharOffset = startCharOffset,
     endCharOffset = endCharOffset,
 )
 
-fun Page.toEntity(): PageEntity = PageEntity(
+fun Page.toEntity(existingId: Long = 0): PageEntity = PageEntity(
+    id = existingId,
     bookId = bookId,
     pageIndex = index,
     chapterIndex = chapterIndex,
     originalText = originalText,
-    translatedText = translatedText,
-    translatedLang = translatedLang,
+    translationsJson = converters.toTranslationsJson(translations),
     startCharOffset = startCharOffset,
     endCharOffset = endCharOffset,
 )

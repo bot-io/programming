@@ -59,15 +59,10 @@ class ReaderViewModel @Inject constructor(
         /** How many pages to translate around the current page when user taps "Translate". */
         const val TRANSLATE_WINDOW_SIZE = 5
 
-        /**
-         * Visible for testing — allows unit tests to replace Dispatchers.IO
-         * with a TestDispatcher so coroutine execution is deterministic.
-         */
         @VisibleForTesting
         internal var testIoDispatcher: CoroutineDispatcher? = null
     }
 
-    /** Dispatcher used for all background work; falls back to IO in production. */
     private val ioDispatcher: CoroutineDispatcher
         get() = testIoDispatcher ?: Dispatchers.IO
 
@@ -81,7 +76,6 @@ class ReaderViewModel @Inject constructor(
     private val _settings = MutableStateFlow<ReadingSettings?>(null)
     private var _book: Book? = null
 
-    // Translation state as StateFlows so combine picks up changes immediately
     private val _isTranslating = MutableStateFlow(false)
     private val _translationError = MutableStateFlow<String?>(null)
     private var translationJob: Job? = null
@@ -118,7 +112,6 @@ class ReaderViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Start collecting reactive flows
                 launch {
                     combine(
                         settingsRepository.settings,
@@ -168,7 +161,6 @@ class ReaderViewModel @Inject constructor(
         val updatedBook = book.copy(currentPage = index)
         _book = updatedBook
 
-        // Update UI state immediately (don't rely on combine collector)
         _uiState.value = ReaderUiState.ReaderReady(
             book = updatedBook,
             pages = pages,
@@ -179,7 +171,6 @@ class ReaderViewModel @Inject constructor(
             translationError = _translationError.value
         )
 
-        // Persist in background
         viewModelScope.launch(ioDispatcher) {
             try { bookRepository.updateBook(updatedBook) } catch (_: Exception) { }
         }
@@ -201,7 +192,6 @@ class ReaderViewModel @Inject constructor(
      * that haven't been translated to the current target language yet.
      */
     fun translateCurrentPage() {
-        // Cancel any ongoing translation first
         cancelTranslation()
 
         translationJob = viewModelScope.launch(ioDispatcher) {
@@ -212,7 +202,6 @@ class ReaderViewModel @Inject constructor(
             _translationError.value = null
 
             try {
-                // Collect pages around the current page that need translation
                 val pagesToTranslate = collectTranslateWindow(
                     allPages = state.pages,
                     centerIndex = state.currentPage.index,
@@ -220,7 +209,6 @@ class ReaderViewModel @Inject constructor(
                 )
 
                 if (pagesToTranslate.isEmpty()) {
-                    // Current page already translated to this language
                     _isTranslating.value = false
                     return@launch
                 }
@@ -235,33 +223,16 @@ class ReaderViewModel @Inject constructor(
                         targetLanguage = targetLang,
                         sourceLanguage = _book?.language,
                         onPageTranslated = { pageIndex, translation ->
-                            val updatedPages = _pages.value.map { page ->
-                                if (page.index == pageIndex)
-                                    page.copy(translatedText = translation, translatedLang = targetLang)
-                                else page
-                            }
-                            _pages.value = updatedPages
-                            viewModelScope.launch(ioDispatcher) {
-                                runCatching { bookRepository.savePages(updatedPages) }
-                            }
+                            applyTranslation(pageIndex, targetLang, translation)
                         },
                     )
                 } ?: Result.failure(Exception("Translation timed out. Tap Retry."))
 
                 result.fold(
                     onSuccess = { translations ->
-                        val updatedPages = _pages.value.map { page ->
-                            val translation = translations[page.index]
-                            if (translation != null)
-                                page.copy(translatedText = translation, translatedLang = targetLang)
-                            else page
+                        translations.forEach { (pageIndex, translation) ->
+                            applyTranslation(pageIndex, targetLang, translation)
                         }
-                        _pages.value = updatedPages
-
-                        try {
-                            bookRepository.savePages(updatedPages)
-                        } catch (_: Exception) { }
-
                         _isTranslating.value = false
                         _translationError.value = null
                     },
@@ -285,17 +256,13 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun translateAllPages() {
-        // Cancel any ongoing translation first
         cancelTranslation()
 
         translationJob = viewModelScope.launch(ioDispatcher) {
             val state = _uiState.value as? ReaderUiState.ReaderReady ?: return@launch
             val targetLang = state.settings.targetLanguage
 
-            // Only translate pages that don't have a translation in the current target language
-            val untranslated = state.pages.filter {
-                it.translatedText == null || it.translatedLang != targetLang
-            }
+            val untranslated = state.pages.filter { !it.hasTranslation(targetLang) }
             if (untranslated.isEmpty()) return@launch
 
             _isTranslating.value = true
@@ -310,32 +277,15 @@ class ReaderViewModel @Inject constructor(
                     targetLanguage = targetLang,
                     sourceLanguage = _book?.language,
                     onPageTranslated = { pageIndex, translation ->
-                        val updatedPages = _pages.value.map { page ->
-                            if (page.index == pageIndex)
-                                page.copy(translatedText = translation, translatedLang = targetLang)
-                            else page
-                        }
-                        _pages.value = updatedPages
-                        viewModelScope.launch(ioDispatcher) {
-                            runCatching { bookRepository.savePages(updatedPages) }
-                        }
+                        applyTranslation(pageIndex, targetLang, translation)
                     },
                 )
 
                 result.fold(
                     onSuccess = { translations ->
-                        val updatedPages = _pages.value.map { page ->
-                            val translation = translations[page.index]
-                            if (translation != null)
-                                page.copy(translatedText = translation, translatedLang = targetLang)
-                            else page
+                        translations.forEach { (pageIndex, translation) ->
+                            applyTranslation(pageIndex, targetLang, translation)
                         }
-                        _pages.value = updatedPages
-
-                        try {
-                            bookRepository.savePages(updatedPages)
-                        } catch (_: Exception) { }
-
                         _isTranslating.value = false
                     },
                     onFailure = { error ->
@@ -351,6 +301,20 @@ class ReaderViewModel @Inject constructor(
     }
 
     /**
+     * Merge a translation for one page into the pages list, preserving
+     * all other language translations on that page.
+     */
+    private fun applyTranslation(pageIndex: Int, lang: String, translation: String) {
+        val updatedPages = _pages.value.map { page ->
+            if (page.index == pageIndex) page.withTranslation(lang, translation) else page
+        }
+        _pages.value = updatedPages
+        viewModelScope.launch(ioDispatcher) {
+            runCatching { bookRepository.savePages(updatedPages) }
+        }
+    }
+
+    /**
      * Collect up to [TRANSLATE_WINDOW_SIZE] pages around [centerIndex] that need
      * translation to [targetLang]. Prioritizes the current page, then pages after,
      * then pages before.
@@ -360,19 +324,12 @@ class ReaderViewModel @Inject constructor(
         centerIndex: Int,
         targetLang: String,
     ): List<Page> {
-        val needsTranslation = allPages.filter { page ->
-            page.translatedText == null || page.translatedLang != targetLang
-        }
-
-        if (needsTranslation.isEmpty()) return emptyList()
-
-        // Build a window centered on the current page
         val window = mutableListOf<Page>()
         val added = mutableSetOf<Int>()
 
         // Always include current page if it needs translation
         val currentPage = allPages.getOrNull(centerIndex)
-        if (currentPage != null && (currentPage.translatedText == null || currentPage.translatedLang != targetLang)) {
+        if (currentPage != null && !currentPage.hasTranslation(targetLang)) {
             window.add(currentPage)
             added.add(centerIndex)
         }
@@ -381,11 +338,9 @@ class ReaderViewModel @Inject constructor(
         var i = centerIndex + 1
         while (window.size < TRANSLATE_WINDOW_SIZE && i < allPages.size) {
             val page = allPages[i]
-            if (page.translatedText == null || page.translatedLang != targetLang) {
-                if (i !in added) {
-                    window.add(page)
-                    added.add(i)
-                }
+            if (!page.hasTranslation(targetLang) && i !in added) {
+                window.add(page)
+                added.add(i)
             }
             i++
         }
@@ -394,16 +349,13 @@ class ReaderViewModel @Inject constructor(
         i = centerIndex - 1
         while (window.size < TRANSLATE_WINDOW_SIZE && i >= 0) {
             val page = allPages[i]
-            if (page.translatedText == null || page.translatedLang != targetLang) {
-                if (i !in added) {
-                    window.add(page)
-                    added.add(i)
-                }
+            if (!page.hasTranslation(targetLang) && i !in added) {
+                window.add(page)
+                added.add(i)
             }
             i--
         }
 
-        // Sort by index for correct batch ordering
         return window.sortedBy { it.index }
     }
 
