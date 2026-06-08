@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
+import kotlin.collections.IndexedValue
 
 /**
  * Tiered fallback translation service.
@@ -106,6 +107,42 @@ class FallbackTranslationService @Inject constructor(
     ): List<String> {
         if (texts.isEmpty()) return emptyList()
         return texts.map { translate(it, targetLanguage, sourceLanguage) }
+    }
+
+    // ── translatePages (batch optimization) ────────────────────────────────────
+
+    override suspend fun translatePages(
+        pages: List<IndexedValue<String>>,
+        targetLanguage: String,
+        sourceLanguage: String?,
+        context: String?,
+    ): Map<Int, String> {
+        // Try cloud batch first
+        try {
+            val cloudResult = cloudService.translatePages(pages, targetLanguage, sourceLanguage, context)
+            if (cloudResult.size == pages.size) {
+                Log.d(TAG, "Cloud batch translation succeeded (${cloudResult.size} pages)")
+                return cloudResult
+            }
+            // Partial result — fill gaps with ML Kit
+            Log.w(TAG, "Cloud batch returned ${cloudResult.size}/${pages.size} pages, filling gaps with ML Kit")
+            val result = cloudResult.toMutableMap()
+            for (page in pages) {
+                if (page.index !in result) {
+                    try {
+                        result[page.index] = mlKitService.translate(page.value, targetLanguage, sourceLanguage)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "ML Kit gap fill failed for page ${page.index}: ${e.message}")
+                    }
+                }
+            }
+            return result.toMap()
+        } catch (e: Exception) {
+            Log.w(TAG, "Cloud batch failed: ${e.message}, falling back to individual calls")
+        }
+
+        // Fallback: individual calls through the full fallback chain
+        return super.translatePages(pages, targetLanguage, sourceLanguage, context)
     }
 
     // ── detectLanguage ─────────────────────────────────────────────────────────
