@@ -18,15 +18,15 @@ const CONFIG = {
   cooldownMs: 3000,            // min 3s between requests from same IP
 
   // Provider timeouts (CF Workers have 30s total)
-  geminiTimeoutMs: 25000,
+  geminiTimeoutMs: 30000,
   glmTimeoutMs: 20000,
 
   // Provider endpoints
-  geminiApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+  geminiApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',
   glmApiUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
 
   // Models
-  geminiModel: 'gemini-2.5-flash',
+  geminiModel: 'gemini-3.5-flash',
   glmModel: 'glm-4.7-flash',
 
   // CORS
@@ -164,8 +164,11 @@ async function callGemini(apiKey, systemPrompt, userText) {
         parts: [{ text: userText }]
       }],
       generationConfig: {
-        temperature: 0.4,
-        maxOutputTokens: 8192,
+        temperature: 1.0,
+        maxOutputTokens: 16384,
+        thinkingConfig: {
+          thinkingBudget: 2048,
+        },
       },
     }),
     signal: AbortSignal.timeout(CONFIG.geminiTimeoutMs),
@@ -183,14 +186,31 @@ async function callGemini(apiKey, systemPrompt, userText) {
   const data = await resp.json();
 
   // Extract text from Gemini response structure
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-  if (!text) {
-    // Check if blocked by safety
-    const reason = data?.candidates?.[0]?.finishReason;
-    if (reason === 'SAFETY') {
-      throw new Error('Gemini blocked by safety filter');
+  // With thinking enabled, response contains both thought and text parts.
+  // We only want the non-thought (final answer) text.
+  const candidates = data?.candidates;
+  if (!candidates?.length) {
+    throw new Error(`Gemini returned no candidates: ${JSON.stringify(data).slice(0, 300)}`);
+  }
+
+  const parts = candidates[0].content?.parts;
+  if (!parts?.length) {
+    const reason = candidates[0].finishReason;
+    if (reason === 'SAFETY') throw new Error('Gemini blocked by safety filter');
+    throw new Error(`Gemini returned empty parts: ${JSON.stringify(data).slice(0, 300)}`);
+  }
+
+  // Find the last non-thought part (the actual translation)
+  let text = null;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (parts[i].text && !parts[i].thought) {
+      text = parts[i].text.trim();
+      break;
     }
-    throw new Error(`Gemini returned empty response: ${JSON.stringify(data).slice(0, 300)}`);
+  }
+
+  if (!text) {
+    throw new Error(`Gemini returned no text output: ${JSON.stringify(data).slice(0, 300)}`);
   }
 
   return text;
@@ -261,19 +281,19 @@ function buildTranslationPrompt(sourceLang, targetLang) {
   const tgtName = langNames[targetLang] || targetLang;
 
   return [
-    `You are an expert literary translator specializing in ${srcName} to ${tgtName}.`,
-    `You have deep knowledge of both literary traditions and a gift for preserving the author's voice across languages.`,
+    `You are a professional literary translator translating from ${srcName} to ${tgtName}.`,
+    `You produce publication-quality translations that read as if originally written in ${tgtName}.`,
     ``,
-    `TRANSLATION PRINCIPLES:`,
-    `1. Prioritize natural, flowing ${tgtName} over word-for-word accuracy`,
-    `2. Preserve the author's tone — whether poetic, spare, humorous, or lyrical`,
-    `3. Adapt idioms and cultural references to ${tgtName} equivalents where a literal rendering would sound foreign`,
-    `4. Maintain the rhythm, cadence, and pacing of the original prose`,
-    `5. Use register and vocabulary appropriate to the text's literary genre and era`,
-    `6. When the original uses deliberate repetition, alliteration, or sound devices, recreate the effect in ${tgtName}`,
-    `7. Preserve ambiguity and subtext — do not over-explain or simplify`,
+    `CORE RULES:`,
+    `1. Translate the MEANING and INTENT, never word-by-word. Reconstruct sentences in ${tgtName} naturally.`,
+    `2. Match the author's register, tone, and voice — whether literary, colloquial, formal, or poetic.`,
+    `3. Every sentence must be grammatically perfect in ${tgtName}: correct gender agreement, case, number, articles, prepositions, verb tense and aspect.`,
+    `4. Idioms and culture-specific expressions must be adapted to ${tgtName} equivalents, not translated literally.`,
+    `5. Maintain paragraph breaks exactly as the source.`,
+    `6. Preserve ambiguity and subtext — do not explain or simplify.`,
+    `7. Character names: use the standard ${tgtName} transcription/transliteration convention.`,
     ``,
-    `OUTPUT: ONLY the translated text. No commentary, no notes, no quotation marks around the result. Same paragraph structure as the source.`,
+    `OUTPUT: ONLY the translated text. No notes, no commentary, no quotation marks around the result.`,
   ].join('\n');
 }
 

@@ -23,7 +23,7 @@ class CloudTranslationServiceImpl @Inject constructor(
     private val connectivityManager: ConnectivityManager
 ) : TranslationService {
 
-    override val providerName: String = "Gemini 2.5 Flash / GLM-4.7-Flash (cloud)"
+    override val providerName: String = "Gemini 3.5 Flash / GLM-4.7-Flash (cloud)"
 
     companion object {
         /** Minimum delay between batch requests to respect worker rate limits. */

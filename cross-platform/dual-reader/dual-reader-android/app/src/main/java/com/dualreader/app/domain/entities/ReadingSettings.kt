@@ -37,7 +37,7 @@ enum class TranslationProvider(
     val requiresNetwork: Boolean,
     val costPerBook: String,
 ) {
-    GEMINI_FLASH("Gemini 2.5 Flash (Best Free)", true, "$0.00"),
+    GEMINI_FLASH("Gemini 3.5 Flash (Best Free)", true, "$0.00"),
     LLM_FREE("GLM-4.7-Flash (Free AI)", true, "$0.00"),
     LLM_CHEAP("GLM-4.7-FlashX (Fast AI)", true, "~$0.07"),
     DEVICE("On-device (ML Kit)", false, "$0.00"),
