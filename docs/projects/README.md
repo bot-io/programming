@@ -1,13 +1,17 @@
-# Projects
+---
+aliases: [Projects]
+tags: [moc]
+---
 
-Synthesised wiki summaries for each project in this workspace.
+# 🏗 Projects
 
-<!-- Add one entry per project:
-## <Project Name>
-- **Location:** `path/in/repo/`
-- **Stack:** <tech>
-- **Status:** <active|paused|complete>
-- **Summary:** <2-3 line overview>
-- **Recent updates:**
-  - YYYY-MM-DD: <what happened>
--->
+Active and archived projects in this workspace.
+
+## Active
+
+- [[Dual Reader]] — Android bilingual ebook reader with multi-provider translation
+- [[Cloudflare Worker]] — Multi-provider translation API on Cloudflare Workers
+
+## Archived
+
+(none yet)

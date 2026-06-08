@@ -1,4 +1,9 @@
-# Pending Actions
+---
+aliases: [Pending Actions]
+tags: [coordination]
+---
+
+# 📋 Pending Actions
 
 Cross-session coordination queue. Sessions append items here; the orchestrator session processes them.
 

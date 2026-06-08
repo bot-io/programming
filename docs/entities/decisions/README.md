@@ -1,24 +1,16 @@
+---
+aliases: [ADR, ADR Template]
+tags: [template, reference, adr]
+---
+
 # Architecture Decision Records
 
 Numbered, dated records of non-obvious decisions.
 
 Format: Context → Decision → Consequences → Alternatives considered.
 
-<!-- Template:
-## ADR-NNN: <Title>
+> Use the [[templates/adr|ADR template]] to create new records.
 
-**Date:** YYYY-MM-DD
-**Status:** Proposed | Accepted | Deprecated | Superseded by ADR-XXX
+## Active ADRs
 
-### Context
-<Why this decision is needed>
-
-### Decision
-<What was decided>
-
-### Consequences
-<What changes as a result>
-
-### Alternatives considered
-<What else was on the table>
--->
+- [[decisions/translation-quality|Translation Quality]] — Context-aware batch translation architecture
