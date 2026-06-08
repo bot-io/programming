@@ -213,6 +213,7 @@ private fun ReaderContent(
 ) {
     val colors = readerColors(settings.theme)
     val layoutMode = rememberLayoutMode()
+    // Bars visible = NOT immersive. Tapping toggles immersive.
     var barsVisible by remember { mutableStateOf(true) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var showBookmarkList by remember { mutableStateOf(false) }
@@ -231,7 +232,7 @@ private fun ReaderContent(
         ) {
             // ── Top Bar ──────────────────────────────────────────────
             AnimatedVisibility(
-                visible = barsVisible && !settings.isImmersiveMode,
+                visible = barsVisible,
                 enter = fadeIn(), exit = fadeOut(),
             ) {
                 TopAppBar(
@@ -299,8 +300,11 @@ private fun ReaderContent(
                             IconButton(onClick = onSettingsClick) {
                                 Icon(Icons.Default.Settings, "Settings")
                             }
-                            IconButton(onClick = onToggleImmersive) {
-                                Icon(Icons.Default.Fullscreen, "Immersive")
+                            IconButton(onClick = { barsVisible = !barsVisible }) {
+                                Icon(
+                                    if (barsVisible) Icons.Default.Fullscreen else Icons.Default.FullscreenExit,
+                                    if (barsVisible) "Fullscreen" else "Exit fullscreen",
+                                )
                             }
                         }
                     },
@@ -350,35 +354,39 @@ private fun ReaderContent(
             }
 
             // ── Content Area (Adaptive) ──────────────────────────────
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()
+                .pointerInput(Unit) {
+                    detectTapGestures { barsVisible = !barsVisible }
+                }
+            ) {
                 if (layoutMode == ReaderLayoutMode.SIDE_BY_SIDE) {
                     // Tablet / landscape: side by side
                     Row(Modifier.fillMaxSize()) {
                         TextPanel("Original", currentPage.originalText,
                             settings.fontSize, settings.lineHeight, colors,
-                            searchQuery, Modifier.weight(1f))
+                            searchQuery, Modifier.weight(1f), showLabel = barsVisible)
                         Box(Modifier.width(1.dp).fillMaxHeight().background(colors.divider))
                         TranslationPanel(currentPage.translatedText, isTranslating, translationError,
                             settings.fontSize, settings.lineHeight, colors,
-                            onTranslateCurrentPage, searchQuery, Modifier.weight(1f))
+                            onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible)
                     }
                 } else {
                     // Phone portrait: top/bottom split — both visible at once
                     Column(Modifier.fillMaxSize()) {
                         TextPanel("Original", currentPage.originalText,
                             settings.fontSize, settings.lineHeight, colors,
-                            searchQuery, Modifier.weight(1f))
+                            searchQuery, Modifier.weight(1f), showLabel = barsVisible)
                         Box(Modifier.fillMaxWidth().height(1.dp).background(colors.divider))
                         TranslationPanel(currentPage.translatedText, isTranslating, translationError,
                             settings.fontSize, settings.lineHeight, colors,
-                            onTranslateCurrentPage, searchQuery, Modifier.weight(1f))
+                            onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible)
                     }
                 }
             }
 
             // ── Bottom Bar (with system nav insets) ──────────────────
             AnimatedVisibility(
-                visible = barsVisible && !settings.isImmersiveMode,
+                visible = barsVisible,
                 enter = fadeIn(), exit = fadeOut(),
             ) {
                 BottomReaderBar(
@@ -437,12 +445,15 @@ private fun TextPanel(
     colors: ReaderColors,
     searchQuery: String = "",
     modifier: Modifier = Modifier,
+    showLabel: Boolean = true,
 ) {
     Column(modifier = modifier) {
-        Box(Modifier.fillMaxWidth().background(colors.divider.copy(alpha = 0.3f))
-            .padding(horizontal = 12.dp, vertical = 4.dp)) {
-            Text(label, style = MaterialTheme.typography.labelSmall,
-                color = colors.textSecondary, fontWeight = FontWeight.Medium)
+        if (showLabel) {
+            Box(Modifier.fillMaxWidth().background(colors.divider.copy(alpha = 0.3f))
+                .padding(horizontal = 12.dp, vertical = 4.dp)) {
+                Text(label, style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary, fontWeight = FontWeight.Medium)
+            }
         }
         Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -471,12 +482,15 @@ private fun TranslationPanel(
     onTranslate: () -> Unit,
     searchQuery: String = "",
     modifier: Modifier = Modifier,
+    showLabel: Boolean = true,
 ) {
     Column(modifier = modifier) {
-        Box(Modifier.fillMaxWidth().background(colors.divider.copy(alpha = 0.3f))
-            .padding(horizontal = 12.dp, vertical = 4.dp)) {
-            Text("Translation", style = MaterialTheme.typography.labelSmall,
-                color = colors.textSecondary, fontWeight = FontWeight.Medium)
+        if (showLabel) {
+            Box(Modifier.fillMaxWidth().background(colors.divider.copy(alpha = 0.3f))
+                .padding(horizontal = 12.dp, vertical = 4.dp)) {
+                Text("Translation", style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary, fontWeight = FontWeight.Medium)
+            }
         }
         Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp),

@@ -2,6 +2,7 @@ package com.dualreader.app.data.repository
 
 import android.content.Context
 import com.dualreader.app.data.local.dao.BookDao
+import com.dualreader.app.data.local.dao.BookmarkDao
 import com.dualreader.app.data.local.dao.PageDao
 import com.dualreader.app.data.local.mapper.toDomain
 import com.dualreader.app.data.local.mapper.toEntity
@@ -22,6 +23,7 @@ class BookRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bookDao: BookDao,
     private val pageDao: PageDao,
+    private val bookmarkDao: BookmarkDao,
 ) : BookRepository {
 
     override fun getAllBooks(): Flow<List<Book>> =
@@ -36,8 +38,17 @@ class BookRepositoryImpl @Inject constructor(
     override suspend fun updateBook(book: Book) =
         bookDao.update(book.toEntity())
 
-    override suspend fun deleteBook(id: String) =
+    override suspend fun deleteBook(id: String) {
+        // Cascade: delete pages, bookmarks, cover file, then book
+        pageDao.deletePagesForBook(id)
+        bookmarkDao.deleteBookmarksForBook(id)
         bookDao.deleteById(id)
+        // Delete cover file
+        withContext(Dispatchers.IO) {
+            val coversDir = File(context.filesDir, "covers")
+            coversDir.listFiles()?.filter { it.name.startsWith(id) }?.forEach { it.delete() }
+        }
+    }
 
     override suspend fun saveCoverImage(bytes: ByteArray, bookId: String): String? {
         return withContext(Dispatchers.IO) {

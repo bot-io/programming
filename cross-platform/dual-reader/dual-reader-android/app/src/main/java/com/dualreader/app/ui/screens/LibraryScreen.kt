@@ -1,6 +1,8 @@
 package com.dualreader.app.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.ImportContacts
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CardDefaults
@@ -39,9 +42,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,7 +80,7 @@ fun LibraryScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Dual Reader v1.6.0") },
+                title = { Text("Dual Reader v1.7.0") },
                 actions = {
                     IconButton(onClick = onSettingsClick) {
                         Icon(
@@ -231,6 +239,7 @@ private fun ErrorState(
 // Book Grid
 // ──────────────────────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BookGrid(
     books: List<Book>,
@@ -239,6 +248,26 @@ private fun BookGrid(
     onDeleteBook: (bookId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var bookToDelete by remember { mutableStateOf<Book?>(null) }
+
+    if (bookToDelete != null) {
+        val book = bookToDelete!!
+        AlertDialog(
+            onDismissRequest = { bookToDelete = null },
+            title = { Text("Delete book?") },
+            text = { Text("\"${book.title}\" and all its data (pages, bookmarks, translations) will be permanently deleted.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteBook(book.id)
+                    bookToDelete = null
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { bookToDelete = null }) { Text("Cancel") }
+            },
+        )
+    }
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         modifier = modifier.fillMaxSize(),
@@ -269,6 +298,7 @@ private fun BookGrid(
 // Book Card
 // ──────────────────────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BookCard(
     book: Book,
@@ -280,7 +310,10 @@ private fun BookCard(
     ElevatedCard(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { onDelete() },
+            ),
         shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
     ) {
@@ -326,24 +359,6 @@ private fun BookCard(
                         .align(Alignment.TopEnd)
                         .padding(6.dp),
                 )
-
-                // Delete button overlay (bottom-end)
-                if (!book.canBeOpened) {
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(2.dp)
-                            .size(28.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete book",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                        )
-                    }
-                }
             }
 
             // ── Text info ──
