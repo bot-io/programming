@@ -223,19 +223,20 @@ class TranslatePageUseCaseTest {
         )
 
         coEvery { cacheRepository.get(any(), any(), any()) } returns null
-        coEvery { translationService.translate("First page", "bg", "en", any()) } returns "Първа страница"
-        coEvery { translationService.translate("Second page", "bg", "en", any()) } returns "Втора страница"
+        // Batch call via translatePages — both pages in one call
+        coEvery {
+            translationService.translatePages(any(), any(), any(), any())
+        } returns mapOf(0 to "Първа страница", 1 to "Втора страница")
         coEvery { cacheRepository.put(any(), any(), any(), any()) } just Runs
 
-        useCase.translateBatchWithContext(pages, "bg", "en")
+        val result = useCase.translateBatchWithContext(pages, "bg", "en")
 
-        // Second call should have context from first translation
-        coVerify {
-            translationService.translate(
-                "Second page", "bg", "en",
-                match { it != null && it.contains("Първа страница") }
-            )
-        }
+        assertTrue(result.isSuccess)
+        assertEquals("Първа страница", result.getOrThrow()[0])
+        assertEquals("Втора страница", result.getOrThrow()[1])
+        // Should have used the batch endpoint, not individual calls
+        coVerify(exactly = 1) { translationService.translatePages(any(), "bg", any(), any()) }
+        coVerify(exactly = 0) { translationService.translate(any(), any(), any(), any()) }
     }
 
     @Test

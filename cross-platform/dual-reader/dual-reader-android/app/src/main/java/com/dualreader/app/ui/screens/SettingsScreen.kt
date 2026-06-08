@@ -273,6 +273,28 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(32.dp))
+
+            // ── About ───────────────────────────────────────────────
+            SettingsSection("About") {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Dual Reader",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        text = "Version ${com.dualreader.app.BuildConfig.VERSION_NAME} (${com.dualreader.app.BuildConfig.VERSION_CODE})",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "A dual-language EPUB reader with AI-powered translation.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(32.dp))
         }
     }
 }

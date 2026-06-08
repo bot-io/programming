@@ -2,6 +2,7 @@ package com.dualreader.app.data.translation
 
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.util.Log
 import com.dualreader.app.domain.services.TranslationException
 import com.dualreader.app.domain.services.TranslationService
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ class CloudTranslationServiceImpl @Inject constructor(
     override val providerName: String = "Gemini 3.5 Flash / GLM-4.7-Flash (cloud)"
 
     companion object {
+        private const val TAG = "CloudTranslation"
         /** Minimum delay between batch requests to respect worker rate limits. */
         private const val BATCH_DELAY_MS = 500L
     }
@@ -70,6 +72,73 @@ class CloudTranslationServiceImpl @Inject constructor(
                 targetLang = targetLanguage,
             )
             results.add(callProxy(request))
+        }
+        results
+    }
+
+    // ── translatePages (batch optimization) ────────────────────────────────────
+
+    override suspend fun translatePages(
+        pages: List<IndexedValue<String>>,
+        targetLanguage: String,
+        sourceLanguage: String?,
+        context: String?,
+    ): Map<Int, String> = withContext(Dispatchers.IO) {
+        if (pages.isEmpty()) return@withContext emptyMap()
+
+        // Try the batch endpoint first
+        try {
+            val batchPages = pages.map { (index, text) ->
+                BatchPage(index = index, text = text)
+            }
+            val request = ProxyBatchTranslateRequest(
+                pages = batchPages,
+                sourceLang = sourceLanguage,
+                targetLang = targetLanguage,
+            )
+
+            val response = proxyApi.translateBatch(request)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.error == null && body?.translations?.isNotEmpty() == true) {
+                    val results = mutableMapOf<Int, String>()
+                    for (t in body.translations) {
+                        if (t.translatedText.isNotBlank()) {
+                            results[t.index] = t.translatedText.trim()
+                        }
+                    }
+                    // Verify we got translations for all pages
+                    if (results.size == pages.size) {
+                        return@withContext results
+                    }
+                    // Partial success — fill gaps with individual calls
+                    Log.w(TAG, "Batch returned ${results.size}/${pages.size} pages, filling gaps individually")
+                    for (page in pages) {
+                        if (page.index !in results) {
+                            try {
+                                val singleResult = translate(page.value, targetLanguage, sourceLanguage, context)
+                                results[page.index] = singleResult
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Individual fallback failed for page ${page.index}: ${e.message}")
+                            }
+                        }
+                    }
+                    if (results.size == pages.size) return@withContext results
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Batch translation failed, falling back to individual: ${e.message}")
+        }
+
+        // Fallback: individual calls
+        val results = mutableMapOf<Int, String>()
+        for ((i, page) in pages.withIndex()) {
+            if (i > 0) delay(BATCH_DELAY_MS)
+            try {
+                results[page.index] = translate(page.value, targetLanguage, sourceLanguage, context)
+            } catch (e: Exception) {
+                Log.e(TAG, "Individual translation failed for page ${page.index}: ${e.message}")
+            }
         }
         results
     }

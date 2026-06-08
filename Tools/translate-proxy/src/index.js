@@ -13,7 +13,9 @@
 
 const CONFIG = {
   // Rate limiting (per IP)
-  maxTextLength: 10000,         // chars per request
+  maxTextLength: 10000,         // chars per single-page request
+  maxBatchChars: 10000,         // total chars per batch request (sum of all pages)
+  maxBatchPages: 5,             // max pages per batch call
   dailyLimitPerIp: 500,        // requests per IP per day
   cooldownMs: 3000,            // min 3s between requests from same IP
 
@@ -44,12 +46,18 @@ export default {
       return corsResponse(new Response(null, { status: 204 }));
     }
 
-    // Only accept POST on /translate
-    if (request.method !== 'POST' || !new URL(request.url).pathname.startsWith('/translate')) {
-      return corsResponse(jsonResponse(404, { error: 'Not found. Use POST /translate' }));
+    const url = new URL(request.url);
+    const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+
+    // POST /translate/batch — multi-page batch translation
+    if (request.method === 'POST' && url.pathname === '/translate/batch') {
+      return corsResponse(await handleBatchTranslate(request, clientIp, env));
     }
 
-    const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+    // POST /translate — single page translation
+    if (request.method !== 'POST' || !url.pathname.startsWith('/translate')) {
+      return corsResponse(jsonResponse(404, { error: 'Not found. Use POST /translate or POST /translate/batch' }));
+    }
 
     try {
       // 1. Rate limit check
@@ -172,6 +180,222 @@ export default {
   },
 };
 
+// ─── Batch Translation Handler ───────────────────────────────────────────────
+
+async function handleBatchTranslate(request, clientIp, env) {
+  // Rate limit
+  const rateLimitResult = await checkRateLimit(request, clientIp, env);
+  if (rateLimitResult) return rateLimitResult;
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse(400, { error: 'Invalid JSON body' });
+  }
+
+  const { pages, source_lang, target_lang } = body;
+  if (!Array.isArray(pages) || pages.length === 0) {
+    return jsonResponse(400, { error: 'Missing "pages" array' });
+  }
+  if (!target_lang) {
+    return jsonResponse(400, { error: 'Missing "target_lang"' });
+  }
+  if (pages.length > CONFIG.maxBatchPages) {
+    return jsonResponse(413, { error: `Too many pages (${pages.length}). Max ${CONFIG.maxBatchPages}.` });
+  }
+
+  // Validate pages
+  const totalChars = pages.reduce((sum, p, i) => {
+    if (!p.text || typeof p.text !== 'string') {
+      throw new Error(`Page ${i} missing "text" field`);
+    }
+    return sum + p.text.length;
+  }, 0);
+
+  if (totalChars > CONFIG.maxBatchChars) {
+    return jsonResponse(413, {
+      error: `Total text too long (${totalChars} chars). Max ${CONFIG.maxBatchChars}.`
+    });
+  }
+
+  const systemPrompt = buildBatchTranslationPrompt(source_lang || 'auto', target_lang, pages.length);
+  const userText = formatBatchPages(pages);
+
+  // Try providers with same fallback chain as single translate
+  let translatedText = null;
+  let usedModel = null;
+  let geminiError = null;
+
+  const geminiKey = env.GEMINI_API_KEY;
+  if (geminiKey) {
+    for (let attempt = 0; attempt < 2 && !translatedText; attempt++) {
+      try {
+        const result = await callGemini(geminiKey, systemPrompt, userText, CONFIG.geminiApiUrl);
+        if (result) { translatedText = result; usedModel = CONFIG.geminiModel; }
+      } catch (err) {
+        geminiError = err.message || 'Unknown error';
+        const is503 = geminiError.includes('503') || geminiError.includes('UNAVAILABLE');
+        if (is503 && attempt === 0) {
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+        if (!translatedText) {
+          try {
+            const r2 = await callGemini(geminiKey, systemPrompt, userText, CONFIG.gemini25ApiUrl);
+            if (r2) { translatedText = r2; usedModel = CONFIG.gemini25Model; }
+          } catch (err25) {
+            geminiError += ` | 2.5: ${err25.message}`;
+          }
+        }
+      }
+    }
+  }
+
+  if (!translatedText) {
+    const glmKey = env.GLM_API_KEY;
+    if (!glmKey) {
+      return jsonResponse(500, { error: 'No translation service configured.' });
+    }
+    try {
+      const glmResult = await callGlm(glmKey, systemPrompt, userText);
+      if (glmResult) { translatedText = glmResult; usedModel = CONFIG.glmModel; }
+    } catch (err) {
+      return jsonResponse(502, { error: `${geminiError ? 'Gemini: ' + geminiError + '. ' : ''}GLM: ${err.message}` });
+    }
+  }
+
+  if (!translatedText) {
+    return jsonResponse(502, { error: 'Empty response from all providers' });
+  }
+
+  // Parse the structured response into individual translations
+  const parsed = parseBatchResponse(translatedText, pages.length);
+
+  await recordRequest(request, clientIp, env);
+
+  return jsonResponse(200, {
+    translations: parsed,
+    model: usedModel,
+    source_lang: source_lang || 'auto',
+    target_lang,
+  });
+}
+
+/**
+ * Format pages into a structured prompt with numbered markers.
+ * Example:
+ *   [Page 1]
+ *   First page text here...
+ *
+ *   [Page 2]
+ *   Second page text here...
+ */
+function formatBatchPages(pages) {
+  return pages.map((p, i) => `[Page ${i + 1}]\n${p.text}`).join('\n\n');
+}
+
+/**
+ * Parse the model's structured response back into individual translations.
+ * Expects format like:
+ *   [Page 1]
+ *   Translated text...
+ *
+ *   [Page 2]
+ *   Translated text...
+ *
+ * Falls back to splitting by markers or returning as single block.
+ */
+function parseBatchResponse(text, expectedCount) {
+  const results = [];
+
+  // Try structured parsing: split by [Page N] markers
+  const pageRegex = /\[Page\s+(\d+)\]\s*\n([\s\S]*?)(?=\n\[Page\s+\d+\]|$)/gi;
+  let match;
+  const found = new Map();
+
+  while ((match = pageRegex.exec(text)) !== null) {
+    const pageNum = parseInt(match[1], 10);
+    const content = match[2].trim();
+    if (pageNum >= 1 && pageNum <= expectedCount) {
+      found.set(pageNum, content);
+    }
+  }
+
+  if (found.size === expectedCount) {
+    // All pages found with markers — clean result
+    for (let i = 1; i <= expectedCount; i++) {
+      results.push({ index: i - 1, translated_text: found.get(i) });
+    }
+    return results;
+  }
+
+  // Fallback: try splitting by double newlines into roughly equal chunks
+  // Strip any remaining markers
+  const cleanText = text.replace(/\[Page\s+\d+\]\s*\n?/gi, '').trim();
+  const chunks = cleanText.split(/\n{2,}/).filter(c => c.trim());
+
+  if (chunks.length === expectedCount) {
+    return chunks.map((chunk, i) => ({ index: i, translated_text: chunk.trim() }));
+  }
+
+  // Last resort: if expected 1 page, return whole text
+  if (expectedCount === 1) {
+    return [{ index: 0, translated_text: cleanText }];
+  }
+
+  // Couldn't parse — return empty so caller can fall back to single-page
+  console.warn(`Batch parse failed: expected ${expectedCount} pages, found ${found.size} markers, ${chunks.length} chunks`);
+  return [];
+}
+
+/**
+ * Build a prompt specifically for batch translation.
+ * Instructs the model to maintain the numbered page structure.
+ */
+function buildBatchTranslationPrompt(sourceLang, targetLang, pageCount) {
+  const langNames = {
+    en: 'English', es: 'Spanish', fr: 'French', de: 'German',
+    it: 'Italian', pt: 'Portuguese', ru: 'Russian', zh: 'Chinese',
+    ja: 'Japanese', ko: 'Korean', ar: 'Arabic', bg: 'Bulgarian',
+    nl: 'Dutch', sv: 'Swedish', pl: 'Polish', tr: 'Turkish',
+    cs: 'Czech', ro: 'Romanian', el: 'Greek', da: 'Danish',
+    fi: 'Finnish', no: 'Norwegian', hu: 'Hungarian', uk: 'Ukrainian',
+  };
+
+  const srcName = sourceLang === 'auto'
+    ? 'the source language (auto-detect)'
+    : (langNames[sourceLang] || sourceLang);
+  const tgtName = langNames[targetLang] || targetLang;
+
+  return [
+    `You are a professional literary translator translating from ${srcName} to ${tgtName}.`,
+    `You produce publication-quality translations that read as if originally written in ${tgtName}.`,
+    ``,
+    `CORE RULES:`,
+    `1. Translate the MEANING and INTENT, never word-by-word. Reconstruct sentences in ${tgtName} naturally.`,
+    `2. Match the author's register, tone, and voice — whether literary, colloquial, formal, or poetic.`,
+    `3. Every sentence must be grammatically perfect in ${tgtName}: correct gender agreement, case, number, articles, prepositions, verb tense and aspect.`,
+    `4. Idioms and culture-specific expressions must be adapted to ${tgtName} equivalents, not translated literally.`,
+    `5. Maintain paragraph breaks exactly as the source.`,
+    `6. Preserve ambiguity and subtext — do not explain or simplify.`,
+    `7. Character names: use the standard ${tgtName} transcription/transliteration convention.`,
+    `8. Maintain CONTINUITY across pages — the same name, term, or style on page 1 must be consistent on page ${pageCount}.`,
+    ``,
+    `IMPORTANT: You will receive ${pageCount} pages marked with [Page N] headers.`,
+    `You MUST output exactly ${pageCount} translations with matching [Page N] headers.`,
+    `Format your output EXACTLY like this:`,
+    ``,
+    `[Page 1]`,
+    `(translation of page 1)`,
+    ``,
+    `[Page 2]`,
+    `(translation of page 2)`,
+    ``,
+    `Do NOT add any commentary, notes, or quotation marks. Only the translations with page markers.`,
+  ].join('\n');
+}
+
 // ─── Gemini Provider ─────────────────────────────────────────────────────────
 
 async function callGemini(apiKey, systemPrompt, userText, apiUrl) {
@@ -191,7 +415,7 @@ async function callGemini(apiKey, systemPrompt, userText, apiUrl) {
         temperature: 1.0,
         maxOutputTokens: 16384,
         thinkingConfig: {
-          thinkingBudget: 2048,
+          thinkingBudget: 4096,
         },
       },
     }),
@@ -260,7 +484,7 @@ async function callGlm(apiKey, systemPrompt, userText) {
         { role: 'user', content: userText },
       ],
       temperature: 0.4,
-      max_tokens: 4096,
+      max_tokens: 8192,
     }),
     signal: AbortSignal.timeout(CONFIG.glmTimeoutMs),
   });

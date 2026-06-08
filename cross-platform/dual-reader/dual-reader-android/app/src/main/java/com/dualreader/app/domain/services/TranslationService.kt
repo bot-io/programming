@@ -43,6 +43,25 @@ interface TranslationService {
     ): List<String>
 
     /**
+     * Translate multiple pages in a single API call (batch optimization).
+     * Returns a map of page index → translated text.
+     * Falls back to individual calls if batch fails.
+     */
+    suspend fun translatePages(
+        pages: List<IndexedValue<String>>,
+        targetLanguage: String,
+        sourceLanguage: String? = null,
+        context: String? = null,
+    ): Map<Int, String> {
+        // Default: fall back to individual calls
+        val results = mutableMapOf<Int, String>()
+        for ((index, text) in pages) {
+            results[index] = translate(text, targetLanguage, sourceLanguage, context)
+        }
+        return results
+    }
+
+    /**
      * Detect the language of the given text.
      * @return ISO 639-1 language code
      */
