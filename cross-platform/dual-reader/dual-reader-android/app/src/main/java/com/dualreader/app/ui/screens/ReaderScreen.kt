@@ -254,13 +254,8 @@ private fun ReaderContent(
                                 }
                             )
                         } else {
-                            Column {
-                                Text(book.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.titleMedium)
-                                Text("${book.currentPage + 1} / $totalPages",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+                            Text(book.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.titleMedium)
                         }
                     },
                     navigationIcon = {
@@ -281,21 +276,22 @@ private fun ReaderContent(
                             IconButton(onClick = { showSearch = true }) {
                                 Icon(Icons.Default.Search, "Search")
                             }
-                            IconButton(onClick = { showBookmarkDialog = true }) {
-                                Icon(Icons.Default.BookmarkAdd, "Add bookmark")
-                            }
                             if (bookmarks.isNotEmpty()) {
                                 BadgedBox(badge = { Badge { Text("${bookmarks.size}") } }) {
                                     IconButton(onClick = { showBookmarkList = true }) {
-                                        Icon(Icons.Default.BookmarkBorder, "View bookmarks")
+                                        Icon(Icons.Default.BookmarkBorder, "Bookmarks")
                                     }
+                                }
+                            } else {
+                                IconButton(onClick = { showBookmarkDialog = true }) {
+                                    Icon(Icons.Default.BookmarkAdd, "Add bookmark")
                                 }
                             }
                             IconButton(onClick = onTranslateCurrentPage) {
                                 Icon(Icons.Default.Translate, "Translate page")
                             }
                             IconButton(onClick = onTranslateAll) {
-                                Icon(Icons.Default.CloudDownload, "Translate all")
+                                Icon(Icons.Default.AutoStories, "Translate all pages")
                             }
                             IconButton(onClick = onSettingsClick) {
                                 Icon(Icons.Default.Settings, "Settings")
@@ -365,7 +361,7 @@ private fun ReaderContent(
                         TextPanel("Original", currentPage.originalText,
                             settings.fontSize, settings.lineHeight, colors,
                             searchQuery, Modifier.weight(1f), showLabel = barsVisible)
-                        Box(Modifier.width(1.dp).fillMaxHeight().background(colors.divider))
+                        Box(Modifier.width(2.dp).fillMaxHeight().background(colors.accent.copy(alpha = 0.5f)))
                         TranslationPanel(currentPage.translatedText, isTranslating, translationError,
                             settings.fontSize, settings.lineHeight, colors,
                             onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible)
@@ -376,7 +372,7 @@ private fun ReaderContent(
                         TextPanel("Original", currentPage.originalText,
                             settings.fontSize, settings.lineHeight, colors,
                             searchQuery, Modifier.weight(1f), showLabel = barsVisible)
-                        Box(Modifier.fillMaxWidth().height(1.dp).background(colors.divider))
+                        Box(Modifier.fillMaxWidth().height(2.dp).background(colors.accent.copy(alpha = 0.5f)))
                         TranslationPanel(currentPage.translatedText, isTranslating, translationError,
                             settings.fontSize, settings.lineHeight, colors,
                             onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible)
@@ -611,6 +607,19 @@ fun BookmarkListSheet(
             .padding(bottom = 16.dp)) {
             Text("Bookmarks", style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(bottom = 16.dp))
+
+            // Add bookmark button at top
+            FilledTonalButton(
+                onClick = {
+                    onDismiss()
+                    // Will need to trigger add from parent; for now, close sheet
+                },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+            ) {
+                Icon(Icons.Default.BookmarkAdd, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Bookmark current page")
+            }
 
             if (bookmarks.isEmpty()) {
                 Box(Modifier.fillMaxWidth().padding(vertical = 32.dp),
