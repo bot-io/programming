@@ -1,21 +1,20 @@
 package com.dualreader.app.domain.usecases
 
+import com.dualreader.app.domain.repositories.TranslationCacheRepository
 import com.dualreader.app.domain.services.TranslationService
 import javax.inject.Inject
 
 /**
- * Context-aware translation use case.
+ * Context-aware translation use case with local caching.
  *
- * Sends surrounding pages as context so the LLM can:
- * - Resolve pronouns and references across page boundaries
- * - Maintain consistent tone, style, and character names
- * - Avoid repeating or contradicting previous translations
- *
- * For batch mode (Translate All), groups pages into batches of [BATCH_SIZE]
- * and carries forward the last translated paragraph as context for the next batch.
+ * - Checks the local cache before calling any translation service
+ * - Stores every successful translation in the cache
+ * - Re-translations overwrite the cache entry (model upgrade → better quality)
+ * - Sends surrounding pages as context for better quality
  */
 class TranslatePageUseCase @Inject constructor(
     private val translationService: TranslationService,
+    private val cacheRepository: TranslationCacheRepository,
 ) {
     companion object {
         /** Minimum delay between batch requests to respect worker rate limits. */
@@ -27,12 +26,7 @@ class TranslatePageUseCase @Inject constructor(
 
     /**
      * Translate a single page with optional surrounding context.
-     *
-     * @param text The page text to translate.
-     * @param targetLanguage ISO 639-1 target language code.
-     * @param sourceLanguage Optional source language (null = auto-detect).
-     * @param previousOriginal Text from the previous page (original language).
-     * @param previousTranslation Translation of the previous page (if available).
+     * Uses cached translation if available, otherwise calls the service and caches the result.
      */
     suspend operator fun invoke(
         text: String,
@@ -40,15 +34,28 @@ class TranslatePageUseCase @Inject constructor(
         sourceLanguage: String? = null,
         previousOriginal: String? = null,
         previousTranslation: String? = null,
+        forceRetranslate: Boolean = false,
     ): Result<String> {
         return runCatching {
+            // Check cache first (unless forced retranslate)
+            if (!forceRetranslate) {
+                val cached = cacheRepository.get(text, sourceLanguage, targetLanguage)
+                if (cached != null) return Result.success(cached)
+            }
+
+            // Cache miss or forced — call the service
             val context = buildContext(previousOriginal, previousTranslation)
-            translationService.translate(
+            val translated = translationService.translate(
                 text = text,
                 targetLanguage = targetLanguage,
                 sourceLanguage = sourceLanguage,
                 context = context,
             )
+
+            // Store in cache (overwrites if exists = model upgrade)
+            cacheRepository.put(text, sourceLanguage, targetLanguage, translated)
+
+            translated
         }
     }
 
@@ -56,19 +63,31 @@ class TranslatePageUseCase @Inject constructor(
      * Translate multiple pages with context continuity.
      *
      * Translates pages one at a time, passing the previous translation as context.
-     * This keeps requests small and avoids timeouts from oversized payloads.
+     * Skips pages that are already cached (unless forceRetranslate).
      */
     suspend fun translateBatchWithContext(
         pages: List<PageToTranslate>,
         targetLanguage: String,
         sourceLanguage: String? = null,
         onPageTranslated: (index: Int, translation: String) -> Unit = { _, _ -> },
+        forceRetranslate: Boolean = false,
     ): Result<Map<Int, String>> {
         return runCatching {
             val results = mutableMapOf<Int, String>()
             var lastTranslation: String? = null
 
             for ((i, page) in pages.withIndex()) {
+                // Check cache first
+                if (!forceRetranslate) {
+                    val cached = cacheRepository.get(page.text, sourceLanguage, targetLanguage)
+                    if (cached != null) {
+                        results[page.index] = cached
+                        onPageTranslated(page.index, cached)
+                        lastTranslation = cached
+                        continue
+                    }
+                }
+
                 val prevOriginal = if (i > 0) pages[i - 1].text else null
 
                 val result = invoke(
@@ -77,6 +96,7 @@ class TranslatePageUseCase @Inject constructor(
                     sourceLanguage = sourceLanguage,
                     previousOriginal = prevOriginal,
                     previousTranslation = lastTranslation,
+                    forceRetranslate = true, // Already checked cache above
                 ).getOrThrow()
 
                 results[page.index] = result

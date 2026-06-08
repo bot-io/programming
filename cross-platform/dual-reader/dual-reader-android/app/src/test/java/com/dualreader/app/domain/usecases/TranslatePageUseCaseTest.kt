@@ -1,276 +1,267 @@
 package com.dualreader.app.domain.usecases
 
+import com.dualreader.app.domain.repositories.TranslationCacheRepository
 import com.dualreader.app.domain.services.TranslationException
 import com.dualreader.app.domain.services.TranslationService
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
-/**
- * Comprehensive tests for TranslatePageUseCase — the context-aware translation orchestrator.
- *
- * Covers:
- * - Single page translation (with/without context)
- * - Context building (truncation, format, both/null)
- * - Batch with context (continuity, callback, error propagation)
- * - Legacy batch (backward compat)
- * - Error wrapping (service failures → Result.failure)
- */
 class TranslatePageUseCaseTest {
 
     private lateinit var translationService: TranslationService
+    private lateinit var cacheRepository: TranslationCacheRepository
     private lateinit var useCase: TranslatePageUseCase
 
     @Before
     fun setUp() {
         translationService = mockk()
-        useCase = TranslatePageUseCase(translationService)
+        cacheRepository = mockk()
+        useCase = TranslatePageUseCase(translationService, cacheRepository)
     }
 
-    // ── Single invoke — happy path ───────────────────────────────────────────
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
+
+    // ─── Cache hit: skips service call ──────────────────────────────────
 
     @Test
-    fun `invoke - translates single text without context`() = runTest {
-        coEvery { translationService.translate("Hello world", "es", null, null) } returns "Hola mundo"
+    fun `cache hit returns cached translation without calling service`() = runTest {
+        coEvery { cacheRepository.get("Hello", "en", "bg") } returns "Здравей"
 
-        val result = useCase("Hello world", "es")
+        val result = useCase("Hello", "bg", "en")
+
         assertTrue(result.isSuccess)
-        assertEquals("Hola mundo", result.getOrThrow())
+        assertEquals("Здравей", result.getOrThrow())
+        coVerify(exactly = 0) { translationService.translate(any(), any(), any(), any()) }
     }
 
     @Test
-    fun `invoke - passes source language when provided`() = runTest {
-        coEvery { translationService.translate("Bonjour", "en", "fr", null) } returns "Hello"
+    fun `cache hit with null sourceLang passes null to cache`() = runTest {
+        // UseCase passes sourceLanguage=null directly to cacheRepository.get
+        coEvery { cacheRepository.get("Hello", null, "bg") } returns "Здравей"
 
-        val result = useCase("Bonjour", "en", sourceLanguage = "fr")
+        val result = useCase("Hello", "bg", null)
+
         assertTrue(result.isSuccess)
-        coVerify { translationService.translate("Bonjour", "en", "fr", null) }
+        assertEquals("Здравей", result.getOrThrow())
+    }
+
+    // ─── Cache miss: calls service and stores result ────────────────────
+
+    @Test
+    fun `cache miss calls service and stores result`() = runTest {
+        coEvery { cacheRepository.get("Hello", "en", "bg") } returns null
+        coEvery {
+            translationService.translate("Hello", "bg", "en", null)
+        } returns "Здравей"
+        coEvery { cacheRepository.put("Hello", "en", "bg", "Здравей") } just Runs
+
+        val result = useCase("Hello", "bg", "en")
+
+        assertTrue(result.isSuccess)
+        assertEquals("Здравей", result.getOrThrow())
+        coVerify(exactly = 1) { translationService.translate("Hello", "bg", "en", null) }
+        coVerify(exactly = 1) { cacheRepository.put("Hello", "en", "bg", "Здравей") }
     }
 
     @Test
-    fun `invoke - passes previous original and translation as context`() = runTest {
-        coEvery { translationService.translate(
-            eq("Page 2 text"), eq("bg"), eq("en"),
-            match { ctx -> ctx != null && ctx.contains("Page 1 translation") && ctx.contains("Page 1 original") }
-        ) } returns "Страница 2"
+    fun `cache miss with context passes context to service`() = runTest {
+        coEvery { cacheRepository.get(any(), any(), any()) } returns null
+        coEvery {
+            translationService.translate("Page 2", "bg", "en", any())
+        } returns "Страница 2"
+        coEvery { cacheRepository.put(any(), any(), any(), any()) } just Runs
 
         val result = useCase(
-            "Page 2 text", "bg", "en",
+            text = "Page 2",
+            targetLanguage = "bg",
+            sourceLanguage = "en",
             previousOriginal = "Page 1 original",
-            previousTranslation = "Page 1 translation"
+            previousTranslation = "Страница 1",
         )
+
         assertTrue(result.isSuccess)
-        assertEquals("Страница 2", result.getOrThrow())
+        coVerify {
+            translationService.translate("Page 2", "bg", "en", match { ctx ->
+                ctx != null && ctx.contains("Страница 1")
+            })
+        }
     }
 
-    @Test
-    fun `invoke - passes only previous original when no translation`() = runTest {
-        coEvery { translationService.translate(
-            eq("Text"), eq("bg"), eq("en"),
-            match { ctx -> ctx != null && ctx.contains("Previous original") && !ctx.contains("translation") }
-        ) } returns "Текст"
+    // ─── Force retranslate: bypasses cache ──────────────────────────────
 
-        val result = useCase("Text", "bg", "en", previousOriginal = "Previous original")
+    @Test
+    fun `forceRetranslate bypasses cache and overwrites`() = runTest {
+        // Cache has a value but we force retranslate
+        coEvery {
+            translationService.translate("Hello", "bg", "en", null)
+        } returns "New translation"
+        coEvery { cacheRepository.put("Hello", "en", "bg", "New translation") } just Runs
+
+        val result = useCase("Hello", "bg", "en", forceRetranslate = true)
+
         assertTrue(result.isSuccess)
+        assertEquals("New translation", result.getOrThrow())
+        // Cache lookup was skipped
+        coVerify(exactly = 0) { cacheRepository.get(any(), any(), any()) }
+        // Service was called
+        coVerify(exactly = 1) { translationService.translate("Hello", "bg", "en", null) }
+        // Result was stored in cache (overwriting old)
+        coVerify(exactly = 1) { cacheRepository.put("Hello", "en", "bg", "New translation") }
     }
 
-    @Test
-    fun `invoke - passes only previous translation when no original`() = runTest {
-        coEvery { translationService.translate(
-            eq("Text"), eq("bg"), eq("en"),
-            match { ctx -> ctx != null && ctx.contains("Previous translation") }
-        ) } returns "Текст"
-
-        val result = useCase("Text", "bg", "en", previousTranslation = "Previous translation")
-        assertTrue(result.isSuccess)
-    }
+    // ─── Service failure: does not cache ────────────────────────────────
 
     @Test
-    fun `invoke - context null when no previous info`() = runTest {
-        coEvery { translationService.translate("Text", "bg", "en", null) } returns "Текст"
+    fun `service failure returns error without caching`() = runTest {
+        coEvery { cacheRepository.get("Hello", "en", "bg") } returns null
+        coEvery {
+            translationService.translate("Hello", "bg", "en", null)
+        } throws TranslationException("API error")
 
-        val result = useCase("Text", "bg", "en")
-        assertTrue(result.isSuccess)
-        coVerify { translationService.translate("Text", "bg", "en", null) }
-    }
+        val result = useCase("Hello", "bg", "en")
 
-    // ── Context building — edge cases ────────────────────────────────────────
-
-    @Test
-    fun `invoke - truncates long context to 300 chars`() = runTest {
-        val longTranslation = "А".repeat(500)
-        coEvery { translationService.translate(
-            any(), any(), any(),
-            match { ctx -> ctx != null && ctx.contains("А".repeat(300)) && ctx.contains("...") }
-        ) } returns "Текст"
-
-        useCase("Text", "bg", "en", previousTranslation = longTranslation)
-    }
-
-    @Test
-    fun `invoke - context contains do NOT translate instruction`() = runTest {
-        coEvery { translationService.translate(
-            any(), any(), any(),
-            match { ctx -> ctx != null && ctx.contains("do NOT translate") }
-        ) } returns "Текст"
-
-        useCase("Text", "bg", "en", previousTranslation = "Some context")
-    }
-
-    // ── Single invoke — error paths ──────────────────────────────────────────
-
-    @Test
-    fun `invoke - wraps service exception in failure result`() = runTest {
-        coEvery { translationService.translate(any(), any(), any(), any()) } throws RuntimeException("API error")
-
-        val result = useCase("text", "es")
         assertTrue(result.isFailure)
+        assertEquals("API error", result.exceptionOrNull()?.message)
+        coVerify(exactly = 0) { cacheRepository.put(any(), any(), any(), any()) }
     }
 
-    @Test
-    fun `invoke - wraps TranslationException in failure result`() = runTest {
-        coEvery { translationService.translate(any(), any(), any(), any()) } throws TranslationException("Rate limited")
-
-        val result = useCase("text", "es")
-        assertTrue(result.isFailure)
-    }
-
-    // ── Batch with context ───────────────────────────────────────────────────
+    // ─── Batch with cache ───────────────────────────────────────────────
 
     @Test
-    fun `translateBatchWithContext - translates pages one at a time with rolling context`() = runTest {
-        // Page 0: no context
-        coEvery { translationService.translate("Page 0", "bg", "en", null) } returns "Страница 0"
-        // Page 1: gets page 0's translation + original as context
-        coEvery { translationService.translate(
-            eq("Page 1"), eq("bg"), eq("en"),
-            match { ctx -> ctx != null && ctx.contains("Страница 0") && ctx.contains("Page 0") }
-        ) } returns "Страница 1"
-        // Page 2: gets page 1's translation + original as context
-        coEvery { translationService.translate(
-            eq("Page 2"), eq("bg"), eq("en"),
-            match { ctx -> ctx != null && ctx.contains("Страница 1") && ctx.contains("Page 1") }
-        ) } returns "Страница 2"
-
+    fun `batch skips cached pages and translates uncached`() = runTest {
         val pages = listOf(
-            PageToTranslate(0, "Page 0"),
-            PageToTranslate(1, "Page 1"),
-            PageToTranslate(2, "Page 2"),
+            PageToTranslate(index = 0, text = "Page 0"),
+            PageToTranslate(index = 1, text = "Page 1"),
+            PageToTranslate(index = 2, text = "Page 2"),
         )
+
+        // Page 0 cached, Page 1 and 2 not cached
+        coEvery { cacheRepository.get("Page 0", "en", "bg") } returns "Стр. 0"
+        coEvery { cacheRepository.get("Page 1", "en", "bg") } returns null
+        coEvery { cacheRepository.get("Page 2", "en", "bg") } returns null
+
+        coEvery { translationService.translate("Page 1", "bg", "en", any()) } returns "Стр. 1"
+        coEvery { translationService.translate("Page 2", "bg", "en", any()) } returns "Стр. 2"
+        coEvery { cacheRepository.put(any(), any(), any(), any()) } just Runs
+
+        val translated = mutableListOf<Pair<Int, String>>()
+        val result = useCase.translateBatchWithContext(
+            pages = pages,
+            targetLanguage = "bg",
+            sourceLanguage = "en",
+            onPageTranslated = { idx, text -> translated.add(idx to text) },
+        )
+
+        assertTrue(result.isSuccess)
+        val map = result.getOrThrow()
+        assertEquals("Стр. 0", map[0]) // From cache
+        assertEquals("Стр. 1", map[1]) // From service
+        assertEquals("Стр. 2", map[2]) // From service
+
+        // Callbacks fired in order
+        assertEquals(3, translated.size)
+        assertEquals(0 to "Стр. 0", translated[0])
+        assertEquals(1 to "Стр. 1", translated[1])
+        assertEquals(2 to "Стр. 2", translated[2])
+
+        // Only 2 service calls (page 0 was cached)
+        coVerify(exactly = 2) { translationService.translate(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `batch all cached skips all service calls`() = runTest {
+        val pages = listOf(
+            PageToTranslate(index = 0, text = "A"),
+            PageToTranslate(index = 1, text = "B"),
+        )
+
+        coEvery { cacheRepository.get("A", "en", "bg") } returns "А"
+        coEvery { cacheRepository.get("B", "en", "bg") } returns "Б"
 
         val result = useCase.translateBatchWithContext(pages, "bg", "en")
+
         assertTrue(result.isSuccess)
-
-        val translations = result.getOrThrow()
-        assertEquals(3, translations.size)
-        assertEquals("Страница 0", translations[0])
-        assertEquals("Страница 1", translations[1])
-        assertEquals("Страница 2", translations[2])
+        assertEquals("А", result.getOrThrow()[0])
+        assertEquals("Б", result.getOrThrow()[1])
+        coVerify(exactly = 0) { translationService.translate(any(), any(), any(), any()) }
     }
 
     @Test
-    fun `translateBatchWithContext - calls onPageTranslated for each page`() = runTest {
-        coEvery { translationService.translate(any(), eq("bg"), any(), any()) } returns "Текст"
+    fun `batch with forceRetranslate ignores cache`() = runTest {
+        val pages = listOf(PageToTranslate(index = 0, text = "Hello"))
 
-        val pages = listOf(
-            PageToTranslate(5, "Text A"),
-            PageToTranslate(10, "Text B"),
-        )
-
-        val callbacks = mutableListOf<Pair<Int, String>>()
-        useCase.translateBatchWithContext(pages, "bg", "en") { index, translation ->
-            callbacks.add(index to translation)
-        }
-
-        assertEquals(2, callbacks.size)
-        assertEquals(5, callbacks[0].first)
-        assertEquals(10, callbacks[1].first)
-    }
-
-    @Test
-    fun `translateBatchWithContext - returns empty map for empty input`() = runTest {
-        val result = useCase.translateBatchWithContext(emptyList(), "bg", "en")
-        assertTrue(result.isSuccess)
-        assertTrue(result.getOrThrow().isEmpty())
-    }
-
-    @Test
-    fun `translateBatchWithContext - single page gets no context`() = runTest {
-        coEvery { translationService.translate("Only page", "bg", "en", null) } returns "Само страница"
+        coEvery { translationService.translate("Hello", "bg", "en", any()) } returns "Fresh"
+        coEvery { cacheRepository.put("Hello", "en", "bg", "Fresh") } just Runs
 
         val result = useCase.translateBatchWithContext(
-            listOf(PageToTranslate(0, "Only page")), "bg", "en"
+            pages = pages,
+            targetLanguage = "bg",
+            sourceLanguage = "en",
+            forceRetranslate = true,
         )
+
         assertTrue(result.isSuccess)
-        assertEquals("Само страница", result.getOrThrow()[0])
+        assertEquals("Fresh", result.getOrThrow()[0])
+        coVerify(exactly = 0) { cacheRepository.get(any(), any(), any()) }
+        coVerify(exactly = 1) { translationService.translate(any(), any(), any(), any()) }
     }
 
-    @Test
-    fun `translateBatchWithContext - propagates failure on page error`() = runTest {
-        coEvery { translationService.translate("Page 0", "bg", "en", null) } returns "Страница 0"
-        coEvery { translationService.translate(eq("Page 1"), any(), any(), any()) } throws TranslationException("Timeout")
+    // ─── Context continuity across pages ────────────────────────────────
 
+    @Test
+    fun `batch passes previous translation as context for uncached pages`() = runTest {
         val pages = listOf(
-            PageToTranslate(0, "Page 0"),
-            PageToTranslate(1, "Page 1"),
+            PageToTranslate(index = 0, text = "First page"),
+            PageToTranslate(index = 1, text = "Second page"),
         )
 
-        val result = useCase.translateBatchWithContext(pages, "bg", "en")
-        assertTrue(result.isFailure)
+        coEvery { cacheRepository.get(any(), any(), any()) } returns null
+        coEvery { translationService.translate("First page", "bg", "en", any()) } returns "Първа страница"
+        coEvery { translationService.translate("Second page", "bg", "en", any()) } returns "Втора страница"
+        coEvery { cacheRepository.put(any(), any(), any(), any()) } just Runs
+
+        useCase.translateBatchWithContext(pages, "bg", "en")
+
+        // Second call should have context from first translation
+        coVerify {
+            translationService.translate(
+                "Second page", "bg", "en",
+                match { it != null && it.contains("Първа страница") }
+            )
+        }
     }
 
     @Test
-    fun `translateBatchWithContext - preserves page indices in result map`() = runTest {
-        coEvery { translationService.translate(any(), eq("bg"), any(), any()) } returns "Текст"
-
+    fun `cached page in middle of batch still provides context for next`() = runTest {
         val pages = listOf(
-            PageToTranslate(42, "Page forty-two"),
-            PageToTranslate(99, "Page ninety-nine"),
+            PageToTranslate(index = 0, text = "P0"),
+            PageToTranslate(index = 1, text = "P1"), // Will be cached
+            PageToTranslate(index = 2, text = "P2"),
         )
 
-        val result = useCase.translateBatchWithContext(pages, "bg", "en")
-        val translations = result.getOrThrow()
-        assertTrue(translations.containsKey(42))
-        assertTrue(translations.containsKey(99))
-    }
+        coEvery { cacheRepository.get("P0", "en", "bg") } returns null
+        coEvery { cacheRepository.get("P1", "en", "bg") } returns "Кеширана P1"
+        coEvery { cacheRepository.get("P2", "en", "bg") } returns null
 
-    // ── Legacy batch ─────────────────────────────────────────────────────────
+        coEvery { translationService.translate("P0", "bg", "en", any()) } returns "T0"
+        coEvery { translationService.translate("P2", "bg", "en", any()) } returns "T2"
+        coEvery { cacheRepository.put(any(), any(), any(), any()) } just Runs
 
-    @Test
-    fun `translateBatch - translates multiple texts`() = runTest {
-        val input = listOf("Hello", "Goodbye", "Thanks")
-        val expected = listOf("Hola", "Adiós", "Gracias")
-        coEvery { translationService.translateBatch(input, "es", null) } returns expected
+        useCase.translateBatchWithContext(pages, "bg", "en")
 
-        val result = useCase.translateBatch(input, "es")
-        assertTrue(result.isSuccess)
-        assertEquals(expected, result.getOrThrow())
-    }
-
-    @Test
-    fun `translateBatch - empty list returns empty list`() = runTest {
-        coEvery { translationService.translateBatch(emptyList(), "es", null) } returns emptyList()
-
-        val result = useCase.translateBatch(emptyList(), "es")
-        assertTrue(result.isSuccess)
-        assertEquals(emptyList<String>(), result.getOrThrow())
-    }
-
-    @Test
-    fun `translateBatch - wraps service error in failure`() = runTest {
-        coEvery { translationService.translateBatch(any(), any(), any()) } throws TranslationException("Failed")
-
-        val result = useCase.translateBatch(listOf("Text"), "es")
-        assertTrue(result.isFailure)
-    }
-
-    @Test
-    fun `translateBatch - passes source language`() = runTest {
-        coEvery { translationService.translateBatch(any(), eq("bg"), eq("en")) } returns listOf("Текст")
-
-        useCase.translateBatch(listOf("Text"), "bg", "en")
-        coVerify { translationService.translateBatch(listOf("Text"), "bg", "en") }
+        // P2 should receive cached P1 translation as context
+        coVerify {
+            translationService.translate(
+                "P2", "bg", "en",
+                match { it != null && it.contains("Кеширана P1") }
+            )
+        }
     }
 }

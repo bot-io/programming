@@ -21,7 +21,9 @@ import com.dualreader.app.domain.entities.TranslationProvider
 @Composable
 fun SettingsScreen(
     settings: ReadingSettings,
+    cachedTranslationCount: Int,
     onSettingsChanged: (ReadingSettings) -> Unit,
+    onClearTranslations: () -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -215,6 +217,58 @@ fun SettingsScreen(
                             Text(name, style = MaterialTheme.typography.bodyLarge)
                         }
                     }
+                }
+            }
+
+            // ── Clear Translation Cache ──────────────────────────────
+            SettingsSection("Translation Cache") {
+                var showDialog by remember { mutableStateOf(false) }
+
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Cached translations: $cachedTranslationCount",
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            "Cleared translations will be re-translated on demand",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    OutlinedButton(
+                        onClick = { showDialog = true },
+                        enabled = cachedTranslationCount > 0,
+                    ) {
+                        Text("Clear All")
+                    }
+                }
+
+                if (showDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDialog = false },
+                        title = { Text("Clear all translations?") },
+                        text = { Text("Cached translations will be deleted. Next time you translate a page, it will be re-translated from scratch. Your reading progress is not affected.") },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                onClearTranslations()
+                                showDialog = false
+                            }) {
+                                Text("Clear")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDialog = false }) {
+                                Text("Cancel")
+                            }
+                        },
+                    )
                 }
             }
 

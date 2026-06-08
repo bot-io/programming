@@ -127,10 +127,13 @@ fun DualReaderNavHost() {
         composable("settings") {
             val viewModel: SettingsViewModel = hiltViewModel()
             val settings by viewModel.settings.collectAsState()
+            val cachedCount by viewModel.cachedCount.collectAsState()
 
             SettingsScreen(
                 settings = settings,
+                cachedTranslationCount = cachedCount,
                 onSettingsChanged = { viewModel.updateSettings(it) },
+                onClearTranslations = { viewModel.clearAllTranslations() },
                 onBack = { navController.popBackStack() },
             )
         }

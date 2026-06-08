@@ -13,5 +13,22 @@
   "daily-notes": true,
   "command-palette": true,
   "editor-status": true,
-  "bookmarks": true
+  "bookmarks": true,
+  "switcher": true,
+  "graph": true,
+  "canvas": true,
+  "footnotes": false,
+  "properties": true,
+  "note-composer": true,
+  "slash-command": false,
+  "zk-prefixer": false,
+  "random-note": false,
+  "slides": false,
+  "audio-recorder": false,
+  "workspaces": false,
+  "file-recovery": true,
+  "publish": false,
+  "sync": true,
+  "bases": true,
+  "webviewer": false
 }
