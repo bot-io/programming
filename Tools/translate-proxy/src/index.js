@@ -23,10 +23,12 @@ const CONFIG = {
 
   // Provider endpoints
   geminiApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',
+  gemini25ApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
   glmApiUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
 
   // Models
   geminiModel: 'gemini-3.5-flash',
+  gemini25Model: 'gemini-2.5-flash',
   glmModel: 'glm-4.7-flash',
 
   // CORS
@@ -83,18 +85,40 @@ export default {
       let usedModel = null;
       let geminiError = null;
 
-      // ── Attempt 1: Gemini 2.5 Flash (free, high quality) ──────────────
+      // ── Attempt 1: Gemini 3.5 Flash (free, best quality) ──────────────
       const geminiKey = env.GEMINI_API_KEY;
       if (geminiKey) {
-        try {
-          const geminiResult = await callGemini(geminiKey, systemPrompt, text);
-          if (geminiResult) {
-            translatedText = geminiResult;
-            usedModel = CONFIG.geminiModel;
+        // Try Gemini 3.5 Flash with one retry on 503 (high demand is temporary)
+        for (let attempt = 0; attempt < 2 && !translatedText; attempt++) {
+          try {
+            const geminiResult = await callGemini(geminiKey, systemPrompt, text, CONFIG.geminiApiUrl);
+            if (geminiResult) {
+              translatedText = geminiResult;
+              usedModel = CONFIG.geminiModel;
+            }
+          } catch (err) {
+            geminiError = err.message || 'Unknown Gemini error';
+            const is503 = geminiError.includes('503') || geminiError.includes('UNAVAILABLE');
+            if (is503 && attempt === 0) {
+              console.warn(`Gemini 3.5 unavailable (503), retrying in 1s...`);
+              await new Promise(r => setTimeout(r, 1000));
+              continue;
+            }
+            // If 3.5 failed after retry (or non-503 error), try 2.5 Flash
+            if (!translatedText) {
+              try {
+                console.warn(`Gemini 3.5 failed (${geminiError}), trying Gemini 2.5 Flash...`);
+                const gemini25Result = await callGemini(geminiKey, systemPrompt, text, CONFIG.gemini25ApiUrl);
+                if (gemini25Result) {
+                  translatedText = gemini25Result;
+                  usedModel = CONFIG.gemini25Model;
+                }
+              } catch (err25) {
+                geminiError += ` | 2.5: ${err25.message}`;
+                console.warn(`Gemini 2.5 also failed: ${err25.message}`);
+              }
+            }
           }
-        } catch (err) {
-          geminiError = err.message || 'Unknown Gemini error';
-          console.warn(`Gemini failed, falling back to GLM: ${geminiError}`);
         }
       } else {
         console.info('GEMINI_API_KEY not set, using GLM directly');
@@ -150,8 +174,8 @@ export default {
 
 // ─── Gemini Provider ─────────────────────────────────────────────────────────
 
-async function callGemini(apiKey, systemPrompt, userText) {
-  const url = `${CONFIG.geminiApiUrl}?key=${apiKey}`;
+async function callGemini(apiKey, systemPrompt, userText, apiUrl) {
+  const url = `${apiUrl || CONFIG.geminiApiUrl}?key=${apiKey}`;
 
   const resp = await fetch(url, {
     method: 'POST',
@@ -201,10 +225,14 @@ async function callGemini(apiKey, systemPrompt, userText) {
   }
 
   // Find the last non-thought part (the actual translation)
+  // Note: Gemini 3.5 Flash uses "thoughtSignature" field on thought parts,
+  // and "thought: true" on explicit thought text parts. Either way, we want
+  // the part that has actual text without thought markers.
   let text = null;
   for (let i = parts.length - 1; i >= 0; i--) {
-    if (parts[i].text && !parts[i].thought) {
-      text = parts[i].text.trim();
+    const part = parts[i];
+    if (part.text && !part.thought) {
+      text = part.text.trim();
       break;
     }
   }
