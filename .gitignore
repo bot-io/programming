@@ -263,6 +263,16 @@ tasks.md
 .hermes/
 
 # ============================================
+# Obsidian Workspace (user-specific state)
+# ============================================
+docs/.obsidian/workspace.json
+docs/.obsidian/workspace-mobile.json
+docs/.obsidian/plugins/
+docs/.obsidian/themes/
+docs/.obsidian/hotkeys.json
+docs/.obsidian/community-plugins.json
+
+# ============================================
 # Security and Secrets
 # ============================================
 # API keys and secrets

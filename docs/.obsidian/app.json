@@ -1,0 +1,12 @@
+{
+  "legacyEditor": false,
+  "livePreview": true,
+  "readableLineLength": true,
+  "defaultViewMode": "preview",
+  "newFileLocation": "inbox",
+  "attachmentFolderPath": "assets",
+  "showUnsupportedFiles": false,
+  "strictLineBreaks": false,
+  "useMarkdownLinks": false,
+  "showLineNumber": false
+}

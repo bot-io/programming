@@ -41,7 +41,15 @@ class SettingsRepositoryImpl @Inject constructor(
                 margins = prefs[Keys.MARGINS] ?: 16,
                 theme = try { ReaderTheme.valueOf(prefs[Keys.THEME] ?: "DARK") } catch (_: Exception) { ReaderTheme.DARK },
                 targetLanguage = prefs[Keys.TARGET_LANGUAGE] ?: "es",
-                translationProvider = try { TranslationProvider.valueOf(prefs[Keys.TRANSLATION_PROVIDER] ?: "LLM_FREE") } catch (_: Exception) { TranslationProvider.LLM_FREE },
+                translationProvider = try {
+                    val name = prefs[Keys.TRANSLATION_PROVIDER] ?: "GEMINI_FLASH"
+                    // Map removed enum values to closest equivalent
+                    when (name) {
+                        "LLM_QUALITY" -> TranslationProvider.GEMINI_FLASH
+                        "LLM_FREE" -> TranslationProvider.LLM_FREE
+                        else -> TranslationProvider.valueOf(name)
+                    }
+                } catch (_: Exception) { TranslationProvider.GEMINI_FLASH },
                 brightness = prefs[Keys.BRIGHTNESS] ?: -1f,
                 isImmersiveMode = prefs[Keys.IMMERSIVE_MODE] ?: false,
             )
@@ -56,7 +64,14 @@ class SettingsRepositoryImpl @Inject constructor(
                 margins = prefs[Keys.MARGINS] ?: 16,
                 theme = try { ReaderTheme.valueOf(prefs[Keys.THEME] ?: "DARK") } catch (_: Exception) { ReaderTheme.DARK },
                 targetLanguage = prefs[Keys.TARGET_LANGUAGE] ?: "es",
-                translationProvider = try { TranslationProvider.valueOf(prefs[Keys.TRANSLATION_PROVIDER] ?: "LLM_FREE") } catch (_: Exception) { TranslationProvider.LLM_FREE },
+                translationProvider = try {
+                    val name = prefs[Keys.TRANSLATION_PROVIDER] ?: "GEMINI_FLASH"
+                    when (name) {
+                        "LLM_QUALITY" -> TranslationProvider.GEMINI_FLASH
+                        "LLM_FREE" -> TranslationProvider.LLM_FREE
+                        else -> TranslationProvider.valueOf(name)
+                    }
+                } catch (_: Exception) { TranslationProvider.GEMINI_FLASH },
                 brightness = prefs[Keys.BRIGHTNESS] ?: -1f,
                 isImmersiveMode = prefs[Keys.IMMERSIVE_MODE] ?: false,
             )

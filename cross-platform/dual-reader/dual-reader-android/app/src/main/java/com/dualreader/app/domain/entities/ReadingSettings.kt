@@ -13,7 +13,7 @@ data class ReadingSettings(
     val margins: Int = 16,
     val theme: ReaderTheme = ReaderTheme.DARK,
     val targetLanguage: String = "es",
-    val translationProvider: TranslationProvider = TranslationProvider.LLM_FREE,
+    val translationProvider: TranslationProvider = TranslationProvider.GEMINI_FLASH,
     val brightness: Float = -1f, // -1 = system default
     val isImmersiveMode: Boolean = false,
 )
@@ -29,15 +29,16 @@ enum class ReaderTheme {
 
 /**
  * Translation provider priority.
- * User can choose which to use — each has different quality/speed/cost tradeoffs.
+ * The Worker automatically tries Gemini first, then GLM fallback.
+ * These options let the user express a preference.
  */
 enum class TranslationProvider(
     val displayName: String,
     val requiresNetwork: Boolean,
     val costPerBook: String,
 ) {
+    GEMINI_FLASH("Gemini 2.5 Flash (Best Free)", true, "$0.00"),
     LLM_FREE("GLM-4.7-Flash (Free AI)", true, "$0.00"),
     LLM_CHEAP("GLM-4.7-FlashX (Fast AI)", true, "~$0.07"),
-    LLM_QUALITY("GLM-4.5 (Best AI)", true, "~$0.30"),
     DEVICE("On-device (ML Kit)", false, "$0.00"),
 }
