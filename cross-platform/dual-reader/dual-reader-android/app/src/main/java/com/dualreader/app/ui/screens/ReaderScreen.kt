@@ -290,9 +290,6 @@ private fun ReaderContent(
                             IconButton(onClick = onTranslateCurrentPage) {
                                 Icon(Icons.Default.Translate, "Translate page")
                             }
-                            IconButton(onClick = onTranslateAll) {
-                                Icon(Icons.Default.AutoStories, "Translate all pages")
-                            }
                             IconButton(onClick = onSettingsClick) {
                                 Icon(Icons.Default.Settings, "Settings")
                             }

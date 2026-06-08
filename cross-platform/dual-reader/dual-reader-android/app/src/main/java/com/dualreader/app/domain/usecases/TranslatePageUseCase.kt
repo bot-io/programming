@@ -2,6 +2,8 @@ package com.dualreader.app.domain.usecases
 
 import com.dualreader.app.domain.repositories.TranslationCacheRepository
 import com.dualreader.app.domain.services.TranslationService
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import javax.inject.Inject
 
 /**
@@ -72,11 +74,14 @@ class TranslatePageUseCase @Inject constructor(
         onPageTranslated: (index: Int, translation: String) -> Unit = { _, _ -> },
         forceRetranslate: Boolean = false,
     ): Result<Map<Int, String>> {
-        return runCatching {
-            val results = mutableMapOf<Int, String>()
-            var lastTranslation: String? = null
+        val results = mutableMapOf<Int, String>()
+        var lastTranslation: String? = null
 
+        try {
             for ((i, page) in pages.withIndex()) {
+                // Check for cancellation before each page
+                currentCoroutineContext().ensureActive()
+
                 // Check cache first
                 if (!forceRetranslate) {
                     val cached = cacheRepository.get(page.text, sourceLanguage, targetLanguage)
@@ -103,8 +108,11 @@ class TranslatePageUseCase @Inject constructor(
                 onPageTranslated(page.index, result)
                 lastTranslation = result
             }
-
-            results
+            return Result.success(results)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Propagate cancellation
+        } catch (e: Exception) {
+            return Result.failure(e)
         }
     }
 

@@ -238,7 +238,71 @@ class ReaderViewModelTest {
         vm.translateCurrentPage()
         advanceUntilIdle()
 
-        assertEquals("Should only call translate once", 1, callCount)
+        // Second call cancels the first and starts a new one
+        assertEquals("Should call translate (cancelled + restarted)", 2, callCount)
+    }
+
+    @Test
+    fun `cancelTranslation - resets isTranslating`() = runTest(testDispatcher) {
+        coEvery { translatePageUseCase(any(), any(), any()) } coAnswers {
+            kotlinx.coroutines.delay(5000)
+            Result.success("translated")
+        }
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        vm.cancelTranslation()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse("isTranslating should be false after cancel", state.isTranslating)
+        assertNull("translationError should be null after cancel", state.translationError)
+    }
+
+    @Test
+    fun `cancelTranslation - while batch translating stops cleanly`() = runTest(testDispatcher) {
+        var translatedCount = 0
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } coAnswers {
+            kotlinx.coroutines.delay(5000)
+            translatedCount = 3
+            Result.success(mapOf(0 to "t0", 1 to "t1", 2 to "t2"))
+        }
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateAllPages()
+        vm.cancelTranslation()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse("isTranslating should be false after cancel", state.isTranslating)
+    }
+
+    @Test
+    fun `translateAllPages - saves progress per page`() = runTest(testDispatcher) {
+        val pages = listOf(
+            com.dualreader.app.domain.usecases.PageToTranslate(0, "Page zero text"),
+            com.dualreader.app.domain.usecases.PageToTranslate(1, "Page one text"),
+        )
+        coEvery {
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+        } coAnswers {
+            val callback = args[3] as ((Int, String) -> Unit)
+            callback(0, "Превод нула")
+            callback(1, "Превод едно")
+            Result.success(mapOf(0 to "Превод нула", 1 to "Превод едно"))
+        }
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateAllPages()
+        advanceUntilIdle()
+
+        // Should have saved pages at least once per translated page
+        coVerify(atLeast = 2) { bookRepository.savePages(any()) }
     }
 
     @Test

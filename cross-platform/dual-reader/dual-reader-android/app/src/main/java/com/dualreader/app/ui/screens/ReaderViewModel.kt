@@ -15,6 +15,7 @@ import com.dualreader.app.domain.usecases.TranslatePageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -79,6 +80,7 @@ class ReaderViewModel @Inject constructor(
     // Translation state as StateFlows so combine picks up changes immediately
     private val _isTranslating = MutableStateFlow(false)
     private val _translationError = MutableStateFlow<String?>(null)
+    private var translationJob: Job? = null
 
     init {
         currentBookId?.let { loadBook(it) }
@@ -190,9 +192,11 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun translateCurrentPage() {
-        viewModelScope.launch(ioDispatcher) {
+        // Cancel any ongoing translation first
+        cancelTranslation()
+
+        translationJob = viewModelScope.launch(ioDispatcher) {
             val state = _uiState.value as? ReaderUiState.ReaderReady ?: return@launch
-            if (_isTranslating.value) return@launch  // Already translating
 
             _isTranslating.value = true
             _translationError.value = null
@@ -240,10 +244,19 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    fun cancelTranslation() {
+        translationJob?.cancel()
+        translationJob = null
+        _isTranslating.value = false
+        _translationError.value = null
+    }
+
     fun translateAllPages() {
-        viewModelScope.launch(ioDispatcher) {
+        // Cancel any ongoing translation first
+        cancelTranslation()
+
+        translationJob = viewModelScope.launch(ioDispatcher) {
             val state = _uiState.value as? ReaderUiState.ReaderReady ?: return@launch
-            if (_isTranslating.value) return@launch
 
             val untranslated = state.pages.filter { it.translatedText == null }
             if (untranslated.isEmpty()) return@launch
@@ -262,13 +275,17 @@ class ReaderViewModel @Inject constructor(
                     pages = pagesToTranslate,
                     targetLanguage = state.settings.targetLanguage,
                     sourceLanguage = _book?.language,
-                    onPageTranslated = { pageIndex, _ ->
-                        // Update progress: mark page as "being processed"
+                    onPageTranslated = { pageIndex, translation ->
+                        // Save each page as it's translated so progress isn't lost on cancel
                         val updatedPages = _pages.value.map { page ->
-                            if (page.index == pageIndex) page
+                            if (page.index == pageIndex) page.copy(translatedText = translation)
                             else page
                         }
                         _pages.value = updatedPages
+                        // Launch a coroutine to persist (callback is not suspend)
+                        viewModelScope.launch(ioDispatcher) {
+                            runCatching { bookRepository.savePages(updatedPages) }
+                        }
                     },
                 )
 
