@@ -5,10 +5,21 @@ import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -21,25 +32,14 @@ import java.util.UUID
 
 private const val TAG = "NavHost"
 
-/**
- * Copies an EPUB from a content URI (SAF picker) to internal storage.
- * Returns the absolute file path on success, or null on failure.
- */
 private fun copyEpubToInternalStorage(context: Context, uri: Uri): String? {
     return try {
         val epubsDir = File(context.filesDir, "epubs").apply { mkdirs() }
         val fileName = "${UUID.randomUUID()}.epub"
         val destFile = File(epubsDir, fileName)
-
         context.contentResolver.openInputStream(uri)?.use { input ->
-            destFile.outputStream().use { output ->
-                input.copyTo(output)
-            }
-        } ?: run {
-            Log.e(TAG, "Failed to open input stream for URI: $uri")
-            return null
-        }
-
+            destFile.outputStream().use { output -> input.copyTo(output) }
+        } ?: return null
         Log.d(TAG, "EPUB copied to ${destFile.absolutePath}")
         destFile.absolutePath
     } catch (e: Exception) {
@@ -53,44 +53,43 @@ fun DualReaderNavHost() {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    NavHost(
-        navController = navController,
-        startDestination = "library",
-    ) {
+    NavHost(navController = navController, startDestination = "library") {
         // ── Library ──────────────────────────────────────────────────
         composable("library") {
             val viewModel: LibraryViewModel = hiltViewModel()
             val uiState by viewModel.uiState.collectAsState()
 
-            // SAF launcher must be created at the top level of the composable,
-            // outside any callback or conditional block (Compose requirement).
-            val epubPickerLauncher = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.OpenDocument()
-            ) { uri: Uri? ->
-                uri?.let { pickedUri ->
-                    val savedPath = copyEpubToInternalStorage(context, pickedUri)
-                    if (savedPath != null) {
-                        viewModel.importBook(savedPath)
-                    }
-                }
+            // Check for crash report from previous run
+            val crashReport = remember {
+                val file = File(context.filesDir, "last_crash.txt")
+                if (file.exists()) {
+                    val text = file.readText()
+                    file.delete()
+                    text
+                } else null
             }
 
-            LibraryScreen(
-                uiState = uiState,
-                onBookClick = { bookId ->
-                    navController.navigate("reader/$bookId")
-                },
-                onImportClick = {
-                    epubPickerLauncher.launch(arrayOf("application/epub+zip"))
-                },
-                onSettingsClick = {
-                    navController.navigate("settings")
-                },
-                onRetryPagination = { book ->
-                    viewModel.retryPagination(book, 1080, 2280)
-                },
-                onDeleteBook = { viewModel.deleteBook(it) },
-            )
+            if (crashReport != null) {
+                CrashReportView(report = crashReport)
+            } else {
+                val epubPickerLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocument()
+                ) { uri: Uri? ->
+                    uri?.let { pickedUri ->
+                        val savedPath = copyEpubToInternalStorage(context, pickedUri)
+                        if (savedPath != null) viewModel.importBook(savedPath)
+                    }
+                }
+
+                LibraryScreen(
+                    uiState = uiState,
+                    onBookClick = { bookId -> navController.navigate("reader/$bookId") },
+                    onImportClick = { epubPickerLauncher.launch(arrayOf("application/epub+zip")) },
+                    onSettingsClick = { navController.navigate("settings") },
+                    onRetryPagination = { book -> viewModel.retryPagination(book, 1080, 2280) },
+                    onDeleteBook = { viewModel.deleteBook(it) },
+                )
+            }
         }
 
         // ── Reader ───────────────────────────────────────────────────
@@ -137,5 +136,26 @@ fun DualReaderNavHost() {
                 onBack = { navController.popBackStack() },
             )
         }
+    }
+}
+
+@Composable
+private fun CrashReportView(report: String) {
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Crash Report", style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.error)
+        Spacer(Modifier.height(12.dp))
+        Box(
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())
+        ) {
+            SelectionContainer {
+                Text(report, style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text("Please share this crash report. The app will work normally after you navigate away.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
