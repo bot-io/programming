@@ -108,7 +108,7 @@ fun highlightText(
 
 private val sentenceRegex = Regex("""(?<=[.!?…]["'"»'')\]]*\s+)""")
 
-private fun splitSentences(text: String): List<String> {
+internal fun splitSentences(text: String): List<String> {
     if (text.isBlank()) return emptyList()
     return text.split(sentenceRegex).filter { it.isNotBlank() }
 }

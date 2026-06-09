@@ -430,4 +430,107 @@ class ReaderViewModelTest {
         val state = vm.uiState.value
         assert(state is ReaderUiState.ReaderReady) { "Expected ReaderReady, got $state" }
     }
+
+    // ── Per-language translation cache ──────────────────────────────────
+
+    @Test
+    fun `translateCurrentPage - caches translation per language`() = runTest(testDispatcher) {
+        coEvery {
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+        } returns Result.success(mapOf(0 to "BG translation"))
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertEquals("BG translation", state.currentPage.effectiveTranslation("bg"))
+    }
+
+    @Test
+    fun `hasTranslation - marks page as translated after translateCurrentPage`() = runTest(testDispatcher) {
+        coEvery {
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+        } returns Result.success(mapOf(0 to "Превод"))
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertTrue(state.currentPage.hasTranslation("bg"))
+    }
+
+    @Test
+    fun `effectiveTranslation - returns null for untranslated language`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertNull(state.currentPage.effectiveTranslation("de"))
+    }
+
+    // ── Screen wake settings ────────────────────────────────────────────
+
+    @Test
+    fun `settings default screenWakeTimeoutMinutes is 30`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertEquals(30, state.settings.screenWakeTimeoutMinutes)
+    }
+
+    @Test
+    fun `settings default sentenceCounterEnabled is false`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse(state.settings.sentenceCounterEnabled)
+    }
+
+    @Test
+    fun `updateSettings - changes in-memory settings without crash`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // updateSettings modifies _settings StateFlow in-memory
+        vm.updateSettings { it.copy(screenWakeTimeoutMinutes = 60, sentenceCounterEnabled = true) }
+        advanceUntilIdle()
+
+        // The VM should still be in a valid state
+        val state = vm.uiState.value
+        assert(state is ReaderUiState.ReaderReady) { "Expected ReaderReady, got $state" }
+    }
+
+    @Test
+    fun `updateSettings - screenWake disabled with 0 without crash`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.updateSettings { it.copy(screenWakeTimeoutMinutes = 0) }
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assert(state is ReaderUiState.ReaderReady) { "Expected ReaderReady, got $state" }
+    }
+
+    @Test
+    fun `ReadingSettings defaults - screenWake 30, sentenceCounter false`() {
+        val settings = ReadingSettings()
+        assertEquals(30, settings.screenWakeTimeoutMinutes)
+        assertFalse(settings.sentenceCounterEnabled)
+    }
+
+    @Test
+    fun `ReadingSettings - screenWake can be set to various values`() {
+        val values = listOf(0, 5, 10, 15, 30, 60)
+        for (value in values) {
+            val settings = ReadingSettings(screenWakeTimeoutMinutes = value)
+            assertEquals(value, settings.screenWakeTimeoutMinutes)
+        }
+    }
 }
