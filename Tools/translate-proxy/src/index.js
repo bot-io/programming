@@ -21,8 +21,9 @@ const CONFIG = {
   dailyLimitPerIp: 500,        // requests per IP per day
   cooldownMs: 3000,            // min 3s between requests from same IP
 
-  // Provider timeouts (CF Workers have 30s total)
-  geminiTimeoutMs: 15000,
+  // Provider timeouts (CF Workers subrequest I/O wait, not CPU)
+  geminiTimeoutMs: 25000,        // Gemini 3.5 Flash with thinking needs 15-25s for quality
+  gemini25TimeoutMs: 15000,      // Gemini 2.5 Flash is faster (no thinking)
   glmTimeoutMs: 15000,
 
   // Provider endpoints
@@ -329,8 +330,9 @@ function buildBatchTranslationPrompt(sourceLang, targetLang, pageCount) {
 
 // ─── Gemini Provider ─────────────────────────────────────────────────────────
 
-async function callGemini(apiKey, systemPrompt, userText, apiUrl) {
+async function callGemini(apiKey, systemPrompt, userText, apiUrl, timeoutMs) {
   const url = `${apiUrl || CONFIG.geminiApiUrl}?key=${apiKey}`;
+  const timeout = timeoutMs || (apiUrl === CONFIG.gemini25ApiUrl ? CONFIG.gemini25TimeoutMs : CONFIG.geminiTimeoutMs);
 
   const resp = await fetch(url, {
     method: 'POST',
@@ -350,7 +352,7 @@ async function callGemini(apiKey, systemPrompt, userText, apiUrl) {
         },
       },
     }),
-    signal: AbortSignal.timeout(CONFIG.geminiTimeoutMs),
+    signal: AbortSignal.timeout(timeout),
   });
 
   if (resp.status === 429) {

@@ -284,7 +284,7 @@ class ReaderViewModel @Inject constructor(
                     PageToTranslate(index = page.index, text = page.originalText)
                 }
 
-                val result = withTimeoutOrNull(90_000L) {
+                val result = withTimeoutOrNull(120_000L) {
                     translatePageUseCase.translateBatchWithContext(
                         pages = pageTranslations,
                         targetLanguage = targetLang,
