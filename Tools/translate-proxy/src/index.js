@@ -22,8 +22,8 @@ const CONFIG = {
   cooldownMs: 3000,            // min 3s between requests from same IP
 
   // Provider timeouts (CF Workers have 30s total)
-  geminiTimeoutMs: 30000,
-  glmTimeoutMs: 20000,
+  geminiTimeoutMs: 15000,
+  glmTimeoutMs: 15000,
 
   // Provider endpoints
   geminiApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',
@@ -231,25 +231,21 @@ async function handleBatchTranslate(request, clientIp, env) {
 
   const geminiKey = env.GEMINI_API_KEY;
   if (geminiKey) {
-    for (let attempt = 0; attempt < 2 && !translatedText; attempt++) {
+    // Try Gemini 3.5 Flash (with thinking) — one attempt only
+    try {
+      const result = await callGemini(geminiKey, systemPrompt, userText, CONFIG.geminiApiUrl);
+      if (result) { translatedText = result; usedModel = CONFIG.geminiModel; }
+    } catch (err) {
+      geminiError = err.message || 'Unknown error';
+    }
+
+    // Fallback to Gemini 2.5 Flash (no thinking, faster)
+    if (!translatedText) {
       try {
-        const result = await callGemini(geminiKey, systemPrompt, userText, CONFIG.geminiApiUrl);
-        if (result) { translatedText = result; usedModel = CONFIG.geminiModel; }
-      } catch (err) {
-        geminiError = err.message || 'Unknown error';
-        const is503 = geminiError.includes('503') || geminiError.includes('UNAVAILABLE');
-        if (is503 && attempt === 0) {
-          await new Promise(r => setTimeout(r, 1000));
-          continue;
-        }
-        if (!translatedText) {
-          try {
-            const r2 = await callGemini(geminiKey, systemPrompt, userText, CONFIG.gemini25ApiUrl);
-            if (r2) { translatedText = r2; usedModel = CONFIG.gemini25Model; }
-          } catch (err25) {
-            geminiError += ` | 2.5: ${err25.message}`;
-          }
-        }
+        const r2 = await callGemini(geminiKey, systemPrompt, userText, CONFIG.gemini25ApiUrl);
+        if (r2) { translatedText = r2; usedModel = CONFIG.gemini25Model; }
+      } catch (err25) {
+        geminiError += ` | 2.5: ${err25.message}`;
       }
     }
   }
