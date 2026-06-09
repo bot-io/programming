@@ -106,11 +106,32 @@ fun highlightText(
 
 // ─── Sentence splitting ──────────────────────────────────────────────────────
 
-private val sentenceRegex = Regex("""(?<=[.!?…]["'"»'')\]]*\s+)""")
+/**
+ * Split text into sentences.
+ *
+ * Strategy: match the boundary *between* the end-of-sentence punctuation
+ * (plus optional trailing quotes/brackets) and the whitespace that follows,
+ * without using a lookbehind.  We match the punctuation + quotes + space
+ * and then split, keeping the punctuation/quotes on the preceding sentence
+ * by using a capture group.
+ *
+ * Original regex crashed on Android because it used an unbounded lookbehind:
+ *   (?<=[.!?…]["'"»'')\]]*\s+)
+ * Android's ICU regex engine requires bounded-length lookbehinds.
+ */
+private val sentenceSplitRegex = Regex(
+    """([.!?…]["'"»'')\]]{0,3})\s+"""
+)
 
 internal fun splitSentences(text: String): List<String> {
     if (text.isBlank()) return emptyList()
-    return text.split(sentenceRegex).filter { it.isNotBlank() }
+    // Replace the boundary with the captured punctuation + a null char,
+    // then split on the null char. This preserves the punctuation on the
+    // preceding sentence and trims the inter-sentence whitespace.
+    val stitched = sentenceSplitRegex.replace(text) { match ->
+        match.groupValues[1] + "\u0000"
+    }
+    return stitched.split('\u0000').filter { it.isNotBlank() }
 }
 
 // ─── Layout Mode ─────────────────────────────────────────────────────────────
