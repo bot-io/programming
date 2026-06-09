@@ -169,7 +169,7 @@ fun ReaderScreen(
     onClearSearch: () -> Unit = {},
     searchQuery: String = "",
     searchResults: List<ReaderViewModel.SearchResult> = emptyList(),
-    onRePaginate: (widthPx: Int, heightPx: Int) -> Unit = { _, _ -> },
+    onRePaginate: (widthPx: Int, heightPx: Int, density: Float) -> Unit = { _, _, _ -> },
 ) {
     when (uiState) {
         is ReaderUiState.Loading -> {
@@ -249,7 +249,7 @@ private fun ReaderContent(
     onClearSearch: () -> Unit,
     searchQuery: String,
     searchResults: List<ReaderViewModel.SearchResult>,
-    onRePaginate: (widthPx: Int, heightPx: Int) -> Unit = { _, _ -> },
+    onRePaginate: (widthPx: Int, heightPx: Int, density: Float) -> Unit = { _, _, _ -> },
 ) {
     val colors = readerColors(settings.theme)
     val layoutMode = rememberLayoutMode()
@@ -438,7 +438,8 @@ private fun ReaderContent(
                         if (size.width > lastPaginatedWidth || panelHeight > lastPaginatedHeight) {
                             lastPaginatedWidth = maxOf(lastPaginatedWidth, size.width)
                             lastPaginatedHeight = maxOf(lastPaginatedHeight, panelHeight)
-                            onRePaginate(size.width, panelHeight)
+                            val density = context.resources.displayMetrics.density
+                            onRePaginate(size.width, panelHeight, density)
                         }
                     }
                 }

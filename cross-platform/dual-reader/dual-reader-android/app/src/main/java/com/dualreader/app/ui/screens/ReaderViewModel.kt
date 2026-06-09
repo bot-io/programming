@@ -60,7 +60,7 @@ class ReaderViewModel @Inject constructor(
         private const val KEY_BOOK_ID = "bookId"
 
         /** How many pages to translate around the current page when user taps "Translate". */
-        const val TRANSLATE_WINDOW_SIZE = 5
+        const val TRANSLATE_WINDOW_SIZE = 3
 
         @VisibleForTesting
         internal var testIoDispatcher: CoroutineDispatcher? = null
@@ -160,11 +160,13 @@ class ReaderViewModel @Inject constructor(
      * Re-paginate the book with actual measured dimensions from the reader layout.
      * Called once when the content area is first measured with real pixel sizes.
      */
-    fun rePaginate(panelWidthPx: Int, panelHeightPx: Int) {
+    fun rePaginate(panelWidthPx: Int, panelHeightPx: Int, displayDensity: Float) {
         val book = _book ?: return
         viewModelScope.launch(ioDispatcher) {
             _isRePaginating.value = true
             try {
+                // Set the actual device density so StaticLayout matches Compose rendering
+                com.dualreader.app.data.pagination.PaginationServiceImpl.displayDensity = displayDensity
                 paginateBookUseCase(
                     book = book,
                     screenWidth = panelWidthPx,

@@ -119,7 +119,7 @@ fun DualReaderNavHost() {
                 onClearSearch = { viewModel.clearSearch() },
                 searchQuery = searchQuery,
                 searchResults = searchResults,
-                onRePaginate = { w, h -> viewModel.rePaginate(w, h) },
+                onRePaginate = { w, h, d -> viewModel.rePaginate(w, h, d) },
             )
         }
 

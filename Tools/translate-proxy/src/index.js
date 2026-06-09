@@ -15,7 +15,7 @@ const CONFIG = {
   // Rate limiting (per IP)
   maxTextLength: 10000,         // chars per single-page request
   maxBatchChars: 10000,         // total chars per batch request (sum of all pages)
-  maxBatchPages: 5,             // max pages per batch call
+  maxBatchPages: 3,             // max pages per batch call (reduced for timeout safety)
   dailyLimitPerIp: 500,        // requests per IP per day
   cooldownMs: 3000,            // min 3s between requests from same IP
 
@@ -415,7 +415,7 @@ async function callGemini(apiKey, systemPrompt, userText, apiUrl) {
         temperature: 1.0,
         maxOutputTokens: 16384,
         thinkingConfig: {
-          thinkingBudget: 4096,
+          thinkingBudget: 2048,
         },
       },
     }),

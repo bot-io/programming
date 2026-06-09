@@ -545,7 +545,7 @@ class ReaderViewModelTest {
         val vm = createViewModel()
         advanceUntilIdle()
 
-        vm.rePaginate(panelWidthPx = 1080, panelHeightPx = 2400)
+        vm.rePaginate(panelWidthPx = 1080, panelHeightPx = 2400, displayDensity = 2.625f)
         advanceUntilIdle()
 
         coVerify {
@@ -579,7 +579,7 @@ class ReaderViewModelTest {
         // Before re-pagination: 3 pages
         assertEquals(3, (vm.uiState.value as ReaderUiState.ReaderReady).pages.size)
 
-        vm.rePaginate(1080, 2400)
+        vm.rePaginate(1080, 2400, 2.625f)
         advanceUntilIdle()
 
         // After re-pagination: 4 pages
@@ -600,7 +600,7 @@ class ReaderViewModelTest {
         val vm = createViewModel()
         advanceUntilIdle()
 
-        vm.rePaginate(1080, 2400)
+        vm.rePaginate(1080, 2400, 2.625f)
         advanceUntilIdle()
 
         coVerify { paginateBookUseCase(any(), any(), any()) }
@@ -611,7 +611,7 @@ class ReaderViewModelTest {
         val vm = createViewModel()
         advanceUntilIdle()
 
-        vm.rePaginate(1080, 2400)
+        vm.rePaginate(1080, 2400, 2.625f)
         advanceUntilIdle()
 
         val state = vm.uiState.value as ReaderUiState.ReaderReady
@@ -627,7 +627,7 @@ class ReaderViewModelTest {
         val vm = createViewModel()
         advanceUntilIdle()
 
-        vm.rePaginate(1080, 2400)
+        vm.rePaginate(1080, 2400, 2.625f)
         advanceUntilIdle()
 
         val state = vm.uiState.value as ReaderUiState.ReaderReady
@@ -644,7 +644,7 @@ class ReaderViewModelTest {
         advanceUntilIdle()
 
         // State should be Error, rePaginate should not crash
-        vm.rePaginate(1080, 2400)
+        vm.rePaginate(1080, 2400, 2.625f)
         advanceUntilIdle()
 
         coVerify(exactly = 0) { paginateBookUseCase(any(), any(), any()) }
@@ -661,7 +661,7 @@ class ReaderViewModelTest {
 
         val originalPages = (vm.uiState.value as ReaderUiState.ReaderReady).pages.size
 
-        vm.rePaginate(1080, 2400)
+        vm.rePaginate(1080, 2400, 2.625f)
         advanceUntilIdle()
 
         val state = vm.uiState.value as ReaderUiState.ReaderReady
