@@ -29,7 +29,7 @@ class CloudTranslationServiceImpl @Inject constructor(
     companion object {
         private const val TAG = "CloudTranslation"
         /** Minimum delay between batch requests to respect worker rate limits. */
-        private const val BATCH_DELAY_MS = 500L
+        private const val BATCH_DELAY_MS = 3500L   // Must be >= worker cooldown (3s)
     }
 
     // ── translate ──────────────────────────────────────────────────────────────
@@ -187,31 +187,56 @@ class CloudTranslationServiceImpl @Inject constructor(
 
     private suspend fun callProxy(request: ProxyTranslateRequest): String {
         AppLogger.i("callProxy: sending ${request.text.length} chars, ${request.sourceLang}->${request.targetLang}")
-        val response = try {
-            proxyApi.translate(request)
-        } catch (e: Exception) {
-            AppLogger.e("callProxy: network error: ${e.message}", e)
-            throw TranslationException("Network error calling translation proxy", e)
-        }
+        
+        // Retry up to 3 times on 429 (rate limit) with server-suggested backoff
+        var lastError: String? = null
+        repeat(3) { attempt ->
+            val response = try {
+                proxyApi.translate(request)
+            } catch (e: Exception) {
+                AppLogger.e("callProxy: network error: ${e.message}", e)
+                throw TranslationException("Network error calling translation proxy", e)
+            }
 
-        AppLogger.i("callProxy: response code=${response.code()}")
-        if (!response.isSuccessful) {
+            AppLogger.i("callProxy: response code=${response.code()}")
+            if (response.isSuccessful) {
+                val body = response.body()
+                    ?: throw TranslationException("Translation proxy returned empty response.")
+                if (body.error != null) {
+                    throw TranslationException("Translation error: ${body.error}")
+                }
+                if (body.translatedText.isBlank()) {
+                    throw TranslationException("Translation returned empty text.")
+                }
+                return body.translatedText.trim()
+            }
+
+            // Handle 429 rate limit — wait and retry
+            if (response.code() == 429) {
+                val errorBody = response.errorBody()?.string()?.take(300) ?: "no body"
+                val retryAfter = extractRetryAfterMs(errorBody)
+                lastError = "429 rate limited (attempt ${attempt + 1}/3, retry after ${retryAfter}ms)"
+                AppLogger.w("callProxy: 429 rate limited, waiting ${retryAfter}ms (attempt ${attempt + 1}/3)")
+                delay(retryAfter.coerceAtLeast(1000L))
+                return@repeat
+            }
+
+            // Non-429 error — don't retry
             val errorBody = response.errorBody()?.string()?.take(300) ?: "no body"
             AppLogger.e("callProxy: error $${response.code()}: $errorBody")
             throw TranslationException("Translation proxy error ${response.code()}: $errorBody")
         }
 
-        val body = response.body()
-            ?: throw TranslationException("Translation proxy returned empty response.")
+        throw TranslationException("Translation proxy rate limited after 3 retries: $lastError")
+    }
 
-        if (body.error != null) {
-            throw TranslationException("Translation error: ${body.error}")
+    /** Extract retry_after_ms from worker 429 JSON response. */
+    private fun extractRetryAfterMs(errorBody: String): Long {
+        return try {
+            val regex = """"retry_after_ms"\s*:\s*(\d+)""".toRegex()
+            regex.find(errorBody)?.groupValues?.get(1)?.toLongOrNull() ?: 3000L
+        } catch (_: Exception) {
+            3000L
         }
-
-        if (body.translatedText.isBlank()) {
-            throw TranslationException("Translation returned empty text.")
-        }
-
-        return body.translatedText.trim()
     }
 }

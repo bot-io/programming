@@ -294,7 +294,7 @@ class ReaderViewModel @Inject constructor(
                         },
                     )
                 } ?: run {
-                    AppLogger.e("Translation timed out after 60s for ${pagesToTranslate.size} pages")
+                    AppLogger.e("Translation timed out for ${pagesToTranslate.size} pages")
                     Result.failure(Exception("Translation timed out. Tap Retry."))
                 }
 
