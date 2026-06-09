@@ -12,6 +12,7 @@ Usage:
   python zai_quota.py              # Show quota status
   python zai_quota.py --json       # Raw JSON output
   python zai_quota.py --warn 95    # Exit 1 if usage >= 95% (for scripts)
+  python zai_quota.py --cron       # Cron-friendly summary (compact)
 """
 
 import json
@@ -128,6 +129,29 @@ def progress_bar(percentage, width=30):
     return f"{color}{bar_char * filled}{'░' * empty}{reset}"
 
 
+def get_current_model():
+    """Read current model from Hermes config.yaml."""
+    config_path = Path.home() / "AppData" / "Local" / "hermes" / "config.yaml"
+    if not config_path.exists():
+        return None
+    import re
+    content = config_path.read_text(encoding="utf-8")
+    match = re.search(r"^\s*default:\s*(.+)$", content, re.MULTILINE)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+GLM_MODELS = {
+    "glm-4.7-flash":  {"tier": 0, "cost": "FREE", "desc": "Best free model"},
+    "glm-4.5-flash":  {"tier": 0, "cost": "FREE", "desc": "Older free model"},
+    "glm-4.7-flashx": {"tier": 1, "cost": "$0.07/$0.40/M", "desc": "Fast & cheap"},
+    "glm-4.5-air":    {"tier": 2, "cost": "$0.20/$1.10/M", "desc": "Balanced"},
+    "glm-4.7":        {"tier": 3, "cost": "$0.60/$2.20/M", "desc": "High quality"},
+    "glm-5.1":        {"tier": 4, "cost": "$1.40/$4.40/M", "desc": "Best GLM"},
+}
+
+
 def print_quota(data, json_output=False):
     """Print formatted quota information."""
     if json_output:
@@ -151,20 +175,25 @@ def print_quota(data, json_output=False):
     
     for limit in limits:
         limit_type = limit.get("type", "")
-        usage_total = limit.get("usage", 0)
-        current = limit.get("currentValue", 0)
         percentage = limit.get("percentage", 0)
         next_reset = limit.get("nextResetTime")
         
         max_percentage = max(max_percentage, percentage)
         
         if limit_type == "TOKENS_LIMIT":
+            usage_total = limit.get("usage", 0)
+            current = limit.get("currentValue", 0)
             remaining_pct = 100 - percentage
+            
             print(f"\n  📊 Token Quota (5-hour window)")
-            print(f"  {progress_bar(percentage)} {percentage:.1f}% used")
-            print(f"  Used:     {format_tokens(current)} tokens")
-            print(f"  Total:    {format_tokens(usage_total)} tokens")
-            print(f"  Remaining: {format_tokens(max(0, usage_total - current))} tokens ({remaining_pct:.1f}%)")
+            print(f"  {progress_bar(percentage)} {percentage}% used")
+            
+            if usage_total and current:
+                print(f"  Used:     {format_tokens(current)} tokens")
+                print(f"  Total:    {format_tokens(usage_total)} tokens")
+                print(f"  Remaining: {format_tokens(max(0, usage_total - current))} tokens ({remaining_pct:.0f}%)")
+            else:
+                print(f"  Remaining: {remaining_pct:.0f}%")
             
             if next_reset:
                 reset_dt = datetime.fromtimestamp(next_reset / 1000, tz=timezone.utc)
@@ -173,7 +202,7 @@ def print_quota(data, json_output=False):
                     hours = int(delta.total_seconds() // 3600)
                     mins = int((delta.total_seconds() % 3600) // 60)
                     reset_sofia = reset_dt.astimezone(timezone(timedelta(hours=get_sofia_offset())))
-                    print(f"  Resets in: {hours}h {mins}m (at {reset_sofia.strftime('%H:%M')} Sofia)")
+                    print(f"  Resets in: {hours}h {mins}m (at {reset_sofia.strftime('%H:%M')} Sofia time)")
             
             if percentage >= 95:
                 should_warn = True
@@ -183,6 +212,8 @@ def print_quota(data, json_output=False):
                 print(f"\n  ⚡ Warning: Token usage at {percentage:.1f}%")
         
         elif limit_type == "TIME_LIMIT":
+            usage_total = limit.get("usage", 0)
+            current = limit.get("currentValue", 0)
             remaining = usage_total - current
             print(f"\n  🔍 MCP Search Limit")
             print(f"  Used: {current} / {usage_total} ({remaining} remaining)")
@@ -192,8 +223,86 @@ def print_quota(data, json_output=False):
     return max_percentage
 
 
+def print_cron_summary(data):
+    """Print a compact cron-friendly summary with actionable info."""
+    limits = data.get("data", {}).get("limits", [])
+    if not limits:
+        print("No quota data available.")
+        return 0
+    
+    for limit in limits:
+        if limit.get("type") != "TOKENS_LIMIT":
+            continue
+        
+        percentage = limit.get("percentage", 0)
+        usage_total = limit.get("usage", 0)
+        current = limit.get("currentValue", 0)
+        next_reset = limit.get("nextResetTime")
+        
+        # Build usage detail string (API may or may not include usage/currentValue)
+        if usage_total and current:
+            remaining = max(0, usage_total - current)
+            detail = f"({format_tokens(remaining)} remaining of {format_tokens(usage_total)})"
+        else:
+            detail = f"({100 - percentage:.0f}% remaining)"
+        
+        # Reset time in Sofia
+        reset_str = "unknown"
+        if next_reset:
+            reset_dt = datetime.fromtimestamp(next_reset / 1000, tz=timezone.utc)
+            delta = reset_dt - datetime.now(timezone.utc)
+            reset_sofia = reset_dt.astimezone(timezone(timedelta(hours=get_sofia_offset())))
+            if delta.total_seconds() > 0:
+                hours = int(delta.total_seconds() // 3600)
+                mins = int((delta.total_seconds() % 3600) // 60)
+                reset_str = f"{hours}h {mins}m (at {reset_sofia.strftime('%H:%M')} Sofia time)"
+            else:
+                reset_str = f"imminent ({reset_sofia.strftime('%H:%M')} Sofia time)"
+        
+        # Current model info
+        current_model = get_current_model()
+        model_info = GLM_MODELS.get(current_model, {}) if current_model else {}
+        model_tier = model_info.get("tier", "?")
+        model_cost = model_info.get("cost", "unknown")
+        
+        # Determine emoji based on usage
+        if percentage >= 95:
+            emoji = "🔴"
+        elif percentage >= 80:
+            emoji = "🟡"
+        elif percentage >= 60:
+            emoji = "🟠"
+        else:
+            emoji = "🟢"
+        
+        print(f"{emoji} Z.AI Token Usage: {percentage}% used {detail}")
+        print(f"🕐 Resets in: {reset_str}")
+        print(f"📋 Current model: `{current_model or 'unknown'}` (Tier {model_tier}, {model_cost})")
+        
+        if percentage >= 95:
+            print()
+            print("⚠️ **CRITICAL** — Quota almost exhausted!")
+            print()
+            print("To switch to a free model:")
+            print('1. Send: `switch glm-4.7-flash`')
+            print("2. Then send: `/reset`")
+            print("This switches to GLM-4.7-Flash (FREE, Tier 0)")
+        elif percentage >= 80:
+            print()
+            print("⚡ Usage is high. Consider switching to a lower tier:")
+            print('`switch glm-4.7-flash` (FREE) then `/reset`')
+        elif percentage >= 60:
+            print()
+            print("💡 Usage moderate. If it rises, switch to `glm-4.7-flash` (FREE)")
+        
+        return percentage
+    
+    return 0
+
+
 def main():
     json_output = "--json" in sys.argv
+    cron_mode = "--cron" in sys.argv
     warn_threshold = None
     for i, arg in enumerate(sys.argv):
         if arg == "--warn" and i + 1 < len(sys.argv):
@@ -201,7 +310,11 @@ def main():
     
     api_key = load_api_key()
     data = fetch_quota(api_key)
-    max_pct = print_quota(data, json_output=json_output)
+    
+    if cron_mode:
+        max_pct = print_cron_summary(data)
+    else:
+        max_pct = print_quota(data, json_output=json_output)
     
     # Exit with code 1 if above threshold (for script/cron use)
     if warn_threshold is not None and max_pct is not None:
