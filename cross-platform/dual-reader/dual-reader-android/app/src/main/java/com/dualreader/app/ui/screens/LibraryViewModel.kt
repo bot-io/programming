@@ -90,11 +90,20 @@ class LibraryViewModel @Inject constructor(
 
     companion object {
         // Default screen dimensions for background pagination.
-        // Height is halved because the reader uses vertical split on phones
-        // (original text on top, translation on bottom, each getting ~50% height).
-        // Pages should fit the original text panel without scrolling.
+        //
+        // Pages are calculated to fill the text panel when the reader is in
+        // "maximized" mode (app bars hidden, system bars still visible).
+        // When app bars are shown, the text panel is smaller and pages scroll a bit.
+        //
+        // The reader uses vertical split on phones (original top, translation bottom),
+        // so each panel gets roughly 50% of the available height.
+        //
+        // Using the full screen height (no deduction for system bars) ensures pages
+        // are large enough even when immersive mode hides system bars.
         private const val DEFAULT_SCREEN_WIDTH = 1080
-        private const val DEFAULT_SCREEN_HEIGHT = 2280
+        private const val DEFAULT_SCREEN_HEIGHT = 2400
+        // Full-screen panel height: entire screen split in half for vertical layout.
+        // This ensures pages fill the panel when maximized (bars hidden).
         private const val EFFECTIVE_PAGE_HEIGHT = DEFAULT_SCREEN_HEIGHT / 2
     }
 }

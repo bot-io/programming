@@ -86,7 +86,7 @@ fun DualReaderNavHost() {
                     onBookClick = { bookId -> navController.navigate("reader/$bookId") },
                     onImportClick = { epubPickerLauncher.launch(arrayOf("application/epub+zip")) },
                     onSettingsClick = { navController.navigate("settings") },
-                    onRetryPagination = { book -> viewModel.retryPagination(book, 1080, 2280) },
+                    onRetryPagination = { book -> viewModel.retryPagination(book, 1080, 1200) },
                     onDeleteBook = { viewModel.deleteBook(it) },
                 )
             }
