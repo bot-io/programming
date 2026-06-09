@@ -646,11 +646,7 @@ private fun SentenceCountedText(
                         )
                     } else {
                         // Invisible spacer to keep alignment
-                        Text(
-                            text = "",
-                            fontSize = 9.sp,
-                            modifier = Modifier.height((fontSize * lineHeight).sp.value.dp.coerceAtLeast(4.dp).value.dp),
-                        )
+                        Spacer(modifier = Modifier.height((fontSize * lineHeight).dp.coerceAtLeast(4.dp)))
                     }
                 }
             }

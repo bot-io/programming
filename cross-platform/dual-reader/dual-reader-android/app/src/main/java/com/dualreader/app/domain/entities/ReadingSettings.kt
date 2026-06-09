@@ -17,7 +17,7 @@ data class ReadingSettings(
     val brightness: Float = -1f, // -1 = system default
     val isImmersiveMode: Boolean = false,
     val screenWakeTimeoutMinutes: Int = 30,
-    val sentenceCounterEnabled: Boolean = true,
+    val sentenceCounterEnabled: Boolean = false,
 )
 
 enum class ReaderTheme {

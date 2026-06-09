@@ -29,6 +29,8 @@ class SettingsRepositoryImpl @Inject constructor(
         val TRANSLATION_PROVIDER = stringPreferencesKey("translation_provider")
         val BRIGHTNESS = floatPreferencesKey("brightness")
         val IMMERSIVE_MODE = booleanPreferencesKey("immersive_mode")
+        val SCREEN_WAKE_TIMEOUT = intPreferencesKey("screen_wake_timeout")
+        val SENTENCE_COUNTER = booleanPreferencesKey("sentence_counter")
     }
 
     override val settings: Flow<ReadingSettings> = dataStore.data
@@ -52,6 +54,8 @@ class SettingsRepositoryImpl @Inject constructor(
                 } catch (_: Exception) { TranslationProvider.GEMINI_FLASH },
                 brightness = prefs[Keys.BRIGHTNESS] ?: -1f,
                 isImmersiveMode = prefs[Keys.IMMERSIVE_MODE] ?: false,
+                screenWakeTimeoutMinutes = prefs[Keys.SCREEN_WAKE_TIMEOUT] ?: 30,
+                sentenceCounterEnabled = prefs[Keys.SENTENCE_COUNTER] ?: false,
             )
         }
 
@@ -74,6 +78,8 @@ class SettingsRepositoryImpl @Inject constructor(
                 } catch (_: Exception) { TranslationProvider.GEMINI_FLASH },
                 brightness = prefs[Keys.BRIGHTNESS] ?: -1f,
                 isImmersiveMode = prefs[Keys.IMMERSIVE_MODE] ?: false,
+                screenWakeTimeoutMinutes = prefs[Keys.SCREEN_WAKE_TIMEOUT] ?: 30,
+                sentenceCounterEnabled = prefs[Keys.SENTENCE_COUNTER] ?: false,
             )
             val updated = transform(current)
             prefs[Keys.FONT_SIZE] = updated.fontSize
@@ -85,6 +91,8 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[Keys.TRANSLATION_PROVIDER] = updated.translationProvider.name
             prefs[Keys.BRIGHTNESS] = updated.brightness
             prefs[Keys.IMMERSIVE_MODE] = updated.isImmersiveMode
+            prefs[Keys.SCREEN_WAKE_TIMEOUT] = updated.screenWakeTimeoutMinutes
+            prefs[Keys.SENTENCE_COUNTER] = updated.sentenceCounterEnabled
         }
     }
 
