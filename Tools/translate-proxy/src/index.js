@@ -270,7 +270,7 @@ async function handleBatchTranslate(request, clientIp, env) {
   }
 
   // Parse the structured response into individual translations
-  const parsed = parseBatchResponse(translatedText, pages.length);
+  const parsed = parseBatchResponse(translatedText, pages);
 
   await recordRequest(request, clientIp, env);
 
@@ -292,7 +292,7 @@ async function handleBatchTranslate(request, clientIp, env) {
  *   Second page text here...
  */
 function formatBatchPages(pages) {
-  return pages.map((p, i) => `[Page ${i + 1}]\n${p.text}`).join('\n\n');
+  return pages.map((p) => `[Page ${p.index}]\n${p.text}`).join('\n\n');
 }
 
 /**
@@ -306,8 +306,12 @@ function formatBatchPages(pages) {
  *
  * Falls back to splitting by markers or returning as single block.
  */
-function parseBatchResponse(text, expectedCount) {
+function parseBatchResponse(text, pages) {
+  const expectedCount = pages.length;
   const results = [];
+
+  // Build a set of valid page indices from the original request
+  const validIndices = new Set(pages.map(p => p.index));
 
   // Try structured parsing: split by [Page N] markers
   const pageRegex = /\[Page\s+(\d+)\]\s*\n([\s\S]*?)(?=\n\[Page\s+\d+\]|$)/gi;
@@ -317,15 +321,15 @@ function parseBatchResponse(text, expectedCount) {
   while ((match = pageRegex.exec(text)) !== null) {
     const pageNum = parseInt(match[1], 10);
     const content = match[2].trim();
-    if (pageNum >= 1 && pageNum <= expectedCount) {
+    if (validIndices.has(pageNum)) {
       found.set(pageNum, content);
     }
   }
 
   if (found.size === expectedCount) {
-    // All pages found with markers — clean result
-    for (let i = 1; i <= expectedCount; i++) {
-      results.push({ index: i - 1, translated_text: found.get(i) });
+    // All pages found with markers — preserve original indices
+    for (const [idx, content] of found) {
+      results.push({ index: idx, translated_text: content });
     }
     return results;
   }
@@ -336,12 +340,13 @@ function parseBatchResponse(text, expectedCount) {
   const chunks = cleanText.split(/\n{2,}/).filter(c => c.trim());
 
   if (chunks.length === expectedCount) {
-    return chunks.map((chunk, i) => ({ index: i, translated_text: chunk.trim() }));
+    // Map chunks back to original page indices in order
+    return pages.map((p, i) => ({ index: p.index, translated_text: chunks[i].trim() }));
   }
 
   // Last resort: if expected 1 page, return whole text
   if (expectedCount === 1) {
-    return [{ index: 0, translated_text: cleanText }];
+    return [{ index: pages[0].index, translated_text: cleanText }];
   }
 
   // Couldn't parse — return empty so caller can fall back to single-page
