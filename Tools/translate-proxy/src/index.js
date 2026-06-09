@@ -23,8 +23,8 @@ const CONFIG = {
 
   // Provider timeouts (CF Workers subrequest I/O wait, not CPU)
   geminiTimeoutMs: 25000,        // Gemini 3.5 Flash with thinking needs 15-25s for quality
-  gemini25TimeoutMs: 15000,      // Gemini 2.5 Flash is faster (no thinking)
-  glmTimeoutMs: 15000,
+  gemini25TimeoutMs: 10000,      // Gemini 2.5 Flash is faster (no thinking mode) — 10s generous
+  glmTimeoutMs: 10000,           // GLM-4.7-Flash is very fast — 10s generous
 
   // Provider endpoints
   geminiApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',
@@ -233,20 +233,24 @@ async function handleBatchTranslate(request, clientIp, env) {
   const geminiKey = env.GEMINI_API_KEY;
   if (geminiKey) {
     // Try Gemini 3.5 Flash (with thinking) — one attempt only
+    console.log(`[batch] Trying Gemini 3.5 Flash (${CONFIG.geminiTimeoutMs}ms timeout)...`);
     try {
       const result = await callGemini(geminiKey, systemPrompt, userText, CONFIG.geminiApiUrl);
       if (result) { translatedText = result; usedModel = CONFIG.geminiModel; }
     } catch (err) {
       geminiError = err.message || 'Unknown error';
+      console.log(`[batch] Gemini 3.5 failed: ${geminiError}`);
     }
 
     // Fallback to Gemini 2.5 Flash (no thinking, faster)
     if (!translatedText) {
+      console.log(`[batch] Trying Gemini 2.5 Flash (${CONFIG.gemini25TimeoutMs}ms timeout)...`);
       try {
         const r2 = await callGemini(geminiKey, systemPrompt, userText, CONFIG.gemini25ApiUrl);
         if (r2) { translatedText = r2; usedModel = CONFIG.gemini25Model; }
       } catch (err25) {
         geminiError += ` | 2.5: ${err25.message}`;
+        console.log(`[batch] Gemini 2.5 failed: ${err25.message}`);
       }
     }
   }
@@ -256,6 +260,7 @@ async function handleBatchTranslate(request, clientIp, env) {
     if (!glmKey) {
       return jsonResponse(500, { error: 'No translation service configured.' });
     }
+    console.log(`[batch] Trying GLM (${CONFIG.glmTimeoutMs}ms timeout)...`);
     try {
       const glmResult = await callGlm(glmKey, systemPrompt, userText);
       if (glmResult) { translatedText = glmResult; usedModel = CONFIG.glmModel; }
