@@ -71,14 +71,18 @@ class Converters {
     @TypeConverter
     fun fromTranslationsJson(value: String?): Map<String, String> {
         if (value.isNullOrBlank() || value == "{}") return emptyMap()
-        val obj = JSONObject(value)
-        val map = mutableMapOf<String, String>()
-        val keys = obj.keys()
-        while (keys.hasNext()) {
-            val key = keys.next()
-            map[key] = obj.getString(key)
+        return try {
+            val obj = JSONObject(value)
+            val map = mutableMapOf<String, String>()
+            val keys = obj.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                map[key] = obj.getString(key)
+            }
+            map
+        } catch (_: Exception) {
+            emptyMap()
         }
-        return map
     }
 
     @TypeConverter
