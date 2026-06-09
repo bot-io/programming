@@ -409,25 +409,37 @@ private fun ReaderContent(
 
             // ── Content Area (Adaptive) ──────────────────────────────
             // Measure the actual content area and trigger re-pagination
-            // once with the real device dimensions (no hardcoded pixels).
-            var hasTriggeredRePagination by remember { mutableStateOf(false) }
+            // with the largest dimensions seen so far.
+            var lastPaginatedWidth by remember { mutableStateOf(0) }
+            var lastPaginatedHeight by remember { mutableStateOf(0) }
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()
                 .pointerInput(Unit) {
-                    detectTapGestures { barsVisible = !barsVisible }
+                    detectTapGestures { offset ->
+                        // Left third → previous page, right third → next page,
+                        // center third → toggle bars.
+                        val third = size.width / 3
+                        when {
+                            offset.x < third -> onPreviousPage()
+                            offset.x > size.width - third -> onNextPage()
+                            else -> barsVisible = !barsVisible
+                        }
+                    }
                 }
                 .onSizeChanged { size ->
-                    // Trigger re-pagination once with the actual measured size.
-                    // Height is the full content area; for vertical split each
-                    // panel gets half, so we pass half-height as the page height.
-                    if (!hasTriggeredRePagination && size.width > 0 && size.height > 0) {
-                        hasTriggeredRePagination = true
+                    if (size.width > 0 && size.height > 0) {
+                        // Calculate panel height (half for vertical split, full for side-by-side)
                         val panelHeight = if (layoutMode == ReaderLayoutMode.VERTICAL_SPLIT) {
                             size.height / 2
                         } else {
                             size.height
                         }
-                        onRePaginate(size.width, panelHeight)
+                        // Only re-paginate if dimensions grew (bars hidden → larger area)
+                        if (size.width > lastPaginatedWidth || panelHeight > lastPaginatedHeight) {
+                            lastPaginatedWidth = maxOf(lastPaginatedWidth, size.width)
+                            lastPaginatedHeight = maxOf(lastPaginatedHeight, panelHeight)
+                            onRePaginate(size.width, panelHeight)
+                        }
                     }
                 }
             ) {
