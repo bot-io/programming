@@ -178,6 +178,10 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             _isRePaginating.value = true
             try {
+                // Capture old pages BEFORE re-pagination for substring fallback matching
+                val oldPages = _pages.value
+                val oldTranslated = oldPages.filter { it.translations.isNotEmpty() }
+                
                 // Set the actual device density so StaticLayout matches Compose rendering
                 com.dualreader.app.data.pagination.PaginationServiceImpl.displayDensity = displayDensity
                 paginateBookUseCase(
@@ -187,15 +191,30 @@ class ReaderViewModel @Inject constructor(
                 )
                 val newPages = bookRepository.getPagesForBook(book.id)
                 // Restore cached translations onto the new pages
+                val targetLang = settingsRepository.getSettings().targetLanguage
                 val restoredPages = try {
-                    val targetLang = settingsRepository.getSettings().targetLanguage
                     newPages.map { page ->
+                        // 1. Exact cache match (fast path)
                         val cached = translationCacheRepository.get(
                             text = page.originalText,
                             sourceLang = book.language,
                             targetLang = targetLang,
                         )
-                        if (cached != null) page.withTranslation(targetLang, cached) else page
+                        if (cached != null) {
+                            page.withTranslation(targetLang, cached)
+                        } else {
+                            // 2. Substring fallback: check if any old translated page contains this page's text
+                            val oldMatch = oldTranslated.firstOrNull { old ->
+                                old.originalText.contains(page.originalText)
+                            }
+                            if (oldMatch != null) {
+                                val trans = oldMatch.translations[targetLang]
+                                if (trans != null) {
+                                    AppLogger.i("rePaginate: substring restore page ${page.index} from old page ${oldMatch.index}")
+                                    page.withTranslation(targetLang, trans)
+                                } else page
+                            } else page
+                        }
                     }
                 } catch (e: Exception) {
                     AppLogger.e("Cache restore failed: ${e.message}", e)
@@ -204,7 +223,8 @@ class ReaderViewModel @Inject constructor(
                 _pages.value = restoredPages
                 val updatedBook = bookRepository.getBookById(book.id) ?: book
                 _book = updatedBook
-                AppLogger.i("rePaginate done: ${newPages.size} pages, totalPg=${updatedBook.totalPages}")
+                val transCount = restoredPages.count { it.translations.containsKey(targetLang) }
+                AppLogger.i("rePaginate done: ${newPages.size} pages, totalPg=${updatedBook.totalPages}, transPages=$transCount")
             } catch (e: Exception) {
                 AppLogger.e("rePaginate failed: ${e.message}", e)
                 // Keep existing pages
