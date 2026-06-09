@@ -4,8 +4,23 @@
 # Data models used by Moshi (Retrofit)
 -keep class com.dualreader.app.data.translation.** { *; }
 
-# Room entities
+# Room — entities, DAOs, database, converters
 -keep class com.dualreader.app.data.local.entity.** { *; }
+-keep class com.dualreader.app.data.local.dao.** { *; }
+-keep class com.dualreader.app.data.local.AppDatabase { *; }
+-keep class com.dualreader.app.data.local.Converters { *; }
+
+# ViewModels (Hilt creates these)
+-keep class com.dualreader.app.ui.screens.** { *; }
+
+# Repositories (Hilt)
+-keep class com.dualreader.app.data.repository.** { *; }
+
+# Use cases
+-keep class com.dualreader.app.domain.usecases.** { *; }
+
+# Data mappers (use Converters)
+-keep class com.dualreader.app.data.local.mapper.** { *; }
 
 # epub4j — keep parsing classes
 -keep class nl.siegmann.epublib.** { *; }
