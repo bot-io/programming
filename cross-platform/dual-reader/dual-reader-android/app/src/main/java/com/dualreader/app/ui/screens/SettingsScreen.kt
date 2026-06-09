@@ -419,30 +419,9 @@ private fun DebugPanel(
                     appendLine()
                 }
 
-                // ── Recent logcat (app-related tags, last 200 lines) ──
-                appendLine("=== Recent Logcat ===")
-                try {
-                    // Use -d (dump) to get existing logs, filter for our tags
-                    val process = Runtime.getRuntime().exec(
-                        arrayOf("logcat", "-d", "-t", "200", "-v", "time")
-                    )
-                    val output = process.inputStream.bufferedReader().readText()
-                    // Filter to only our app's log lines
-                    val filtered = output.lineSequence()
-                        .filter { line ->
-                            line.contains("DualReader") ||
-                            line.contains("CloudTranslation") ||
-                            line.contains("FallbackTranslation") ||
-                            line.contains("TranslationService") ||
-                            line.contains("ReaderViewModel") ||
-                            line.contains("PaginationService")
-                        }
-                        .take(100)
-                        .joinToString("\n")
-                    appendLine(filtered.ifBlank { "(no app log entries found)" })
-                } catch (e: Exception) {
-                    appendLine("Could not read logcat: ${e.message}")
-                }
+                // ── Recent app logs (from file, works on all devices) ──
+                appendLine("=== App Logs ===")
+                appendLine(com.dualreader.app.util.AppLogger.getRecentLogs(200))
             }
         }
     }

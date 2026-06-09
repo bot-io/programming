@@ -2,9 +2,9 @@ package com.dualreader.app.data.translation
 
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.util.Log
 import com.dualreader.app.domain.services.TranslationException
 import com.dualreader.app.domain.services.TranslationService
+import com.dualreader.app.util.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -88,6 +88,7 @@ class CloudTranslationServiceImpl @Inject constructor(
 
         // Try the batch endpoint first
         try {
+            AppLogger.i("translatePages: sending ${pages.size} pages to batch endpoint")
             val batchPages = pages.map { (index, text) ->
                 BatchPage(index = index, text = text)
             }
@@ -98,6 +99,7 @@ class CloudTranslationServiceImpl @Inject constructor(
             )
 
             val response = proxyApi.translateBatch(request)
+            AppLogger.i("translatePages: response code=${response.code()}, ok=${response.isSuccessful}")
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body?.error == null && body?.translations?.isNotEmpty() == true) {
@@ -112,14 +114,14 @@ class CloudTranslationServiceImpl @Inject constructor(
                         return@withContext results
                     }
                     // Partial success — fill gaps with individual calls
-                    Log.w(TAG, "Batch returned ${results.size}/${pages.size} pages, filling gaps individually")
+                    AppLogger.w("Batch returned ${results.size}/${pages.size} pages, filling gaps individually")
                     for (page in pages) {
                         if (page.index !in results) {
                             try {
                                 val singleResult = translate(page.value, targetLanguage, sourceLanguage, context)
                                 results[page.index] = singleResult
                             } catch (e: Exception) {
-                                Log.e(TAG, "Individual fallback failed for page ${page.index}: ${e.message}")
+                                AppLogger.e("Individual fallback failed for page ${page.index}: ${e.message}")
                             }
                         }
                     }
@@ -127,7 +129,7 @@ class CloudTranslationServiceImpl @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Batch translation failed, falling back to individual: ${e.message}")
+            AppLogger.w("Batch translation failed, falling back to individual: ${e.message}")
         }
 
         // Fallback: individual calls
@@ -137,7 +139,7 @@ class CloudTranslationServiceImpl @Inject constructor(
             try {
                 results[page.index] = translate(page.value, targetLanguage, sourceLanguage, context)
             } catch (e: Exception) {
-                Log.e(TAG, "Individual translation failed for page ${page.index}: ${e.message}")
+                AppLogger.e("Individual translation failed for page ${page.index}: ${e.message}")
             }
         }
         results
@@ -184,14 +186,18 @@ class CloudTranslationServiceImpl @Inject constructor(
     }
 
     private suspend fun callProxy(request: ProxyTranslateRequest): String {
+        AppLogger.i("callProxy: sending ${request.text.length} chars, ${request.sourceLang}->${request.targetLang}")
         val response = try {
             proxyApi.translate(request)
         } catch (e: Exception) {
+            AppLogger.e("callProxy: network error: ${e.message}", e)
             throw TranslationException("Network error calling translation proxy", e)
         }
 
+        AppLogger.i("callProxy: response code=${response.code()}")
         if (!response.isSuccessful) {
             val errorBody = response.errorBody()?.string()?.take(300) ?: "no body"
+            AppLogger.e("callProxy: error $${response.code()}: $errorBody")
             throw TranslationException("Translation proxy error ${response.code()}: $errorBody")
         }
 

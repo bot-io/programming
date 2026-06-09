@@ -270,7 +270,7 @@ def print_cron_summary(data):
             emoji = "🔴"
         elif percentage >= 80:
             emoji = "🟡"
-        elif percentage >= 60:
+        elif percentage >= 50:
             emoji = "🟠"
         else:
             emoji = "🟢"
@@ -294,6 +294,10 @@ def print_cron_summary(data):
         elif percentage >= 60:
             print()
             print("💡 Usage moderate. If it rises, switch to `glm-4.7-flash` (FREE)")
+        elif percentage >= 50:
+            print()
+            print("💡 Usage past 50%. If it keeps rising, switch to:")
+            print('`switch glm-4.7-flash` (FREE) then `/reset`')
         
         return percentage
     

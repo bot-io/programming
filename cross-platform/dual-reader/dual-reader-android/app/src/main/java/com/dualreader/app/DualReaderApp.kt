@@ -3,6 +3,7 @@ package com.dualreader.app
 import android.app.Application
 import android.util.Log
 import com.dualreader.app.data.pagination.PaginationServiceImpl
+import com.dualreader.app.util.AppLogger
 import dagger.hilt.android.HiltAndroidApp
 import java.io.File
 
@@ -38,6 +39,12 @@ class DualReaderApp : Application() {
         }
 
         super.onCreate()
+
+        // Initialize file-based logger (works on all devices including Huawei with HK2)
+        AppLogger.init(this)
+        AppLogger.i("DualReader ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) starting")
+        AppLogger.i("Device density: ${resources.displayMetrics.density}")
+
         PaginationServiceImpl.displayDensity = resources.displayMetrics.density
     }
 }
