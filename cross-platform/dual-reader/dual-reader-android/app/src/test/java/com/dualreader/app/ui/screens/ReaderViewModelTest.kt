@@ -804,4 +804,392 @@ class ReaderViewModelTest {
         assertEquals(1, state.pages.size)
         assertFalse(state.isRePaginating)
     }
+
+    // ── Substring fallback after re-pagination ─────────────────────────────
+
+    @Test
+    fun `rePaginate - restores translation via substring match when exact cache misses`() = runTest(testDispatcher) {
+        // Use pages whose text contains the new (re-paginated) text
+        val longTextPages = listOf(
+            Page(index = 0, bookId = "book1", originalText = "Alpha Beta Gamma Delta", chapterIndex = 0),
+            Page(index = 1, bookId = "book1", originalText = "Epsilon Zeta Eta Theta", chapterIndex = 0),
+            Page(index = 2, bookId = "book1", originalText = "Iota Kappa Lambda Mu", chapterIndex = 0),
+        )
+        coEvery { bookRepository.getPagesForBook("book1") } returns longTextPages
+
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+            Result.success(mapOf(0 to "Алфа Бета Гама Делта"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Translate page 0 → now _pages.value[0] has bg translation
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        val stateBefore = vm.uiState.value as ReaderUiState.ReaderReady
+        assertTrue("Page 0 should have bg translation", stateBefore.pages[0].hasTranslation("bg"))
+
+        // Re-paginate: new pages split the old page text into smaller chunks
+        coEvery { bookRepository.getPagesForBook("book1") } returns listOf(
+            Page(index = 0, bookId = "book1", originalText = "Alpha Beta", chapterIndex = 0),
+            Page(index = 1, bookId = "book1", originalText = "Gamma Delta", chapterIndex = 0),
+        )
+        // Cache miss — substring fallback should kick in
+        coEvery { translationCacheRepository.get(any(), any(), any()) } returns null
+
+        vm.rePaginate(1080, 2400, 2.625f)
+        advanceUntilIdle()
+
+        val stateAfter = vm.uiState.value as ReaderUiState.ReaderReady
+        // "Alpha Beta" is contained in old "Alpha Beta Gamma Delta" → translation restored via substring
+        assertTrue(
+            "Page 0 should have bg translation via substring fallback",
+            stateAfter.pages[0].hasTranslation("bg")
+        )
+    }
+
+    @Test
+    fun `rePaginate - substring fallback does not match unrelated pages`() = runTest(testDispatcher) {
+        var rePaginated = false
+        coEvery { bookRepository.getPagesForBook("book1") } coAnswers {
+            if (rePaginated) {
+                listOf(
+                    Page(index = 0, bookId = "book1", originalText = "XYZ not found in old text", chapterIndex = 0),
+                )
+            } else {
+                testPages
+            }
+        }
+
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+            Result.success(mapOf(0 to "Напълно различен текст"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        // Re-paginate: new page text is NOT contained in any old translated page
+        rePaginated = true
+        coEvery { translationCacheRepository.get(any(), any(), any()) } returns null
+
+        vm.rePaginate(1080, 2400, 2.625f)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse("Page 0 should NOT have translation (no substring match)", state.pages[0].hasTranslation("bg"))
+    }
+
+    // ── Translation flow with mock service scenarios ────────────────────────
+
+    @Test
+    fun `translateCurrentPage - batch success with multiple pages`() = runTest(testDispatcher) {
+        // Simulate: batch returns translations for pages 0, 1, 2
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } coAnswers {
+            val callback = args[3] as ((Int, String) -> Unit)
+            callback(0, "Превод нула")
+            callback(1, "Превод едно")
+            callback(2, "Превод две")
+            Result.success(mapOf(0 to "Превод нула", 1 to "Превод едно", 2 to "Превод две"))
+        }
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse(state.isTranslating)
+        assertNull(state.translationError)
+        assertEquals("Превод нула", state.pages[0].effectiveTranslation("bg"))
+        assertEquals("Превод едно", state.pages[1].effectiveTranslation("bg"))
+        assertEquals("Превод две", state.pages[2].effectiveTranslation("bg"))
+    }
+
+    @Test
+    fun `translateCurrentPage - partial success via callback updates pages incrementally`() = runTest(testDispatcher) {
+        // Simulate: use case succeeds but only returns some pages (partial batch)
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } coAnswers {
+            val callback = args[3] as ((Int, String) -> Unit)
+            callback(0, "Превод нула")
+            // Page 1 and 2 not delivered via callback (simulating partial failure inside use case)
+            Result.success(mapOf(0 to "Превод нула"))
+        }
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse(state.isTranslating)
+        // Page 0 got its translation via callback
+        assertEquals("Превод нула", state.pages[0].effectiveTranslation("bg"))
+    }
+
+    @Test
+    fun `translateCurrentPage - use case throws network exception`() = runTest(testDispatcher) {
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } throws
+            java.io.IOException("Connection reset")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse(state.isTranslating)
+        assertNotNull("Should have error message", state.translationError)
+        assertTrue(state.translationError!!.contains("Connection reset"))
+    }
+
+    @Test
+    fun `translateCurrentPage - use case returns 502 failure`() = runTest(testDispatcher) {
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+            Result.failure(Exception("Translation proxy error 502: All providers failed"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse(state.isTranslating)
+        assertTrue(state.translationError!!.contains("502"))
+    }
+
+    @Test
+    fun `translateCurrentPage - use case returns 429 rate limit`() = runTest(testDispatcher) {
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+            Result.failure(Exception("Translation proxy error 429: Too fast"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse(state.isTranslating)
+        assertTrue(state.translationError!!.contains("429"))
+    }
+
+    @Test
+    fun `translateCurrentPage - skips already-translated pages in window`() = runTest(testDispatcher) {
+        // Pre-translate page 0
+        val preTranslatedPages = listOf(
+            testPages[0].withTranslation("bg", "Вече преведено"),
+            testPages[1],
+            testPages[2],
+        )
+        var callCount = 0
+        coEvery { bookRepository.getPagesForBook("book1") } coAnswers {
+            callCount++
+            if (callCount == 1) preTranslatedPages else preTranslatedPages
+        }
+
+        // Translate should only send pages 1 and 2 (page 0 is already done)
+        var capturedPages: List<com.dualreader.app.domain.usecases.PageToTranslate>? = null
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } coAnswers {
+            capturedPages = args[0] as List<com.dualreader.app.domain.usecases.PageToTranslate>
+            Result.success(mapOf(1 to "Едно", 2 to "Две"))
+        }
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        assertNotNull("Should have called translate", capturedPages)
+        assertEquals("Should skip already-translated page 0", 2, capturedPages!!.size)
+        assertEquals(1, capturedPages!![0].index)
+        assertEquals(2, capturedPages!![1].index)
+    }
+
+    // ── Translation + language switching ────────────────────────────────────
+
+    @Test
+    fun `page entity - supports multiple language translations`() {
+        // Core entity test: a page can hold translations for multiple languages
+        val page = Page(index = 0, bookId = "book1", originalText = "Hello world", chapterIndex = 0)
+            .withTranslation("bg", "Здравей свят")
+            .withTranslation("es", "Hola mundo")
+            .withTranslation("fr", "Bonjour le monde")
+
+        assertEquals("Здравей свят", page.effectiveTranslation("bg"))
+        assertEquals("Hola mundo", page.effectiveTranslation("es"))
+        assertEquals("Bonjour le monde", page.effectiveTranslation("fr"))
+        assertNull(page.effectiveTranslation("de")) // No German translation
+    }
+
+    @Test
+    fun `page entity - adding new language preserves existing translations`() {
+        val page = Page(index = 0, bookId = "book1", originalText = "Test", chapterIndex = 0)
+            .withTranslation("bg", "Тест")
+
+        assertEquals("Тест", page.effectiveTranslation("bg"))
+
+        val updated = page.withTranslation("es", "Prueba")
+        assertEquals("Тест", updated.effectiveTranslation("bg"))
+        assertEquals("Prueba", updated.effectiveTranslation("es"))
+    }
+
+    @Test
+    fun `page entity - re-adding same language overwrites translation`() {
+        val page = Page(index = 0, bookId = "book1", originalText = "Test", chapterIndex = 0)
+            .withTranslation("bg", "Тест първи")
+
+        val updated = page.withTranslation("bg", "Тест втори")
+        assertEquals("Тест втори", updated.effectiveTranslation("bg"))
+    }
+
+    @Test
+    fun `translateCurrentPage - second call to same language uses cached result`() = runTest(testDispatcher) {
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+            Result.success(mapOf(0 to "Превод"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        // Reset mock to track second call
+        val slot = slot<List<com.dualreader.app.domain.usecases.PageToTranslate>>()
+        coEvery { translatePageUseCase.translateBatchWithContext(capture(slot), any(), any(), any()) } returns
+            Result.success(emptyMap())
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        // Since page 0 is already translated, the window should be empty → no translate call
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse(state.isTranslating)
+    }
+
+    // ── collectTranslateWindow edge cases ──────────────────────────────────
+
+    @Test
+    fun `collectTranslateWindow - at end of book collects pages before current`() = runTest(testDispatcher) {
+        // Go to last page (index 2) — window should collect page 2, then page 1, then page 0
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } coAnswers {
+            val pages = args[0] as List<com.dualreader.app.domain.usecases.PageToTranslate>
+            val result = pages.associate { it.index to "T${it.index}" }
+            Result.success(result)
+        }
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.goToPage(2)
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        // All 3 pages should be translated (window of 3, all untranslated)
+        assertEquals("T0", state.pages[0].effectiveTranslation("bg"))
+        assertEquals("T1", state.pages[1].effectiveTranslation("bg"))
+        assertEquals("T2", state.pages[2].effectiveTranslation("bg"))
+    }
+
+    @Test
+    fun `collectTranslateWindow - single page book`() = runTest(testDispatcher) {
+        val singlePageBook = testBook.copy(totalPages = 1, currentPage = 0)
+        val singlePage = listOf(
+            Page(index = 0, bookId = "book1", originalText = "Only page", chapterIndex = 0),
+        )
+        coEvery { bookRepository.getBookById("book1") } returns singlePageBook
+        coEvery { bookRepository.getPagesForBook("book1") } returns singlePage
+
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+            Result.success(mapOf(0 to "Единствена страница"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertEquals("Единствена страница", state.pages[0].effectiveTranslation("bg"))
+    }
+
+    // ── Translation preserves across page navigation ────────────────────────
+
+    @Test
+    fun `translateCurrentPage then goToPage - translation persists`() = runTest(testDispatcher) {
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+            Result.success(mapOf(0 to "Превод", 1 to "Едно", 2 to "Две"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateCurrentPage()
+        advanceUntilIdle()
+
+        // Navigate away and back
+        vm.goToPage(2)
+        advanceUntilIdle()
+        vm.goToPage(0)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertEquals("Translation should persist after navigation", "Превод", state.pages[0].effectiveTranslation("bg"))
+        assertEquals("Едно", state.pages[1].effectiveTranslation("bg"))
+        assertEquals("Две", state.pages[2].effectiveTranslation("bg"))
+    }
+
+    // ── translateAllPages error scenarios ───────────────────────────────────
+
+    @Test
+    fun `translateAllPages - sets error on failure`() = runTest(testDispatcher) {
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+            Result.failure(Exception("All providers failed"))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateAllPages()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse(state.isTranslating)
+        assertNotNull(state.translationError)
+        assertTrue(state.translationError!!.contains("failed", ignoreCase = true))
+    }
+
+    @Test
+    fun `translateAllPages - skips already translated pages`() = runTest(testDispatcher) {
+        val preTranslated = listOf(
+            testPages[0].withTranslation("bg", "Готово"),
+            testPages[1],
+            testPages[2],
+        )
+        coEvery { bookRepository.getPagesForBook("book1") } returns preTranslated
+
+        var capturedPages: List<com.dualreader.app.domain.usecases.PageToTranslate>? = null
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } coAnswers {
+            capturedPages = args[0] as List<com.dualreader.app.domain.usecases.PageToTranslate>
+            val result = capturedPages!!.associate { it.index to "T${it.index}" }
+            Result.success(result)
+        }
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.translateAllPages()
+        advanceUntilIdle()
+
+        assertNotNull("Should have called translate", capturedPages)
+        assertEquals("Should skip already-translated page 0", 2, capturedPages!!.size)
+        assertFalse(capturedPages!!.any { it.index == 0 })
+    }
 }

@@ -409,10 +409,9 @@ private fun ReaderContent(
             }
 
             // ── Content Area (Adaptive) ──────────────────────────────
-            // Measure the actual content area and trigger re-pagination
-            // with the largest dimensions seen so far.
-            var lastPaginatedWidth by remember { mutableStateOf(0) }
-            var lastPaginatedHeight by remember { mutableStateOf(0) }
+            // Measure the actual content area and trigger pagination ONCE.
+            // Fullscreen toggle must NOT re-paginate — page count stays fixed.
+            var hasPaginated by remember { mutableStateOf(false) }
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()
                 .pointerInput(Unit) {
@@ -428,20 +427,16 @@ private fun ReaderContent(
                     }
                 }
                 .onSizeChanged { size ->
-                    if (size.width > 0 && size.height > 0) {
+                    if (!hasPaginated && size.width > 0 && size.height > 0) {
+                        hasPaginated = true
                         // Calculate panel height (half for vertical split, full for side-by-side)
                         val panelHeight = if (layoutMode == ReaderLayoutMode.VERTICAL_SPLIT) {
                             size.height / 2
                         } else {
                             size.height
                         }
-                        // Only re-paginate if dimensions grew (bars hidden → larger area)
-                        if (size.width > lastPaginatedWidth || panelHeight > lastPaginatedHeight) {
-                            lastPaginatedWidth = maxOf(lastPaginatedWidth, size.width)
-                            lastPaginatedHeight = maxOf(lastPaginatedHeight, panelHeight)
-                            val density = context.resources.displayMetrics.density
-                            onRePaginate(size.width, panelHeight, density)
-                        }
+                        val density = context.resources.displayMetrics.density
+                        onRePaginate(size.width, panelHeight, density)
                     }
                 }
             ) {
