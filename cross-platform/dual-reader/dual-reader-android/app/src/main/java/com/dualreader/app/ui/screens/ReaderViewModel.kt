@@ -12,6 +12,7 @@ import com.dualreader.app.domain.entities.ReadingSettings
 import com.dualreader.app.domain.repositories.BookRepository
 import com.dualreader.app.domain.repositories.BookmarkRepository
 import com.dualreader.app.domain.repositories.SettingsRepository
+import com.dualreader.app.domain.repositories.TranslationCacheRepository
 import com.dualreader.app.domain.usecases.PageToTranslate
 import com.dualreader.app.domain.usecases.PaginateBookUseCase
 import com.dualreader.app.domain.usecases.TranslatePageUseCase
@@ -55,6 +56,7 @@ class ReaderViewModel @Inject constructor(
     private val bookmarkRepository: BookmarkRepository,
     private val translatePageUseCase: TranslatePageUseCase,
     private val paginateBookUseCase: PaginateBookUseCase,
+    private val translationCacheRepository: TranslationCacheRepository,
 ) : ViewModel() {
 
     companion object {
@@ -184,7 +186,22 @@ class ReaderViewModel @Inject constructor(
                     screenHeight = panelHeightPx,
                 )
                 val newPages = bookRepository.getPagesForBook(book.id)
-                _pages.value = newPages
+                // Restore cached translations onto the new pages
+                val restoredPages = try {
+                    val targetLang = settingsRepository.getSettings().targetLanguage
+                    newPages.map { page ->
+                        val cached = translationCacheRepository.get(
+                            text = page.originalText,
+                            sourceLang = book.language,
+                            targetLang = targetLang,
+                        )
+                        if (cached != null) page.withTranslation(targetLang, cached) else page
+                    }
+                } catch (e: Exception) {
+                    AppLogger.e("Cache restore failed: ${e.message}", e)
+                    newPages
+                }
+                _pages.value = restoredPages
                 val updatedBook = bookRepository.getBookById(book.id) ?: book
                 _book = updatedBook
                 AppLogger.i("rePaginate done: ${newPages.size} pages, totalPg=${updatedBook.totalPages}")

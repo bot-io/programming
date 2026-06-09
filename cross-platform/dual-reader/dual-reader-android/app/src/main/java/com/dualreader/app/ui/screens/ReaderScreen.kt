@@ -29,6 +29,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -685,6 +686,47 @@ private fun TranslationPanel(
 // Shows small numbered markers on the left at regular sentence intervals.
 // Target: 5-6 cues per page, reset per page.
 
+/**
+ * Build an AnnotatedString with inline sentence counters.
+ * Each sentence is prefixed with a small superscript number: ¹First sentence. ²Second sentence.
+ * The numbers are always aligned with their sentence because they're part of the text flow.
+ */
+private fun buildSentenceCountedText(
+    text: String,
+    colors: ReaderColors,
+    searchQuery: String = "",
+): AnnotatedString {
+    val sentences = splitSentences(text)
+    if (sentences.isEmpty()) return AnnotatedString(text)
+
+    return buildAnnotatedString {
+        sentences.forEachIndexed { i, sentence ->
+            val num = i + 1
+            // Superscript-style inline marker
+            withStyle(SpanStyle(
+                fontSize = 9.sp,
+                color = colors.textSecondary.copy(alpha = 0.6f),
+                fontWeight = FontWeight.Medium,
+                baselineShift = BaselineShift.Superscript,
+            )) {
+                append("$num")
+            }
+            // Thin space between number and sentence
+            append("\u2009")
+            // Apply search highlighting if needed
+            if (searchQuery.isNotBlank() && sentence.contains(searchQuery, ignoreCase = true)) {
+                val highlighted = highlightText(sentence, searchQuery, colors.accent.copy(alpha = 0.35f))
+                append(highlighted)
+            } else {
+                append(sentence)
+            }
+            // Space between sentences (preserving original spacing)
+            if (i < sentences.lastIndex) append(" ")
+        }
+    }
+}
+
+/** Sentence-counted text with its own scroll container (for TextPanel) */
 @Composable
 private fun SentenceCountedText(
     text: String,
@@ -693,56 +735,22 @@ private fun SentenceCountedText(
     colors: ReaderColors,
     searchQuery: String = "",
 ) {
-    val sentences = remember(text) { splitSentences(text) }
-    val totalSentences = sentences.size
-
-    // Show a marker every N sentences, targeting 5-6 markers per page
-    val interval = if (totalSentences <= 6) 1 else (totalSentences / 6).coerceAtLeast(1)
-
+    val annotatedText = remember(text, searchQuery) { buildSentenceCountedText(text, colors, searchQuery) }
     Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(horizontal = 8.dp, vertical = 12.dp)) {
-        Row {
-            // Left: sentence markers
-            Column(
-                modifier = Modifier.width(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                for (i in sentences.indices) {
-                    val markerIndex = i + 1
-                    if (markerIndex == 1 || markerIndex % interval == 0) {
-                        Text(
-                            text = "$markerIndex",
-                            color = colors.textSecondary.copy(alpha = 0.45f),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Light,
-                            modifier = Modifier.padding(top = 0.dp, bottom = 0.dp),
-                        )
-                    } else {
-                        // Invisible spacer to keep alignment
-                        Spacer(modifier = Modifier.height((fontSize * lineHeight).dp.coerceAtLeast(4.dp)))
-                    }
-                }
-            }
-            Spacer(Modifier.width(4.dp))
-            // Right: text
-            val displayText = if (searchQuery.isNotBlank())
-                highlightText(text, searchQuery, colors.accent.copy(alpha = 0.35f))
-            else AnnotatedString(text)
-            SelectionContainer {
-                Text(
-                    text = displayText,
-                    color = colors.text,
-                    fontSize = fontSize.sp,
-                    lineHeight = (fontSize * lineHeight).sp,
-                    fontFamily = FontFamily.Serif,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+        SelectionContainer {
+            Text(
+                text = annotatedText,
+                color = colors.text,
+                fontSize = fontSize.sp,
+                lineHeight = (fontSize * lineHeight).sp,
+                fontFamily = FontFamily.Serif,
+            )
         }
     }
 }
 
-/** Inner sentence counter for translation panel (no outer Box — already inside one) */
+/** Sentence-counted text without outer scroll (for TranslationPanel, already inside a scroll) */
 @Composable
 private fun SentenceCountedTextInner(
     text: String,
@@ -751,48 +759,16 @@ private fun SentenceCountedTextInner(
     colors: ReaderColors,
     searchQuery: String = "",
 ) {
-    val sentences = remember(text) { splitSentences(text) }
-    val totalSentences = sentences.size
-    val interval = if (totalSentences <= 6) 1 else (totalSentences / 6).coerceAtLeast(1)
-
-    Row {
-        // Left: sentence markers
-        Column(
-            modifier = Modifier.width(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            for (i in sentences.indices) {
-                val markerIndex = i + 1
-                if (markerIndex == 1 || markerIndex % interval == 0) {
-                    Text(
-                        text = "$markerIndex",
-                        color = colors.textSecondary.copy(alpha = 0.45f),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Light,
-                    )
-                } else {
-                    Text(
-                        text = "",
-                        fontSize = 9.sp,
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.width(4.dp))
-        // Right: text
-        val displayText = if (searchQuery.isNotBlank())
-            highlightText(text, searchQuery, colors.accent.copy(alpha = 0.35f))
-        else AnnotatedString(text)
-        SelectionContainer {
-            Text(
-                text = displayText,
-                color = colors.text,
-                fontSize = fontSize.sp,
-                lineHeight = (fontSize * lineHeight).sp,
-                fontFamily = FontFamily.Serif,
-                modifier = Modifier.weight(1f),
-            )
-        }
+    val annotatedText = remember(text, searchQuery) { buildSentenceCountedText(text, colors, searchQuery) }
+    SelectionContainer {
+        Text(
+            text = annotatedText,
+            color = colors.text,
+            fontSize = fontSize.sp,
+            lineHeight = (fontSize * lineHeight).sp,
+            fontFamily = FontFamily.Serif,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

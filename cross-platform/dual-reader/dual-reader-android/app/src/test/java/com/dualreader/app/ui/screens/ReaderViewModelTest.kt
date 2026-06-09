@@ -7,6 +7,7 @@ import com.dualreader.app.domain.entities.ReadingSettings
 import com.dualreader.app.domain.repositories.BookRepository
 import com.dualreader.app.domain.repositories.BookmarkRepository
 import com.dualreader.app.domain.repositories.SettingsRepository
+import com.dualreader.app.domain.repositories.TranslationCacheRepository
 import com.dualreader.app.domain.usecases.PaginateBookUseCase
 import com.dualreader.app.domain.usecases.TranslatePageUseCase
 import io.mockk.*
@@ -29,6 +30,7 @@ class ReaderViewModelTest {
     private lateinit var bookmarkRepository: BookmarkRepository
     private lateinit var translatePageUseCase: TranslatePageUseCase
     private lateinit var paginateBookUseCase: PaginateBookUseCase
+    private lateinit var translationCacheRepository: TranslationCacheRepository
 
     private val testBook = Book(
         id = "book1", title = "Test Book", author = "Author",
@@ -55,6 +57,7 @@ class ReaderViewModelTest {
         bookmarkRepository = mockk(relaxed = true)
         translatePageUseCase = mockk()
         paginateBookUseCase = mockk(relaxed = true)
+        translationCacheRepository = mockk(relaxed = true)
 
         coEvery { bookRepository.getBookById("book1") } returns testBook
         coEvery { bookRepository.getPagesForBook("book1") } returns testPages
@@ -72,6 +75,7 @@ class ReaderViewModelTest {
             bookmarkRepository = bookmarkRepository,
             translatePageUseCase = translatePageUseCase,
             paginateBookUseCase = paginateBookUseCase,
+            translationCacheRepository = translationCacheRepository,
         )
     }
 
@@ -687,6 +691,117 @@ class ReaderViewModelTest {
         vm.goToPage(1)
         val state = vm.uiState.value as ReaderUiState.ReaderReady
         assertEquals(1, state.currentPage.index)
+        assertFalse(state.isRePaginating)
+    }
+
+    // ── Cache restoration after re-pagination ─────────────────────────
+
+    @Test
+    fun `rePaginate - restores cached translations for new pages`() = runTest(testDispatcher) {
+        val newPages = listOf(
+            Page(index = 0, bookId = "book1", originalText = "Hello world", chapterIndex = 0),
+            Page(index = 1, bookId = "book1", originalText = "Goodbye world", chapterIndex = 0),
+        )
+
+        var pageCallCount = 0
+        coEvery { bookRepository.getPagesForBook("book1") } coAnswers {
+            pageCallCount++
+            if (pageCallCount <= 1) testPages else newPages
+        }
+
+        // Cache has a translation for page 0 but not page 1
+        coEvery { translationCacheRepository.get("Hello world", "en", "bg") } returns "Здравей свят"
+        coEvery { translationCacheRepository.get("Goodbye world", "en", "bg") } returns null
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.rePaginate(1080, 2400, 2.625f)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertEquals(2, state.pages.size)
+        // Page 0 should have its cached translation restored
+        assertEquals("Здравей свят", state.pages[0].effectiveTranslation("bg"))
+        assertTrue(state.pages[0].hasTranslation("bg"))
+        // Page 1 has no cache entry, should remain untranslated
+        assertFalse(state.pages[1].hasTranslation("bg"))
+    }
+
+    @Test
+    fun `rePaginate - restores all cached translations`() = runTest(testDispatcher) {
+        val newPages = listOf(
+            Page(index = 0, bookId = "book1", originalText = "Alpha", chapterIndex = 0),
+            Page(index = 1, bookId = "book1", originalText = "Beta", chapterIndex = 0),
+        )
+
+        var pageCallCount = 0
+        coEvery { bookRepository.getPagesForBook("book1") } coAnswers {
+            pageCallCount++
+            if (pageCallCount <= 1) testPages else newPages
+        }
+
+        coEvery { translationCacheRepository.get("Alpha", "en", "bg") } returns "Алфа"
+        coEvery { translationCacheRepository.get("Beta", "en", "bg") } returns "Бета"
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.rePaginate(1080, 2400, 2.625f)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertEquals("Алфа", state.pages[0].effectiveTranslation("bg"))
+        assertEquals("Бета", state.pages[1].effectiveTranslation("bg"))
+    }
+
+    @Test
+    fun `rePaginate - queries cache with correct source language`() = runTest(testDispatcher) {
+        val newPages = listOf(
+            Page(index = 0, bookId = "book1", originalText = "Some text", chapterIndex = 0),
+        )
+
+        var pageCallCount = 0
+        coEvery { bookRepository.getPagesForBook("book1") } coAnswers {
+            pageCallCount++
+            if (pageCallCount <= 1) testPages else newPages
+        }
+
+        coEvery { translationCacheRepository.get(any(), any(), any()) } returns null
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.rePaginate(1080, 2400, 2.625f)
+        advanceUntilIdle()
+
+        // Verify the cache was queried with the book's language ("en") and target language ("bg")
+        coVerify { translationCacheRepository.get("Some text", "en", "bg") }
+    }
+
+    @Test
+    fun `rePaginate - handles cache exception gracefully`() = runTest(testDispatcher) {
+        val newPages = listOf(
+            Page(index = 0, bookId = "book1", originalText = "Hello", chapterIndex = 0),
+        )
+
+        var pageCallCount = 0
+        coEvery { bookRepository.getPagesForBook("book1") } coAnswers {
+            pageCallCount++
+            if (pageCallCount <= 1) testPages else newPages
+        }
+
+        coEvery { translationCacheRepository.get(any(), any(), any()) } throws RuntimeException("Cache error")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Should NOT crash even if cache throws
+        vm.rePaginate(1080, 2400, 2.625f)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertEquals(1, state.pages.size)
         assertFalse(state.isRePaginating)
     }
 }
