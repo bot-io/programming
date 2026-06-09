@@ -2,11 +2,13 @@
   "name": "dual-reader-translate",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "set-key": "wrangler secret put GLM_API_KEY",
-    "tail": "wrangler tail"
+    "tail": "wrangler tail",
+    "test": "node --test test/index.test.js"
   },
   "devDependencies": {
     "wrangler": "^4"

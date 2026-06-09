@@ -9,6 +9,8 @@
  * Rate limits enforced per-IP using Cloudflare Cache API.
  */
 
+import { formatBatchPages, parseBatchResponse } from './batch-utils.js';
+
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const CONFIG = {
@@ -280,78 +282,6 @@ async function handleBatchTranslate(request, clientIp, env) {
     source_lang: source_lang || 'auto',
     target_lang,
   });
-}
-
-/**
- * Format pages into a structured prompt with numbered markers.
- * Example:
- *   [Page 1]
- *   First page text here...
- *
- *   [Page 2]
- *   Second page text here...
- */
-function formatBatchPages(pages) {
-  return pages.map((p) => `[Page ${p.index}]\n${p.text}`).join('\n\n');
-}
-
-/**
- * Parse the model's structured response back into individual translations.
- * Expects format like:
- *   [Page 1]
- *   Translated text...
- *
- *   [Page 2]
- *   Translated text...
- *
- * Falls back to splitting by markers or returning as single block.
- */
-function parseBatchResponse(text, pages) {
-  const expectedCount = pages.length;
-  const results = [];
-
-  // Build a set of valid page indices from the original request
-  const validIndices = new Set(pages.map(p => p.index));
-
-  // Try structured parsing: split by [Page N] markers
-  const pageRegex = /\[Page\s+(\d+)\]\s*\n([\s\S]*?)(?=\n\[Page\s+\d+\]|$)/gi;
-  let match;
-  const found = new Map();
-
-  while ((match = pageRegex.exec(text)) !== null) {
-    const pageNum = parseInt(match[1], 10);
-    const content = match[2].trim();
-    if (validIndices.has(pageNum)) {
-      found.set(pageNum, content);
-    }
-  }
-
-  if (found.size === expectedCount) {
-    // All pages found with markers — preserve original indices
-    for (const [idx, content] of found) {
-      results.push({ index: idx, translated_text: content });
-    }
-    return results;
-  }
-
-  // Fallback: try splitting by double newlines into roughly equal chunks
-  // Strip any remaining markers
-  const cleanText = text.replace(/\[Page\s+\d+\]\s*\n?/gi, '').trim();
-  const chunks = cleanText.split(/\n{2,}/).filter(c => c.trim());
-
-  if (chunks.length === expectedCount) {
-    // Map chunks back to original page indices in order
-    return pages.map((p, i) => ({ index: p.index, translated_text: chunks[i].trim() }));
-  }
-
-  // Last resort: if expected 1 page, return whole text
-  if (expectedCount === 1) {
-    return [{ index: pages[0].index, translated_text: cleanText }];
-  }
-
-  // Couldn't parse — return empty so caller can fall back to single-page
-  console.warn(`Batch parse failed: expected ${expectedCount} pages, found ${found.size} markers, ${chunks.length} chunks`);
-  return [];
 }
 
 /**

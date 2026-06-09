@@ -254,6 +254,170 @@ class CloudTranslationServiceImplTest {
         assertEquals("Здравейте", result)
     }
 
+    // ── translatePages — batch index mapping ──────────────────────────────────
+
+    @Test
+    fun `translatePages - returns map with original page indices from batch response`() = runTest {
+        // Pages with non-sequential indices 5, 6, 7
+        val pages = listOf(
+            IndexedValue(5, "Page five"),
+            IndexedValue(6, "Page six"),
+            IndexedValue(7, "Page seven"),
+        )
+
+        coEvery { proxyApi.translateBatch(any()) } returns batchSuccessResponse(
+            listOf(
+                BatchTranslation(index = 5, translatedText = "Страница пет"),
+                BatchTranslation(index = 6, translatedText = "Страница шест"),
+                BatchTranslation(index = 7, translatedText = "Страница седем"),
+            )
+        )
+
+        val result = service.translatePages(pages, "bg", "en", null)
+
+        // Keys MUST be 5, 6, 7 — NOT 0, 1, 2
+        assertEquals(setOf(5, 6, 7), result.keys)
+        assertEquals("Страница пет", result[5])
+        assertEquals("Страница шест", result[6])
+        assertEquals("Страница седем", result[7])
+    }
+
+    @Test
+    fun `translatePages - returns map with sequential indices from batch response`() = runTest {
+        val pages = listOf(
+            IndexedValue(0, "Page zero"),
+            IndexedValue(1, "Page one"),
+            IndexedValue(2, "Page two"),
+        )
+
+        coEvery { proxyApi.translateBatch(any()) } returns batchSuccessResponse(
+            listOf(
+                BatchTranslation(index = 0, translatedText = "Страница нула"),
+                BatchTranslation(index = 1, translatedText = "Страница едно"),
+                BatchTranslation(index = 2, translatedText = "Страница две"),
+            )
+        )
+
+        val result = service.translatePages(pages, "bg", "en", null)
+
+        assertEquals(setOf(0, 1, 2), result.keys)
+        assertEquals("Страница нула", result[0])
+        assertEquals("Страница едно", result[1])
+        assertEquals("Страница две", result[2])
+    }
+
+    @Test
+    fun `translatePages - preserves single non-zero index`() = runTest {
+        val pages = listOf(IndexedValue(42, "Page forty-two"))
+
+        coEvery { proxyApi.translateBatch(any()) } returns batchSuccessResponse(
+            listOf(BatchTranslation(index = 42, translatedText = "Страница 42"))
+        )
+
+        val result = service.translatePages(pages, "bg", "en", null)
+
+        assertEquals(setOf(42), result.keys)
+        assertEquals("Страница 42", result[42])
+        assertNull(result[0])
+    }
+
+    @Test
+    fun `translatePages - returns empty map for empty input`() = runTest {
+        val result = service.translatePages(emptyList(), "bg", "en", null)
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `translatePages - does NOT map non-zero indices to zero-based keys`() = runTest {
+        // Regression guard: if the implementation incorrectly used loop index instead
+        // of the response's index field, indices 5,6,7 would become 0,1,2.
+        val pages = listOf(
+            IndexedValue(5, "A"),
+            IndexedValue(6, "B"),
+        )
+
+        coEvery { proxyApi.translateBatch(any()) } returns batchSuccessResponse(
+            listOf(
+                BatchTranslation(index = 5, translatedText = "А"),
+                BatchTranslation(index = 6, translatedText = "Б"),
+            )
+        )
+
+        val result = service.translatePages(pages, "bg", "en", null)
+
+        // Must NOT contain zero-based keys
+        assertFalse("Result should not contain key 0", result.containsKey(0))
+        assertFalse("Result should not contain key 1", result.containsKey(1))
+        assertTrue(result.containsKey(5))
+        assertTrue(result.containsKey(6))
+    }
+
+    @Test
+    fun `translatePages - batch endpoint receives correct page indices in request`() = runTest {
+        val pages = listOf(
+            IndexedValue(10, "Ten"),
+            IndexedValue(20, "Twenty"),
+        )
+
+        coEvery { proxyApi.translateBatch(match { req ->
+            val indices = req.pages.map { it.index }
+            indices == listOf(10, 20)
+        }) } returns batchSuccessResponse(
+            listOf(
+                BatchTranslation(index = 10, translatedText = "Десет"),
+                BatchTranslation(index = 20, translatedText = "Двайсет"),
+            )
+        )
+
+        val result = service.translatePages(pages, "bg", "en", null)
+
+        assertEquals(mapOf(10 to "Десет", 20 to "Двайсет"), result)
+    }
+
+    @Test
+    fun `translatePages - fallback to individual calls preserves original indices`() = runTest {
+        // Batch endpoint fails, forcing individual fallback
+        val pages = listOf(
+            IndexedValue(5, "Five"),
+            IndexedValue(6, "Six"),
+        )
+
+        coEvery { proxyApi.translateBatch(any()) } returns Response.success(
+            ProxyBatchTranslateResponse(error = "batch failed")
+        )
+        // Individual translate calls succeed
+        coEvery { proxyApi.translate(match { it.text == "Five" }) } returns successResponse("Пет")
+        coEvery { proxyApi.translate(match { it.text == "Six" }) } returns successResponse("Шест")
+
+        val result = service.translatePages(pages, "bg", "en", null)
+
+        // Even through fallback path, keys must be 5,6 not 0,1
+        assertEquals(setOf(5, 6), result.keys)
+        assertEquals("Пет", result[5])
+        assertEquals("Шест", result[6])
+    }
+
+    @Test
+    fun `translatePages - partial batch success fills gaps with individual calls`() = runTest {
+        val pages = listOf(
+            IndexedValue(3, "Three"),
+            IndexedValue(4, "Four"),
+        )
+
+        // Batch returns only page 3, missing page 4
+        coEvery { proxyApi.translateBatch(any()) } returns batchSuccessResponse(
+            listOf(BatchTranslation(index = 3, translatedText = "Три"))
+        )
+        // Individual fallback for page 4
+        coEvery { proxyApi.translate(match { it.text == "Four" }) } returns successResponse("Четири")
+
+        val result = service.translatePages(pages, "bg", "en", null)
+
+        assertEquals(setOf(3, 4), result.keys)
+        assertEquals("Три", result[3])
+        assertEquals("Четири", result[4])
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private fun successResponse(
@@ -264,6 +428,19 @@ class CloudTranslationServiceImplTest {
             ProxyTranslateResponse(
                 translatedText = translatedText,
                 model = model,
+                sourceLang = "en",
+                targetLang = "bg",
+            )
+        )
+    }
+
+    private fun batchSuccessResponse(
+        translations: List<BatchTranslation>
+    ): Response<ProxyBatchTranslateResponse> {
+        return Response.success(
+            ProxyBatchTranslateResponse(
+                translations = translations,
+                model = "gemini-2.5-flash",
                 sourceLang = "en",
                 targetLang = "bg",
             )
