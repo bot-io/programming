@@ -133,4 +133,96 @@ class PaginateBookUseCaseTest {
             )
         }
     }
+
+    @Test
+    fun `re-pagination preserves translations by content matching`() = runTest {
+        // Given: existing pages with translations
+        val existingPages = listOf(
+            com.dualreader.app.domain.entities.Page(
+                index = 0, bookId = "book-1", chapterIndex = 0, originalText = "Hello world",
+                translations = mapOf("es" to "Hola mundo"),
+            ),
+            com.dualreader.app.domain.entities.Page(
+                index = 1, bookId = "book-1", chapterIndex = 0, originalText = "Goodbye world",
+                translations = mapOf("es" to "Adiós mundo"),
+            ),
+        )
+        coEvery { bookRepository.getPagesForBook("book-1") } returns existingPages
+        coEvery { epubParser.extractFullText(any()) } returns "Full text"
+        // Re-pagination with different screen size — same content, different order
+        coEvery { paginationService.paginate(any(), any(), any(), any()) } returns
+            listOf("Goodbye world", "Hello world")
+
+        // When
+        useCase(testBook, screenWidth = 800, screenHeight = 1200)
+
+        // Then: translations are preserved, indices updated
+        coVerify {
+            bookRepository.savePages(match { saved ->
+                saved.size == 2 &&
+                saved[0].originalText == "Goodbye world" &&
+                saved[0].index == 0 &&
+                saved[0].translations["es"] == "Adiós mundo" &&
+                saved[1].originalText == "Hello world" &&
+                saved[1].index == 1 &&
+                saved[1].translations["es"] == "Hola mundo"
+            })
+        }
+    }
+
+    @Test
+    fun `re-pagination preserves translations even when content moves to different index`() = runTest {
+        // Given: page 5 has a translation
+        val existingPages = listOf(
+            com.dualreader.app.domain.entities.Page(
+                index = 5, bookId = "book-1", chapterIndex = 0, originalText = "Chapter two begins here",
+                translations = mapOf("es" to "El capítulo dos comienza aquí", "fr" to "Le chapitre deux commence ici"),
+            ),
+        )
+        coEvery { bookRepository.getPagesForBook("book-1") } returns existingPages
+        coEvery { epubParser.extractFullText(any()) } returns "Full text"
+        // After re-paginating with fullscreen, the same content now lands at index 2
+        coEvery { paginationService.paginate(any(), any(), any(), any()) } returns
+            listOf("Some text", "More text", "Chapter two begins here")
+
+        // When
+        useCase(testBook, screenWidth = 1256, screenHeight = 1268)
+
+        // Then: translation carried over with BOTH languages, new index
+        coVerify {
+            bookRepository.savePages(match { saved ->
+                val page2 = saved[2]
+                page2.index == 2 &&
+                page2.originalText == "Chapter two begins here" &&
+                page2.translations["es"] == "El capítulo dos comienza aquí" &&
+                page2.translations["fr"] == "Le chapitre deux commence ici"
+            })
+        }
+    }
+
+    @Test
+    fun `re-pagination creates fresh pages for content without translations`() = runTest {
+        // Given: existing pages have no translations
+        val existingPages = listOf(
+            com.dualreader.app.domain.entities.Page(
+                index = 0, bookId = "book-1", chapterIndex = 0, originalText = "Hello world",
+                translations = emptyMap(),
+            ),
+        )
+        coEvery { bookRepository.getPagesForBook("book-1") } returns existingPages
+        coEvery { epubParser.extractFullText(any()) } returns "Full text"
+        coEvery { paginationService.paginate(any(), any(), any(), any()) } returns
+            listOf("Hello world", "New page")
+
+        // When
+        useCase(testBook, screenWidth = 800, screenHeight = 1200)
+
+        // Then: no translations carried over, new pages created normally
+        coVerify {
+            bookRepository.savePages(match { saved ->
+                saved.size == 2 &&
+                saved.all { it.translations.isEmpty() }
+            })
+        }
+    }
 }

@@ -53,14 +53,25 @@ class PaginateBookUseCase @Inject constructor(
                     margins = margins,
                 )
 
-                // Save pages to repository
+                // Load existing pages to preserve translations across re-pagination
+                val existingPages = bookRepository.getPagesForBook(book.id)
+                val existingByContent = existingPages
+                    .filter { it.translations.isNotEmpty() }
+                    .associateBy { it.originalText }
+
+                // Save pages to repository, carrying over translations by content match
                 val pageEntities = pages.mapIndexed { index, text ->
-                    Page(
-                        index = index,
-                        bookId = book.id,
-                        chapterIndex = 0, // TODO: track chapter boundaries
-                        originalText = text,
-                    )
+                    val existing = existingByContent[text]
+                    if (existing != null) {
+                        existing.copy(index = index)
+                    } else {
+                        Page(
+                            index = index,
+                            bookId = book.id,
+                            chapterIndex = 0, // TODO: track chapter boundaries
+                            originalText = text,
+                        )
+                    }
                 }
                 bookRepository.savePages(pageEntities)
 
