@@ -7,6 +7,7 @@ import com.dualreader.app.domain.entities.ReadingSettings
 import com.dualreader.app.domain.repositories.BookRepository
 import com.dualreader.app.domain.repositories.BookmarkRepository
 import com.dualreader.app.domain.repositories.SettingsRepository
+import com.dualreader.app.domain.usecases.PaginateBookUseCase
 import com.dualreader.app.domain.usecases.TranslatePageUseCase
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,7 @@ class ReaderViewModelTest {
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var bookmarkRepository: BookmarkRepository
     private lateinit var translatePageUseCase: TranslatePageUseCase
+    private lateinit var paginateBookUseCase: PaginateBookUseCase
 
     private val testBook = Book(
         id = "book1", title = "Test Book", author = "Author",
@@ -52,6 +54,7 @@ class ReaderViewModelTest {
         settingsRepository = mockk(relaxed = true)
         bookmarkRepository = mockk(relaxed = true)
         translatePageUseCase = mockk()
+        paginateBookUseCase = mockk(relaxed = true)
 
         coEvery { bookRepository.getBookById("book1") } returns testBook
         coEvery { bookRepository.getPagesForBook("book1") } returns testPages
@@ -68,6 +71,7 @@ class ReaderViewModelTest {
             settingsRepository = settingsRepository,
             bookmarkRepository = bookmarkRepository,
             translatePageUseCase = translatePageUseCase,
+            paginateBookUseCase = paginateBookUseCase,
         )
     }
 
@@ -532,5 +536,157 @@ class ReaderViewModelTest {
             val settings = ReadingSettings(screenWakeTimeoutMinutes = value)
             assertEquals(value, settings.screenWakeTimeoutMinutes)
         }
+    }
+
+    // ── Dynamic Re-Pagination ──────────────────────────────────────────
+
+    @Test
+    fun `rePaginate - calls paginateBookUseCase with measured dimensions`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.rePaginate(panelWidthPx = 1080, panelHeightPx = 2400)
+        advanceUntilIdle()
+
+        coVerify {
+            paginateBookUseCase(
+                book = match { it.id == "book1" },
+                screenWidth = 1080,
+                screenHeight = 2400,
+            )
+        }
+    }
+
+    @Test
+    fun `rePaginate - reloads pages from repository`() = runTest(testDispatcher) {
+        val newPages = listOf(
+            Page(index = 0, bookId = "book1", originalText = "Re-paginated page 0", chapterIndex = 0),
+            Page(index = 1, bookId = "book1", originalText = "Re-paginated page 1", chapterIndex = 0),
+            Page(index = 2, bookId = "book1", originalText = "Re-paginated page 2", chapterIndex = 0),
+            Page(index = 3, bookId = "book1", originalText = "Re-paginated page 3", chapterIndex = 0),
+        )
+
+        // Initially returns 3 pages, then 4 after re-pagination
+        var pageCallCount = 0
+        coEvery { bookRepository.getPagesForBook("book1") } coAnswers {
+            pageCallCount++
+            if (pageCallCount <= 1) testPages else newPages
+        }
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Before re-pagination: 3 pages
+        assertEquals(3, (vm.uiState.value as ReaderUiState.ReaderReady).pages.size)
+
+        vm.rePaginate(1080, 2400)
+        advanceUntilIdle()
+
+        // After re-pagination: 4 pages
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertEquals(4, state.pages.size)
+        assertEquals("Re-paginated page 0", state.pages[0].originalText)
+    }
+
+    @Test
+    fun `rePaginate - sets isRePaginating during operation`() = runTest(testDispatcher) {
+        coEvery {
+            paginateBookUseCase(any(), any(), any())
+        } coAnswers {
+            kotlinx.coroutines.delay(100)
+            Result.success(Unit)
+        }
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.rePaginate(1080, 2400)
+        advanceUntilIdle()
+
+        coVerify { paginateBookUseCase(any(), any(), any()) }
+    }
+
+    @Test
+    fun `rePaginate - resets isRePaginating to false after completion`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.rePaginate(1080, 2400)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse("isRePaginating should be false after completion", state.isRePaginating)
+    }
+
+    @Test
+    fun `rePaginate - resets isRePaginating to false on error`() = runTest(testDispatcher) {
+        coEvery {
+            paginateBookUseCase(any(), any(), any())
+        } throws RuntimeException("Pagination failed")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.rePaginate(1080, 2400)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse("isRePaginating should be false after error", state.isRePaginating)
+        // Pages should remain unchanged
+        assertEquals(3, state.pages.size)
+    }
+
+    @Test
+    fun `rePaginate - does nothing when no book loaded`() = runTest(testDispatcher) {
+        coEvery { bookRepository.getBookById("nobook") } returns null
+
+        val vm = createViewModel("nobook")
+        advanceUntilIdle()
+
+        // State should be Error, rePaginate should not crash
+        vm.rePaginate(1080, 2400)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { paginateBookUseCase(any(), any(), any()) }
+    }
+
+    @Test
+    fun `rePaginate - keeps existing pages when use case throws`() = runTest(testDispatcher) {
+        coEvery {
+            paginateBookUseCase(any(), any(), any())
+        } throws RuntimeException("Disk error")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val originalPages = (vm.uiState.value as ReaderUiState.ReaderReady).pages.size
+
+        vm.rePaginate(1080, 2400)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertEquals("Pages should be unchanged", originalPages, state.pages.size)
+    }
+
+    // ── isRePaginating in state ────────────────────────────────────────
+
+    @Test
+    fun `ReaderReady - isRePaginating defaults to false`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertFalse(state.isRePaginating)
+    }
+
+    @Test
+    fun `goToPage - includes isRePaginating in state`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.goToPage(1)
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertEquals(1, state.currentPage.index)
+        assertFalse(state.isRePaginating)
     }
 }
