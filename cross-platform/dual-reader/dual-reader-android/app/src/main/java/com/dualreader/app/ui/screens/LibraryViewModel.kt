@@ -83,16 +83,18 @@ class LibraryViewModel @Inject constructor(
             paginateBookUseCase(
                 book = book,
                 screenWidth = DEFAULT_SCREEN_WIDTH,
-                screenHeight = DEFAULT_SCREEN_HEIGHT
+                screenHeight = EFFECTIVE_PAGE_HEIGHT
             )
         }
     }
 
     companion object {
         // Default screen dimensions for background pagination.
-        // Actual re-pagination can be triggered via retryPagination()
-        // with device-specific dimensions when the book is opened.
+        // Height is halved because the reader uses vertical split on phones
+        // (original text on top, translation on bottom, each getting ~50% height).
+        // Pages should fit the original text panel without scrolling.
         private const val DEFAULT_SCREEN_WIDTH = 1080
         private const val DEFAULT_SCREEN_HEIGHT = 2280
+        private const val EFFECTIVE_PAGE_HEIGHT = DEFAULT_SCREEN_HEIGHT / 2
     }
 }

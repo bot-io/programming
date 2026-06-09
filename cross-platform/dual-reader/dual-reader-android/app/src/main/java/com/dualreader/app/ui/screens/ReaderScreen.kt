@@ -1,5 +1,7 @@
 package com.dualreader.app.ui.screens
 
+import android.app.Activity
+import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -20,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -35,6 +38,7 @@ import com.dualreader.app.domain.entities.Bookmark
 import com.dualreader.app.domain.entities.Page
 import com.dualreader.app.domain.entities.ReaderTheme
 import com.dualreader.app.domain.entities.ReadingSettings
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // ─── Theme colors ────────────────────────────────────────────────────────────
@@ -98,6 +102,15 @@ fun highlightText(
             searchFrom = matchIndex + query.length
         }
     }
+}
+
+// ─── Sentence splitting ──────────────────────────────────────────────────────
+
+private val sentenceRegex = Regex("""(?<=[.!?…]["'"»'')\]]*\s+)""")
+
+private fun splitSentences(text: String): List<String> {
+    if (text.isBlank()) return emptyList()
+    return text.split(sentenceRegex).filter { it.isNotBlank() }
 }
 
 // ─── Layout Mode ─────────────────────────────────────────────────────────────
@@ -213,12 +226,33 @@ private fun ReaderContent(
 ) {
     val colors = readerColors(settings.theme)
     val layoutMode = rememberLayoutMode()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     // Bars visible = NOT immersive. Tapping toggles immersive.
     var barsVisible by remember { mutableStateOf(true) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var showBookmarkList by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
     var searchInput by remember { mutableStateOf("") }
+
+    // ── Keep screen awake ──────────────────────────────────────────
+    DisposableEffect(settings.screenWakeTimeoutMinutes) {
+        val activity = context as? Activity
+        val window = activity?.window
+        window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        val timeoutMs = settings.screenWakeTimeoutMinutes * 60_000L
+        val job = scope.launch {
+            delay(timeoutMs)
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+
+        onDispose {
+            job.cancel()
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -357,22 +391,26 @@ private fun ReaderContent(
                     Row(Modifier.fillMaxSize()) {
                         TextPanel("Original", currentPage.originalText,
                             settings.fontSize, settings.lineHeight, colors,
-                            searchQuery, Modifier.weight(1f), showLabel = barsVisible)
+                            searchQuery, Modifier.weight(1f), showLabel = barsVisible,
+                            sentenceCounterEnabled = settings.sentenceCounterEnabled)
                         Box(Modifier.width(2.dp).fillMaxHeight().background(colors.accent.copy(alpha = 0.5f)))
                         TranslationPanel(currentPage.effectiveTranslation(settings.targetLanguage), isTranslating, translationError,
                             settings.fontSize, settings.lineHeight, colors,
-                            onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible)
+                            onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible,
+                            sentenceCounterEnabled = settings.sentenceCounterEnabled)
                     }
                 } else {
                     // Phone portrait: top/bottom split — both visible at once
                     Column(Modifier.fillMaxSize()) {
                         TextPanel("Original", currentPage.originalText,
                             settings.fontSize, settings.lineHeight, colors,
-                            searchQuery, Modifier.weight(1f), showLabel = barsVisible)
+                            searchQuery, Modifier.weight(1f), showLabel = barsVisible,
+                            sentenceCounterEnabled = settings.sentenceCounterEnabled)
                         Box(Modifier.fillMaxWidth().height(2.dp).background(colors.accent.copy(alpha = 0.5f)))
                         TranslationPanel(currentPage.effectiveTranslation(settings.targetLanguage), isTranslating, translationError,
                             settings.fontSize, settings.lineHeight, colors,
-                            onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible)
+                            onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible,
+                            sentenceCounterEnabled = settings.sentenceCounterEnabled)
                     }
                 }
             }
@@ -439,6 +477,7 @@ private fun TextPanel(
     searchQuery: String = "",
     modifier: Modifier = Modifier,
     showLabel: Boolean = true,
+    sentenceCounterEnabled: Boolean = false,
 ) {
     Column(modifier = modifier) {
         if (showLabel) {
@@ -448,15 +487,25 @@ private fun TextPanel(
                     color = colors.textSecondary, fontWeight = FontWeight.Medium)
             }
         }
-        Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp)) {
-            val displayText = if (searchQuery.isNotBlank())
-                highlightText(text, searchQuery, colors.accent.copy(alpha = 0.35f))
-            else AnnotatedString(text)
-            SelectionContainer {
-                Text(text = displayText, color = colors.text,
-                    fontSize = fontSize.sp, lineHeight = (fontSize * lineHeight).sp,
-                    fontFamily = FontFamily.Serif)
+        if (sentenceCounterEnabled) {
+            SentenceCountedText(
+                text = text,
+                fontSize = fontSize,
+                lineHeight = lineHeight,
+                colors = colors,
+                searchQuery = searchQuery,
+            )
+        } else {
+            Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp)) {
+                val displayText = if (searchQuery.isNotBlank())
+                    highlightText(text, searchQuery, colors.accent.copy(alpha = 0.35f))
+                else AnnotatedString(text)
+                SelectionContainer {
+                    Text(text = displayText, color = colors.text,
+                        fontSize = fontSize.sp, lineHeight = (fontSize * lineHeight).sp,
+                        fontFamily = FontFamily.Serif)
+                }
             }
         }
     }
@@ -476,6 +525,7 @@ private fun TranslationPanel(
     searchQuery: String = "",
     modifier: Modifier = Modifier,
     showLabel: Boolean = true,
+    sentenceCounterEnabled: Boolean = false,
 ) {
     Column(modifier = modifier) {
         if (showLabel) {
@@ -517,13 +567,24 @@ private fun TranslationPanel(
                     }
                 }
                 translatedText != null -> {
-                    val displayText = if (searchQuery.isNotBlank())
-                        highlightText(translatedText, searchQuery, colors.accent.copy(alpha = 0.35f))
-                    else AnnotatedString(translatedText)
-                    SelectionContainer {
-                        Text(text = displayText, color = colors.text,
-                            fontSize = fontSize.sp, lineHeight = (fontSize * lineHeight).sp,
-                            fontFamily = FontFamily.Serif)
+                    if (sentenceCounterEnabled) {
+                        // Inline sentence counter — no surrounding Box
+                        SentenceCountedTextInner(
+                            text = translatedText,
+                            fontSize = fontSize,
+                            lineHeight = lineHeight,
+                            colors = colors,
+                            searchQuery = searchQuery,
+                        )
+                    } else {
+                        val displayText = if (searchQuery.isNotBlank())
+                            highlightText(translatedText, searchQuery, colors.accent.copy(alpha = 0.35f))
+                        else AnnotatedString(translatedText)
+                        SelectionContainer {
+                            Text(text = displayText, color = colors.text,
+                                fontSize = fontSize.sp, lineHeight = (fontSize * lineHeight).sp,
+                                fontFamily = FontFamily.Serif)
+                        }
                     }
                 }
                 else -> {
@@ -543,6 +604,125 @@ private fun TranslationPanel(
                     }
                 }
             }
+        }
+    }
+}
+
+// ─── Sentence Counter Text ───────────────────────────────────────────────────
+// Shows small numbered markers on the left at regular sentence intervals.
+// Target: 5-6 cues per page, reset per page.
+
+@Composable
+private fun SentenceCountedText(
+    text: String,
+    fontSize: Float,
+    lineHeight: Float,
+    colors: ReaderColors,
+    searchQuery: String = "",
+) {
+    val sentences = remember(text) { splitSentences(text) }
+    val totalSentences = sentences.size
+
+    // Show a marker every N sentences, targeting 5-6 markers per page
+    val interval = if (totalSentences <= 6) 1 else (totalSentences / 6).coerceAtLeast(1)
+
+    Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+        .padding(horizontal = 8.dp, vertical = 12.dp)) {
+        Row {
+            // Left: sentence markers
+            Column(
+                modifier = Modifier.width(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                for (i in sentences.indices) {
+                    val markerIndex = i + 1
+                    if (markerIndex == 1 || markerIndex % interval == 0) {
+                        Text(
+                            text = "$markerIndex",
+                            color = colors.textSecondary.copy(alpha = 0.45f),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Light,
+                            modifier = Modifier.padding(top = 0.dp, bottom = 0.dp),
+                        )
+                    } else {
+                        // Invisible spacer to keep alignment
+                        Text(
+                            text = "",
+                            fontSize = 9.sp,
+                            modifier = Modifier.height((fontSize * lineHeight).sp.value.dp.coerceAtLeast(4.dp).value.dp),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.width(4.dp))
+            // Right: text
+            val displayText = if (searchQuery.isNotBlank())
+                highlightText(text, searchQuery, colors.accent.copy(alpha = 0.35f))
+            else AnnotatedString(text)
+            SelectionContainer {
+                Text(
+                    text = displayText,
+                    color = colors.text,
+                    fontSize = fontSize.sp,
+                    lineHeight = (fontSize * lineHeight).sp,
+                    fontFamily = FontFamily.Serif,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+/** Inner sentence counter for translation panel (no outer Box — already inside one) */
+@Composable
+private fun SentenceCountedTextInner(
+    text: String,
+    fontSize: Float,
+    lineHeight: Float,
+    colors: ReaderColors,
+    searchQuery: String = "",
+) {
+    val sentences = remember(text) { splitSentences(text) }
+    val totalSentences = sentences.size
+    val interval = if (totalSentences <= 6) 1 else (totalSentences / 6).coerceAtLeast(1)
+
+    Row {
+        // Left: sentence markers
+        Column(
+            modifier = Modifier.width(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            for (i in sentences.indices) {
+                val markerIndex = i + 1
+                if (markerIndex == 1 || markerIndex % interval == 0) {
+                    Text(
+                        text = "$markerIndex",
+                        color = colors.textSecondary.copy(alpha = 0.45f),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Light,
+                    )
+                } else {
+                    Text(
+                        text = "",
+                        fontSize = 9.sp,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.width(4.dp))
+        // Right: text
+        val displayText = if (searchQuery.isNotBlank())
+            highlightText(text, searchQuery, colors.accent.copy(alpha = 0.35f))
+        else AnnotatedString(text)
+        SelectionContainer {
+            Text(
+                text = displayText,
+                color = colors.text,
+                fontSize = fontSize.sp,
+                lineHeight = (fontSize * lineHeight).sp,
+                fontFamily = FontFamily.Serif,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }

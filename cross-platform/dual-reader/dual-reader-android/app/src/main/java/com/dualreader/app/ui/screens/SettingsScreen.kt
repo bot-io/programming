@@ -220,6 +220,58 @@ fun SettingsScreen(
                 }
             }
 
+            // ── Screen Wake ──────────────────────────────────────────
+            SettingsSection("Keep Screen On") {
+                val options = listOf(5 to "5 min", 10 to "10 min", 15 to "15 min", 30 to "30 min", 60 to "1 hour", 0 to "Disabled")
+                Column {
+                    options.forEach { (minutes, label) ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSettingsChanged(settings.copy(screenWakeTimeoutMinutes = minutes))
+                                }
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = settings.screenWakeTimeoutMinutes == minutes,
+                                onClick = {
+                                    onSettingsChanged(settings.copy(screenWakeTimeoutMinutes = minutes))
+                                },
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(label, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            }
+
+            // ── Sentence Counter ─────────────────────────────────────
+            SettingsSection("Sentence Counter") {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Show sentence numbers", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Display numbered markers on the left side to help align original and translated text",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = settings.sentenceCounterEnabled,
+                        onCheckedChange = {
+                            onSettingsChanged(settings.copy(sentenceCounterEnabled = it))
+                        },
+                    )
+                }
+            }
+
             // ── Clear Translation Cache ──────────────────────────────
             SettingsSection("Translation Cache") {
                 var showDialog by remember { mutableStateOf(false) }

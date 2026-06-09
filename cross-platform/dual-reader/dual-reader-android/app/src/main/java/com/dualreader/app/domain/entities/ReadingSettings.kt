@@ -16,6 +16,8 @@ data class ReadingSettings(
     val translationProvider: TranslationProvider = TranslationProvider.GEMINI_FLASH,
     val brightness: Float = -1f, // -1 = system default
     val isImmersiveMode: Boolean = false,
+    val screenWakeTimeoutMinutes: Int = 30,
+    val sentenceCounterEnabled: Boolean = true,
 )
 
 enum class ReaderTheme {
