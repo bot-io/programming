@@ -12,6 +12,7 @@ import com.dualreader.app.domain.repositories.BookRepository
 import com.dualreader.app.domain.repositories.BookmarkRepository
 import com.dualreader.app.domain.repositories.SettingsRepository
 import com.dualreader.app.domain.usecases.PageToTranslate
+import com.dualreader.app.domain.usecases.PaginateBookUseCase
 import com.dualreader.app.domain.usecases.TranslatePageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -39,6 +40,7 @@ sealed class ReaderUiState {
         val bookmarks: List<Bookmark>,
         val isTranslating: Boolean = false,
         val translationError: String? = null,
+        val isRePaginating: Boolean = false,
     ) : ReaderUiState()
 
     data class Error(val message: String) : ReaderUiState()
@@ -50,7 +52,8 @@ class ReaderViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val settingsRepository: SettingsRepository,
     private val bookmarkRepository: BookmarkRepository,
-    private val translatePageUseCase: TranslatePageUseCase
+    private val translatePageUseCase: TranslatePageUseCase,
+    private val paginateBookUseCase: PaginateBookUseCase,
 ) : ViewModel() {
 
     companion object {
@@ -79,6 +82,7 @@ class ReaderViewModel @Inject constructor(
     private val _isTranslating = MutableStateFlow(false)
     private val _translationError = MutableStateFlow<String?>(null)
     private var translationJob: Job? = null
+    private val _isRePaginating = MutableStateFlow(false)
 
     init {
         currentBookId?.let { loadBook(it) }
@@ -117,11 +121,12 @@ class ReaderViewModel @Inject constructor(
                         settingsRepository.settings,
                         bookmarkRepository.getBookmarksForBook(bookId),
                         _pages,
-                        _isTranslating,
-                        _translationError
-                    ) { settingsFlow, bookmarksFlow, pagesFlow, translating, error ->
-                        Quintuple(settingsFlow, bookmarksFlow, pagesFlow, translating, error)
-                    }.collect { (settingsVal, bookmarksVal, pagesVal, isTranslating, translationError) ->
+                        combine(_isTranslating, _translationError, _isRePaginating) { t, e, r ->
+                            UiExtras(t, e, r)
+                        },
+                    ) { settingsFlow, bookmarksFlow, pagesFlow, extras ->
+                        Quadruple(settingsFlow, bookmarksFlow, pagesFlow, extras)
+                    }.collect { (settingsVal, bookmarksVal, pagesVal, extras) ->
                         _settings.value = settingsVal
                         _bookmarks.value = bookmarksVal
 
@@ -137,8 +142,9 @@ class ReaderViewModel @Inject constructor(
                                     currentPage = currentPg,
                                     settings = settingsVal,
                                     bookmarks = bookmarksVal,
-                                    isTranslating = isTranslating,
-                                    translationError = translationError
+                                    isTranslating = extras.isTranslating,
+                                    translationError = extras.translationError,
+                                    isRePaginating = extras.isRePaginating,
                                 )
                             }
                         }
@@ -146,6 +152,32 @@ class ReaderViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _uiState.value = ReaderUiState.Error(e.message ?: "Failed to load book")
+            }
+        }
+    }
+
+    /**
+     * Re-paginate the book with actual measured dimensions from the reader layout.
+     * Called once when the content area is first measured with real pixel sizes.
+     */
+    fun rePaginate(panelWidthPx: Int, panelHeightPx: Int) {
+        val book = _book ?: return
+        viewModelScope.launch(ioDispatcher) {
+            _isRePaginating.value = true
+            try {
+                paginateBookUseCase(
+                    book = book,
+                    screenWidth = panelWidthPx,
+                    screenHeight = panelHeightPx,
+                )
+                val newPages = bookRepository.getPagesForBook(book.id)
+                _pages.value = newPages
+                val updatedBook = bookRepository.getBookById(book.id) ?: book
+                _book = updatedBook
+            } catch (_: Exception) {
+                // Keep existing pages
+            } finally {
+                _isRePaginating.value = false
             }
         }
     }
@@ -168,7 +200,8 @@ class ReaderViewModel @Inject constructor(
             settings = settings,
             bookmarks = bookmarks,
             isTranslating = _isTranslating.value,
-            translationError = _translationError.value
+            translationError = _translationError.value,
+            isRePaginating = _isRePaginating.value,
         )
 
         viewModelScope.launch(ioDispatcher) {
@@ -450,7 +483,14 @@ class ReaderViewModel @Inject constructor(
     }
 }
 
-/** 5-tuple for combine with 5 flows. */
-private data class Quintuple<A, B, C, D, E>(
-    val first: A, val second: B, val third: C, val fourth: D, val fifth: E
+/** 4-tuple for combine. */
+private data class Quadruple<A, B, C, D>(
+    val first: A, val second: B, val third: C, val fourth: D,
+)
+
+/** UI extras bundled for combine. */
+private data class UiExtras(
+    val isTranslating: Boolean,
+    val translationError: String?,
+    val isRePaginating: Boolean,
 )

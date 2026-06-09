@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -168,6 +169,7 @@ fun ReaderScreen(
     onClearSearch: () -> Unit = {},
     searchQuery: String = "",
     searchResults: List<ReaderViewModel.SearchResult> = emptyList(),
+    onRePaginate: (widthPx: Int, heightPx: Int) -> Unit = { _, _ -> },
 ) {
     when (uiState) {
         is ReaderUiState.Loading -> {
@@ -199,6 +201,7 @@ fun ReaderScreen(
                 bookmarks = uiState.bookmarks,
                 isTranslating = uiState.isTranslating,
                 translationError = uiState.translationError,
+                isRePaginating = uiState.isRePaginating,
                 onBack = onBack,
                 onNextPage = onNextPage,
                 onPreviousPage = onPreviousPage,
@@ -213,6 +216,7 @@ fun ReaderScreen(
                 onClearSearch = onClearSearch,
                 searchQuery = searchQuery,
                 searchResults = searchResults,
+                onRePaginate = onRePaginate,
             )
         }
     }
@@ -230,6 +234,7 @@ private fun ReaderContent(
     bookmarks: List<Bookmark>,
     isTranslating: Boolean,
     translationError: String? = null,
+    isRePaginating: Boolean = false,
     onBack: () -> Unit,
     onNextPage: () -> Unit,
     onPreviousPage: () -> Unit,
@@ -244,6 +249,7 @@ private fun ReaderContent(
     onClearSearch: () -> Unit,
     searchQuery: String,
     searchResults: List<ReaderViewModel.SearchResult>,
+    onRePaginate: (widthPx: Int, heightPx: Int) -> Unit = { _, _ -> },
 ) {
     val colors = readerColors(settings.theme)
     val layoutMode = rememberLayoutMode()
@@ -402,9 +408,27 @@ private fun ReaderContent(
             }
 
             // ── Content Area (Adaptive) ──────────────────────────────
+            // Measure the actual content area and trigger re-pagination
+            // once with the real device dimensions (no hardcoded pixels).
+            var hasTriggeredRePagination by remember { mutableStateOf(false) }
+
             Box(modifier = Modifier.weight(1f).fillMaxWidth()
                 .pointerInput(Unit) {
                     detectTapGestures { barsVisible = !barsVisible }
+                }
+                .onSizeChanged { size ->
+                    // Trigger re-pagination once with the actual measured size.
+                    // Height is the full content area; for vertical split each
+                    // panel gets half, so we pass half-height as the page height.
+                    if (!hasTriggeredRePagination && size.width > 0 && size.height > 0) {
+                        hasTriggeredRePagination = true
+                        val panelHeight = if (layoutMode == ReaderLayoutMode.VERTICAL_SPLIT) {
+                            size.height / 2
+                        } else {
+                            size.height
+                        }
+                        onRePaginate(size.width, panelHeight)
+                    }
                 }
             ) {
                 if (layoutMode == ReaderLayoutMode.SIDE_BY_SIDE) {
@@ -432,6 +456,21 @@ private fun ReaderContent(
                             settings.fontSize, settings.lineHeight, colors,
                             onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible,
                             sentenceCounterEnabled = settings.sentenceCounterEnabled)
+                    }
+                }
+
+                // Re-pagination loading overlay
+                if (isRePaginating) {
+                    Box(
+                        Modifier.fillMaxSize().background(colors.background.copy(alpha = 0.7f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(color = colors.accent)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Re-paginating…", color = colors.text,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
             }
