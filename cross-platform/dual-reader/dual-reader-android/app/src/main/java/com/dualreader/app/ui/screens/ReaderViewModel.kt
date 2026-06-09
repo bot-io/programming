@@ -3,6 +3,7 @@ package com.dualreader.app.ui.screens
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.dualreader.app.domain.entities.Book
 import com.dualreader.app.domain.entities.Bookmark
@@ -58,6 +59,7 @@ class ReaderViewModel @Inject constructor(
 
     companion object {
         private const val KEY_BOOK_ID = "bookId"
+        private const val TAG = "DualReader"
 
         /** How many pages to translate around the current page when user taps "Translate". */
         const val TRANSLATE_WINDOW_SIZE = 3
@@ -151,6 +153,7 @@ class ReaderViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "loadBook failed: ${e.message}", e)
                 _uiState.value = ReaderUiState.Error(e.message ?: "Failed to load book")
             }
         }
@@ -162,6 +165,7 @@ class ReaderViewModel @Inject constructor(
      */
     fun rePaginate(panelWidthPx: Int, panelHeightPx: Int, displayDensity: Float) {
         val book = _book ?: return
+        Log.i(TAG, "rePaginate: ${panelWidthPx}x${panelHeightPx}px density=$displayDensity book=${book.id}")
         viewModelScope.launch(ioDispatcher) {
             _isRePaginating.value = true
             try {
@@ -176,7 +180,9 @@ class ReaderViewModel @Inject constructor(
                 _pages.value = newPages
                 val updatedBook = bookRepository.getBookById(book.id) ?: book
                 _book = updatedBook
-            } catch (_: Exception) {
+                Log.i(TAG, "rePaginate done: ${newPages.size} pages, totalPg=${updatedBook.totalPages}")
+            } catch (e: Exception) {
+                Log.e(TAG, "rePaginate failed: ${e.message}", e)
                 // Keep existing pages
             } finally {
                 _isRePaginating.value = false
@@ -248,6 +254,8 @@ class ReaderViewModel @Inject constructor(
                     return@launch
                 }
 
+                Log.i(TAG, "translateCurrentPage: ${pagesToTranslate.size} pages, targetLang=$targetLang, center=${state.currentPage.index}")
+
                 val pageTranslations = pagesToTranslate.map { page ->
                     PageToTranslate(index = page.index, text = page.originalText)
                 }
@@ -261,10 +269,14 @@ class ReaderViewModel @Inject constructor(
                             applyTranslation(pageIndex, targetLang, translation)
                         },
                     )
-                } ?: Result.failure(Exception("Translation timed out. Tap Retry."))
+                } ?: run {
+                    Log.e(TAG, "Translation timed out after 60s for ${pagesToTranslate.size} pages")
+                    Result.failure(Exception("Translation timed out. Tap Retry."))
+                }
 
                 result.fold(
                     onSuccess = { translations ->
+                        Log.i(TAG, "Translation success: ${translations.size} pages translated")
                         translations.forEach { (pageIndex, translation) ->
                             applyTranslation(pageIndex, targetLang, translation)
                         }
@@ -272,11 +284,13 @@ class ReaderViewModel @Inject constructor(
                         _translationError.value = null
                     },
                     onFailure = { error ->
+                        Log.e(TAG, "translateCurrentPage failed: ${error.message}", error)
                         _isTranslating.value = false
                         _translationError.value = error.message ?: "Translation failed"
                     }
                 )
             } catch (e: Exception) {
+                Log.e(TAG, "translateCurrentPage exception: ${e.message}", e)
                 _isTranslating.value = false
                 _translationError.value = e.message ?: "Translation failed"
             }
@@ -324,11 +338,13 @@ class ReaderViewModel @Inject constructor(
                         _isTranslating.value = false
                     },
                     onFailure = { error ->
+                        Log.e(TAG, "translateAllPages failed: ${error.message}", error)
                         _isTranslating.value = false
                         _translationError.value = error.message ?: "Batch translation failed"
                     }
                 )
             } catch (e: Exception) {
+                Log.e(TAG, "translateAllPages exception: ${e.message}", e)
                 _isTranslating.value = false
                 _translationError.value = e.message ?: "Batch translation failed"
             }
