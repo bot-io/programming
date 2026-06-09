@@ -24,7 +24,7 @@ const CONFIG = {
   // Provider timeouts (CF Workers subrequest I/O wait, not CPU)
   geminiTimeoutMs: 25000,        // Gemini 3.5 Flash with thinking needs 15-25s for quality
   gemini25TimeoutMs: 10000,      // Gemini 2.5 Flash is faster (no thinking mode) — 10s generous
-  glmTimeoutMs: 10000,           // GLM-4.7-Flash is very fast — 10s generous
+  glmTimeoutMs: 20000,           // GLM-4.7-Flash with reasoning needs 12-15s
 
   // Provider endpoints
   geminiApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',
@@ -55,6 +55,11 @@ export default {
     // POST /translate/batch — multi-page batch translation
     if (request.method === 'POST' && url.pathname === '/translate/batch') {
       return corsResponse(await handleBatchTranslate(request, clientIp, env));
+    }
+
+    // GET /test/glm — diagnostic: test GLM connectivity from CF edge
+    if (request.method === 'GET' && url.pathname === '/test/glm') {
+      return corsResponse(await testGlm(env));
     }
 
     // POST /translate — single page translation
@@ -422,7 +427,9 @@ async function callGlm(apiKey, systemPrompt, userText) {
         { role: 'user', content: userText },
       ],
       temperature: 0.4,
-      max_tokens: 8192,
+      max_tokens: 4096,
+      // Disable thinking/reasoning to get direct translations — no reasoning_content overhead
+      thinking: { type: 'disabled' },
     }),
     signal: AbortSignal.timeout(CONFIG.glmTimeoutMs),
   });
@@ -547,6 +554,53 @@ function jsonResponse(status, body) {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+// ─── GLM Connectivity Test ─────────────────────────────────────────────────
+
+async function testGlm(env) {
+  const key = env.GLM_API_KEY;
+  if (!key) return jsonResponse(500, { error: 'No GLM_API_KEY secret' });
+
+  const results = {};
+  const endpoints = [
+    ['z.ai/paas', 'https://api.z.ai/api/paas/v4/chat/completions'],
+    ['bigmodel', 'https://open.bigmodel.cn/api/paas/v4/chat/completions'],
+  ];
+
+  for (const [name, url] of endpoints) {
+    const start = Date.now();
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          model: 'glm-4.7-flash',
+          messages: [{ role: 'user', content: 'Say OK' }],
+          max_tokens: 10,
+          thinking: { type: 'disabled' },
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const text = await resp.text();
+      results[name] = {
+        status: resp.status,
+        time_ms: Date.now() - start,
+        body: text.slice(0, 200),
+      };
+    } catch (err) {
+      results[name] = {
+        status: 'error',
+        time_ms: Date.now() - start,
+        error: err.message,
+      };
+    }
+  }
+
+  return jsonResponse(200, { key_prefix: key.slice(0, 8), results });
 }
 
 function corsResponse(response) {
