@@ -137,6 +137,14 @@ class ReaderViewModel @Inject constructor(
                                 ?: pagesVal.firstOrNull()
 
                             if (currentPg != null) {
+                                // Debug: log translation state for current page
+                                val transLang = settingsVal.targetLanguage
+                                val hasTrans = currentPg.translations.containsKey(transLang)
+                                val transCount = pagesVal.count { it.translations.containsKey(transLang) }
+                                if (hasTrans || transCount > 0) {
+                                    AppLogger.i("UI update: page ${currentPg.index} hasTrans=$hasTrans lang=$transLang totalTransPages=$transCount")
+                                }
+
                                 _uiState.value = ReaderUiState.ReaderReady(
                                     book = currentBookRef,
                                     pages = pagesVal,
@@ -355,12 +363,18 @@ class ReaderViewModel @Inject constructor(
      * all other language translations on that page.
      */
     private fun applyTranslation(pageIndex: Int, lang: String, translation: String) {
+        AppLogger.i("applyTranslation: pageIndex=$pageIndex lang=$lang textLen=${translation.length}")
         val updatedPages = _pages.value.map { page ->
             if (page.index == pageIndex) page.withTranslation(lang, translation) else page
         }
         _pages.value = updatedPages
+        // Verify the page was actually found and updated
+        val updated = updatedPages.find { it.index == pageIndex }
+        AppLogger.i("applyTranslation: page found=${updated != null}, hasTranslation=${updated?.translations?.containsKey(lang) == true}")
         viewModelScope.launch(ioDispatcher) {
             runCatching { bookRepository.savePages(updatedPages) }
+                .onSuccess { AppLogger.i("applyTranslation: saved ${updatedPages.size} pages to repo") }
+                .onFailure { AppLogger.e("applyTranslation: save failed: ${it.message}", it) }
         }
     }
 
