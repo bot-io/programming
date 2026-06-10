@@ -1,26 +1,22 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 01:10 Sofia**
+> Last updated: **2026-06-11 02:13 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 20%
+- **Usage:** 27%
 - **Resets:** 41 Sofia |
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- `dual-reader.lock` — 64 min ago
-  > session: telegram-dual-reader
-  > timestamp: 2026-06-11T00:45 Sofia
-  > project: dual-reader
-  > item: DR-005
+- _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T01:10:00 Sofia
+- **Last run:** 2026-06-11T02:11:00 Sofia
 - **Last project:** critterium
-- **Last item:** CRT-3
-- **Total runs:** 2
+- **Last item:** CRT-4
+- **Total runs:** 3
 
 ## 📁 Projects
 
@@ -33,11 +29,11 @@
 ### 🟢 critterium
 - **Status:** ** M1 in progress
 - **Updated:** ** 2026-06-11
-- **Ready:** CRT-4, CRT-5, CRT-6, CRT-7, CRT-8, CRT-9, CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
+- **Ready:** CRT-5, CRT-6, CRT-7, CRT-8, CRT-9, CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
 - **Blocked:** CRT-16
-- **Progress:** 3/16 done
+- **Progress:** 4/16 done
 - **❓ Open Questions:** Q1:, Q2:, Q3:, Q4:, Q5:, Q6:, Q7:, Q8: → answer in `questions.md` or this chat
-- **Last work:** 2026-06-11 — CRT-3: Spatial Hash Grid
+- **Last work:** 2026-06-11 — CRT-4: PairwiseForce + Interaction Matrix (overnight worker)
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development

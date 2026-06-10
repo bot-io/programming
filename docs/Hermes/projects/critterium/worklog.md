@@ -49,3 +49,24 @@
 - All 48 tests pass (30 existing + 18 new)
 - Branch `crt-3-spatial-hash` pushed. PR needs manual creation (token scope issue).
 - PR URL: https://github.com/bot-io/critterium/pull/new/crt-3-spatial-hash
+
+### 2026-06-11 — CRT-4: PairwiseForce + Interaction Matrix (overnight worker)
+- Implemented InteractionMatrix class: N×N lookup, per (typeA, typeB) → { strength, radius, falloff }
+- FalloffType: linear (1-t), inverse (strength/(t+0.1)), constant
+- Asymmetric: A→B ≠ B→A enables chase/flee (predator attracted to prey, prey repelled by predator)
+- PairwiseForce class: O(n) via spatial hash grid, accumulated velocity changes (order-independent)
+- Universal short-range repulsion: linear falloff, prevents particle collapse (default: strength 500, radius 8)
+- RepulsionConfig interface with DEFAULT_REPULSION export
+- 25 new tests:
+  - InteractionMatrix (7): null init, store/retrieve, asymmetry, forceAtDistance edge cases + 3 falloff types + negative strength
+  - PairwiseForce (18):
+    - AC1: attraction/repulsion via matrix (analytic 2-particle)
+    - AC2: asymmetric chase/flee, same-type no-interaction
+    - AC3: repulsion prevents collapse, linear falloff to zero, closer = stronger
+    - AC4: analytic x-axis, y-axis, diagonal force verification
+    - AC5: 3-type chase/flee scenario, 3×3 matrix per-pair verification
+    - Integration: 500 particles × 100 steps with forces stable
+    - Edge cases: no forces empty matrix, beyond-radius, DEFAULT_REPULSION values
+- All 75 tests pass (48 existing + 25 new + 2 other packages)
+- Branch `feat/crt-4-pairwise-force` pushed. PR needs manual creation (token scope issue).
+- PR URL: https://github.com/bot-io/critterium/pull/new/feat/crt-4-pairwise-force

@@ -34,7 +34,7 @@
 - **Notes:** Branch `crt-3-spatial-hash` pushed. 18 new tests, all 48 pass. PR needs manual creation (token scope).
 
 ### CRT-4 PairwiseForce + interaction matrix + short-range repulsion
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M1
 - **Acceptance Criteria:**
   1. N×N interaction matrix: per (typeA, typeB) → strength, radius, falloff
@@ -42,6 +42,7 @@
   3. Universal short-range repulsion to prevent particle collapse
   4. Analytic two-particle tests
   5. Asymmetry test: A chases B, B flees A
+- **Notes:** Branch `feat/crt-4-pairwise-force` pushed. 25 new tests, all 75 pass. PR needs manual creation (token scope issue).
 
 ### CRT-5 Global forces: drag, gravity, boundaries
 - **Status:** ready
