@@ -1,15 +1,16 @@
 # Critterium — Backlog
 
 ### CRT-1 Name check + scaffold
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M1
 - **Acceptance Criteria:**
   1. ~~Check "Critterium" name availability~~ ✅ Done — clear on stores and USPTO
   2. ~~Report conflicts in questions.md~~ ✅ No blocking conflicts
-  3. Scaffold monorepo: `core/`, `render/`, `app/` packages
-  4. Vite + Vitest + ESLint + Prettier configured
-  5. CI pipeline (GitHub Actions) — `npm test` green
-- **Notes:** First item. Blocks all others. Name check done.
+  3. ~~Scaffold monorepo: `core/`, `render/`, `app/` packages~~ ✅ npm workspaces
+  4. ~~Vite + Vitest + ESLint + Prettier configured~~ ✅ TypeScript strict + Prettier
+  5. ~~CI pipeline (GitHub Actions) — `npm test` green~~ ✅ All 3 packages green
+- **Notes:** Branch `crt-1-scaffold` pushed. PR needs manual creation (token scope issue).
+- **Repo:** https://github.com/bot-io/critterium
 
 ### CRT-2 Core world: typed-array state + timestep + RNG
 - **Status:** ready
