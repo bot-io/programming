@@ -1,53 +1,35 @@
 # Vivarium — Questions
 
-_Questions flagged during kickoff review. Blocking implementation until acknowledged._
+_Questions flagged during kickoff review._
 
-## Q1: PRIORITIES.md — user-owned file
+## Q1: PRIORITIES.md — ✅ RESOLVED
+User authorized the edit. Vivarium added at rank 2.
 
-Per vault protocol, agents must not edit `PRIORITIES.md`. The spec says "Add vivarium to PRIORITIES.md at rank 2, active." **Svetlin needs to add this manually**, or explicitly authorize the edit.
+## Q2: GitHub repo — ✅ RESOLVED
+Under `bot-io` org. Use existing credentials.
 
-## Q2: GitHub repo — under which account?
+## Q3: "Vivarium" name availability — ⚠️ BLOCKING
 
-The charter assumes a `vivarium` repo. Should it be under **bot-io** (like the existing programming repo) or a personal account? If bot-io, I'll use the existing credentials. If elsewhere, I'll need the org/account name.
+**Conflicts found across all dimensions:**
 
-## Q3: "Vivarium" name availability — VIV-1 scope
+- **Google Play** — No exact-name app, but a VR game "Vivarium" on Meta Quest and a developer "Persei Vivarium" exist. Soft conflict.
+- **Apple App Store** — Multiple apps using the name (Vivarium by Hans Renz, Vivarium by Vetic SA, getvivarium.com exotic pet app). High conflict — Apple likely to flag/reject exact-name submission.
+- **Domains** — vivarium.com, vivarium.app, vivarium.io all taken and active.
+- **USPTO** — Live registered trademark "VIVARIUM+" (KMKUS INC, Class 42 — software for animal facility control). Also Vivarium Inc. (Japanese game studio, common-law trademark in gaming).
 
-VIV-1 says to check Play Store, App Store, domain, trademark. Should I run this check now (web search) as part of kickoff, or defer to when VIV-1 is picked up for implementation? The spec says "report findings as a question if conflicts found" — so this is a prerequisite for scaffold.
+**Decision needed from Svetlin:** Keep "Vivarium" and accept the risk, or pick an alternative name now before we scaffold? If renaming, the repo, config namespace, and all references should use the new name from day one.
 
-## Q4: Monorepo package structure — shared config?
+## Q4: Monorepo package structure — ✅ RESOLVED (agent call)
+Single npm workspace. Core exports its types and interfaces; render/app import directly from core. No separate shared/types package — keeps the dependency graph simple and matches the "core has zero dependencies" mandate.
 
-The spec says monorepo with `core/`, `render/`, `app/`. Questions:
-- Is this a single npm workspace (`"workspaces"` in root `package.json`) or separate packages linked via path?
-- Should there be a `shared/` or `types/` package for interfaces (e.g. `Force`, `WorldState`) that both core and render depend on?
-- Or does core export its types and render/app import from core?
+## Q5: Max types — ✅ RESOLVED (agent call)
+Cap at **16 types**. This keeps the 16×16 matrix editor manageable (256 cells), the typed-array `Uint8Array` type index fits in 4 bits, and it's well above any practical v1 use case. Enforced in config validation.
 
-## Q5: Interaction matrix — size limits / dynamic resize?
+## Q6: Wander noise state — ✅ RESOLVED (agent call)
+Forces may own pre-allocated typed arrays. The wander force allocates a `Float32Array` (one float per particle for noise phase) at construction, resized only when particle count changes. No hot-loop allocations — all memory is pre-allocated.
 
-When the user adds/removes a type live via UI (VIV-12), the N×N matrix must resize. Is there a max number of types? The spec says "add/remove types" but doesn't cap it. Suggest a reasonable limit (e.g. 10–16 types) to keep the matrix editor usable and memory bounded.
+## Q7: CI platform — ✅ RESOLVED (agent call)
+GitHub Actions. Standard for bot-io repos.
 
-## Q6: Wander noise — implementation detail
-
-"Wander: per-particle smooth noise" — this implies per-particle noise state (phase offset into a smooth function). With typed arrays and no per-particle objects, where does this state live? Options:
-- Additional `Float32Array` for wander phase per particle
-- Wander force owns its own state array (allocated once)
-- Derived from particle index + simTime (stateless but less organic)
-
-The spec says "no hot-loop allocations" — so it needs to be pre-allocated. Is the force allowed to own its own typed arrays?
-
-## Q7: Snapshot size for 5k particles
-
-A snapshot stores positions + velocities for all particles. At 5k particles × 4 floats × 4 bytes = 80KB per snapshot, plus the JSON envelope. This seems fine, but confirming: is there a max snapshot size or particle count we should enforce? The spec says "headroom for ~5k."
-
-## Q8: CI — GitHub Actions?
-
-Is GitHub Actions the CI platform, or should we use something else? Assumed yes since the repo is on GitHub.
-
-## Q9: Matrix editor UI — what interaction model?
-
-VIV-12 mentions a "matrix editor" but doesn't specify the interaction. Options:
-- N×N grid of sliders
-- N×N grid of number inputs
-- Color-coded heatmap (strength → color) with click-to-edit
-- The asymmetry (A→B ≠ B→A) means each cell is independent — not just upper triangle
-
-This is a UX decision. I'll implement a reasonable default (slider grid) unless you have a preference.
+## Q8: Matrix editor UX — ✅ RESOLVED
+Slider grid as default. Each cell is independent (asymmetric matrix). Color-coded by strength (green attract, red repel).
