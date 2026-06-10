@@ -3,6 +3,7 @@ package com.dualreader.app.data.translation
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import com.dualreader.app.domain.services.TranslationException
+import com.dualreader.app.domain.services.BatchTranslationResult
 import com.dualreader.app.domain.services.TranslationService
 import com.dualreader.app.util.AppLogger
 import kotlinx.coroutines.Dispatchers
@@ -83,8 +84,8 @@ class CloudTranslationServiceImpl @Inject constructor(
         targetLanguage: String,
         sourceLanguage: String?,
         context: String?,
-    ): Map<Int, String> = withContext(Dispatchers.IO) {
-        if (pages.isEmpty()) return@withContext emptyMap()
+    ): BatchTranslationResult = withContext(Dispatchers.IO) {
+        if (pages.isEmpty()) return@withContext BatchTranslationResult(emptyMap())
 
         // Try the batch endpoint first
         try {
@@ -99,10 +100,12 @@ class CloudTranslationServiceImpl @Inject constructor(
             )
 
             val response = proxyApi.translateBatch(request)
-            AppLogger.i("translatePages: response code=${response.code()}, ok=${response.isSuccessful}")
+            val batchModel: String? = response.body()?.model?.takeIf { it.isNotBlank() }
+            AppLogger.i("translatePages: response code=${response.code()} model=${batchModel ?: "n/a"}")
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body?.error == null && body?.translations?.isNotEmpty() == true) {
+                    val modelUsed = batchModel ?: "unknown"
                     val results = mutableMapOf<Int, String>()
                     for (t in body.translations) {
                         if (t.translatedText.isNotBlank()) {
@@ -111,7 +114,7 @@ class CloudTranslationServiceImpl @Inject constructor(
                     }
                     // Verify we got translations for all pages
                     if (results.size == pages.size) {
-                        return@withContext results
+                        return@withContext BatchTranslationResult(results, modelUsed)
                     }
                     // Partial success — fill gaps with individual calls
                     AppLogger.w("Batch returned ${results.size}/${pages.size} pages, filling gaps individually")
@@ -125,7 +128,7 @@ class CloudTranslationServiceImpl @Inject constructor(
                             }
                         }
                     }
-                    if (results.size == pages.size) return@withContext results
+                    if (results.size == pages.size) return@withContext BatchTranslationResult(results, modelUsed)
                 }
             }
         } catch (e: Exception) {
@@ -142,7 +145,7 @@ class CloudTranslationServiceImpl @Inject constructor(
                 AppLogger.e("Individual translation failed for page ${page.index}: ${e.message}")
             }
         }
-        results
+        BatchTranslationResult(results, providerName)
     }
 
     // ── detectLanguage ─────────────────────────────────────────────────────────

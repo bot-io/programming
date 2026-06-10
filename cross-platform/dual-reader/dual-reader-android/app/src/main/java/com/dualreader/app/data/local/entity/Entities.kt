@@ -44,6 +44,7 @@ data class PageEntity(
     val chapterIndex: Int,
     val originalText: String,
     val translationsJson: String? = null,
+    val translationModelsJson: String? = null,
     val startCharOffset: Int = 0,
     val endCharOffset: Int = 0,
 )

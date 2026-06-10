@@ -44,7 +44,7 @@ interface TranslationService {
 
     /**
      * Translate multiple pages in a single API call (batch optimization).
-     * Returns a map of page index → translated text.
+     * Returns a BatchTranslationResult with page index → translated text + model name.
      * Falls back to individual calls if batch fails.
      */
     suspend fun translatePages(
@@ -52,13 +52,13 @@ interface TranslationService {
         targetLanguage: String,
         sourceLanguage: String? = null,
         context: String? = null,
-    ): Map<Int, String> {
+    ): BatchTranslationResult {
         // Default: fall back to individual calls
         val results = mutableMapOf<Int, String>()
         for ((index, text) in pages) {
             results[index] = translate(text, targetLanguage, sourceLanguage, context)
         }
-        return results
+        return BatchTranslationResult(results, providerName)
     }
 
     /**
@@ -91,3 +91,11 @@ data class TranslationResult(
 )
 
 class TranslationException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+/**
+ * Result of a batch translation — includes model metadata.
+ */
+data class BatchTranslationResult(
+    val translations: Map<Int, String>,
+    val model: String = "unknown",
+)

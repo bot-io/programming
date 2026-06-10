@@ -128,12 +128,15 @@ fun DualReaderNavHost() {
             val viewModel: SettingsViewModel = hiltViewModel()
             val settings by viewModel.settings.collectAsState()
             val cachedCount by viewModel.cachedCount.collectAsState()
+            val translationInfo by viewModel.translationInfo.collectAsState()
 
             SettingsScreen(
                 settings = settings,
                 cachedTranslationCount = cachedCount,
+                translationInfo = translationInfo,
                 onSettingsChanged = { viewModel.updateSettings(it) },
                 onClearTranslations = { viewModel.clearAllTranslations() },
+                onViewTranslationInfo = { viewModel.loadTranslationInfo() },
                 onBack = { navController.popBackStack() },
             )
         }

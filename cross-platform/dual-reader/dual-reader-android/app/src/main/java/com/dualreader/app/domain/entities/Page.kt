@@ -17,6 +17,8 @@ data class Page(
     val chapterIndex: Int,
     val originalText: String,
     val translations: Map<String, String> = emptyMap(),
+    /** Which model produced the translation for each language, e.g. {"bg": "gemini-2.5-flash"} */
+    val translationModels: Map<String, String> = emptyMap(),
     val startCharOffset: Int = 0,
     val endCharOffset: Int = 0,
 ) {
@@ -27,10 +29,16 @@ data class Page(
 
     /**
      * Returns a copy with [text] merged into [translations] for [lang].
+     * Optionally records which [model] produced the translation.
      * Other language translations are preserved.
      */
-    fun withTranslation(lang: String, text: String): Page =
-        copy(translations = translations + (lang to text))
+    fun withTranslation(lang: String, text: String, model: String? = null): Page {
+        val newModels = if (model != null) translationModels + (lang to model) else translationModels
+        return copy(translations = translations + (lang to text), translationModels = newModels)
+    }
+
+    /** Which model was used for the translation in [lang], or null. */
+    fun translationModel(lang: String): String? = translationModels[lang]
 
     /**
      * Whether this page already has a translation in [lang].

@@ -57,6 +57,7 @@ fun PageEntity.toDomain(): Page = Page(
     chapterIndex = chapterIndex,
     originalText = originalText,
     translations = converters.fromTranslationsJson(translationsJson),
+    translationModels = converters.fromTranslationsJson(translationModelsJson),
     startCharOffset = startCharOffset,
     endCharOffset = endCharOffset,
 )
@@ -68,6 +69,7 @@ fun Page.toEntity(existingId: Long = 0): PageEntity = PageEntity(
     chapterIndex = chapterIndex,
     originalText = originalText,
     translationsJson = converters.toTranslationsJson(translations),
+    translationModelsJson = converters.toTranslationsJson(translationModels),
     startCharOffset = startCharOffset,
     endCharOffset = endCharOffset,
 )

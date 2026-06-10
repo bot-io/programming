@@ -1,6 +1,7 @@
 package com.dualreader.app.domain.usecases
 
 import com.dualreader.app.domain.repositories.TranslationCacheRepository
+import com.dualreader.app.domain.services.BatchTranslationResult
 import com.dualreader.app.domain.services.TranslationService
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -81,9 +82,10 @@ class TranslatePageUseCase @Inject constructor(
         sourceLanguage: String? = null,
         onPageTranslated: (index: Int, translation: String) -> Unit = { _, _ -> },
         forceRetranslate: Boolean = false,
-    ): Result<Map<Int, String>> {
+    ): Result<BatchTranslationResult> {
         val results = mutableMapOf<Int, String>()
         var lastTranslation: String? = null
+        var lastModel = "unknown"
 
         try {
             var i = 0
@@ -113,10 +115,11 @@ class TranslatePageUseCase @Inject constructor(
                 }
 
                 // Try batch translation
-                val batchResults = translateBatch(batch, targetLanguage, sourceLanguage, lastTranslation)
+                val batchResult = translateBatch(batch, targetLanguage, sourceLanguage, lastTranslation)
+                lastModel = batchResult.model
 
                 // Process results
-                for ((pageIndex, translation) in batchResults) {
+                for ((pageIndex, translation) in batchResult.translations) {
                     results[pageIndex] = translation
                     onPageTranslated(pageIndex, translation)
                     lastTranslation = translation
@@ -133,7 +136,7 @@ class TranslatePageUseCase @Inject constructor(
                     kotlinx.coroutines.delay(BATCH_DELAY_MS)
                 }
             }
-            return Result.success(results)
+            return Result.success(BatchTranslationResult(results, lastModel))
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e // Propagate cancellation
         } catch (e: Exception) {
@@ -175,14 +178,15 @@ class TranslatePageUseCase @Inject constructor(
     /**
      * Translate a batch of pages using the service's batch endpoint.
      * Falls back to individual calls if batch fails.
+     * Returns BatchTranslationResult with model metadata.
      */
     private suspend fun translateBatch(
         batch: List<PageToTranslate>,
         targetLanguage: String,
         sourceLanguage: String?,
         previousTranslation: String?,
-    ): Map<Int, String> {
-        if (batch.isEmpty()) return emptyMap()
+    ): BatchTranslationResult {
+        if (batch.isEmpty()) return BatchTranslationResult(emptyMap())
 
         // Single page — use individual call with context
         if (batch.size == 1) {
@@ -194,7 +198,7 @@ class TranslatePageUseCase @Inject constructor(
                 sourceLanguage = sourceLanguage,
                 context = context,
             )
-            return mapOf(page.index to result)
+            return BatchTranslationResult(mapOf(page.index to result), translationService.providerName)
         }
 
         // Multiple pages — use batch endpoint
@@ -219,7 +223,7 @@ class TranslatePageUseCase @Inject constructor(
                     // Skip failed individual pages
                 }
             }
-            results
+            BatchTranslationResult(results, translationService.providerName)
         }
     }
 

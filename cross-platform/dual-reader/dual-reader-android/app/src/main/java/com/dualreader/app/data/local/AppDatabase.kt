@@ -16,7 +16,7 @@ import com.dualreader.app.data.local.entity.TranslationCacheEntity
 
 @Database(
     entities = [BookEntity::class, PageEntity::class, BookmarkEntity::class, TranslationCacheEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -79,6 +79,13 @@ abstract class AppDatabase : RoomDatabase() {
                 // Swap tables
                 db.execSQL("DROP TABLE pages")
                 db.execSQL("ALTER TABLE pages_new RENAME TO pages")
+            }
+        }
+
+        /** Migration v4→v5: add translationModelsJson column to pages. */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE pages ADD COLUMN translationModelsJson TEXT DEFAULT NULL")
             }
         }
     }

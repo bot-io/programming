@@ -9,6 +9,7 @@ import com.dualreader.app.domain.entities.Book
 import com.dualreader.app.domain.entities.Bookmark
 import com.dualreader.app.domain.entities.Page
 import com.dualreader.app.domain.entities.ReadingSettings
+import com.dualreader.app.domain.services.BatchTranslationResult
 import com.dualreader.app.domain.repositories.BookRepository
 import com.dualreader.app.domain.repositories.BookmarkRepository
 import com.dualreader.app.domain.repositories.SettingsRepository
@@ -319,10 +320,10 @@ class ReaderViewModel @Inject constructor(
                 }
 
                 result.fold(
-                    onSuccess = { translations ->
-                        AppLogger.i("Translation success: ${translations.size} pages translated")
-                        translations.forEach { (pageIndex, translation) ->
-                            applyTranslation(pageIndex, targetLang, translation)
+                    onSuccess = { batchResult ->
+                        AppLogger.i("Translation success: ${batchResult.translations.size} pages, model=${batchResult.model}")
+                        batchResult.translations.forEach { (pageIndex, translation) ->
+                            applyTranslation(pageIndex, targetLang, translation, batchResult.model)
                         }
                         _isTranslating.value = false
                         _translationError.value = null
@@ -375,9 +376,9 @@ class ReaderViewModel @Inject constructor(
                 )
 
                 result.fold(
-                    onSuccess = { translations ->
-                        translations.forEach { (pageIndex, translation) ->
-                            applyTranslation(pageIndex, targetLang, translation)
+                    onSuccess = { batchResult ->
+                        batchResult.translations.forEach { (pageIndex, translation) ->
+                            applyTranslation(pageIndex, targetLang, translation, batchResult.model)
                         }
                         _isTranslating.value = false
                     },
@@ -399,10 +400,10 @@ class ReaderViewModel @Inject constructor(
      * Merge a translation for one page into the pages list, preserving
      * all other language translations on that page.
      */
-    private fun applyTranslation(pageIndex: Int, lang: String, translation: String) {
-        AppLogger.i("applyTranslation: pageIndex=$pageIndex lang=$lang textLen=${translation.length}")
+    private fun applyTranslation(pageIndex: Int, lang: String, translation: String, model: String? = null) {
+        AppLogger.i("applyTranslation: pageIndex=$pageIndex lang=$lang model=${model ?: "n/a"} textLen=${translation.length}")
         val updatedPages = _pages.value.map { page ->
-            if (page.index == pageIndex) page.withTranslation(lang, translation) else page
+            if (page.index == pageIndex) page.withTranslation(lang, translation, model) else page
         }
         _pages.value = updatedPages
         // Verify the page was actually found and updated

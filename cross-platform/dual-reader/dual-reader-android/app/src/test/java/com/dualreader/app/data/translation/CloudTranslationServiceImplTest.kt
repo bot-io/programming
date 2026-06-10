@@ -276,10 +276,10 @@ class CloudTranslationServiceImplTest {
         val result = service.translatePages(pages, "bg", "en", null)
 
         // Keys MUST be 5, 6, 7 — NOT 0, 1, 2
-        assertEquals(setOf(5, 6, 7), result.keys)
-        assertEquals("Страница пет", result[5])
-        assertEquals("Страница шест", result[6])
-        assertEquals("Страница седем", result[7])
+        assertEquals(setOf(5, 6, 7), result.translations.keys)
+        assertEquals("Страница пет", result.translations[5])
+        assertEquals("Страница шест", result.translations[6])
+        assertEquals("Страница седем", result.translations[7])
     }
 
     @Test
@@ -300,10 +300,10 @@ class CloudTranslationServiceImplTest {
 
         val result = service.translatePages(pages, "bg", "en", null)
 
-        assertEquals(setOf(0, 1, 2), result.keys)
-        assertEquals("Страница нула", result[0])
-        assertEquals("Страница едно", result[1])
-        assertEquals("Страница две", result[2])
+        assertEquals(setOf(0, 1, 2), result.translations.keys)
+        assertEquals("Страница нула", result.translations[0])
+        assertEquals("Страница едно", result.translations[1])
+        assertEquals("Страница две", result.translations[2])
     }
 
     @Test
@@ -316,15 +316,15 @@ class CloudTranslationServiceImplTest {
 
         val result = service.translatePages(pages, "bg", "en", null)
 
-        assertEquals(setOf(42), result.keys)
-        assertEquals("Страница 42", result[42])
-        assertNull(result[0])
+        assertEquals(setOf(42), result.translations.keys)
+        assertEquals("Страница 42", result.translations[42])
+        assertNull(result.translations[0])
     }
 
     @Test
     fun `translatePages - returns empty map for empty input`() = runTest {
         val result = service.translatePages(emptyList(), "bg", "en", null)
-        assertTrue(result.isEmpty())
+        assertTrue(result.translations.isEmpty())
     }
 
     @Test
@@ -346,10 +346,10 @@ class CloudTranslationServiceImplTest {
         val result = service.translatePages(pages, "bg", "en", null)
 
         // Must NOT contain zero-based keys
-        assertFalse("Result should not contain key 0", result.containsKey(0))
-        assertFalse("Result should not contain key 1", result.containsKey(1))
-        assertTrue(result.containsKey(5))
-        assertTrue(result.containsKey(6))
+        assertFalse("Result should not contain key 0", result.translations.containsKey(0))
+        assertFalse("Result should not contain key 1", result.translations.containsKey(1))
+        assertTrue(result.translations.containsKey(5))
+        assertTrue(result.translations.containsKey(6))
     }
 
     @Test
@@ -371,7 +371,8 @@ class CloudTranslationServiceImplTest {
 
         val result = service.translatePages(pages, "bg", "en", null)
 
-        assertEquals(mapOf(10 to "Десет", 20 to "Двайсет"), result)
+        assertEquals(mapOf(10 to "Десет", 20 to "Двайсет"), result.translations)
+        assertEquals("gemini-2.5-flash", result.model)
     }
 
     @Test
@@ -392,9 +393,9 @@ class CloudTranslationServiceImplTest {
         val result = service.translatePages(pages, "bg", "en", null)
 
         // Even through fallback path, keys must be 5,6 not 0,1
-        assertEquals(setOf(5, 6), result.keys)
-        assertEquals("Пет", result[5])
-        assertEquals("Шест", result[6])
+        assertEquals(setOf(5, 6), result.translations.keys)
+        assertEquals("Пет", result.translations[5])
+        assertEquals("Шест", result.translations[6])
     }
 
     @Test
@@ -413,9 +414,9 @@ class CloudTranslationServiceImplTest {
 
         val result = service.translatePages(pages, "bg", "en", null)
 
-        assertEquals(setOf(3, 4), result.keys)
-        assertEquals("Три", result[3])
-        assertEquals("Четири", result[4])
+        assertEquals(setOf(3, 4), result.translations.keys)
+        assertEquals("Три", result.translations[3])
+        assertEquals("Четири", result.translations[4])
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

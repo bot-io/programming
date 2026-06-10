@@ -4,6 +4,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
 import com.dualreader.app.domain.services.TranslationException
+import com.dualreader.app.domain.services.BatchTranslationResult
 import com.dualreader.app.domain.services.TranslationService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -116,17 +117,17 @@ class FallbackTranslationService @Inject constructor(
         targetLanguage: String,
         sourceLanguage: String?,
         context: String?,
-    ): Map<Int, String> {
+    ): BatchTranslationResult {
         // Try cloud batch first
         try {
             val cloudResult = cloudService.translatePages(pages, targetLanguage, sourceLanguage, context)
-            if (cloudResult.size == pages.size) {
-                Log.d(TAG, "Cloud batch translation succeeded (${cloudResult.size} pages)")
+            if (cloudResult.translations.size == pages.size) {
+                Log.d(TAG, "Cloud batch translation succeeded (${cloudResult.translations.size} pages) model=${cloudResult.model}")
                 return cloudResult
             }
             // Partial result — fill gaps with ML Kit
-            Log.w(TAG, "Cloud batch returned ${cloudResult.size}/${pages.size} pages, filling gaps with ML Kit")
-            val result = cloudResult.toMutableMap()
+            Log.w(TAG, "Cloud batch returned ${cloudResult.translations.size}/${pages.size} pages, filling gaps with ML Kit")
+            val result = cloudResult.translations.toMutableMap()
             for (page in pages) {
                 if (page.index !in result) {
                     try {
@@ -136,7 +137,7 @@ class FallbackTranslationService @Inject constructor(
                     }
                 }
             }
-            return result.toMap()
+            return BatchTranslationResult(result.toMap(), cloudResult.model)
         } catch (e: Exception) {
             Log.w(TAG, "Cloud batch failed: ${e.message}, falling back to individual calls")
         }

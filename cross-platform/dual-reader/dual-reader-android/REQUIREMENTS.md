@@ -19,9 +19,14 @@
 
 ### UI
 - **No hardcoded pixel dimensions.** All sizing must be fluid and responsive via dp/sp.
+- **Top bar and bottom bar OVERLAY on top of content.** They must never resize the text area.
+  - Bars use semi-transparent backgrounds with shadow elevation.
+  - Slide in/out from top/bottom with expand/shrink animation.
+  - Hidden by default when a book is opened. Tap center of screen to toggle.
 - Sentence numbering: inline superscript AnnotatedString (not two-column layout).
 - Translation display: original text with inline superscript numbers, translated text with matching numbers below.
 - About section shows version; version does NOT appear in visible UI titles.
+- **Cached translations info**: accessible via settings menu, shows per-page list of translated languages and models used.
 
 ### Error Handling
 - Every bug fix must have test coverage before shipping.

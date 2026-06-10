@@ -3,8 +3,10 @@ package com.dualreader.app.ui.screens
 import android.app.Activity
 import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -257,8 +259,8 @@ private fun ReaderContent(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Bars visible = NOT immersive. Tapping toggles immersive.
-    var barsVisible by remember { mutableStateOf(true) }
+    // Bars hidden by default — tap center of screen to show.
+    var barsVisible by remember { mutableStateOf(false) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var showBookmarkList by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
@@ -288,14 +290,88 @@ private fun ReaderContent(
             .background(colors.background)
             .windowInsetsPadding(WindowInsets.systemBars)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
+        // ── Content Area (fills entire screen) ─────────────────────
+        // Measure the maximized content area and trigger pagination ONCE.
+        // Bars overlay on top — they never resize the text area.
+        var hasPaginated by remember { mutableStateOf(false) }
+
+        Box(modifier = Modifier.fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    val third = size.width / 3
+                    when {
+                        offset.x < third -> onPreviousPage()
+                        offset.x > size.width - third -> onNextPage()
+                        else -> barsVisible = !barsVisible
+                    }
+                }
+            }
+            .onSizeChanged { size ->
+                if (!hasPaginated && size.width > 0 && size.height > 0) {
+                    hasPaginated = true
+                    // Panel height: full screen for side-by-side, half for vertical split
+                    val panelHeight = if (layoutMode == ReaderLayoutMode.VERTICAL_SPLIT) {
+                        size.height / 2
+                    } else {
+                        size.height
+                    }
+                    val density = context.resources.displayMetrics.density
+                    onRePaginate(size.width, panelHeight, density)
+                }
+            }
         ) {
-            // ── Top Bar ──────────────────────────────────────────────
-            AnimatedVisibility(
-                visible = barsVisible,
-                enter = fadeIn(), exit = fadeOut(),
+            if (layoutMode == ReaderLayoutMode.SIDE_BY_SIDE) {
+                Row(Modifier.fillMaxSize()) {
+                    TextPanel("Original", currentPage.originalText,
+                        settings.fontSize, settings.lineHeight, colors,
+                        searchQuery, Modifier.weight(1f), showLabel = barsVisible,
+                        sentenceCounterEnabled = settings.sentenceCounterEnabled)
+                    Box(Modifier.width(2.dp).fillMaxHeight().background(colors.accent.copy(alpha = 0.5f)))
+                    TranslationPanel(currentPage.effectiveTranslation(settings.targetLanguage), isTranslating, translationError,
+                        settings.fontSize, settings.lineHeight, colors,
+                        onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible,
+                        sentenceCounterEnabled = settings.sentenceCounterEnabled)
+                }
+            } else {
+                Column(Modifier.fillMaxSize()) {
+                    TextPanel("Original", currentPage.originalText,
+                        settings.fontSize, settings.lineHeight, colors,
+                        searchQuery, Modifier.weight(1f), showLabel = barsVisible,
+                        sentenceCounterEnabled = settings.sentenceCounterEnabled)
+                    Box(Modifier.fillMaxWidth().height(2.dp).background(colors.accent.copy(alpha = 0.5f)))
+                    TranslationPanel(currentPage.effectiveTranslation(settings.targetLanguage), isTranslating, translationError,
+                        settings.fontSize, settings.lineHeight, colors,
+                        onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible,
+                        sentenceCounterEnabled = settings.sentenceCounterEnabled)
+                }
+            }
+
+            // Re-pagination loading overlay
+            if (isRePaginating) {
+                Box(
+                    Modifier.fillMaxSize().background(colors.background.copy(alpha = 0.7f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = colors.accent)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Re-paginating…", color = colors.text,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+
+        // ── Top Bar (overlays on top of content) ───────────────────
+        AnimatedVisibility(
+            visible = barsVisible,
+            enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
+            modifier = Modifier.align(Alignment.TopCenter),
+        ) {
+            Surface(
+                color = colors.background.copy(alpha = 0.92f),
+                shadowElevation = 4.dp,
             ) {
                 TopAppBar(
                     title = {
@@ -365,18 +441,23 @@ private fun ReaderContent(
                     },
                 )
             }
+        }
 
-            // ── Search Results Dropdown ──────────────────────────────
-            AnimatedVisibility(
-                visible = showSearch && searchResults.isNotEmpty(),
-                enter = fadeIn(), exit = fadeOut(),
+        // ── Search Results Dropdown (overlays on top) ──────────────
+        AnimatedVisibility(
+            visible = showSearch && searchResults.isNotEmpty(),
+            enter = fadeIn(), exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 56.dp),
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
+                shadowElevation = 2.dp,
             ) {
                 Column(
                     Modifier
-                        .fillMaxWidth()
+                        .fillMaxWidth(0.9f)
                         .heightIn(max = 200.dp)
                         .verticalScroll(rememberScrollState())
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .padding(horizontal = 8.dp)
                 ) {
                     Text(
@@ -407,87 +488,18 @@ private fun ReaderContent(
                     }
                 }
             }
+        }
 
-            // ── Content Area (Adaptive) ──────────────────────────────
-            // Measure the actual content area and trigger pagination ONCE.
-            // Fullscreen toggle must NOT re-paginate — page count stays fixed.
-            var hasPaginated by remember { mutableStateOf(false) }
-
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()
-                .pointerInput(Unit) {
-                    detectTapGestures { offset ->
-                        // Left third → previous page, right third → next page,
-                        // center third → toggle bars.
-                        val third = size.width / 3
-                        when {
-                            offset.x < third -> onPreviousPage()
-                            offset.x > size.width - third -> onNextPage()
-                            else -> barsVisible = !barsVisible
-                        }
-                    }
-                }
-                .onSizeChanged { size ->
-                    if (!hasPaginated && size.width > 0 && size.height > 0) {
-                        hasPaginated = true
-                        // Calculate panel height (half for vertical split, full for side-by-side)
-                        val panelHeight = if (layoutMode == ReaderLayoutMode.VERTICAL_SPLIT) {
-                            size.height / 2
-                        } else {
-                            size.height
-                        }
-                        val density = context.resources.displayMetrics.density
-                        onRePaginate(size.width, panelHeight, density)
-                    }
-                }
-            ) {
-                if (layoutMode == ReaderLayoutMode.SIDE_BY_SIDE) {
-                    // Tablet / landscape: side by side
-                    Row(Modifier.fillMaxSize()) {
-                        TextPanel("Original", currentPage.originalText,
-                            settings.fontSize, settings.lineHeight, colors,
-                            searchQuery, Modifier.weight(1f), showLabel = barsVisible,
-                            sentenceCounterEnabled = settings.sentenceCounterEnabled)
-                        Box(Modifier.width(2.dp).fillMaxHeight().background(colors.accent.copy(alpha = 0.5f)))
-                        TranslationPanel(currentPage.effectiveTranslation(settings.targetLanguage), isTranslating, translationError,
-                            settings.fontSize, settings.lineHeight, colors,
-                            onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible,
-                            sentenceCounterEnabled = settings.sentenceCounterEnabled)
-                    }
-                } else {
-                    // Phone portrait: top/bottom split — both visible at once
-                    Column(Modifier.fillMaxSize()) {
-                        TextPanel("Original", currentPage.originalText,
-                            settings.fontSize, settings.lineHeight, colors,
-                            searchQuery, Modifier.weight(1f), showLabel = barsVisible,
-                            sentenceCounterEnabled = settings.sentenceCounterEnabled)
-                        Box(Modifier.fillMaxWidth().height(2.dp).background(colors.accent.copy(alpha = 0.5f)))
-                        TranslationPanel(currentPage.effectiveTranslation(settings.targetLanguage), isTranslating, translationError,
-                            settings.fontSize, settings.lineHeight, colors,
-                            onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible,
-                            sentenceCounterEnabled = settings.sentenceCounterEnabled)
-                    }
-                }
-
-                // Re-pagination loading overlay
-                if (isRePaginating) {
-                    Box(
-                        Modifier.fillMaxSize().background(colors.background.copy(alpha = 0.7f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = colors.accent)
-                            Spacer(Modifier.height(8.dp))
-                            Text("Re-paginating…", color = colors.text,
-                                style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-            }
-
-            // ── Bottom Bar (with system nav insets) ──────────────────
-            AnimatedVisibility(
-                visible = barsVisible,
-                enter = fadeIn(), exit = fadeOut(),
+        // ── Bottom Bar (overlays on top of content) ────────────────
+        AnimatedVisibility(
+            visible = barsVisible,
+            enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
+            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            Surface(
+                color = colors.background.copy(alpha = 0.92f),
+                shadowElevation = 4.dp,
             ) {
                 BottomReaderBar(
                     currentPage = book.currentPage,

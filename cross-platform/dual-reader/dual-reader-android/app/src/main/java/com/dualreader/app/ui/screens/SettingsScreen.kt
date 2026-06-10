@@ -27,8 +27,10 @@ import java.io.File
 fun SettingsScreen(
     settings: ReadingSettings,
     cachedTranslationCount: Int,
+    translationInfo: List<PageTranslationInfo>,
     onSettingsChanged: (ReadingSettings) -> Unit,
     onClearTranslations: () -> Unit,
+    onViewTranslationInfo: () -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -277,51 +279,68 @@ fun SettingsScreen(
                 }
             }
 
-            // ── Clear Translation Cache ──────────────────────────────
+            // ── Translation Cache ──────────────────────────────
             SettingsSection("Translation Cache") {
-                var showDialog by remember { mutableStateOf(false) }
+                var showClearDialog by remember { mutableStateOf(false) }
+                var showInfoDialog by remember { mutableStateOf(false) }
 
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 8.dp)
+                        .clickable(enabled = cachedTranslationCount > 0) {
+                            onViewTranslationInfo()
+                            showInfoDialog = true
+                        },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
                             "Cached translations: $cachedTranslationCount",
                             style = MaterialTheme.typography.bodyLarge,
+                            color = if (cachedTranslationCount > 0)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            "Cleared translations will be re-translated on demand",
+                            if (cachedTranslationCount > 0) "Tap to view translation details"
+                            else "No translations cached yet",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Spacer(Modifier.width(12.dp))
                     OutlinedButton(
-                        onClick = { showDialog = true },
+                        onClick = { showClearDialog = true },
                         enabled = cachedTranslationCount > 0,
                     ) {
                         Text("Clear All")
                     }
                 }
 
-                if (showDialog) {
+                if (showInfoDialog) {
+                    TranslationInfoDialog(
+                        translationInfo = translationInfo,
+                        onDismiss = { showInfoDialog = false },
+                    )
+                }
+
+                if (showClearDialog) {
                     AlertDialog(
-                        onDismissRequest = { showDialog = false },
+                        onDismissRequest = { showClearDialog = false },
                         title = { Text("Clear all translations?") },
                         text = { Text("Cached translations will be deleted. Next time you translate a page, it will be re-translated from scratch. Your reading progress is not affected.") },
                         confirmButton = {
                             TextButton(onClick = {
                                 onClearTranslations()
-                                showDialog = false
+                                showClearDialog = false
                             }) {
                                 Text("Clear")
                             }
                         },
                         dismissButton = {
-                            TextButton(onClick = { showDialog = false }) {
+                            TextButton(onClick = { showClearDialog = false }) {
                                 Text("Cancel")
                             }
                         },
@@ -371,6 +390,70 @@ fun SettingsScreen(
             Spacer(Modifier.height(32.dp))
         }
     }
+}
+
+/**
+ * Dialog showing per-page translation details: languages + models used.
+ */
+@Composable
+private fun TranslationInfoDialog(
+    translationInfo: List<PageTranslationInfo>,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Translation Details") },
+        text = {
+            if (translationInfo.isEmpty()) {
+                Text("Loading translation info…")
+            } else {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "${translationInfo.size} pages with translations",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        for (info in translationInfo) {
+                            Card(
+                                Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                            ) {
+                                Column(Modifier.padding(8.dp)) {
+                                    Text(
+                                        "Page ${info.pageIndex}",
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                    for ((lang, text) in info.languages) {
+                                        val model = info.models[lang]
+                                        Text(
+                                            buildString {
+                                                append("$lang: ")
+                                                append(text)
+                                                if (model != null) append(" [$model]")
+                                            },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            maxLines = 2,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        },
+    )
 }
 
 @Composable
