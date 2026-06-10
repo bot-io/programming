@@ -299,3 +299,4 @@ secrets/
 *.db-shm
 *.db-wal
 
+Tools/critterium
