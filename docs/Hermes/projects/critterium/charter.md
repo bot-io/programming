@@ -1,7 +1,7 @@
-# Vivarium — Project Charter
+# Critterium — Project Charter
 
 ---
-aliases: [Vivarium]
+aliases: [Critterium]
 tags: [project, active]
 ---
 
@@ -62,6 +62,12 @@ Three modules, strict boundaries:
 - Future features (ecosystem, skins, WebGPU worker) designed for but NOT built in v1
 - Core data layout must allow per-particle scalar channels without redesign (pattern reserved)
 
+## Name
+
+- **Critterium** — checked 2026-06-10: clear on Play Store, App Store, USPTO (software/gaming class)
+- critterium.com taken (education center in Barcelona); critterium.app and critterium.io likely available
+- EU wine trademark in unrelated class (no conflict)
+
 ## Related
 
 - [[spec]] — full project specification
@@ -69,4 +75,4 @@ Three modules, strict boundaries:
 
 ## GitHub
 
-- Repo: `vivarium` (to be created under bot-io org)
+- Repo: `critterium` under bot-io org

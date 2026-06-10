@@ -1,4 +1,4 @@
-# Vivarium — Decisions
+# Critterium — Decisions
 
 ### D1: Monorepo structure — npm workspaces, core exports types
 - **Date:** 2026-06-10
@@ -29,3 +29,9 @@
 - **Context:** Q8 — matrix editor UX
 - **Decision:** N×N slider grid. Each cell independent (asymmetric). Color-coded by strength (green attract, red repel).
 - **Rationale:** Simple, functional, handles asymmetry naturally.
+
+### D6: Project name — Critterium
+- **Date:** 2026-06-10
+- **Context:** Q3 — "Vivarium" had conflicts on app stores, domains, and trademark
+- **Decision:** Rename to **Critterium**. Clear on Google Play, App Store, USPTO (software/gaming class). critterium.app and critterium.io likely available.
+- **Rationale:** "Vivarium" had high conflict risk (App Store rejections, live USPTO trademark, all domains taken). Critterium is clean, distinctive, and carries the critter/living-world theme.

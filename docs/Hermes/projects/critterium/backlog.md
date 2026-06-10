@@ -1,17 +1,17 @@
-# Vivarium — Backlog
+# Critterium — Backlog
 
-### VIV-1 Name check + scaffold
+### CRT-1 Name check + scaffold
 - **Status:** ready
 - **Milestone:** M1
 - **Acceptance Criteria:**
-  1. Check "Vivarium" name availability (Play Store, App Store, domain, trademark)
-  2. Report conflicts in questions.md if found
+  1. ~~Check "Critterium" name availability~~ ✅ Done — clear on stores and USPTO
+  2. ~~Report conflicts in questions.md~~ ✅ No blocking conflicts
   3. Scaffold monorepo: `core/`, `render/`, `app/` packages
   4. Vite + Vitest + ESLint + Prettier configured
   5. CI pipeline (GitHub Actions) — `npm test` green
-- **Notes:** First item. Blocks all others.
+- **Notes:** First item. Blocks all others. Name check done.
 
-### VIV-2 Core world: typed-array state + timestep + RNG
+### CRT-2 Core world: typed-array state + timestep + RNG
 - **Status:** ready
 - **Milestone:** M1
 - **Acceptance Criteria:**
@@ -22,7 +22,7 @@
   5. Determinism test: same seed → identical state after 1000 steps
   6. Clamp/spawn unit tests
 
-### VIV-3 Spatial hash grid + neighbor queries
+### CRT-3 Spatial hash grid + neighbor queries
 - **Status:** ready
 - **Milestone:** M1
 - **Acceptance Criteria:**
@@ -30,7 +30,7 @@
   2. Property test vs brute-force reference (correctness)
   3. Zero allocations per step (benchmark-verified)
 
-### VIV-4 PairwiseForce + interaction matrix + short-range repulsion
+### CRT-4 PairwiseForce + interaction matrix + short-range repulsion
 - **Status:** ready
 - **Milestone:** M1
 - **Acceptance Criteria:**
@@ -40,7 +40,7 @@
   4. Analytic two-particle tests
   5. Asymmetry test: A chases B, B flees A
 
-### VIV-5 Global forces: drag, gravity, boundaries
+### CRT-5 Global forces: drag, gravity, boundaries
 - **Status:** ready
 - **Milestone:** M1
 - **Acceptance Criteria:**
@@ -49,7 +49,7 @@
   3. Boundary modes: bounce and wrap
   4. Unit tests per force
 
-### VIV-6 Wander + flow field + vortex forces
+### CRT-6 Wander + flow field + vortex forces
 - **Status:** ready
 - **Milestone:** M1
 - **Acceptance Criteria:**
@@ -59,7 +59,7 @@
   4. Unit tests for each
   5. Wander smoothness test (no teleporting / discontinuous jumps)
 
-### VIV-7 Alignment (flocking) force
+### CRT-7 Alignment (flocking) force
 - **Status:** ready
 - **Milestone:** M1
 - **Acceptance Criteria:**
@@ -67,7 +67,7 @@
   2. Unit test — aligned neighbors converge headings over time
   3. Mixed types unaffected unless explicitly configured in matrix
 
-### VIV-8 Benchmark harness + CI perf gate
+### CRT-8 Benchmark harness + CI perf gate
 - **Status:** ready
 - **Milestone:** M1
 - **Acceptance Criteria:**
@@ -76,7 +76,7 @@
   3. CI perf gate (fail if below threshold)
   4. Committed benchmark report
 
-### VIV-9 Pixi renderer + minimal web app
+### CRT-9 Pixi renderer + minimal web app
 - **Status:** ready
 - **Milestone:** M2
 - **Acceptance Criteria:**
@@ -88,7 +88,7 @@
   6. Per-particle rotation from velocity heading (one-point change for future creatures)
   7. Playwright smoke test
 
-### VIV-10 Pointer/touch interaction force
+### CRT-10 Pointer/touch interaction force
 - **Status:** ready
 - **Milestone:** M2
 - **Acceptance Criteria:**
@@ -96,7 +96,7 @@
   2. Works on both mouse (web) and touch (mobile)
   3. E2E test
 
-### VIV-11 Config schema v1 + serialization
+### CRT-11 Config schema v1 + serialization
 - **Status:** ready
 - **Milestone:** M3
 - **Acceptance Criteria:**
@@ -106,14 +106,14 @@
   4. Round-trip test: serialize → deserialize → identical state
   5. Unknown fields ignored on read (forward compatibility test)
 
-### VIV-12 Controls UI (live-applied)
+### CRT-12 Controls UI (live-applied)
 - **Status:** ready
 - **Milestone:** M3
 - **Acceptance Criteria:**
   1. Collapsible overlay panel
   2. Per-type: count, color, radius, initialSpeed, maxSpeed
   3. Add/remove types dynamically
-  4. Matrix editor
+  4. Matrix editor (slider grid, color-coded)
   5. Per-force enable + parameter sliders
   6. Play/pause/reset/re-seed buttons
   7. Randomize-matrix button
@@ -121,7 +121,7 @@
   9. All controls apply live (no restart)
   10. Playwright tests per control
 
-### VIV-13 Autosave + exact resume
+### CRT-13 Autosave + exact resume
 - **Status:** ready
 - **Milestone:** M3
 - **Acceptance Criteria:**
@@ -129,7 +129,7 @@
   2. Restore exact state on launch (positions, velocities, seed, simTime)
   3. E2E reload-continuity test
 
-### VIV-14 Export/import config files
+### CRT-14 Export/import config files
 - **Status:** ready
 - **Milestone:** M3
 - **Acceptance Criteria:**
@@ -137,7 +137,7 @@
   2. Import configs with validation
   3. E2E round-trip test
 
-### VIV-15 Capacitor Android build + background-pause
+### CRT-15 Capacitor Android build + background-pause
 - **Status:** ready
 - **Milestone:** M4
 - **Acceptance Criteria:**
@@ -145,7 +145,7 @@
   2. Background-pause: sim pauses when app backgrounded, resumes on foreground
   3. On-device perf check — **needs Svetlin** (block on human verification)
 
-### VIV-16 iOS + store readiness
+### CRT-16 iOS + store readiness
 - **Status:** blocked
 - **Milestone:** M5
 - **Blockers:** After M4 completion
