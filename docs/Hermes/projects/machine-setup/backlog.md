@@ -34,7 +34,7 @@
 - **Notes:** This project tracks its own setup tasks.
 
 ### MS-004: Subscription Usage Monitoring Script
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Acceptance Criteria:**
   1. Script reads current usage data from API/provider
@@ -42,27 +42,27 @@
   3. Appends row to status/usage-history.csv with timestamp, usage_pct, next_reset_sofia, spare_capacity, threshold_alert
   4. Script is idempotent and safe to run via cron
   5. Threshold alert triggers when usage exceeds configurable limit
-- **Notes:** Needs API endpoint details and auth configuration.
+- **Notes:** Implemented as zai_monitor_vault.py. Runs every 10m via cron. Sends Telegram alerts at 80%/95%.
 
 ### MS-005: Cron Job Scheduling
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Acceptance Criteria:**
   1. Monitoring script runs on a defined schedule (e.g., every 6 hours)
   2. Cron configuration is documented and reproducible
   3. Cron jobs follow the AGENTS.md protocol (read shared layer, respect locks)
   4. Failed cron runs produce logs in logs/ directory
-- **Notes:** Depends on MS-004. Platform is Windows — may need Task Scheduler or WSL cron.
+- **Notes:** 4 cron jobs active: usage monitor (10m), worker (hourly 23-07), digest (07:30), transcript export (03:00).
 
 ### MS-006: Obsidian Vault Integration
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Acceptance Criteria:**
   1. Vault is openable in Obsidian as a valid vault
   2. All markdown files render correctly with proper linking
   3. Navigation between projects, backlog, and state is intuitive
   4. .obsidian/ config committed (or explicitly excluded) per user preference
-- **Notes:** Verify the vault structure works naturally with Obsidian's file explorer.
+- **Notes:** Registered in Obsidian via obsidian.json. Consolidated structure.
 
 ### MS-007: Channel Configuration Documentation
 - **Status:** ready
@@ -75,7 +75,7 @@
 - **Notes:** Can be a section in the vault README or a dedicated doc.
 
 ### MS-008: Git Integration and Commit Workflow
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Acceptance Criteria:**
   1. Vault is tracked in git at D:\programming\
