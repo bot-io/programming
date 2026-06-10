@@ -25,12 +25,13 @@
 - **Notes:** Branch `crt-2-core-world` pushed. All green: test, build, typecheck.
 
 ### CRT-3 Spatial hash grid + neighbor queries
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M1
 - **Acceptance Criteria:**
   1. Spatial hash grid sized to max interaction radius → O(n) neighbor queries
   2. Property test vs brute-force reference (correctness)
   3. Zero allocations per step (benchmark-verified)
+- **Notes:** Branch `crt-3-spatial-hash` pushed. 18 new tests, all 48 pass. PR needs manual creation (token scope).
 
 ### CRT-4 PairwiseForce + interaction matrix + short-range repulsion
 - **Status:** ready

@@ -29,3 +29,23 @@
 - World.snapshot() for exact resume serialization
 - 30 tests: RNG (4), World (6), clamp (4), bounce (4), wrap (2), integrate (1), determinism (2), SimLoop (5), snapshot (1), constants (1)
 - Branch `crt-2-core-world` pushed
+
+### 2026-06-11 — CRT-3: Spatial Hash Grid
+- Implemented SpatialHashGrid: linked-list cell storage (Int32Array head/next arrays)
+- Cell size ≥ max interaction radius → 3×3 cell search guarantees all neighbors found
+- Zero allocations per rebuild: pre-allocated typed arrays, callback-based query
+- `queryRadius()` (callback API) and `queryRadiusToArray()` (pre-allocated output)
+- `bruteForceNeighbors()` reference function for property testing
+- `rebuild(world)` convenience method for one-call grid update from World
+- 18 new tests:
+  - Grid construction (3): dimensions, non-divisible sizes, single-cell
+  - Insert & cellAt (3): correct cells, edge clamping, out-of-bounds
+  - Query (4): nearby particles, adjacent-cell crossing, radius exclusion, edge queries
+  - queryRadiusToArray (2): pre-allocated collection, maxResults cap
+  - Rebuild (2): World integration, state clearing
+  - Zero-allocation (1): heap growth check across 100 rebuild+query cycles
+  - Property tests (2): 200 trials × 100 particles + 50 trials × 500 particles vs brute-force
+  - World integration (1): correct neighbors after 100 simulation steps
+- All 48 tests pass (30 existing + 18 new)
+- Branch `crt-3-spatial-hash` pushed. PR needs manual creation (token scope issue).
+- PR URL: https://github.com/bot-io/critterium/pull/new/crt-3-spatial-hash
