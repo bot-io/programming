@@ -105,6 +105,10 @@ class ReaderViewModel @Inject constructor(
                 }
                 _book = book
 
+                // Update lastReadAt so library sorts correctly
+                val bookWithReadTime = book.copy(lastReadAt = java.time.LocalDateTime.now())
+                try { bookRepository.updateBook(bookWithReadTime) } catch (_: Exception) { }
+
                 val pages = bookRepository.getPagesForBook(bookId)
                 _pages.value = pages
 

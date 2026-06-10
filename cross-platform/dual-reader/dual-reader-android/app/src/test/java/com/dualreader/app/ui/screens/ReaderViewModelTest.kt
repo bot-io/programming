@@ -1193,4 +1193,56 @@ class ReaderViewModelTest {
         assertEquals("Should skip already-translated page 0", 2, capturedPages!!.size)
         assertFalse(capturedPages!!.any { it.index == 0 })
     }
+
+    // ── Reading Progress (DR-005) ──────────────────────────────────────────
+
+    @Test
+    fun `loadBook - updates lastReadAt on book open`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Verify updateBook was called with a book that has lastReadAt set
+        coVerify {
+            bookRepository.updateBook(match { it.lastReadAt != null })
+        }
+    }
+
+    @Test
+    fun `loadBook - does not update lastReadAt when book not found`() = runTest(testDispatcher) {
+        coEvery { bookRepository.getBookById("missing") } returns null
+        val vm = createViewModel("missing")
+        advanceUntilIdle()
+
+        // updateBook should never be called if book wasn't found
+        coVerify(exactly = 0) { bookRepository.updateBook(any()) }
+    }
+
+    @Test
+    fun `goToPage - persists currentPage via updateBook`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.goToPage(2)
+        advanceUntilIdle()
+
+        coVerify {
+            bookRepository.updateBook(match { it.currentPage == 2 })
+        }
+    }
+
+    @Test
+    fun `goToPage - persists last-read position across multiple navigations`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.goToPage(1)
+        advanceUntilIdle()
+        vm.goToPage(2)
+        advanceUntilIdle()
+
+        // Last updateBook call should have currentPage = 2
+        coVerify {
+            bookRepository.updateBook(match { it.currentPage == 2 })
+        }
+    }
 }

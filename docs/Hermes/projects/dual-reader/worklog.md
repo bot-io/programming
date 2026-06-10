@@ -71,3 +71,19 @@
 
 **Test results:** 316 tests, 0 failures (up from 138)
 **Commit:** `10757f2` on master
+
+### 2026-06-11 — telegram-session — v1.0.31: reading progress + Continue Reading card
+
+**Item:** DR-005 (Reading Progress Tracking)
+
+**Work done:**
+- Added `lastReadAt = LocalDateTime.now()` update in `ReaderViewModel.loadBook()` — ensures library sorts by recently read
+- `ContinueReadingCard` composable in `LibraryScreen` — shows full-width card at top of library with book title + progress bar + percentage
+- Changed `BookGrid` from pure `LazyVerticalGrid` to `Column` wrapping `ContinueReadingCard` + `LazyVerticalGrid`
+- Added `Row` import to LibraryScreen
+- 4 new tests in `ReaderViewModelTest`: lastReadAt updated on open, not updated on missing book, goToPage persists currentPage, multiple navigations persist final position
+
+**Test results:** 320 tests, 0 failures
+**Version:** v1.0.31, versionCode=31
+**Vault:** DR-005 marked done, state/backlog/worklog updated
+
