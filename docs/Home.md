@@ -5,26 +5,23 @@ tags: [moc]
 
 # 📚 Knowledge Base
 
-Welcome to the workspace knowledge base. Everything is indexed and cross-linked.
+Welcome to the workspace. Everything lives under `Hermes/`.
 
 ## Quick Navigation
 
-| Area | Description |
-|------|-------------|
-| [[Projects\|🏗 Projects]] | Active and archived projects |
-| [[Decisions\|⚖️ Decisions]] | Architecture Decision Records |
-| [[Inbox\|📥 Inbox]] | Unsorted items and open questions |
-| [[Daily Notes\|📅 Daily Notes]] | Activity log by date |
-| [[Skills Registry\|⚡ Skills]] | Hermes skill registry |
-| [[Pending Actions\|📋 Pending]] | Cross-session coordination queue |
-| [[Glossary\|📖 Glossary]] | Domain terms and definitions |
-| [[Libraries\|📦 Libraries]] | Third-party dependency notes |
+- **📋 Projects** → [Hermes/projects/](Hermes/projects/)
+  - [dual-reader](Hermes/projects/dual-reader/) — Android bilingual ebook reader
+  - [cloudflare-worker](Hermes/projects/cloudflare-worker/) — Translation API proxy
+  - [machine-setup](Hermes/projects/machine-setup/) — Hermes coordination system
+- **⚖️ Decisions** → [Hermes/decisions/](Hermes/decisions/) — ADRs and cross-project decisions
+- **📊 Status** → [Hermes/status/](Hermes/status/) — Z.AI usage, subscription state
+- **🔒 Locks** → [Hermes/locks/](Hermes/locks/) — Active session locks
+- **📝 Logs** → [Hermes/logs/](Hermes/logs/) — Session transcripts
+- **📜 Protocol** → [Hermes/AGENTS.md](Hermes/AGENTS.md) — Multi-session coordination rules
+- **🎯 Priorities** → [Hermes/PRIORITIES.md](Hermes/PRIORITIES.md) — User-owned priority list
 
-## Active Projects
+## Templates
 
-- **[[Dual Reader]]** — Android bilingual ebook reader with multi-provider translation
-  - [[Translation Quality]] — Context-aware translation requirements and architecture
-
-## Recent Activity
-
-- 2026-06-04: Workspace bootstrap, Hermes setup, tools restructure
+- [Daily Note](templates/daily-note.md)
+- [ADR](templates/adr.md)
+- [Project](templates/project.md)

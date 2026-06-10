@@ -1,15 +1,6 @@
----
-aliases: [Translation]
-tags: [decision, translation, architecture]
-project: "[[Dual Reader]]"
-related:
-  - "[[Dual Reader]]"
-  - "[[Cloudflare Worker]]"
----
-
 # Translation Quality Requirements
 
-> Part of [[Dual Reader]] project.
+> Part of `dual-reader` project.
 
 ## Problem Statement
 
@@ -80,7 +71,7 @@ User taps "Translate All"
 
 ## Fallback Tiers
 
-- **Tier 1:** GLM-4.7-Flash (cloud) — Free, best quality, full context ✓
-- **Tier 2:** ML Kit (on-device) — Free, basic quality, no context ✗
-- **Tier 3 (future):** GLM-4.7-FlashX — ~$0.07/book, better, full context ✓
-- **Tier 4 (future):** GLM-4.5 — ~$0.30/book, best, full context ✓
+- **Tier 1:** GLM-4.7-Flash (cloud) — Free, best quality, full context
+- **Tier 2:** ML Kit (on-device) — Free, basic quality, no context
+- **Tier 3 (future):** GLM-4.7-FlashX — ~$0.07/book, better, full context
+- **Tier 4 (future):** GLM-4.5 — ~$0.30/book, best, full context
