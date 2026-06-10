@@ -2,8 +2,11 @@
  * Dual Reader Translation Proxy — Cloudflare Worker
  *
  * Multi-provider translation with automatic fallback:
- *   Primary: Google Gemini 2.5 Flash (free tier, 250 RPD)
+ *   Primary: Google Gemini 3.5 Flash → 2.5 Flash (free tier, 250 RPD per key)
  *   Fallback: Z.AI GLM-4.7-Flash (free, unlimited)
+ *
+ * Multi-key pool: set GEMINI_KEYS (JSON array) or individual GEMINI_KEY_1..N.
+ * Each key gets 250 RPD free — rotating across N keys gives N×250 RPD.
  *
  * API keys live server-side — never exposed in the APK.
  * Rate limits enforced per-IP using Cloudflare Cache API.
@@ -40,6 +43,73 @@ const CONFIG = {
   allowedOrigins: ['*'],
 };
 
+// ─── Multi-Key Pool ─────────────────────────────────────────────────────────
+
+/**
+ * Resolve available Gemini API keys from env secrets.
+ * Supports two formats:
+ *   1. GEMINI_KEYS: JSON string '["key1","key2","key3"]'  (preferred)
+ *   2. GEMINI_KEY_1, GEMINI_KEY_2, ..., GEMINI_KEY_N      (fallback)
+ *   3. GEMINI_API_KEY                                       (legacy single key)
+ *
+ * Returns { keys: string[], pickKey: (clientIp: string) => string|null }
+ */
+function resolveGeminiKeys(env) {
+  const keys = [];
+
+  // 1. Try GEMINI_KEYS (JSON array)
+  if (env.GEMINI_KEYS) {
+    try {
+      const parsed = JSON.parse(env.GEMINI_KEYS);
+      if (Array.isArray(parsed)) {
+        keys.push(...parsed.filter(k => typeof k === 'string' && k.length > 0));
+      }
+    } catch { /* not JSON, ignore */ }
+  }
+
+  // 2. Try numbered keys GEMINI_KEY_1..GEMINI_KEY_20
+  if (keys.length === 0) {
+    for (let i = 1; i <= 20; i++) {
+      const key = env[`GEMINI_KEY_${i}`];
+      if (key && typeof key === 'string' && key.length > 0) {
+        keys.push(key);
+      }
+    }
+  }
+
+  // 3. Legacy: single GEMINI_API_KEY
+  if (keys.length === 0 && env.GEMINI_API_KEY) {
+    keys.push(env.GEMINI_API_KEY);
+  }
+
+  /**
+   * Pick a key deterministically based on client IP + current date.
+   * This ensures:
+   *   - Same user gets the same key all day (even distribution)
+   *   - Different users spread across keys (load balancing)
+   *   - Keys rotate daily (avoid hitting 250 RPD on one key)
+   */
+  function pickKey(clientIp) {
+    if (keys.length === 0) return null;
+    if (keys.length === 1) return keys[0];
+    const daySeed = new Date().toISOString().slice(0, 10); // "2026-06-10"
+    const hash = simpleHash(`${clientIp}:${daySeed}`);
+    return keys[Math.abs(hash) % keys.length];
+  }
+
+  return { keys, pickKey };
+}
+
+/** Simple deterministic hash (djb2 variant) — no crypto needed. */
+function simpleHash(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) + h) + str.charCodeAt(i);
+    h = h & h; // 32-bit int
+  }
+  return h;
+}
+
 // ─── Main Handler ────────────────────────────────────────────────────────────
 
 export default {
@@ -60,6 +130,18 @@ export default {
     // GET /test/glm — diagnostic: test GLM connectivity from CF edge
     if (request.method === 'GET' && url.pathname === '/test/glm') {
       return corsResponse(await testGlm(env));
+    }
+
+    // GET /status — pool health check (no keys exposed)
+    if (request.method === 'GET' && url.pathname === '/status') {
+      const { keys } = resolveGeminiKeys(env);
+      return corsResponse(jsonResponse(200, {
+        status: 'ok',
+        geminiKeyCount: keys.length,
+        glmKey: !!env.GLM_API_KEY,
+        dailyLimitPerIp: CONFIG.dailyLimitPerIp,
+        maxBatchPages: CONFIG.maxBatchPages,
+      }));
     }
 
     // POST /translate — single page translation
@@ -96,13 +178,14 @@ export default {
 
       const systemPrompt = buildTranslationPrompt(source_lang || 'auto', target_lang);
 
-      // 3. Try Gemini first, fall back to GLM
+      // 3. Resolve Gemini key from pool, then try providers
+      const { pickKey } = resolveGeminiKeys(env);
+      const geminiKey = pickKey(clientIp);
       let translatedText = null;
       let usedModel = null;
       let geminiError = null;
 
       // ── Attempt 1: Gemini 3.5 Flash (free, best quality) ──────────────
-      const geminiKey = env.GEMINI_API_KEY;
       if (geminiKey) {
         // Try Gemini 3.5 Flash with one retry on 503 (high demand is temporary)
         for (let attempt = 0; attempt < 2 && !translatedText; attempt++) {
@@ -230,12 +313,15 @@ async function handleBatchTranslate(request, clientIp, env) {
   const systemPrompt = buildBatchTranslationPrompt(source_lang || 'auto', target_lang, pages.length);
   const userText = formatBatchPages(pages);
 
+  // Resolve Gemini key from pool
+  const { pickKey } = resolveGeminiKeys(env);
+  const geminiKey = pickKey(clientIp);
+
   // Try providers with same fallback chain as single translate
   let translatedText = null;
   let usedModel = null;
   let geminiError = null;
 
-  const geminiKey = env.GEMINI_API_KEY;
   if (geminiKey) {
     // Try Gemini 3.5 Flash (with thinking) — one attempt only
     console.log(`[batch] Trying Gemini 3.5 Flash (${CONFIG.geminiTimeoutMs}ms timeout)...`);
