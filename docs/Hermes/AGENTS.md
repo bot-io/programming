@@ -59,13 +59,11 @@ These are maintained by the user and/or automated monitoring scripts. Agents may
 ## 5. LOCKING
 
 Before beginning autonomous work:
-1. Check `locks/` for any active locks on the target project.
-2. If a lock exists and is recent (within the session's expected duration), **do not start work** — coordinate with the locking session.
-3. If no active lock exists, create a lock file containing:
-   - Session ID
-   - Timestamp
-   - Project being worked on
-4. Remove the lock file when the session ends or moves to a different project.
+1. Check `locks/worker.lock`. If it exists and is less than **90 minutes old**, **stop and wait**. This means the overnight worker is running — it works across ALL projects, not just one. Do not assume "it's working on a different project." It isn't.
+2. If `worker.lock` exists but is older than 90 minutes, it's stale — delete it and proceed.
+3. Create your own lock: `locks/<project-name>.lock` containing session ID, timestamp, and the item you're working on.
+4. Remove your project lock when done or switching projects.
+5. **Never** create or modify `worker.lock` — that belongs to the overnight worker cron only.
 
 ## 6. CHANNELS
 
