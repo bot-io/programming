@@ -44,7 +44,7 @@
 - **Notes:** Needs user input on scope — full collections or simple tags-first approach? Also need to decide on DB schema changes.
 
 ### DR-005: Reading Progress Tracking with Persistence
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Acceptance Criteria:**
   1. App remembers last-read position per book and reopens to that position
@@ -52,7 +52,7 @@
   3. Progress data persists across app restarts and survives app updates
   4. Progress syncs correctly when switching between devices (if applicable — needs decision)
   5. Unit tests for progress calculation, persistence, and restoration logic
-- **Notes:** Basic feature expectation. May need cloud sync scope clarification.
+- **Notes:** Completed in v1.0.31. currentPage already persisted via goToPage. Added lastReadAt update on book open, Continue Reading card in library. 4 new tests. Cloud sync deferred (no multi-device use case yet).
 
 ### DR-006: Export Annotations and Highlights
 - **Status:** ready

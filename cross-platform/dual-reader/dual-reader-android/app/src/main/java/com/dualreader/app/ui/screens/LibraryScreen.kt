@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -269,28 +270,104 @@ private fun BookGrid(
         )
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 12.dp,
-            end = 12.dp,
-            top = 8.dp,
-            bottom = 88.dp, // room for FAB
-        ),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        items(
-            items = books,
-            key = { it.id },
-        ) { book ->
-            BookCard(
-                book = book,
-                onClick = { onBookClick(book.id) },
-                onRetryPagination = { onRetryPagination(book) },
-                onDeleteRequest = { bookToDelete = book },
+    // Find the most recently read book (has lastReadAt and some progress)
+    val continueBook = books.firstOrNull { it.lastReadAt != null && it.canBeOpened }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        // Continue Reading banner
+        if (continueBook != null) {
+            ContinueReadingCard(
+                book = continueBook,
+                onClick = { onBookClick(continueBook.id) },
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp),
             )
+        }
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 12.dp,
+                end = 12.dp,
+                top = if (continueBook != null) 4.dp else 8.dp,
+                bottom = 88.dp, // room for FAB
+            ),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            items(
+                items = books,
+                key = { it.id },
+            ) { book ->
+                BookCard(
+                    book = book,
+                    onClick = { onBookClick(book.id) },
+                    onRetryPagination = { onRetryPagination(book) },
+                    onDeleteRequest = { bookToDelete = book },
+                )
+            }
+        }
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Continue Reading Card
+// ──────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ContinueReadingCard(
+    book: Book,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ElevatedCard(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Book icon
+            Icon(
+                imageVector = Icons.Default.MenuBook,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Title + progress
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = book.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    LinearProgressIndicator(
+                        progress = { book.progressPercent },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(4.dp),
+                    )
+                    Text(
+                        text = "${(book.progressPercent * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }
