@@ -170,6 +170,11 @@ def main():
     append_csv(st, pct, rs, spare, alert or "")
     if not test:
         print(f"Z.AI: {pct}% | spare: {spare} | reset: {rs}")
+    # Refresh the live dashboard
+    try:
+        subprocess.run([sys.executable, r"C:\Users\Svetlin\AppData\Local\hermes\scripts\update-now-dashboard.py"], timeout=10)
+    except Exception:
+        pass
 
 if __name__ == "__main__":
     main()

@@ -46,6 +46,7 @@ No work may begin until all three steps are completed.
 
 ### Vault Commits
 - Commit the vault (`docs/`) after every significant write (backlog updates, decisions, worklog entries, state changes).
+- After any vault commit, run: `python "C:\Users\Svetlin\AppData\Local\hermes\scripts\update-now-dashboard.py"` to refresh the live dashboard at `status/now.md`.
 
 ## 4. SHARED LAYER
 
