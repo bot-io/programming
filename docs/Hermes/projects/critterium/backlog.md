@@ -13,15 +13,16 @@
 - **Repo:** https://github.com/bot-io/critterium
 
 ### CRT-2 Core world: typed-array state + timestep + RNG
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M1
 - **Acceptance Criteria:**
-  1. `Float32Array` for x, y, vx, vy; `Uint8Array` for type — with room for future scalar channels
-  2. Fixed timestep loop with accumulator and interpolation; dt clamping
-  3. Seeded RNG (mulberry32)
-  4. Per-type `initialSpeed` spawn (random direction) + per-type `maxSpeed` clamp in integrator
-  5. Determinism test: same seed → identical state after 1000 steps
-  6. Clamp/spawn unit tests
+  1. ~~`Float32Array` for x, y, vx, vy; `Uint8Array` for type~~ ✅ With ScalarChannel pattern for future
+  2. ~~Fixed timestep loop with accumulator and interpolation; dt clamping~~ ✅ SimLoop class
+  3. ~~Seeded RNG (mulberry32)~~ ✅ Deterministic
+  4. ~~Per-type `initialSpeed` spawn + per-type `maxSpeed` clamp~~ ✅
+  5. ~~Determinism test: same seed → identical state after 1000 steps~~ ✅
+  6. ~~Clamp/spawn unit tests~~ ✅ 30 tests total (RNG, World, clamp, boundaries, integration, determinism, SimLoop, snapshot)
+- **Notes:** Branch `crt-2-core-world` pushed. All green: test, build, typecheck.
 
 ### CRT-3 Spatial hash grid + neighbor queries
 - **Status:** ready

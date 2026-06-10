@@ -17,5 +17,15 @@
 - Scaffolded monorepo: `packages/core/`, `packages/render/`, `packages/app/`
 - npm workspaces, Vite, Vitest, TypeScript strict, Prettier, GitHub Actions CI
 - All 3 packages pass: `npm test` (3/3), `npm run build`, `npm run typecheck`
-- Branch `crt-1-scaffold` pushed (PR needs manual creation — token scope)
-- Marked CRT-1 done
+- Branch `crt-1-scaffold` pushed
+
+### 2026-06-10 — CRT-2: Core World
+- Implemented World class: Float32Array x/y/vx/vy, Uint8Array type
+- ScalarChannel pattern reserved for future (ecosystem mode)
+- mulberry32 seeded RNG — deterministic, uniformity tested
+- Per-type initialSpeed spawn (random direction) + per-type maxSpeed clamp
+- Boundary modes: bounce and wrap
+- SimLoop: fixed-timestep accumulator with interpolation, dt clamping, MAX_ACCUMULATOR_STEPS
+- World.snapshot() for exact resume serialization
+- 30 tests: RNG (4), World (6), clamp (4), bounce (4), wrap (2), integrate (1), determinism (2), SimLoop (5), snapshot (1), constants (1)
+- Branch `crt-2-core-world` pushed
