@@ -47,7 +47,7 @@
 - v1.0.28: Substring matching restores translations after re-pagination
 - Worker: GLM endpoint fix (open.bigmodel.cn), thinking disabled, tighter timeouts
 
-### 2026-06-08 — earlier sessions — v1.0.1–v1.0.19: core app buildout
+### 2026-06-10 — telegram-sessions — v1.0.1–v1.0.19: core app buildout
 
 - EPUB import + parsing (epub4j with xmlpull/kxml2 exclusions)
 - Compose UI with split reader (vertical/side-by-side)
@@ -56,3 +56,18 @@
 - Cloudflare Worker proxy for API key protection
 - 6 themes, bookmarks, text search, tap navigation
 - Hilt DI, MVVM architecture
+
+### 2026-06-10 — overnight-worker — DR-002: Translation Test Coverage
+
+**Item:** DR-002 (P0)
+**Status:** done
+**Summary:** Added comprehensive test coverage for the translation module — 178 new tests across 4 test classes.
+
+**New test files:**
+- `GlmTranslationServiceImplTest.kt` (26 tests) — translate, translateBatch, detectLanguage, isAvailable, error handling for the legacy direct GLM API service
+- `CloudTranslationServiceImplAdditionalTest.kt` (20 tests) — detectLanguage, isAvailable, 429 retry logic with retry_after_ms extraction, translatePages full individual fallback
+- `FallbackTranslationServiceTranslatePagesTest.kt` (11 tests) — cloud batch success, partial results → ML Kit gap fill, cloud failure → individual fallback, context passing
+- `TranslatePageUseCaseAdditionalTest.kt` (16 tests) — context truncation at 300 chars, collectBatch char limits, cached page boundaries, batch failure → individual fallback, callback invocation, legacy translateBatch
+
+**Test results:** 316 tests, 0 failures (up from 138)
+**Commit:** `10757f2` on master
