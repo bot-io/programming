@@ -98,12 +98,13 @@
 - **Tests:** 260 unit tests + 5 Playwright e2e tests, all pass
 
 ### CRT-10 Pointer/touch interaction force
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M2
 - **Acceptance Criteria:**
-  1. Pointer attract–repel (user's finger stirs the world)
-  2. Works on both mouse (web) and touch (mobile)
-  3. E2E test
+  1. ~~Pointer attract–repel (user's finger stirs the world)~~ ✅ PointerForce class with configurable strength, radius, falloff
+  2. ~~Works on both mouse (web) and touch (mobile)~~ ✅ pointerdown/pointermove/pointerup events wired
+  3. ~~E2E test~~ ✅ Playwright smoke tests include pointer interaction
+- **Notes:** Branch `feat/crt-10-pointer-touch` pushed. 13 unit tests for PointerForce + e2e tests. Fixed pre-existing TS build errors across core and app packages. All 298 tests pass, build clean.
 
 ### CRT-11 Config schema v1 + serialization
 - **Status:** ready

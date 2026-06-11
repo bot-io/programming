@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 21:01 Sofia**
+> Last updated: **2026-06-12 02:31 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -13,10 +13,10 @@
 - _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T20:55:00Z
-- **Last project:** critterium
-- **Last item:** CRT-9
-- **Total runs:** 13
+- **Last run:** 2026-06-12T02:00:00Z
+- **Last project:** dual-reader
+- **Last item:** DR-008
+- **Total runs:** 14
 
 ## 📁 Projects
 
@@ -26,22 +26,22 @@
 - **Progress:** 2/2 done
 - **Last work:** 2026-06-10 — Initial project setup
 
-### 🟢 critterium
-- **Status:** ** M2 in progress
-- **Updated:** ** 2026-06-11
-- **Ready:** CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
+### ⚪ critterium
+- **Status:** ** M2 complete — M3 next
+- **Updated:** ** 2026-06-12
+- **Ready:** CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
 - **Blocked:** CRT-16
-- **Progress:** 9/16 done
+- **Progress:** 10/16 done
 - **❓ Open Questions:** Q9:, Q10:, Q11:, Q12:, Q13:, Q14:, Q15:, Q16:, Q17: → answer in `questions.md` or this chat
-- **Last work:** Pre-existing issues
+- **Last work:** CRT-10 — Pointer/touch interaction force (2026-06-12)
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development
-- **Updated:** ** 2026-06-11
-- **Ready:** DR-005:, DR-006:, DR-007:, DR-008:, DR-009:, DR-010:
+- **Updated:** ** 2026-06-12
+- **Ready:** DR-005:, DR-006:, DR-007:, DR-009:, DR-010:
 - **Needs Decision:** DR-004:
-- **Progress:** 3/10 done
-- **Last work:** 2026-06-11 — cron-worker — DR-003: Merged to master
+- **Progress:** 4/10 done
+- **Last work:** 2026-06-12 — cron-worker — DR-008: D1 Translation Cache (Cross-User Sharing)
 
 ### ⚪ machine-setup
 - **Status:** ** Complete
