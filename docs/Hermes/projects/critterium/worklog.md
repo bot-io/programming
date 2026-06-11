@@ -87,3 +87,18 @@
 - All 101 tests pass (75 existing + 26 new CRT-5 tests, excluding 3 interface compliance tests that share numbering)
 - Branch `feat/crt-5-global-forces` pushed. PR creation blocked by token scope (needs manual `gh pr create` from CLI with proper token).
 - Acceptance criteria all met: ✅ Drag force ✅ Optional gravity ✅ Bounce/wrap boundaries ✅ Unit tests per force
+
+### 2026-06-11 — CRT-6: Wander + FlowField + Vortex Forces (worker run)
+- Implemented WanderForce: per-particle smooth noise via compound sin/cos, pre-allocated Float32Array for wander angles, zero hot-loop allocations
+- Implemented FlowFieldForce: spatially varying force with 'uniform' (constant direction) and 'turbulence' (sinusoidal pseudo-turbulence) modes, custom field function support
+- Implemented VortexForce: tangential (swirl) + radial (in/out) forces around a configurable center point, 3 falloff modes (linear/inverse/constant)
+- All three forces implement Force interface, participate in ForcePipeline
+- 33 new tests:
+  - WanderForce (8): interface compliance, velocity changes, strength scaling, smoothness (bounded delta-V), independent particles, zero strength, defaults, capacity growth
+  - FlowFieldForce (9): interface, uniform direction (rightward, upward), turbulence spatial variation, custom field, position passthrough, zero strength, analytic π check, defaults, unknown mode
+  - VortexForce (12): interface, tangential direction, analytic force (constant falloff), analytic force (linear falloff), beyond-radius no force, center no force, radial inward, radial outward, spiral pattern, inverse falloff distance, clockwise (negative strength), zero force, defaults
+  - Integration (2): all three forces + drag stable for 10 seconds, wander+vortex orbiting behavior
+- All 134 tests pass (101 existing + 33 new)
+- Branch `feat/crt-6-wander-flow-vortex` pushed. PR needs manual creation (token scope issue).
+- Acceptance criteria all met: ✅ Wander smooth noise ✅ Flow field ✅ Vortex swirl ✅ Unit tests ✅ Smoothness test
+

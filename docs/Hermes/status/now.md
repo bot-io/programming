@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 08:34 Sofia**
+> Last updated: **2026-06-11 09:16 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -10,13 +10,17 @@
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- _No active locks_
+- `dual-reader.lock` — 2 min ago
+  > session: telegram-dual-reader
+  > timestamp: 2026-06-11T00:45 Sofia
+  > project: dual-reader
+  > item: DR-005
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T08:35:00Z
+- **Last run:** 2026-06-11T09:12:00Z
 - **Last project:** critterium
-- **Last item:** CRT-5
-- **Total runs:** 8
+- **Last item:** CRT-6
+- **Total runs:** 9
 
 ## 📁 Projects
 
@@ -29,11 +33,11 @@
 ### 🟢 critterium
 - **Status:** ** M1 in progress
 - **Updated:** ** 2026-06-11
-- **Ready:** CRT-6, CRT-7, CRT-8, CRT-9, CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
+- **Ready:** CRT-7, CRT-8, CRT-9, CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
 - **Blocked:** CRT-16
-- **Progress:** 5/16 done
+- **Progress:** 6/16 done
 - **❓ Open Questions:** Q1:, Q2:, Q3:, Q4:, Q5:, Q6:, Q7:, Q8: → answer in `questions.md` or this chat
-- **Last work:** 2026-06-11 — CRT-5: Global Forces — Drag, Gravity, Boundaries (worker run #8)
+- **Last work:** 2026-06-11 — CRT-6: Wander + FlowField + Vortex Forces (worker run)
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development

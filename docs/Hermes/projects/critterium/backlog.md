@@ -55,14 +55,14 @@
   4. Unit tests per force
 
 ### CRT-6 Wander + flow field + vortex forces
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M1
 - **Acceptance Criteria:**
-  1. Wander: per-particle smooth noise (organic motion)
-  2. Flow field: spatially varying directional force
-  3. Vortex: swirl around a point
-  4. Unit tests for each
-  5. Wander smoothness test (no teleporting / discontinuous jumps)
+  1. ~~Wander: per-particle smooth noise (organic motion)~~ ✅
+  2. ~~Flow field: spatially varying directional force~~ ✅
+  3. ~~Vortex: swirl around a point~~ ✅
+  4. ~~Unit tests for each~~ ✅
+  5. ~~Wander smoothness test (no teleporting / discontinuous jumps)~~ ✅
 
 ### CRT-7 Alignment (flocking) force
 - **Status:** ready
