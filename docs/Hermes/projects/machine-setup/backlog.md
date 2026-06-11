@@ -65,14 +65,14 @@
 - **Notes:** Registered in Obsidian via obsidian.json. Consolidated structure.
 
 ### MS-007: Channel Configuration Documentation
-- **Status:** ready
+- **Status:** done
 - **Priority:** P2
 - **Acceptance Criteria:**
   1. Document how Telegram sessions interact with the vault
   2. Document how CLI sessions interact with the vault
   3. Document how cron jobs interact with the vault
   4. All three channels confirmed to follow AGENTS.md protocol
-- **Notes:** Can be a section in the vault README or a dedicated doc.
+- **Notes:** Created `docs/channel-configuration.md`. Documents all three channels (Telegram, CLI, Cron), their vault interactions, active cron jobs, locking coordination, shared state files, and a compliance matrix confirming all channels follow AGENTS.md.
 
 ### MS-008: Git Integration and Commit Workflow
 - **Status:** done

@@ -1,22 +1,22 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 05:30 Sofia**
+> Last updated: **2026-06-11 06:08 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 27%
-- **Resets:** 41 Sofia |
+- **Usage:** 13%
+- **Resets:** 00 Sofia |
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
 - _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T02:20:00Z
-- **Last project:** dual-reader
-- **Last item:** DR-003
-- **Total runs:** 6
+- **Last run:** 2026-06-11T03:02:45Z
+- **Last project:** machine-setup
+- **Last item:** MS-007
+- **Total runs:** 7
 
 ## 📁 Projects
 
@@ -43,12 +43,11 @@
 - **Progress:** 3/10 done
 - **Last work:** 2026-06-11 — overnight-worker — DR-003: Night Mode Reading Experience
 
-### 🟢 machine-setup
-- **Status:** ** In Progress
-- **Updated:** ** 2026-06-10
-- **Ready:** MS-007:
-- **Progress:** 7/8 done
-- **Last work:** 2026-06-10 — initial-setup — Created full vault structure
+### ⚪ machine-setup
+- **Status:** ** Complete
+- **Updated:** ** 2026-06-11
+- **Progress:** 8/8 done
+- **Last work:** 2026-06-11 — overnight-worker — MS-007: Channel Configuration Documentation
 
 ## 🚨 Needs Your Input
 
