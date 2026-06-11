@@ -66,7 +66,7 @@
 - **Notes:** Lower priority but straightforward to implement. Depends on having annotations/highlights data model in place.
 
 ### DR-007: Play Store Launch Preparation
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** P0
 - **Acceptance Criteria:**
   1. App icon designed and integrated (adaptive icon for all densities)
@@ -77,6 +77,14 @@
   6. Signing config finalized (release keystore backed up securely)
   7. ProGuard/R8 rules verified — no runtime crashes from obfuscation
 - **Notes:** Blocking release. Items 1–5 are user-facing creative work; items 6–7 are technical.
+- **Progress:**
+  - ✅ Item 2: Splash screen implemented (AndroidX SplashScreen API, Theme.DualReader.Splash, 5 tests)
+  - ✅ Item 1: Adaptive icon already exists (book with two-page design)
+  - ⬜ Item 3: Privacy policy URL — needs user to provide/host
+  - ⬜ Item 4: Content rating — needs user action in Play Console
+  - ⬜ Item 5: Play Store listing — creative work, needs user
+  - ⬜ Item 6: Signing config — needs release keystore setup
+  - ⬜ Item 7: R8 rules — needs release build verification
 
 ### DR-008: D1 Translation Cache (Cross-User Sharing)
 - **Status:** ready

@@ -1,26 +1,22 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 10:26 Sofia**
+> Last updated: **2026-06-11 10:48 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 27%
-- **Resets:** 41 Sofia |
+- **Usage:** 25%
+- **Resets:** 00 Sofia |
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- `dual-reader.lock` — 72 min ago
-  > session: telegram-dual-reader
-  > timestamp: 2026-06-11T00:45 Sofia
-  > project: dual-reader
-  > item: DR-005
+- _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T02:11:00 Sofia
-- **Last project:** critterium
-- **Last item:** CRT-4
-- **Total runs:** 3
+- **Last run:** never
+- **Last project:** dual-reader
+- **Last item:** ?
+- **Total runs:** 1
 
 ## 📁 Projects
 
@@ -41,11 +37,12 @@
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development
-- **Updated:** ** 2026-06-10
-- **Ready:** DR-003:, DR-005:, DR-006:, DR-007:, DR-008:, DR-009:, DR-010:
+- **Updated:** ** 2026-06-11
+- **Ready:** DR-003:, DR-005:, DR-006:, DR-008:, DR-009:, DR-010:
+- **In Progress:** DR-007:
 - **Needs Decision:** DR-004:
 - **Progress:** 2/10 done
-- **Last work:** 2026-06-10 — overnight-worker — DR-002: Translation Test Coverage
+- **Last work:** 2026-06-11 — cron-worker — DR-007: Splash Screen Implementation
 
 ### 🟢 machine-setup
 - **Status:** ** In Progress

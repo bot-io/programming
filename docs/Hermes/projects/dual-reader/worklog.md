@@ -71,3 +71,32 @@
 
 **Test results:** 316 tests, 0 failures (up from 138)
 **Commit:** `10757f2` on master
+
+### 2026-06-11 — cron-worker — DR-007: Splash Screen Implementation
+
+**Item:** DR-007 (P0) — Play Store Launch Preparation
+**Status:** in-progress (splash screen done, awaiting user input on remaining items)
+**Branch:** `feat/DR-007-splash-screen`
+
+**Work done:**
+- Added `core-splashscreen 1.2.0` dependency (version catalog + build.gradle.kts)
+- Created `Theme.DualReader.Splash` in themes.xml — uses app's adaptive icon as splash animation, deep dark background (#1A1A2E) matching app theme
+- Added `splash_background` color resource
+- Updated AndroidManifest.xml — MainActivity now uses `Theme.DualReader.Splash`
+- Updated `MainActivity.kt` — calls `installSplashScreen()` before `super.onCreate()`
+- Added 5 unit tests in `SplashScreenTest.kt`:
+  - Splash background color exists
+  - Splash background color matches expected value
+  - Launcher icon resource exists
+  - MainActivity creates without crashing
+  - MainActivity theme resolves correctly
+
+**Test results:** 321 tests, 0 failures (316 existing + 5 new)
+**Commit:** `eefd798` on `feat/DR-007-splash-screen`
+
+**Remaining DR-007 items (need user input):**
+- Privacy policy URL
+- Content rating questionnaire (Play Console)
+- Play Store listing assets (screenshots, description, feature graphic)
+- Release keystore setup
+- R8 rules verification
