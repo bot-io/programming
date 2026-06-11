@@ -45,7 +45,8 @@
 - **Notes:** Branch `feat/crt-4-pairwise-force` pushed. 25 new tests, all 75 pass. PR needs manual creation (token scope issue).
 
 ### CRT-5 Global forces: drag, gravity, boundaries
-- **Status:** ready
+- **Status:** done
+- **PR:** Branch `feat/crt-5-global-forces` pushed; PR creation blocked by token scope (needs manual creation)
 - **Milestone:** M1
 - **Acceptance Criteria:**
   1. Drag force implementation

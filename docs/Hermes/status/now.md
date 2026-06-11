@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 06:08 Sofia**
+> Last updated: **2026-06-11 08:34 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 13%
+- **Usage:** 21%
 - **Resets:** 00 Sofia |
 - **Spare capacity:** ?
 
@@ -13,10 +13,10 @@
 - _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T03:02:45Z
-- **Last project:** machine-setup
-- **Last item:** MS-007
-- **Total runs:** 7
+- **Last run:** 2026-06-11T08:35:00Z
+- **Last project:** critterium
+- **Last item:** CRT-5
+- **Total runs:** 8
 
 ## 📁 Projects
 
@@ -29,11 +29,11 @@
 ### 🟢 critterium
 - **Status:** ** M1 in progress
 - **Updated:** ** 2026-06-11
-- **Ready:** CRT-5, CRT-6, CRT-7, CRT-8, CRT-9, CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
+- **Ready:** CRT-6, CRT-7, CRT-8, CRT-9, CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
 - **Blocked:** CRT-16
-- **Progress:** 4/16 done
+- **Progress:** 5/16 done
 - **❓ Open Questions:** Q1:, Q2:, Q3:, Q4:, Q5:, Q6:, Q7:, Q8: → answer in `questions.md` or this chat
-- **Last work:** 2026-06-11 — CRT-4: PairwiseForce + Interaction Matrix (overnight worker)
+- **Last work:** 2026-06-11 — CRT-5: Global Forces — Drag, Gravity, Boundaries (worker run #8)
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development
