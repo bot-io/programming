@@ -66,7 +66,7 @@
 - **Notes:** Lower priority but straightforward to implement. Depends on having annotations/highlights data model in place.
 
 ### DR-007: Play Store Launch Preparation
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** P0
 - **Acceptance Criteria:**
   1. App icon designed and integrated (adaptive icon for all densities)
@@ -76,7 +76,8 @@
   5. Play Store listing: description, screenshots (phone + tablet), feature graphic
   6. Signing config finalized (release keystore backed up securely)
   7. ProGuard/R8 rules verified — no runtime crashes from obfuscation
-- **Notes:** Blocking release. Items 1–5 are user-facing creative work; items 6–7 are technical.
+- **PR:** Branch `feat/DR-007-play-store-prep` pushed (PR creation blocked by token scope)
+- **Notes:** Technical items done (AC2, AC3 partial, AC6 partial, AC7). Remaining items (AC1, AC4, AC5, AC6 keystore) require user creative work or Play Store Console access.
 
 ### DR-008: D1 Translation Cache (Cross-User Sharing)
 - **Status:** ready

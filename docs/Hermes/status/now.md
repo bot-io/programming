@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 02:13 Sofia**
+> Last updated: **2026-06-11 03:27 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 27%
+- **Usage:** 39%
 - **Resets:** 41 Sofia |
 - **Spare capacity:** ?
 
@@ -13,10 +13,10 @@
 - _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T02:11:00 Sofia
-- **Last project:** critterium
-- **Last item:** CRT-4
-- **Total runs:** 3
+- **Last run:** 2026-06-11T03:05:00 Sofia
+- **Last project:** dual-reader
+- **Last item:** DR-007
+- **Total runs:** 4
 
 ## 📁 Projects
 
@@ -37,11 +37,12 @@
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development
-- **Updated:** ** 2026-06-10
-- **Ready:** DR-003:, DR-005:, DR-006:, DR-007:, DR-008:, DR-009:, DR-010:
+- **Updated:** ** 2026-06-11
+- **Ready:** DR-003:, DR-005:, DR-006:, DR-008:, DR-009:, DR-010:
+- **In Progress:** DR-007:
 - **Needs Decision:** DR-004:
 - **Progress:** 2/10 done
-- **Last work:** 2026-06-10 — overnight-worker — DR-002: Translation Test Coverage
+- **Last work:** 2026-06-11 — overnight-worker — DR-007: Play Store Launch Preparation (partial)
 
 ### 🟢 machine-setup
 - **Status:** ** In Progress

@@ -71,3 +71,30 @@
 
 **Test results:** 316 tests, 0 failures (up from 138)
 **Commit:** `10757f2` on master
+
+### 2026-06-11 — overnight-worker — DR-007: Play Store Launch Preparation (partial)
+
+**Item:** DR-007 (P0)
+**Status:** in-progress (technical items done, creative items need user input)
+**Summary:** Implemented technical parts of Play Store preparation: splash screen, privacy policy link, signing config structure, R8 rules verification.
+
+**Work done:**
+- Added AndroidX Core SplashScreen API (`core-splashscreen:1.2.0`) with themed dark-blue splash
+- Updated `MainActivity` to install splash screen before `setContent`
+- Added `Theme.DualReader.Splash` style with icon background
+- Added clickable "Privacy Policy" link in Settings > About (opens `https://dualreader.pages.dev/privacy`)
+- Set up release signing config structure (reads from local.properties or env vars)
+- Bumped version to 1.0.31
+- Verified R8/ProGuard rules — release build compiles cleanly
+- All 316 unit tests passing
+
+**Remaining (needs user action):**
+- AC1: Commission app icon design (adaptive icon for all densities)
+- AC3: Write and host privacy policy content at dualreader.pages.dev/privacy
+- AC4: Complete Play Store content rating questionnaire
+- AC5: Create Play Store listing (description, screenshots, feature graphic)
+- AC6: Generate release keystore and configure signing
+
+**Test results:** 316 tests, 0 failures
+**Branch:** `feat/DR-007-play-store-prep` (commit `83a6a4a`, pushed to origin)
+**PR:** Token lacks `createPullRequest` scope — manual PR creation needed
