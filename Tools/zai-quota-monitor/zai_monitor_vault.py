@@ -168,8 +168,12 @@ def main():
     else:
         alert = check_alert(pct, rms, state, tok, cid)
     append_csv(st, pct, rs, spare, alert or "")
-    if not test:
+    # Only output if usage changed by >5% or alert fired — otherwise stay silent
+    prev_pct = state.get("last_pct", -1)
+    if alert or abs(pct - prev_pct) >= 5:
         print(f"Z.AI: {pct}% | spare: {spare} | reset: {rs}")
+    state["last_pct"] = pct
+    save_alerts(state)
     # Refresh the live dashboard
     try:
         subprocess.run([sys.executable, r"C:\Users\Svetlin\AppData\Local\hermes\scripts\update-now-dashboard.py"], timeout=10)

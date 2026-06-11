@@ -103,7 +103,9 @@ class ReaderViewModel @Inject constructor(
                     _uiState.value = ReaderUiState.Error("Book not found: $bookId")
                     return@launch
                 }
-                _book = book
+                // Update lastReadAt to reflect this open event
+                val bookWithReadTime = book.copy(lastReadAt = LocalDateTime.now())
+                _book = bookWithReadTime
 
                 val pages = bookRepository.getPagesForBook(bookId)
                 _pages.value = pages
@@ -111,14 +113,17 @@ class ReaderViewModel @Inject constructor(
                 val settings = settingsRepository.getSettings()
                 _settings.value = settings
 
-                val currentPage = pages.getOrNull(book.currentPage)
-                    ?: bookRepository.getPage(bookId, book.currentPage)
+                val currentPage = pages.getOrNull(bookWithReadTime.currentPage)
+                    ?: bookRepository.getPage(bookId, bookWithReadTime.currentPage)
                     ?: pages.firstOrNull()
 
                 if (currentPage == null) {
                     _uiState.value = ReaderUiState.Error("No pages found for book: $bookId")
                     return@launch
                 }
+
+                // Persist lastReadAt update to Room (fire-and-forget)
+                try { bookRepository.updateBook(bookWithReadTime) } catch (_: Exception) { }
 
                 launch {
                     combine(
@@ -243,7 +248,10 @@ class ReaderViewModel @Inject constructor(
         if (index < 0 || index >= pages.size) return
 
         val currentPage = pages[index]
-        val updatedBook = book.copy(currentPage = index)
+        val updatedBook = book.copy(
+            currentPage = index,
+            lastReadAt = LocalDateTime.now(),
+        )
         _book = updatedBook
 
         _uiState.value = ReaderUiState.ReaderReady(

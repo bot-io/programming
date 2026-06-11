@@ -111,3 +111,14 @@
   3. Context cached per-book so re-translation doesn't re-extract
   4. Unit tests for context extraction and injection
 - **Notes:** Low effort, high quality improvement. Helps with character names, setting, tone consistency from page 1.
+
+### DR-011: Bugfix — Sentence Splitter + Translation Info Dialog
+- **Status:** done
+- **Priority:** P1
+- **Acceptance Criteria:**
+  1. Sentence splitter correctly handles abbreviations (Dr., Mr., Mrs., Prof., St., etc.)
+  2. Single-letter initials (A., И.) are not treated as sentence boundaries
+  3. Translation info dialog shows data instead of "loading" forever
+  4. Empty state shows meaningful text ("No translations found") instead of "Loading…"
+  5. Unit tests cover abbreviation handling, initials, quotes, and edge cases
+- **Notes:** Fixed in v1.0.32. Two-phase approach: find all potential boundaries, filter abbreviations. Fixed SettingsViewModel.loadTranslationInfo() hanging on flow.collect(). 18 new tests.

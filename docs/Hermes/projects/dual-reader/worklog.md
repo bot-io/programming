@@ -103,3 +103,22 @@
 - Backlog already marked done from branch; state.md updated
 
 **Git:** Merge commit on master (feat/DR-003-night-mode → master)
+
+### 2026-06-11 — telegram-session — DR-011: Sentence splitter fix + translation info dialog fix
+
+**Item:** DR-011 (P1)
+**Status:** done
+**Summary:** Fixed two bugs: (1) translation details screen stuck on "loading info" forever, (2) sentence splitting broke on abbreviations (Dr., Mr.) inside quotes.
+
+**Work done:**
+- Fixed SettingsViewModel.loadTranslationInfo(): replaced flow.collect (hangs forever, return@collect only exits lambda) with flow.first() (takes first emission)
+- Changed empty-state text from "Loading translation info..." to "No translations found. Translate some pages first."
+- Rewrote sentence splitter: two-phase approach — find all potential boundaries via regex, then filter out abbreviation boundaries
+- Added abbreviation set (dr, mr, mrs, ms, prof, st, jr, sr, vs, no, gen, sgt, lt, col, etc.)
+- Single-letter initial detection (Latin A-Z, Cyrillic A-Я)
+- Skips quotes/brackets before punctuation when checking for abbreviations
+- 18 new sentence splitter tests
+
+**Test results:** 349 tests, 0 failures
+**Version:** v1.0.32
+**Commit:** 00ae406

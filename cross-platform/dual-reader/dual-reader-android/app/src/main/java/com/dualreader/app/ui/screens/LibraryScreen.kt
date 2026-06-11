@@ -434,7 +434,7 @@ private fun BookCard(
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                     Text(
-                        text = "${book.currentPage}/${book.totalPages}",
+                        text = "${(book.progressPercent * 100).toInt()}%  (${book.currentPage}/${book.totalPages})",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
