@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 02:13 Sofia**
+> Last updated: **2026-06-11 10:26 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -10,7 +10,11 @@
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- _No active locks_
+- `dual-reader.lock` — 72 min ago
+  > session: telegram-dual-reader
+  > timestamp: 2026-06-11T00:45 Sofia
+  > project: dual-reader
+  > item: DR-005
 
 ## 🤖 Overnight Worker
 - **Last run:** 2026-06-11T02:11:00 Sofia

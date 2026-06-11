@@ -2,4 +2,6 @@
 <resources>
     <!-- Deep indigo background for the adaptive launcher icon -->
     <color name="ic_launcher_background">#3F51B5</color>
+    <!-- Splash screen background — deep dark matching the app theme -->
+    <color name="splash_background">#1A1A2E</color>
 </resources>

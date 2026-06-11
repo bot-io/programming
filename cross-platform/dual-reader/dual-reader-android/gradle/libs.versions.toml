@@ -28,6 +28,7 @@ navigation = "2.9.8"
 core-ktx = "1.19.0"
 activity-compose = "1.13.0"
 datastore = "1.2.1"
+core-splashscreen = "1.2.0"
 
 # EPUB parsing
 epub4j = "4.2.3"                       # Latest stable
@@ -53,6 +54,7 @@ robolectric = "4.14.1"                 # Latest stable
 # AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
+core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "core-splashscreen" }
 
 # Compose BOM (manages all compose-* versions)
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }

@@ -4,4 +4,16 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+
+    <!-- Splash screen theme — extends Theme.DualReader with SplashScreen attributes -->
+    <style name="Theme.DualReader.Splash" parent="Theme.SplashScreen">
+        <!-- Use the app's primary color as splash background -->
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <!-- Show the app's adaptive icon as the splash animation -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <!-- Brand text shown at the bottom of the splash -->
+        <item name="windowSplashScreenAnimationDuration">500</item>
+        <!-- Transition into the app's main theme -->
+        <item name="postSplashScreenTheme">@style/Theme.DualReader</item>
+    </style>
 </resources>
