@@ -103,3 +103,27 @@
 - Backlog already marked done from branch; state.md updated
 
 **Git:** Merge commit on master (feat/DR-003-night-mode → master)
+
+### 2026-06-12 — cron-worker — DR-008: D1 Translation Cache (Cross-User Sharing)
+
+**Item:** DR-008 (P1)
+**Status:** done
+**Summary:** Implemented D1-based translation cache for the Cloudflare Worker — cross-user sharing so popular books translate once and serve many users.
+
+**Changes:**
+- `src/translation-cache.js` — New module: getCachedTranslation, getCachedTranslations (batch), storeCachedTranslation, storeCachedTranslations (batch), getCacheStats
+  - Cache key: SHA-256(targetLang + sourceText) via Web Crypto API
+  - TTL: 90 days, expired entries cleaned on read (lazy cleanup)
+  - Batch operations use D1 batch API for efficiency
+- `src/index.js` — Integrated cache into both `/translate` and `/translate/batch` handlers
+  - Single translate: cache lookup before providers, store after success
+  - Batch translate: partial cache hit support (only translate uncached pages), merge results
+  - `/status` endpoint now includes `cache` field with total_entries, expired_entries, languages
+- `migrations/0001_create_translation_cache.sql` — D1 migration: translation_cache table with cache_key PK, indexes on cached_at and target_lang
+- `wrangler.toml` — Added D1 binding (database_id needs actual value from `wrangler d1 create`)
+- `package.json` — Updated test script to `test/*.test.js`
+- `test/translation-cache.test.js` — 35 new tests: cache hit/miss, TTL expiry, batch operations, error handling, key determinism, partial cache hits
+
+**Test results:** 51 tests (16 existing + 35 new), 0 failures
+**Branch:** `feat/DR-008-d1-translation-cache`
+**Action needed:** User must run `wrangler d1 create dual-reader-cache` to get the database_id, then apply migration with `wrangler d1 migrations apply dual-reader-cache`

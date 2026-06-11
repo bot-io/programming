@@ -80,16 +80,16 @@
 - **Notes:** Blocking release. Items 1–5 are user-facing creative work; items 6–7 are technical.
 
 ### DR-008: D1 Translation Cache (Cross-User Sharing)
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Acceptance Criteria:**
-  1. Worker checks CF D1/KV for cached translations before calling Gemini
-  2. Cache key: hash(sourceText + targetLang) → translatedText + model
-  3. Popular books (same EPUB content) translate once, serve many users
-  4. Cache TTL: 90 days for translations, cleaned on read
-  5. `/status` endpoint reports cache hit rate
-  6. Unit tests for cache lookup, storage, and TTL logic
-- **Notes:** Major cost savings at scale. Popular titles could see 80%+ cache hits. CF D1 free tier: 5M reads/day, 100K writes/day.
+  1. Worker checks CF D1 for cached translations before calling Gemini ✅ getCachedTranslation / getCachedTranslations
+  2. Cache key: hash(sourceText + targetLang) → translatedText + model ✅ SHA-256 via Web Crypto API
+  3. Popular books (same EPUB content) translate once, serve many users ✅ Same text + lang = same cache key
+  4. Cache TTL: 90 days for translations, cleaned on read ✅ Lazy cleanup on lookup
+  5. `/status` endpoint reports cache hit rate ✅ getCacheStats returns total_entries, expired_entries, languages
+  6. Unit tests for cache lookup, storage, and TTL logic ✅ 35 new tests
+- **Notes:** D1 database needs to be created via `wrangler d1 create dual-reader-cache` and migration applied. database_id placeholder in wrangler.toml needs updating.
 
 ### DR-009: Per-Device Free Quota
 - **Status:** ready

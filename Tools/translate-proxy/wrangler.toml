@@ -2,6 +2,13 @@ name = "dual-reader-translate"
 main = "src/index.js"
 compatibility_date = "2024-12-01"
 
+# D1 Database for translation cache (cross-user sharing)
+# Create with: wrangler d1 create dual-reader-cache
+[[d1_databases]]
+binding = "TRANSLATION_CACHE"
+database_name = "dual-reader-cache"
+database_id = "PLACEHOLDER_RUN_wrangler_d1_create"
+
 # Rate limiting via Cloudflare (free tier: 100K req/day)
 # Uncomment after first deploy to add rate limiting rules:
 # [rate_limiting]
