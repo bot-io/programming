@@ -3,6 +3,8 @@ package com.dualreader.app.ui.screens
 import android.app.Activity
 import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -55,6 +57,22 @@ data class ReaderColors(
     val accent: Color,
 )
 
+/**
+ * Animated version of [ReaderColors] — each color smoothly transitions when the theme changes.
+ * Uses [animateColorAsState] for a 400ms cross-fade between themes.
+ */
+@Composable
+fun animatedReaderColors(theme: ReaderTheme): ReaderColors {
+    val target = readerColors(theme)
+    return ReaderColors(
+        background = animateColorAsState(target.background, animationSpec = tween(400), label = "bg").value,
+        text = animateColorAsState(target.text, animationSpec = tween(400), label = "text").value,
+        textSecondary = animateColorAsState(target.textSecondary, animationSpec = tween(400), label = "text2").value,
+        divider = animateColorAsState(target.divider, animationSpec = tween(400), label = "divider").value,
+        accent = animateColorAsState(target.accent, animationSpec = tween(400), label = "accent").value,
+    )
+}
+
 @Composable
 fun readerColors(theme: ReaderTheme): ReaderColors = when (theme) {
     ReaderTheme.DARK -> ReaderColors(
@@ -80,6 +98,10 @@ fun readerColors(theme: ReaderTheme): ReaderColors = when (theme) {
     ReaderTheme.MIDNIGHT -> ReaderColors(
         background = Color(0xFF0A0A1A), text = Color(0xFFD0D0E0),
         textSecondary = Color(0xFF8080A0), divider = Color(0xFF1A1A3A), accent = Color(0xFF5858B0),
+    )
+    ReaderTheme.NIGHT -> ReaderColors(
+        background = Color(0xFF000000), text = Color(0xFFE0E0E0),
+        textSecondary = Color(0xFFB0B0B0), divider = Color(0xFF1A1A1A), accent = Color(0xFF6C63FF),
     )
 }
 
@@ -254,7 +276,7 @@ private fun ReaderContent(
     searchResults: List<ReaderViewModel.SearchResult>,
     onRePaginate: (widthPx: Int, heightPx: Int, density: Float) -> Unit = { _, _, _ -> },
 ) {
-    val colors = readerColors(settings.theme)
+    val colors = animatedReaderColors(settings.theme)
     val layoutMode = rememberLayoutMode()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

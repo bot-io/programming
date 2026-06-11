@@ -27,6 +27,7 @@ enum class ReaderTheme {
     OCEAN,
     FOREST,
     MIDNIGHT,
+    NIGHT,
 }
 
 /**

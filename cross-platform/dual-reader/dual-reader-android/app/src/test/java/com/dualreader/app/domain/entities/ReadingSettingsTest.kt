@@ -63,6 +63,19 @@ class ReadingSettingsTest {
     }
 
     @Test
+    fun `NIGHT theme exists in ReaderTheme enum`() {
+        assertTrue(
+            "NIGHT should be a valid ReaderTheme",
+            ReaderTheme.entries.any { it.name == "NIGHT" }
+        )
+    }
+
+    @Test
+    fun `ReaderTheme has 7 values`() {
+        assertEquals(7, ReaderTheme.entries.size)
+    }
+
+    @Test
     fun `all TranslationProvider values are parseable`() {
         for (provider in TranslationProvider.entries) {
             val parsed = TranslationProvider.valueOf(provider.name)
