@@ -1,26 +1,26 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 09:16 Sofia**
+> Last updated: **2026-06-11 10:13 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 21%
+- **Usage:** 67%
 - **Resets:** 00 Sofia |
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- `dual-reader.lock` — 2 min ago
+- `dual-reader.lock` — 59 min ago
   > session: telegram-dual-reader
   > timestamp: 2026-06-11T00:45 Sofia
   > project: dual-reader
   > item: DR-005
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T09:12:00Z
+- **Last run:** 2026-06-11T10:11:00Z
 - **Last project:** critterium
-- **Last item:** CRT-6
-- **Total runs:** 9
+- **Last item:** CRT-7
+- **Total runs:** 10
 
 ## 📁 Projects
 
@@ -33,11 +33,11 @@
 ### 🟢 critterium
 - **Status:** ** M1 in progress
 - **Updated:** ** 2026-06-11
-- **Ready:** CRT-7, CRT-8, CRT-9, CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
+- **Ready:** CRT-8, CRT-9, CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
 - **Blocked:** CRT-16
-- **Progress:** 6/16 done
+- **Progress:** 7/16 done
 - **❓ Open Questions:** Q1:, Q2:, Q3:, Q4:, Q5:, Q6:, Q7:, Q8: → answer in `questions.md` or this chat
-- **Last work:** 2026-06-11 — CRT-6: Wander + FlowField + Vortex Forces (worker run)
+- **Last work:** 2026-06-11 CRT-7: Alignment (flocking) force ✅
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development

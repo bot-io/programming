@@ -65,12 +65,13 @@
   5. ~~Wander smoothness test (no teleporting / discontinuous jumps)~~ ✅
 
 ### CRT-7 Alignment (flocking) force
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M1
 - **Acceptance Criteria:**
-  1. Alignment: steer toward average heading of same-type neighbors
-  2. Unit test — aligned neighbors converge headings over time
-  3. Mixed types unaffected unless explicitly configured in matrix
+  1. ~~Alignment: steer toward average heading of same-type neighbors~~ ✅
+  2. ~~Unit test — aligned neighbors converge headings over time~~ ✅
+  3. ~~Mixed types unaffected unless explicitly configured in matrix~~ ✅ (crossType param)
+- **Notes:** Branch `feat/crt-7-alignment` pushed. 10 new tests, all 146 pass. PR needs manual creation (token scope).
 
 ### CRT-8 Benchmark harness + CI perf gate
 - **Status:** ready
