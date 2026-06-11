@@ -103,3 +103,26 @@
 - Backlog already marked done from branch; state.md updated
 
 **Git:** Merge commit on master (feat/DR-003-night-mode → master)
+
+### 2026-06-11 — cron-worker — DR-007: Play Store Launch Preparation (partial)
+
+**Item:** DR-007 (P0)
+**Status:** blocked (needs user input for AC 3–6)
+**Summary:** Implemented AndroidX SplashScreen and verified ProGuard rules. Technical items (AC 1, 2, 7) complete. Remaining items need human input.
+
+**Changes:**
+- Added `androidx.core:core-splashscreen:1.0.1` dependency
+- Created `Theme.DualReader.Splash` with adaptive icon foreground + indigo background (`splash.xml`)
+- `MainActivity.kt` — `installSplashScreen()` called before `super.onCreate()` (API contract)
+- `AndroidManifest.xml` — Added `android:theme="@style/Theme.DualReader.Splash"` to launcher activity
+- `proguard-rules.pro` — Added keep rules for SplashScreen compat classes
+- `SplashScreenConfigTest.kt` — 7 new unit tests covering theme naming, post-splash transition, icon resources, background color, API contract
+
+**Test results:** 356 tests, 0 failures (up from 349)
+**Branch:** `feat/dr007-play-store` (commit 58ed333)
+
+**Blocked items (need user):**
+- AC 3: Privacy policy URL — needs hosting + URL
+- AC 4: Content rating — needs Play Console access
+- AC 5: Play Store listing — needs creative assets (screenshots, description, feature graphic)
+- AC 6: Signing config — needs release keystore creation + secure backup

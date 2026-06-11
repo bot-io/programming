@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 21:01 Sofia**
+> Last updated: **2026-06-11 21:32 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -10,13 +10,16 @@
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- _No active locks_
+- `critterium.lock` — 18 min ago
+  > session: interactive-telegram
+  > started: 2026-06-11T10:23 Sofia
+  > item: architecture planning (ecosystem mode)
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T20:55:00Z
-- **Last project:** critterium
-- **Last item:** CRT-9
-- **Total runs:** 13
+- **Last run:** 2026-06-11T18:30:00Z
+- **Last project:** dual-reader
+- **Last item:** DR-007
+- **Total runs:** 14
 
 ## 📁 Projects
 
@@ -38,10 +41,11 @@
 ### 🟢 dual-reader
 - **Status:** ** Active Development
 - **Updated:** ** 2026-06-11
-- **Ready:** DR-005:, DR-006:, DR-007:, DR-008:, DR-009:, DR-010:
+- **Ready:** DR-005:, DR-006:, DR-008:, DR-009:, DR-010:
+- **Blocked:** DR-007:
 - **Needs Decision:** DR-004:
 - **Progress:** 3/10 done
-- **Last work:** 2026-06-11 — cron-worker — DR-003: Merged to master
+- **Last work:** 2026-06-11 — cron-worker — DR-007: Play Store Launch Preparation (partial)
 
 ### ⚪ machine-setup
 - **Status:** ** Complete
@@ -53,7 +57,7 @@
 
 - **critterium** — blocked: CRT-16; open questions: Q9:, Q10:, Q11:, Q12:, Q13:, Q14:, Q15:, Q16:, Q17:
   → Open that project's Telegram chat and respond, or tell this chat
-- **dual-reader** — needs-decision: DR-004:
+- **dual-reader** — blocked: DR-007:; needs-decision: DR-004:
   → Open that project's Telegram chat and respond, or tell this chat
 
 ## 🔗 Quick Links

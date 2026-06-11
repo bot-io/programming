@@ -2,9 +2,9 @@
 
 **Status:** Active Development
 **Last Updated:** 2026-06-11
-**In-Progress:** DR-007 (P0 — Play Store prep, technical items done, needs creative/Console work)
+**In-Progress:** None (DR-007 blocked on user input)
 **Ready Items:** DR-005 (P1), DR-006 (P2), DR-008 (P1), DR-009 (P1), DR-010 (P2)
-**Blocked/Needs-Decision:** DR-004 (needs-decision — scope clarification needed)
-**Done:** DR-001, DR-002, DR-003
-**Test Suite:** 346 unit tests (316 legacy + 30 new from DR-003, all passing; 9 pre-existing PaginationIntegrationTest failures from temp dir issue)
-**Open Questions:** None
+**Blocked:** DR-004 (needs-decision — scope clarification), DR-007 (blocked — needs privacy policy, Play Console, creative assets, keystore)
+**Done:** DR-001, DR-002, DR-003, DR-007 (partial — AC 1,2,7 done)
+**Test Suite:** 356 unit tests, 0 failures (7 new splash screen tests)
+**Open Questions:** DR-007 needs user input for items 3–6 (see backlog)

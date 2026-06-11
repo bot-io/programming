@@ -67,17 +67,18 @@
 - **Notes:** Lower priority but straightforward to implement. Depends on having annotations/highlights data model in place.
 
 ### DR-007: Play Store Launch Preparation
-- **Status:** ready
+- **Status:** blocked
 - **Priority:** P0
 - **Acceptance Criteria:**
-  1. App icon designed and integrated (adaptive icon for all densities)
-  2. Splash screen / launch screen implemented
-  3. Privacy policy URL hosted and linked in app
-  4. Content rating questionnaire completed
-  5. Play Store listing: description, screenshots (phone + tablet), feature graphic
-  6. Signing config finalized (release keystore backed up securely)
-  7. ProGuard/R8 rules verified — no runtime crashes from obfuscation
-- **Notes:** Blocking release. Items 1–5 are user-facing creative work; items 6–7 are technical.
+  1. ~~App icon designed and integrated (adaptive icon for all densities)~~ ✅ Vector adaptive icon (ic_launcher_foreground.xml + ic_launcher_background.xml)
+  2. ~~Splash screen / launch screen implemented~~ ✅ AndroidX SplashScreen 1.0.1 with Theme.DualReader.Splash (7 tests)
+  3. Privacy policy URL hosted and linked in app — **NEEDS USER** (hosting + URL)
+  4. Content rating questionnaire completed — **NEEDS USER** (Play Console)
+  5. Play Store listing: description, screenshots (phone + tablet), feature graphic — **NEEDS USER** (creative assets)
+  6. Signing config finalized (release keystore backed up securely) — **NEEDS USER** (keystore creation + backup)
+  7. ~~ProGuard/R8 rules verified — no runtime crashes from obfuscation~~ ✅ Comprehensive rules for Room, Hilt, ML Kit, epub4j, SplashScreen
+- **Blocked by:** Items 3–6 require human input (privacy policy hosting, Play Console access, creative assets, keystore creation)
+- **Notes:** Technical items complete (AC 1, 2, 7). Items 3–6 are creative/Console work. Branch `feat/dr007-play-store` ready.
 
 ### DR-008: D1 Translation Cache (Cross-User Sharing)
 - **Status:** ready
