@@ -22,7 +22,7 @@
 - **Notes:** Done. Added 178 new tests across 4 test classes. Suite: 316 tests, 0 failures. Commit: 10757f2.
 
 ### DR-003: Night Mode Reading Experience
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Acceptance Criteria:**
   1. Night mode theme uses true black background (#000000) for OLED devices
@@ -30,7 +30,8 @@
   3. Smooth transition animation when switching to/from night mode
   4. Existing themes continue to work; no visual regression
   5. Screenshot tests or visual regression tests for key screens in night mode
-- **Notes:** Improvements to the existing night mode theme for better readability in low-light conditions.
+- **Branch:** `feat/DR-003-night-mode` pushed (PR creation blocked by token scope)
+- **Notes:** Implemented NIGHT enum value, NightColorScheme Material3 theme, animatedReaderColors() with 400ms cross-fade, colorSchemeForTheme mapping for all 7 themes. 30 new tests all passing. WCAG AAA contrast (12.4:1) on true black.
 
 ### DR-004: Library Management (Tags, Collections, Sorting)
 - **Status:** needs-decision

@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 02:13 Sofia**
+> Last updated: **2026-06-11 05:30 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -13,10 +13,10 @@
 - _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T02:11:00 Sofia
-- **Last project:** critterium
-- **Last item:** CRT-4
-- **Total runs:** 3
+- **Last run:** 2026-06-11T02:20:00Z
+- **Last project:** dual-reader
+- **Last item:** DR-003
+- **Total runs:** 6
 
 ## 📁 Projects
 
@@ -37,11 +37,11 @@
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development
-- **Updated:** ** 2026-06-10
-- **Ready:** DR-003:, DR-005:, DR-006:, DR-007:, DR-008:, DR-009:, DR-010:
+- **Updated:** ** 2026-06-11
+- **Ready:** DR-005:, DR-006:, DR-007:, DR-008:, DR-009:, DR-010:
 - **Needs Decision:** DR-004:
-- **Progress:** 2/10 done
-- **Last work:** 2026-06-10 — overnight-worker — DR-002: Translation Test Coverage
+- **Progress:** 3/10 done
+- **Last work:** 2026-06-11 — overnight-worker — DR-003: Night Mode Reading Experience
 
 ### 🟢 machine-setup
 - **Status:** ** In Progress
