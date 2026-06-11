@@ -39,3 +39,7 @@
 -keep class com.google.android.gms.internal.** { *; }
 -dontwarn com.google.mlkit.**
 -dontwarn com.google.android.gms.**
+
+# AndroidX SplashScreen compat — theme installSplashScreen uses reflection
+-keep class androidx.core.splashscreen.SplashScreen { *; }
+-keep class androidx.core.splashscreen.SplashScreen$Companion { *; }

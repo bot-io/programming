@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Splash screen theme for AndroidX SplashScreen API.
+  On Android 12+ this is read by the system; on older versions the compat
+  library draws the splash before delegating to the real theme.
+-->
+<resources>
+    <style name="Theme.DualReader.Splash" parent="Theme.SplashScreen">
+        <!-- Core splash attributes -->
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+
+        <!-- Branding text shown at the bottom of the splash -->
+        <item name="windowSplashScreenAnimationDuration">0</item>
+
+        <!-- After splash dismisses, switch to the real app theme -->
+        <item name="postSplashScreenTheme">@style/Theme.DualReader</item>
+    </style>
+</resources>
