@@ -45,7 +45,8 @@
 - **Notes:** Branch `feat/crt-4-pairwise-force` pushed. 25 new tests, all 75 pass. PR needs manual creation (token scope issue).
 
 ### CRT-5 Global forces: drag, gravity, boundaries
-- **Status:** ready
+- **Status:** done
+- **PR:** Branch `feat/crt-5-global-forces` pushed; PR creation blocked by token scope (needs manual creation)
 - **Milestone:** M1
 - **Acceptance Criteria:**
   1. Drag force implementation
@@ -54,22 +55,23 @@
   4. Unit tests per force
 
 ### CRT-6 Wander + flow field + vortex forces
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M1
 - **Acceptance Criteria:**
-  1. Wander: per-particle smooth noise (organic motion)
-  2. Flow field: spatially varying directional force
-  3. Vortex: swirl around a point
-  4. Unit tests for each
-  5. Wander smoothness test (no teleporting / discontinuous jumps)
+  1. ~~Wander: per-particle smooth noise (organic motion)~~ ✅
+  2. ~~Flow field: spatially varying directional force~~ ✅
+  3. ~~Vortex: swirl around a point~~ ✅
+  4. ~~Unit tests for each~~ ✅
+  5. ~~Wander smoothness test (no teleporting / discontinuous jumps)~~ ✅
 
 ### CRT-7 Alignment (flocking) force
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M1
 - **Acceptance Criteria:**
-  1. Alignment: steer toward average heading of same-type neighbors
-  2. Unit test — aligned neighbors converge headings over time
-  3. Mixed types unaffected unless explicitly configured in matrix
+  1. ~~Alignment: steer toward average heading of same-type neighbors~~ ✅
+  2. ~~Unit test — aligned neighbors converge headings over time~~ ✅
+  3. ~~Mixed types unaffected unless explicitly configured in matrix~~ ✅ (crossType param)
+- **Notes:** Branch `feat/crt-7-alignment` pushed. 10 new tests, all 146 pass. PR needs manual creation (token scope).
 
 ### CRT-8 Benchmark harness + CI perf gate
 - **Status:** ready

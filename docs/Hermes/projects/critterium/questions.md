@@ -1,27 +1,50 @@
 # Critterium — Questions
 
-_All questions resolved._
+_All previous questions resolved (Q1–Q8). New questions from ecosystem mode architecture._
 
-## Q1: PRIORITIES.md — ✅ RESOLVED
-User authorized the edit. Critterium added at rank 2.
+### Q9: Free version species cap
+How many species in the free version? (Paid = 12)
+- Option A: 3 species (enough for basic presets)
+- Option B: 5 species (enough for RPS + predator/prey)
+- Option C: Other number?
 
-## Q2: GitHub repo — ✅ RESOLVED
-Under `bot-io` org. Repo: `critterium`.
+### Q10: Energy system granularity
+How detailed should the hunger/energy system be?
+- **Simple:** Binary — hungry (seeking food) or full (ignoring food). Timer-based.
+- **Medium:** Hunger bar 0–100. Below threshold → seek food. Eating fills bar. Bar depletes over time.
+- **Complex:** Full energy budget — movement costs energy, eating gains energy, reproduction costs energy, different foods give different energy.
 
-## Q3: Name availability — ✅ RESOLVED
-Renamed from "Vivarium" to **Critterium**. Clear on both app stores and USPTO. See D6 in decisions.md.
+### Q11: Reproduction mechanic
+How do creatures reproduce?
+- **A) Binary fission:** When fed+healthy, particle splits into two (parent + child). Simple, emergent.
+- **B) Proximity mating:** Two same-species particles near each other + both fed → spawn a third.
+- **C) Egg/spawn point:** Fed creature drops an "egg" that hatches after a timer.
 
-## Q4: Monorepo package structure — ✅ RESOLVED (agent call)
-Single npm workspace. Core exports its types and interfaces; render/app import directly from core. No separate shared/types package — keeps the dependency graph simple and matches the "core has zero dependencies" mandate.
+### Q12: Death mechanics
+- Old age: confirmed (die after X sim-seconds)?
+- Starvation: die if hunger reaches 0?
+- Eaten: instant removal, or gradual (chipped away)?
+- Sickness: die after sickness timer, or sickness just slows/weakens?
 
-## Q5: Max types — ✅ RESOLVED (agent call)
-Cap at **16 types**. This keeps the 16×16 matrix editor manageable (256 cells), the typed-array `Uint8Array` type index fits in 4 bits, and it's well above any practical v1 use case. Enforced in config validation.
+### Q13: Sickness center — what is it?
+- **A) Fixed point on the map** — a zone that infects creatures that enter it
+- **B) Contagious disease** — sick creature infects nearby healthy creatures of same species
+- **C) Both** — originates from a center, then spreads contagiously
 
-## Q6: Wander noise state — ✅ RESOLVED (agent call)
-Forces may own pre-allocated typed arrays. The wander force allocates a `Float32Array` (one float per particle for noise phase) at construction, resized only when particle count changes. No hot-loop allocations — all memory is pre-allocated.
+### Q14: Eating mechanic
+When species A eats species B:
+- **A) Instant:** A touches B → B disappears, A gains energy
+- **B) Gradual:** A stays near B for X seconds → B shrinks and dies, A gains energy over time
+- **C) Chase-catch:** A must be faster than B and catch it. One contact = one eat.
 
-## Q7: CI platform — ✅ RESOLVED (agent call)
-GitHub Actions. Standard for bot-io repos.
+### Q15: Force count for paid/free
+You mentioned forces/behaviors will also have a limit. Which forces are free vs paid? Current forces: attraction, repulsion, eating, hunger, aging, reproduction, flocking, wandering, flow field, vortex, drag, gravity. Any others you want?
 
-## Q8: Matrix editor UX — ✅ RESOLVED
-Slider grid as default. Each cell is independent (asymmetric matrix). Color-coded by strength (green attract, red repel).
+### Q16: World boundaries for ecosystem
+With birth/death, the total particle count fluctuates. Should there be:
+- **A) Hard cap:** No new spawns if total > max (e.g., 1200). Oldest die naturally.
+- **B) Soft cap:** Reproduction rate decreases as population grows (logistic growth).
+- **C) No cap:** Let it grow. User's problem if it lags.
+
+### Q17: Per-species interaction — distance ranges
+You mentioned "attracted from distance A to B, repelled from distance B to C." Should each species pair support multiple distance bands with different forces? (e.g., attract far, repel mid, align close)
