@@ -13,8 +13,8 @@ android {
         applicationId = "com.dualreader.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 30
-        versionName = "1.0.30"
+        versionCode = 32
+        versionName = "1.0.32"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

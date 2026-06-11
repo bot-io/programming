@@ -74,13 +74,14 @@
 - **Notes:** Branch `feat/crt-7-alignment` pushed. 10 new tests, all 146 pass. PR needs manual creation (token scope).
 
 ### CRT-8 Benchmark harness + CI perf gate
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M1
 - **Acceptance Criteria:**
   1. Steps/sec measurement @ 100, 500, 1k, 5k particles
   2. Allocation check (zero hot-loop allocations verified)
   3. CI perf gate (fail if below threshold)
   4. Committed benchmark report
+- **Notes:** Branch `feat/crt-8-benchmark-harness` pushed. 11 new tests, all pass. Benchmark measures full pipeline (pairwise + wander + drag + vortex + boundary). PR needs manual creation.
 
 ### CRT-9 Pixi renderer + minimal web app
 - **Status:** ready

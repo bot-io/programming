@@ -1,30 +1,30 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 15:42 Sofia**
+> Last updated: **2026-06-11 16:21 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 67%
-- **Resets:** 00 Sofia |
+- **Usage:** 53%
+- **Resets:** 01 Sofia |
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- `critterium.lock` — 1 min ago
+- `critterium.lock` — 40 min ago
   > session: interactive-telegram
   > started: 2026-06-11T10:23 Sofia
   > item: architecture planning (ecosystem mode)
-- `dual-reader.lock` — 9 min ago
+- `dual-reader.lock` — 49 min ago
   > session: telegram-dual-reader
   > timestamp: 2026-06-11T00:45 Sofia
   > project: dual-reader
   > item: DR-005
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T15:30:00Z
-- **Last project:** dual-reader
-- **Last item:** DR-003
-- **Total runs:** 11
+- **Last run:** 2026-06-11T16:20:00Z
+- **Last project:** critterium
+- **Last item:** CRT-8
+- **Total runs:** 12
 
 ## 📁 Projects
 
@@ -37,11 +37,11 @@
 ### 🟢 critterium
 - **Status:** ** M1 in progress
 - **Updated:** ** 2026-06-11
-- **Ready:** CRT-8, CRT-9, CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
+- **Ready:** CRT-9, CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
 - **Blocked:** CRT-16
-- **Progress:** 7/16 done
+- **Progress:** 8/16 done
 - **❓ Open Questions:** Q9:, Q10:, Q11:, Q12:, Q13:, Q14:, Q15:, Q16:, Q17: → answer in `questions.md` or this chat
-- **Last work:** 2026-06-11 CRT-7: Alignment (flocking) force ✅
+- **Last work:** Pre-existing issues
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development

@@ -1,26 +1,34 @@
 # Critterium — Worklog
 
-## 2026-06-11 CRT-7: Alignment (flocking) force ✅
-- **Branch:** `feat/crt-7-alignment`
-- **Commit:** 99b3018
-- **Status:** Done, pushed
-- **Changes:**
-  - Added `AlignmentForce` class to `packages/core/src/index.ts`
-    - Steers particles toward average heading of same-type neighbors
-    - `crossType` parameter for cross-type alignment
-    - Uses spatial hash grid for O(n) neighbor queries
-    - Pre-allocated temp arrays (sumVx, sumVy, neighborCounts) — zero hot-loop allocations
-    - Implements `Force` interface (id='alignment', serializable params)
-  - Added 10 unit tests to `packages/core/src/index.test.ts`:
-    1. Default params
-    2. Isolated particle (no neighbors) — no effect
-    3. Steering toward average heading (analytic test)
-    4. Heading convergence over 2s simulation
-    5. Same-type isolation (crossType=false)
-    6. Cross-type alignment (crossType=true)
-    7. Radius limit — particles outside radius unaffected
-    8. ForcePipeline integration (300 steps, stable)
-    9. Array reuse (no reallocation after first apply)
-    10. Already-aligned particles — zero force
-- **Test Results:** 146 total (144 core + 1 app + 1 render) — all pass
-- **PR:** Needs manual creation (token scope issue)
+## 2026-06-11 CRT-8: Benchmark harness + CI perf gate
+
+**Worker:** autonomous
+**Branch:** `feat/crt-8-benchmark-harness`
+**Status:** Done
+**Tests:** 11 new (248 total including existing 237)
+
+### What was done
+- Created `packages/core/src/benchmark.ts` — Core benchmark harness with:
+  - `runSingleBenchmark(count, steps, thresholds)` — measures steps/sec for a given particle count
+  - `runBenchmarks(thresholds, steps)` — runs all tiers and produces a report
+  - `formatReportMarkdown(report)` — formats as markdown
+  - Allocation check via heap growth measurement (with --expose-gc)
+  - Full simulation pipeline: pairwise + wander + drag + vortex + boundary forces
+- Created `packages/core/src/benchmark.test.ts` — 11 vitest tests:
+  - 6 harness unit tests (validity, scaling, report format)
+  - 5 CI performance gate tests (threshold enforcement at each tier)
+  - Generous CI thresholds (100/20/10/2 steps/sec for 100/500/1k/5k particles)
+- Updated `.github/workflows/ci.yml` with benchmark CI step
+- Added `npm run test:bench` script to root package.json
+- Committed benchmark report at `docs/BENCHMARK.md`
+- Excluded `benchmark.ts` from build output (not a library export)
+
+### Performance results (this machine)
+- 100 particles: ~8,000+ steps/sec
+- 500 particles: ~465 steps/sec
+- 1000 particles: ~170 steps/sec
+- 5000 particles: ~7 steps/sec
+
+### Pre-existing issues
+- Build fails due to unused variables in ecosystem files (ecosystem.ts, lifecycle.ts, ecosystem-world.ts)
+- These were broken before CRT-8 changes
