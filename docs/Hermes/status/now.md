@@ -1,30 +1,22 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 16:21 Sofia**
+> Last updated: **2026-06-11 20:43 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 53%
+- **Usage:** 3%
 - **Resets:** 01 Sofia |
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- `critterium.lock` — 40 min ago
-  > session: interactive-telegram
-  > started: 2026-06-11T10:23 Sofia
-  > item: architecture planning (ecosystem mode)
-- `dual-reader.lock` — 49 min ago
-  > session: telegram-dual-reader
-  > timestamp: 2026-06-11T00:45 Sofia
-  > project: dual-reader
-  > item: DR-005
+- _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T16:20:00Z
-- **Last project:** critterium
-- **Last item:** CRT-8
-- **Total runs:** 12
+- **Last run:** 2026-06-11T17:32:10Z
+- **Last project:** dual-reader
+- **Last item:** DR-005
+- **Total runs:** 13
 
 ## 📁 Projects
 
@@ -46,10 +38,10 @@
 ### 🟢 dual-reader
 - **Status:** ** Active Development
 - **Updated:** ** 2026-06-11
-- **Ready:** DR-005:, DR-006:, DR-007:, DR-008:, DR-009:, DR-010:
+- **Ready:** DR-006:, DR-007:, DR-008:, DR-009:, DR-010:
 - **Needs Decision:** DR-004:
-- **Progress:** 3/10 done
-- **Last work:** 2026-06-11 — cron-worker — DR-003: Merged to master
+- **Progress:** 5/11 done
+- **Last work:** 2026-06-11 — cron-worker — DR-005: Reading Progress Tracking with Persistence
 
 ### ⚪ machine-setup
 - **Status:** ** Complete

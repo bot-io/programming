@@ -122,3 +122,26 @@
 **Test results:** 349 tests, 0 failures
 **Version:** v1.0.32
 **Commit:** 00ae406
+
+### 2026-06-11 — cron-worker — DR-005: Reading Progress Tracking with Persistence
+
+**Item:** DR-005 (P1)
+**Status:** done
+**Summary:** Added reading progress tracking with lastReadAt persistence and library progress display.
+
+**Changes:**
+- ReaderViewModel.goToPage() — now updates `lastReadAt = LocalDateTime.now()` alongside `currentPage` on every page navigation
+- ReaderViewModel.loadBook() — sets `lastReadAt` when opening a book and persists to Room
+- LibraryScreen — progress text changed from "currentPage/totalPages" to "XX% (currentPage/totalPages)"
+- New test file: ReadingProgressTest.kt — 21 tests covering:
+  - Progress percentage calculation (0%, 50%, 100%, edge cases)
+  - lastReadAt updates on navigation and book open
+  - Position persistence via bookRepository.updateBook()
+  - Position restoration on book reopen
+  - Independent progress tracking across multiple books
+  - Sequential navigation persistence
+  - Out-of-bounds position fallback
+
+**Test results:** 370 tests, 0 failures (up from 349)
+**Branch:** feat/DR-005-reading-progress pushed to bot-io/programming
+**Commit:** d52ca15
