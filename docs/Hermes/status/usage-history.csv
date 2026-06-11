@@ -61,3 +61,5 @@ timestamp,usage_pct,next_reset_sofia,spare_capacity,threshold_alert
 2026-06-11T15:08:53,1,2026-06-11 20:01 Sofia,true,
 2026-06-11T15:18:57,13,2026-06-11 20:01 Sofia,true,
 2026-06-11T15:29:02,32,2026-06-11 20:01 Sofia,true,
+2026-06-12T02:33:18,46,2026-06-12 06:01 Sofia,true,
+2026-06-12T02:44:01,46,2026-06-12 06:01 Sofia,true,

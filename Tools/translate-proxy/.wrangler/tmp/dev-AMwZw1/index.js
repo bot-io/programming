@@ -40,6 +40,233 @@ function parseBatchResponse(text, pages) {
 }
 __name(parseBatchResponse, "parseBatchResponse");
 
+// src/translation-cache.js
+var CACHE_TTL_MS = 90 * 24 * 60 * 60 * 1e3;
+async function getCachedTranslation(db, sourceText, targetLang) {
+  if (!db) return null;
+  const cacheKey = await computeCacheKey(sourceText, targetLang);
+  try {
+    const row = await db.prepare(
+      "SELECT translated_text, model, cached_at FROM translation_cache WHERE cache_key = ?"
+    ).bind(cacheKey).first();
+    if (!row) return null;
+    const cachedAt = new Date(row.cached_at).getTime();
+    if (Date.now() - cachedAt > CACHE_TTL_MS) {
+      await db.prepare("DELETE FROM translation_cache WHERE cache_key = ?").bind(cacheKey).run();
+      return null;
+    }
+    return row;
+  } catch (err) {
+    console.error(`[cache] Lookup error: ${err.message}`);
+    return null;
+  }
+}
+__name(getCachedTranslation, "getCachedTranslation");
+async function getCachedTranslations(db, pages, targetLang) {
+  const result = /* @__PURE__ */ new Map();
+  if (!db || pages.length === 0) return result;
+  try {
+    const keys = await Promise.all(
+      pages.map(async (p) => ({
+        index: p.index,
+        key: await computeCacheKey(p.text, targetLang)
+      }))
+    );
+    const placeholders = keys.map(() => "?").join(",");
+    const stmt = db.prepare(
+      `SELECT cache_key, translated_text, model, cached_at FROM translation_cache WHERE cache_key IN (${placeholders})`
+    ).bind(...keys.map((k) => k.key));
+    const rows = await stmt.all();
+    const keyToIndex = new Map(keys.map((k) => [k.key, k.index]));
+    const expiredKeys = [];
+    for (const row of rows.results) {
+      const idx = keyToIndex.get(row.cache_key);
+      if (idx === void 0) continue;
+      const cachedAt = new Date(row.cached_at).getTime();
+      if (Date.now() - cachedAt > CACHE_TTL_MS) {
+        expiredKeys.push(row.cache_key);
+        continue;
+      }
+      result.set(idx, {
+        translated_text: row.translated_text,
+        model: row.model
+      });
+    }
+    if (expiredKeys.length > 0) {
+      const delPlaceholders = expiredKeys.map(() => "?").join(",");
+      await db.prepare(
+        `DELETE FROM translation_cache WHERE cache_key IN (${delPlaceholders})`
+      ).bind(...expiredKeys).run();
+    }
+  } catch (err) {
+    console.error(`[cache] Batch lookup error: ${err.message}`);
+  }
+  return result;
+}
+__name(getCachedTranslations, "getCachedTranslations");
+async function storeCachedTranslation(db, sourceText, targetLang, translatedText, model) {
+  if (!db) return;
+  const cacheKey = await computeCacheKey(sourceText, targetLang);
+  try {
+    await db.prepare(
+      `INSERT OR REPLACE INTO translation_cache (cache_key, source_hash, target_lang, translated_text, model, cached_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(
+      cacheKey,
+      await computeHash(sourceText),
+      targetLang,
+      translatedText,
+      model,
+      (/* @__PURE__ */ new Date()).toISOString()
+    ).run();
+  } catch (err) {
+    console.error(`[cache] Store error: ${err.message}`);
+  }
+}
+__name(storeCachedTranslation, "storeCachedTranslation");
+async function storeCachedTranslations(db, translations) {
+  if (!db || translations.length === 0) return;
+  try {
+    const stmts = await Promise.all(translations.map(async (t) => {
+      const cacheKey = await computeCacheKey(t.sourceText, t.targetLang);
+      return db.prepare(
+        `INSERT OR REPLACE INTO translation_cache (cache_key, source_hash, target_lang, translated_text, model, cached_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      ).bind(
+        cacheKey,
+        await computeHash(t.sourceText),
+        t.targetLang,
+        t.translatedText,
+        t.model,
+        (/* @__PURE__ */ new Date()).toISOString()
+      );
+    }));
+    await db.batch(stmts);
+  } catch (err) {
+    console.error(`[cache] Batch store error: ${err.message}`);
+  }
+}
+__name(storeCachedTranslations, "storeCachedTranslations");
+async function getCacheStats(db) {
+  if (!db) return null;
+  try {
+    const [totalResult, expiredResult, langResult] = await db.batch([
+      db.prepare("SELECT COUNT(*) as count FROM translation_cache"),
+      db.prepare("SELECT COUNT(*) as count FROM translation_cache WHERE cached_at < ?").bind(new Date(Date.now() - CACHE_TTL_MS).toISOString()),
+      db.prepare("SELECT DISTINCT target_lang FROM translation_cache")
+    ]);
+    return {
+      total_entries: totalResult.results[0]?.count ?? 0,
+      expired_entries: expiredResult.results[0]?.count ?? 0,
+      languages: langResult.results.map((r) => r.target_lang)
+    };
+  } catch (err) {
+    console.error(`[cache] Stats error: ${err.message}`);
+    return null;
+  }
+}
+__name(getCacheStats, "getCacheStats");
+async function computeCacheKey(sourceText, targetLang) {
+  const combined = `${targetLang}:${sourceText}`;
+  return computeHash(combined);
+}
+__name(computeCacheKey, "computeCacheKey");
+async function computeHash(text) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+__name(computeHash, "computeHash");
+
+// src/quota.js
+var DEFAULT_DAILY_QUOTA = 50;
+async function checkDeviceQuota(db, installationId, pagesRequested = 1, dailyLimit) {
+  const limit = dailyLimit || DEFAULT_DAILY_QUOTA;
+  if (!installationId || !db) {
+    return { allowed: true, pagesUsed: 0, dailyLimit: limit, remaining: limit };
+  }
+  const today = getTodayString();
+  try {
+    const row = await db.prepare(
+      "SELECT pages_used FROM device_quota WHERE installation_id = ? AND quota_date = ?"
+    ).bind(installationId, today).first();
+    const pagesUsed = row?.pages_used || 0;
+    const remaining = Math.max(0, limit - pagesUsed);
+    return {
+      allowed: pagesUsed + pagesRequested <= limit,
+      pagesUsed,
+      dailyLimit: limit,
+      remaining
+    };
+  } catch (err) {
+    console.error(`[quota] Check error: ${err.message}`);
+    return { allowed: true, pagesUsed: 0, dailyLimit: limit, remaining: limit };
+  }
+}
+__name(checkDeviceQuota, "checkDeviceQuota");
+async function incrementDeviceQuota(db, installationId, pagesUsed = 1) {
+  if (!installationId || !db) return;
+  const today = getTodayString();
+  try {
+    await db.prepare(`
+      INSERT INTO device_quota (installation_id, quota_date, pages_used, last_updated)
+      VALUES (?, ?, ?, datetime('now'))
+      ON CONFLICT(installation_id, quota_date) DO UPDATE SET
+        pages_used = pages_used + ?,
+        last_updated = datetime('now')
+    `).bind(installationId, today, pagesUsed, pagesUsed).run();
+  } catch (err) {
+    console.error(`[quota] Increment error: ${err.message}`);
+  }
+}
+__name(incrementDeviceQuota, "incrementDeviceQuota");
+async function getDeviceQuotaStatus(db, installationId, dailyLimit) {
+  const limit = dailyLimit || DEFAULT_DAILY_QUOTA;
+  if (!installationId || !db) {
+    return { pagesUsed: 0, dailyLimit: limit, remaining: limit, resetAt: getResetTime() };
+  }
+  const today = getTodayString();
+  try {
+    const row = await db.prepare(
+      "SELECT pages_used FROM device_quota WHERE installation_id = ? AND quota_date = ?"
+    ).bind(installationId, today).first();
+    const pagesUsed = row?.pages_used || 0;
+    const remaining = Math.max(0, limit - pagesUsed);
+    return { pagesUsed, dailyLimit: limit, remaining, resetAt: getResetTime() };
+  } catch (err) {
+    console.error(`[quota] Status error: ${err.message}`);
+    return { pagesUsed: 0, dailyLimit: limit, remaining: limit, resetAt: getResetTime() };
+  }
+}
+__name(getDeviceQuotaStatus, "getDeviceQuotaStatus");
+async function cleanupOldQuotaRows(db) {
+  if (!db) return 0;
+  try {
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1e3).toISOString().slice(0, 10);
+    const result = await db.prepare(
+      "DELETE FROM device_quota WHERE quota_date < ?"
+    ).bind(twoDaysAgo).run();
+    return result.meta?.changes || 0;
+  } catch (err) {
+    console.error(`[quota] Cleanup error: ${err.message}`);
+    return 0;
+  }
+}
+__name(cleanupOldQuotaRows, "cleanupOldQuotaRows");
+function getTodayString() {
+  return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+}
+__name(getTodayString, "getTodayString");
+function getResetTime() {
+  const tomorrow = /* @__PURE__ */ new Date();
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  tomorrow.setUTCHours(0, 0, 0, 0);
+  return tomorrow.toISOString();
+}
+__name(getResetTime, "getResetTime");
+
 // src/index.js
 var CONFIG = {
   // Rate limiting (per IP)
@@ -69,7 +296,10 @@ var CONFIG = {
   gemini25Model: "gemini-2.5-flash",
   glmModel: "glm-4.7-flash",
   // CORS
-  allowedOrigins: ["*"]
+  allowedOrigins: ["*"],
+  // Per-device quota
+  dailyQuotaPerDevice: 50
+  // free pages per device per day
 };
 function resolveGeminiKeys(env) {
   const keys = [];
@@ -123,17 +353,35 @@ var src_default = {
     if (request.method === "POST" && url.pathname === "/translate/batch") {
       return corsResponse(await handleBatchTranslate(request, clientIp, env));
     }
+    if (request.method === "GET" && url.pathname === "/quota") {
+      const installationId = url.searchParams.get("installation_id");
+      if (!installationId) {
+        return corsResponse(jsonResponse(400, { error: "Missing installation_id parameter" }));
+      }
+      const quotaStatus = await getDeviceQuotaStatus(
+        env.TRANSLATION_CACHE,
+        installationId,
+        CONFIG.dailyQuotaPerDevice
+      );
+      if (Math.random() < 0.01) {
+        await cleanupOldQuotaRows(env.TRANSLATION_CACHE);
+      }
+      return corsResponse(jsonResponse(200, quotaStatus));
+    }
     if (request.method === "GET" && url.pathname === "/test/glm") {
       return corsResponse(await testGlm(env));
     }
     if (request.method === "GET" && url.pathname === "/status") {
       const { keys } = resolveGeminiKeys(env);
+      const cacheStats = await getCacheStats(env.TRANSLATION_CACHE);
       return corsResponse(jsonResponse(200, {
         status: "ok",
         geminiKeyCount: keys.length,
         glmKey: !!env.GLM_API_KEY,
         dailyLimitPerIp: CONFIG.dailyLimitPerIp,
-        maxBatchPages: CONFIG.maxBatchPages
+        dailyQuotaPerDevice: CONFIG.dailyQuotaPerDevice,
+        maxBatchPages: CONFIG.maxBatchPages,
+        cache: cacheStats
       }));
     }
     if (request.method !== "POST" || !url.pathname.startsWith("/translate")) {
@@ -148,7 +396,20 @@ var src_default = {
       } catch {
         return corsResponse(jsonResponse(400, { error: "Invalid JSON body" }));
       }
-      const { text, source_lang, target_lang } = body;
+      const { text, source_lang, target_lang, installation_id } = body;
+      const quotaResult = await checkDeviceQuota(
+        env.TRANSLATION_CACHE,
+        installation_id,
+        1,
+        CONFIG.dailyQuotaPerDevice
+      );
+      if (!quotaResult.allowed) {
+        return corsResponse(jsonResponse(429, {
+          error: "Daily free quota exceeded. Quota resets at midnight UTC.",
+          quota: { pages_used: quotaResult.pagesUsed, daily_limit: quotaResult.dailyLimit, remaining: 0 },
+          retry_after_hours: 24
+        }));
+      }
       if (!text || typeof text !== "string") {
         return corsResponse(jsonResponse(400, { error: 'Missing "text" field' }));
       }
@@ -161,6 +422,27 @@ var src_default = {
         }));
       }
       const systemPrompt = buildTranslationPrompt(source_lang || "auto", target_lang);
+      const cached = await getCachedTranslation(env.TRANSLATION_CACHE, text, target_lang);
+      if (cached) {
+        console.log(`[cache] HIT for single page (${target_lang}, ${cached.model})`);
+        await incrementDeviceQuota(env.TRANSLATION_CACHE, installation_id, 1);
+        await recordRequest(request, clientIp, env);
+        const updatedQuota = await checkDeviceQuota(
+          env.TRANSLATION_CACHE,
+          installation_id,
+          0,
+          CONFIG.dailyQuotaPerDevice
+        );
+        return corsResponse(jsonResponse(200, {
+          translated_text: cached.translated_text,
+          model: cached.model,
+          source_lang: source_lang || "auto",
+          target_lang,
+          cached: true,
+          quota: { pages_used: updatedQuota.pagesUsed, daily_limit: updatedQuota.dailyLimit, remaining: updatedQuota.remaining }
+        }));
+      }
+      console.log(`[cache] MISS for single page (${target_lang})`);
       const { pickKey } = resolveGeminiKeys(env);
       const geminiKey = pickKey(clientIp);
       let translatedText = null;
@@ -225,12 +507,21 @@ var src_default = {
       if (!translatedText) {
         return corsResponse(jsonResponse(502, { error: "Empty translation response from all providers" }));
       }
+      await storeCachedTranslation(env.TRANSLATION_CACHE, text, target_lang, translatedText, usedModel);
+      await incrementDeviceQuota(env.TRANSLATION_CACHE, installation_id, 1);
       await recordRequest(request, clientIp, env);
+      const finalQuota = await checkDeviceQuota(
+        env.TRANSLATION_CACHE,
+        installation_id,
+        0,
+        CONFIG.dailyQuotaPerDevice
+      );
       return corsResponse(jsonResponse(200, {
         translated_text: translatedText,
         model: usedModel,
         source_lang: source_lang || "auto",
-        target_lang
+        target_lang,
+        quota: { pages_used: finalQuota.pagesUsed, daily_limit: finalQuota.dailyLimit, remaining: finalQuota.remaining }
       }));
     } catch (err) {
       console.error("Worker error:", err);
@@ -248,7 +539,7 @@ async function handleBatchTranslate(request, clientIp, env) {
   } catch {
     return jsonResponse(400, { error: "Invalid JSON body" });
   }
-  const { pages, source_lang, target_lang } = body;
+  const { pages, source_lang, target_lang, installation_id } = body;
   if (!Array.isArray(pages) || pages.length === 0) {
     return jsonResponse(400, { error: 'Missing "pages" array' });
   }
@@ -257,6 +548,19 @@ async function handleBatchTranslate(request, clientIp, env) {
   }
   if (pages.length > CONFIG.maxBatchPages) {
     return jsonResponse(413, { error: `Too many pages (${pages.length}). Max ${CONFIG.maxBatchPages}.` });
+  }
+  const quotaResult = await checkDeviceQuota(
+    env.TRANSLATION_CACHE,
+    installation_id,
+    pages.length,
+    CONFIG.dailyQuotaPerDevice
+  );
+  if (!quotaResult.allowed) {
+    return jsonResponse(429, {
+      error: "Daily free quota exceeded. Quota resets at midnight UTC.",
+      quota: { pages_used: quotaResult.pagesUsed, daily_limit: quotaResult.dailyLimit, remaining: 0 },
+      retry_after_hours: 24
+    });
   }
   const totalChars = pages.reduce((sum, p, i) => {
     if (!p.text || typeof p.text !== "string") {
@@ -270,7 +574,38 @@ async function handleBatchTranslate(request, clientIp, env) {
     });
   }
   const systemPrompt = buildBatchTranslationPrompt(source_lang || "auto", target_lang, pages.length);
-  const userText = formatBatchPages(pages);
+  const cachedPages = await getCachedTranslations(env.TRANSLATION_CACHE, pages, target_lang || source_lang);
+  if (cachedPages.size === pages.length) {
+    console.log(`[cache] BATCH HIT \u2014 all ${pages.length} pages cached`);
+    const cachedResults = pages.map((p) => {
+      const cached = cachedPages.get(p.index);
+      return {
+        index: p.index,
+        translated_text: cached.translated_text,
+        model: cached.model,
+        cached: true
+      };
+    });
+    await incrementDeviceQuota(env.TRANSLATION_CACHE, installation_id, pages.length);
+    await recordRequest(request, clientIp, env);
+    const batchQuota = await checkDeviceQuota(
+      env.TRANSLATION_CACHE,
+      installation_id,
+      0,
+      CONFIG.dailyQuotaPerDevice
+    );
+    return jsonResponse(200, {
+      translations: cachedResults,
+      model: cachedPages.values().next().value.model,
+      source_lang: source_lang || "auto",
+      target_lang,
+      cached: true,
+      quota: { pages_used: batchQuota.pagesUsed, daily_limit: batchQuota.dailyLimit, remaining: batchQuota.remaining }
+    });
+  }
+  const uncachedPages = pages.filter((p) => !cachedPages.has(p.index));
+  console.log(`[cache] BATCH PARTIAL \u2014 ${cachedPages.size}/${pages.length} cached, translating ${uncachedPages.length}`);
+  const userText = formatBatchPages(uncachedPages);
   const { pickKey } = resolveGeminiKeys(env);
   const geminiKey = pickKey(clientIp);
   let translatedText = null;
@@ -321,13 +656,51 @@ async function handleBatchTranslate(request, clientIp, env) {
   if (!translatedText) {
     return jsonResponse(502, { error: "Empty response from all providers" });
   }
-  const parsed = parseBatchResponse(translatedText, pages);
+  const parsed = parseBatchResponse(translatedText, uncachedPages);
+  if (parsed.length > 0) {
+    const cacheEntries = parsed.map((p) => {
+      const originalPage = uncachedPages.find((op) => op.index === p.index);
+      return {
+        sourceText: originalPage ? originalPage.text : "",
+        targetLang: target_lang,
+        translatedText: p.translated_text,
+        model: usedModel
+      };
+    }).filter((e) => e.sourceText);
+    await storeCachedTranslations(env.TRANSLATION_CACHE, cacheEntries);
+  }
+  const allResults = [];
+  for (const page of pages) {
+    if (cachedPages.has(page.index)) {
+      const cached = cachedPages.get(page.index);
+      allResults.push({ index: page.index, translated_text: cached.translated_text, model: cached.model });
+    } else {
+      const fresh = parsed.find((p) => p.index === page.index);
+      if (fresh) {
+        allResults.push({ index: fresh.index, translated_text: fresh.translated_text, model: usedModel });
+      }
+    }
+  }
+  const freshPages = Math.max(parsed.length, uncachedPages.length);
+  if (freshPages > 0) {
+    await incrementDeviceQuota(env.TRANSLATION_CACHE, installation_id, freshPages);
+  }
+  if (cachedPages.size > 0 && cachedPages.size < pages.length) {
+    await incrementDeviceQuota(env.TRANSLATION_CACHE, installation_id, cachedPages.size);
+  }
   await recordRequest(request, clientIp, env);
+  const batchFinalQuota = await checkDeviceQuota(
+    env.TRANSLATION_CACHE,
+    installation_id,
+    0,
+    CONFIG.dailyQuotaPerDevice
+  );
   return jsonResponse(200, {
-    translations: parsed,
+    translations: allResults,
     model: usedModel,
     source_lang: source_lang || "auto",
-    target_lang
+    target_lang,
+    quota: { pages_used: batchFinalQuota.pagesUsed, daily_limit: batchFinalQuota.dailyLimit, remaining: batchFinalQuota.remaining }
   });
 }
 __name(handleBatchTranslate, "handleBatchTranslate");
@@ -629,7 +1002,7 @@ async function testGlm(env) {
 __name(testGlm, "testGlm");
 function corsResponse(response) {
   response.headers.set("Access-Control-Allow-Origin", "*");
-  response.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  response.headers.set("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   response.headers.set("Access-Control-Allow-Headers", "Content-Type");
   return response;
 }
@@ -676,7 +1049,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-UAlQfS/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-p6KxR0/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -708,7 +1081,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-UAlQfS/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-p6KxR0/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
