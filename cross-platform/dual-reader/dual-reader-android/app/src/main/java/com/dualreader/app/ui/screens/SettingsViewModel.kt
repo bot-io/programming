@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -59,12 +60,7 @@ class SettingsViewModel @Inject constructor(
     /** Load translation info for all books in the library. */
     fun loadTranslationInfo() {
         viewModelScope.launch {
-            val books = bookRepository.getAllBooks().let { flow ->
-                // Collect the first emission
-                var result: List<com.dualreader.app.domain.entities.Book> = emptyList()
-                flow.collect { result = it; return@collect }
-                result
-            }
+            val books = bookRepository.getAllBooks().first()
             val allInfo = mutableListOf<PageTranslationInfo>()
             for (book in books) {
                 val pages = bookRepository.getPagesForBook(book.id)

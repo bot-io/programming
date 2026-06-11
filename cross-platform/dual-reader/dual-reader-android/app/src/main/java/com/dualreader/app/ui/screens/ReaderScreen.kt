@@ -132,32 +132,59 @@ fun highlightText(
 
 // ─── Sentence splitting ──────────────────────────────────────────────────────
 
-/**
- * Split text into sentences.
- *
- * Strategy: match the boundary *between* the end-of-sentence punctuation
- * (plus optional trailing quotes/brackets) and the whitespace that follows,
- * without using a lookbehind.  We match the punctuation + quotes + space
- * and then split, keeping the punctuation/quotes on the preceding sentence
- * by using a capture group.
- *
- * Original regex crashed on Android because it used an unbounded lookbehind:
- *   (?<=[.!?…]["'"»'')\]]*\s+)
- * Android's ICU regex engine requires bounded-length lookbehinds.
- */
-private val sentenceSplitRegex = Regex(
-    """([.!?…]["'"»'')\]]{0,3})\s+"""
+/** Regex matching a potential sentence boundary: punctuation + optional quotes + whitespace. */
+private val boundaryRegex = Regex("""([.!?…]["'"»'')\]]{0,3})(\s+)""")
+
+/** Known abbreviations whose trailing dot is NOT a sentence boundary. */
+private val ABBREVIATIONS = setOf(
+    "dr", "mr", "mrs", "ms", "prof", "st", "jr", "sr", "vs", "no",
+    "gen", "sgt", "lt", "col", "capt", "pvt", "rep", "sen", "rev",
+    "hon", "pres", "gov", "inc", "ltd", "corp", "co", "etc", "ed",
+    "al", "vol", "min", "max", "fig", "approx", "apt", "dept", "est",
 )
 
+/**
+ * Check whether the punctuation at [punctPos] in [text] follows an abbreviation or initial.
+ * Walks backwards from the punctuation, skipping any quotes, then collects the preceding
+ * word and checks it against [ABBREVIATIONS] or the single-uppercase-letter pattern.
+ */
+private fun isAbbreviationBoundary(text: String, punctPos: Int): Boolean {
+    if (punctPos <= 0) return false
+    var i = punctPos - 1
+    // Skip trailing quotes/brackets before the punctuation
+    while (i >= 0 && text[i] in "\"'»\u201C\u201D\u2018\u2019)]}\u00AB") i--
+    val wordEnd = i + 1
+    // Collect the preceding word (letters only)
+    while (i >= 0 && text[i].isLetter()) i--
+    val word = text.substring(i + 1, wordEnd)
+    if (word.isEmpty()) return false
+    // Single uppercase Latin or Cyrillic letter = initial (A., И.)
+    if (word.length == 1 && (word[0] in 'A'..'Z' || word[0] in '\u0410'..'\u042F')) return true
+    return word.lowercase() in ABBREVIATIONS
+}
+
+/**
+ * Split text into sentences, correctly handling abbreviations (Dr., Mr., etc.)
+ * and single-letter initials (A., И.).
+ *
+ * Uses a two-phase approach: first finds all potential boundaries, then filters
+ * out those following abbreviations.
+ */
 internal fun splitSentences(text: String): List<String> {
     if (text.isBlank()) return emptyList()
-    // Replace the boundary with the captured punctuation + a null char,
-    // then split on the null char. This preserves the punctuation on the
-    // preceding sentence and trims the inter-sentence whitespace.
-    val stitched = sentenceSplitRegex.replace(text) { match ->
-        match.groupValues[1] + "\u0000"
+    val result = mutableListOf<String>()
+    var last = 0
+    for (m in boundaryRegex.findAll(text)) {
+        val punctPos = m.range.first
+        if (isAbbreviationBoundary(text, punctPos)) continue
+        val boundary = m.range.last + 1
+        val sentence = text.substring(last, boundary).trim()
+        if (sentence.isNotEmpty()) result.add(sentence)
+        last = boundary
     }
-    return stitched.split('\u0000').filter { it.isNotBlank() }
+    val tail = text.substring(last).trim()
+    if (tail.isNotEmpty()) result.add(tail)
+    return if (result.isEmpty() && text.isNotBlank()) listOf(text.trim()) else result
 }
 
 // ─── Layout Mode ─────────────────────────────────────────────────────────────

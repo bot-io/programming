@@ -210,12 +210,80 @@ class SentenceSplitterTest {
 
     @Test
     fun `splitSentences - abbreviations treated as single sentence`() {
-        // "Dr. Jones" — period after abbreviation but no space before capital
-        // Actually there IS a space after "Dr." so this WILL split.
-        // This is a known limitation of simple regex-based splitting.
+        // "Dr. Jones" — now correctly NOT split on abbreviation
         val result = splitSentences("Dr. Jones arrived.")
-        // Accept either 1 or 2 — both are reasonable for a simple splitter
-        assertTrue("Expected 1-2 sentences, got ${result.size}", result.size in 1..2)
+        assertEquals("Dr. should not split", 1, result.size)
+    }
+
+    @Test
+    fun `splitSentences - abbreviation Mr inside quotes`() {
+        val result = splitSentences("\"Mr. Jones.\" She said.")
+        assertEquals(2, result.size)
+        assertTrue(result[0].contains("Mr. Jones"))
+    }
+
+    @Test
+    fun `splitSentences - abbreviation Dr inside quotes`() {
+        val result = splitSentences("He said \"Dr. Smith is here.\" She nodded.")
+        assertEquals(2, result.size)
+        assertTrue(result[0].contains("Dr. Smith"))
+    }
+
+    @Test
+    fun `splitSentences - abbreviation etc does not split`() {
+        val result = splitSentences("Items like apples, oranges, etc. are available.")
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun `splitSentences - abbreviation St does not split`() {
+        val result = splitSentences("He lived on St. Mary Street.")
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun `splitSentences - abbreviation No does not split`() {
+        val result = splitSentences("This is No. 5 on the list.")
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun `splitSentences - single letter initial does not split`() {
+        val result = splitSentences("A. B. Smith came to the party.")
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun `splitSentences - Cyrillic initial does not split`() {
+        val result = splitSentences("\u0410. \u0411. \u0418\u0432\u0430\u043d\u043e\u0432 \u0434\u043e\u0439\u0434\u0435.")
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun `splitSentences - dot inside quotes still splits correctly`() {
+        val result = splitSentences("He replied \"I know.\" And walked away.")
+        assertEquals(2, result.size)
+        assertTrue(result[0].contains("I know"))
+    }
+
+    @Test
+    fun `splitSentences - Mrs abbreviation does not split`() {
+        val result = splitSentences("Mrs. Smith arrived early.")
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun `splitSentences - Prof abbreviation does not split`() {
+        val result = splitSentences("Prof. Adams gave a lecture.")
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun `splitSentences - abbreviation followed by real sentence`() {
+        val result = splitSentences("Dr. Jones arrived. He was late.")
+        assertEquals(2, result.size)
+        assertTrue(result[0].contains("Dr. Jones"))
+        assertTrue(result[1].contains("He was late"))
     }
 
     @Test

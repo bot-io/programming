@@ -405,7 +405,7 @@ private fun TranslationInfoDialog(
         title = { Text("Translation Details") },
         text = {
             if (translationInfo.isEmpty()) {
-                Text("Loading translation info…")
+                Text("No translations found. Translate some pages first.")
             } else {
                 Box(
                     Modifier
