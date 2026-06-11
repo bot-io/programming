@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 20:52 Sofia**
+> Last updated: **2026-06-11 21:01 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -10,21 +10,13 @@
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- `dual-reader.lock` — 0 min ago
-  > session: telegram-dual-reader
-  > timestamp: 2026-06-11T01:15 Sofia
-  > project: dual-reader
-  > item: bugfix-translation-info + bugfix-sentence-splitting
-- ⚠️ **WORKER RUNNING** — 6 min ago
-  > worker: autonomous-critterium
-  > started: 2026-06-11T20:46 Sofia
-  > item: TBD
+- _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T16:20:00Z
+- **Last run:** 2026-06-11T20:55:00Z
 - **Last project:** critterium
-- **Last item:** CRT-8
-- **Total runs:** 12
+- **Last item:** CRT-9
+- **Total runs:** 13
 
 ## 📁 Projects
 
@@ -35,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🟢 critterium
-- **Status:** ** M1 in progress
+- **Status:** ** M2 in progress
 - **Updated:** ** 2026-06-11
-- **Ready:** CRT-9, CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
+- **Ready:** CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
 - **Blocked:** CRT-16
-- **Progress:** 8/16 done
+- **Progress:** 9/16 done
 - **❓ Open Questions:** Q9:, Q10:, Q11:, Q12:, Q13:, Q14:, Q15:, Q16:, Q17: → answer in `questions.md` or this chat
 - **Last work:** Pre-existing issues
 

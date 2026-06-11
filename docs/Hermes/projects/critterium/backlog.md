@@ -84,16 +84,18 @@
 - **Notes:** Branch `feat/crt-8-benchmark-harness` pushed. 11 new tests, all pass. Benchmark measures full pipeline (pairwise + wander + drag + vortex + boundary). PR needs manual creation.
 
 ### CRT-9 Pixi renderer + minimal web app
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M2
 - **Acceptance Criteria:**
-  1. Circles as batched tinted sprites from one shared texture
-  2. Interpolation between sim steps for smooth rendering
-  3. FPS counter overlay
-  4. Default 3-type config with documented sample matrix showing emergent clustering + chase
-  5. Per-type texture swap support (one-point change for future skins)
-  6. Per-particle rotation from velocity heading (one-point change for future creatures)
-  7. Playwright smoke test
+  1. ~~Circles as batched tinted sprites from one shared texture~~ ✅ Per-species RenderTexture from Graphics → batched Sprites
+  2. ~~Interpolation between sim steps for smooth rendering~~ ✅ prevX/prevY + alpha lerp in update()
+  3. ~~FPS counter overlay~~ ✅ HUD with FPS, particle count, per-species counts
+  4. ~~Default 3-type config with documented sample matrix showing emergent clustering + chase~~ ✅ Documented asymmetric matrix in main.ts
+  5. ~~Per-type texture swap support (one-point change for future skins)~~ ✅ setSpeciesTexture() + SpeciesVisual.texture
+  6. ~~Per-particle rotation from velocity heading (one-point change for future creatures)~~ ✅ atan2(vy, vx)
+  7. ~~Playwright smoke test~~ ✅ 5 e2e tests all pass
+- **Branch:** `feat/crt-9-pixi-renderer` pushed (PR needs manual creation — token scope issue)
+- **Tests:** 260 unit tests + 5 Playwright e2e tests, all pass
 
 ### CRT-10 Pointer/touch interaction force
 - **Status:** ready
