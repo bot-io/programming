@@ -13,6 +13,13 @@
  */
 
 import { formatBatchPages, parseBatchResponse } from './batch-utils.js';
+import {
+  getCachedTranslation,
+  getCachedTranslations,
+  storeCachedTranslation,
+  storeCachedTranslations,
+  getCacheStats,
+} from './translation-cache.js';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -132,15 +139,17 @@ export default {
       return corsResponse(await testGlm(env));
     }
 
-    // GET /status — pool health check (no keys exposed)
+    // GET /status — pool health check + cache stats
     if (request.method === 'GET' && url.pathname === '/status') {
       const { keys } = resolveGeminiKeys(env);
+      const cacheStats = await getCacheStats(env.TRANSLATION_CACHE);
       return corsResponse(jsonResponse(200, {
         status: 'ok',
         geminiKeyCount: keys.length,
         glmKey: !!env.GLM_API_KEY,
         dailyLimitPerIp: CONFIG.dailyLimitPerIp,
         maxBatchPages: CONFIG.maxBatchPages,
+        cache: cacheStats,
       }));
     }
 
@@ -177,6 +186,21 @@ export default {
       }
 
       const systemPrompt = buildTranslationPrompt(source_lang || 'auto', target_lang);
+
+      // 2b. Check D1 translation cache (cross-user sharing)
+      const cached = await getCachedTranslation(env.TRANSLATION_CACHE, text, target_lang);
+      if (cached) {
+        console.log(`[cache] HIT for single page (${target_lang}, ${cached.model})`);
+        await recordRequest(request, clientIp, env);
+        return corsResponse(jsonResponse(200, {
+          translated_text: cached.translated_text,
+          model: cached.model,
+          source_lang: source_lang || 'auto',
+          target_lang,
+          cached: true,
+        }));
+      }
+      console.log(`[cache] MISS for single page (${target_lang})`);
 
       // 3. Resolve Gemini key from pool, then try providers
       const { pickKey } = resolveGeminiKeys(env);
@@ -253,7 +277,10 @@ export default {
         return corsResponse(jsonResponse(502, { error: 'Empty translation response from all providers' }));
       }
 
-      // 4. Record this request for rate limiting
+      // 4. Store in D1 cache for cross-user sharing
+      await storeCachedTranslation(env.TRANSLATION_CACHE, text, target_lang, translatedText, usedModel);
+
+      // 5. Record this request for rate limiting
       await recordRequest(request, clientIp, env);
 
       return corsResponse(jsonResponse(200, {
@@ -311,7 +338,37 @@ async function handleBatchTranslate(request, clientIp, env) {
   }
 
   const systemPrompt = buildBatchTranslationPrompt(source_lang || 'auto', target_lang, pages.length);
-  const userText = formatBatchPages(pages);
+
+  // Check D1 cache for all pages (cross-user sharing)
+  const cachedPages = await getCachedTranslations(env.TRANSLATION_CACHE, pages, target_lang || source_lang);
+
+  // If all pages are cached, return immediately
+  if (cachedPages.size === pages.length) {
+    console.log(`[cache] BATCH HIT — all ${pages.length} pages cached`);
+    const cachedResults = pages.map(p => {
+      const cached = cachedPages.get(p.index);
+      return {
+        index: p.index,
+        translated_text: cached.translated_text,
+        model: cached.model,
+        cached: true,
+      };
+    });
+    await recordRequest(request, clientIp, env);
+    return jsonResponse(200, {
+      translations: cachedResults,
+      model: cachedPages.values().next().value.model,
+      source_lang: source_lang || 'auto',
+      target_lang,
+      cached: true,
+    });
+  }
+
+  // Filter to only uncached pages for translation
+  const uncachedPages = pages.filter(p => !cachedPages.has(p.index));
+  console.log(`[cache] BATCH PARTIAL — ${cachedPages.size}/${pages.length} cached, translating ${uncachedPages.length}`);
+
+  const userText = formatBatchPages(uncachedPages);
 
   // Resolve Gemini key from pool
   const { pickKey } = resolveGeminiKeys(env);
@@ -364,13 +421,41 @@ async function handleBatchTranslate(request, clientIp, env) {
     return jsonResponse(502, { error: 'Empty response from all providers' });
   }
 
-  // Parse the structured response into individual translations
-  const parsed = parseBatchResponse(translatedText, pages);
+  // Parse the structured response into individual translations (against uncached pages)
+  const parsed = parseBatchResponse(translatedText, uncachedPages);
+
+  // Store newly translated pages in D1 cache
+  if (parsed.length > 0) {
+    const cacheEntries = parsed.map(p => {
+      const originalPage = uncachedPages.find(op => op.index === p.index);
+      return {
+        sourceText: originalPage ? originalPage.text : '',
+        targetLang: target_lang,
+        translatedText: p.translated_text,
+        model: usedModel,
+      };
+    }).filter(e => e.sourceText);
+    await storeCachedTranslations(env.TRANSLATION_CACHE, cacheEntries);
+  }
+
+  // Merge cached + newly translated results
+  const allResults = [];
+  for (const page of pages) {
+    if (cachedPages.has(page.index)) {
+      const cached = cachedPages.get(page.index);
+      allResults.push({ index: page.index, translated_text: cached.translated_text, model: cached.model });
+    } else {
+      const fresh = parsed.find(p => p.index === page.index);
+      if (fresh) {
+        allResults.push({ index: fresh.index, translated_text: fresh.translated_text, model: usedModel });
+      }
+    }
+  }
 
   await recordRequest(request, clientIp, env);
 
   return jsonResponse(200, {
-    translations: parsed,
+    translations: allResults,
     model: usedModel,
     source_lang: source_lang || 'auto',
     target_lang,
