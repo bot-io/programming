@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-11 10:13 Sofia**
+> Last updated: **2026-06-11 15:42 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -10,17 +10,21 @@
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- `dual-reader.lock` — 59 min ago
+- `critterium.lock` — 1 min ago
+  > session: interactive-telegram
+  > started: 2026-06-11T10:23 Sofia
+  > item: architecture planning (ecosystem mode)
+- `dual-reader.lock` — 9 min ago
   > session: telegram-dual-reader
   > timestamp: 2026-06-11T00:45 Sofia
   > project: dual-reader
   > item: DR-005
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-11T10:11:00Z
-- **Last project:** critterium
-- **Last item:** CRT-7
-- **Total runs:** 10
+- **Last run:** 2026-06-11T15:30:00Z
+- **Last project:** dual-reader
+- **Last item:** DR-003
+- **Total runs:** 11
 
 ## 📁 Projects
 
@@ -36,7 +40,7 @@
 - **Ready:** CRT-8, CRT-9, CRT-10, CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
 - **Blocked:** CRT-16
 - **Progress:** 7/16 done
-- **❓ Open Questions:** Q1:, Q2:, Q3:, Q4:, Q5:, Q6:, Q7:, Q8: → answer in `questions.md` or this chat
+- **❓ Open Questions:** Q9:, Q10:, Q11:, Q12:, Q13:, Q14:, Q15:, Q16:, Q17: → answer in `questions.md` or this chat
 - **Last work:** 2026-06-11 CRT-7: Alignment (flocking) force ✅
 
 ### 🟢 dual-reader
@@ -45,7 +49,7 @@
 - **Ready:** DR-005:, DR-006:, DR-007:, DR-008:, DR-009:, DR-010:
 - **Needs Decision:** DR-004:
 - **Progress:** 3/10 done
-- **Last work:** 2026-06-11 — overnight-worker — DR-003: Night Mode Reading Experience
+- **Last work:** 2026-06-11 — cron-worker — DR-003: Merged to master
 
 ### ⚪ machine-setup
 - **Status:** ** Complete
@@ -55,7 +59,7 @@
 
 ## 🚨 Needs Your Input
 
-- **critterium** — blocked: CRT-16; open questions: Q1:, Q2:, Q3:, Q4:, Q5:, Q6:, Q7:, Q8:
+- **critterium** — blocked: CRT-16; open questions: Q9:, Q10:, Q11:, Q12:, Q13:, Q14:, Q15:, Q16:, Q17:
   → Open that project's Telegram chat and respond, or tell this chat
 - **dual-reader** — needs-decision: DR-004:
   → Open that project's Telegram chat and respond, or tell this chat

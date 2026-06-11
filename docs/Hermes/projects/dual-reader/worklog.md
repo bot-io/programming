@@ -90,3 +90,16 @@
 **Test results:** 30 new tests, all passing. Pre-existing 9 PaginationIntegrationTest failures unrelated (temp dir issue).
 **Branch:** feat/DR-003-night-mode pushed to bot-io/programming (PR creation blocked by token scope)
 **Commit:** 7955bcd
+
+### 2026-06-11 — cron-worker — DR-003: Merged to master
+
+**Item:** DR-003 (P1)
+**Status:** done (merged to master)
+**Summary:** Verified DR-003 implementation on feat/DR-003-night-mode branch — all tests pass. Merged to master via `--no-ff`.
+
+**Verification:**
+- All 346 unit tests pass (`testDebugUnitTest` — BUILD SUCCESSFUL)
+- Acceptance criteria all met: true black #000000, WCAG AAA contrast, 400ms animated transitions, all 7 themes distinct
+- Backlog already marked done from branch; state.md updated
+
+**Git:** Merge commit on master (feat/DR-003-night-mode → master)
