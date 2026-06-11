@@ -1,8 +1,20 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+}
+
+// Helper to read from local.properties
+fun localProperty(key: String): String? {
+    val localProperties = Properties()
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localProperties.load(localPropertiesFile.inputStream())
+    }
+    return localProperties.getProperty(key)
 }
 
 android {
@@ -13,8 +25,8 @@ android {
         applicationId = "com.dualreader.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 30
-        versionName = "1.0.30"
+        versionCode = 31
+        versionName = "1.0.31"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -31,15 +43,20 @@ android {
     }
 
     signingConfigs {
-        getByName("debug") {
-            // Use debug keystore for release too (no real keystore needed for dev)
-        }
+        // Release signing: add to local.properties:
+        //   storeFile=<path-to-keystore>
+        //   storePassword=<password>
+        //   keyAlias=<alias>
+        //   keyPassword=<password>
+        // Or set env vars: KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+        // Until configured, release builds use debug keystore.
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            // Falls back to debug keystore if no release keystore configured
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -82,6 +99,7 @@ android {
 dependencies {
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
+    implementation(libs.core.splashscreen)
     implementation(libs.androidx.activity.compose)
 
     // Compose

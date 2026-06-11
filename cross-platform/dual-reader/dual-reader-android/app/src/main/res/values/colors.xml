@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash screen colors -->
+    <color name="splash_background">#FF1A1A2E</color>
+    <color name="splash_icon_background">#FF16213E</color>
+</resources>
