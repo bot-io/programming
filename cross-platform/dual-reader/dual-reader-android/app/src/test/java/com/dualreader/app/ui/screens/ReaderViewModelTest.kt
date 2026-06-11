@@ -1193,4 +1193,149 @@ class ReaderViewModelTest {
         assertEquals("Should skip already-translated page 0", 2, capturedPages!!.size)
         assertFalse(capturedPages!!.any { it.index == 0 })
     }
+
+    // ── Reading Progress Tracking (DR-005) ──────────────────────────────────
+
+    @Test
+    fun `goToPage - updates lastReadAt timestamp`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertNull((vm.uiState.value as ReaderUiState.ReaderReady).book.lastReadAt)
+
+        vm.goToPage(1)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertNotNull("lastReadAt should be set after navigation", state.book.lastReadAt)
+    }
+
+    @Test
+    fun `goToPage - persists book with lastReadAt`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.goToPage(2)
+        advanceUntilIdle()
+
+        coVerify {
+            bookRepository.updateBook(match {
+                it.currentPage == 2 && it.lastReadAt != null
+            })
+        }
+    }
+
+    @Test
+    fun `goToPage - updates lastReadAt on each navigation`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.goToPage(1)
+        advanceUntilIdle()
+        val firstReadAt = (vm.uiState.value as ReaderUiState.ReaderReady).book.lastReadAt
+
+        // Small delay to ensure different timestamp
+        kotlinx.coroutines.delay(10)
+
+        vm.goToPage(2)
+        advanceUntilIdle()
+        val secondReadAt = (vm.uiState.value as ReaderUiState.ReaderReady).book.lastReadAt
+
+        assertNotNull(firstReadAt)
+        assertNotNull(secondReadAt)
+        // lastReadAt should be updated (second >= first)
+        assertFalse(secondReadAt!!.isBefore(firstReadAt!!))
+    }
+
+    @Test
+    fun `loadBook - restores last saved page position`() = runTest(testDispatcher) {
+        // Simulate a book that was previously read to page 2
+        val readBook = testBook.copy(currentPage = 2)
+        coEvery { bookRepository.getBookById("book1") } returns readBook
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertEquals("Should restore to page 2", 2, state.currentPage.index)
+        assertEquals("Page two text", state.currentPage.originalText)
+    }
+
+    @Test
+    fun `progress - reflects current page after navigation`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(0f, (vm.uiState.value as ReaderUiState.ReaderReady).book.progressPercent, 0.001f)
+
+        vm.goToPage(1)
+        assertEquals(1f / 3f, (vm.uiState.value as ReaderUiState.ReaderReady).book.progressPercent, 0.001f)
+
+        vm.goToPage(2)
+        assertEquals(2f / 3f, (vm.uiState.value as ReaderUiState.ReaderReady).book.progressPercent, 0.001f)
+    }
+
+    @Test
+    fun `progressLabel - shows correct percentage in book state`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.goToPage(1)
+        val state = vm.uiState.value as ReaderUiState.ReaderReady
+        assertEquals("33%", state.book.progressLabel)
+    }
+
+    @Test
+    fun `hasProgress - true after navigating past first page`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse((vm.uiState.value as ReaderUiState.ReaderReady).book.hasProgress)
+
+        vm.goToPage(1)
+        assertTrue((vm.uiState.value as ReaderUiState.ReaderReady).book.hasProgress)
+    }
+
+    @Test
+    fun `goToPage - persists currentPage for progress restoration`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.goToPage(1)
+        advanceUntilIdle()
+
+        coVerify { bookRepository.updateBook(match { it.currentPage == 1 }) }
+    }
+
+    @Test
+    fun `progress persists across simulated app restart`() = runTest(testDispatcher) {
+        // First session: navigate to page 2
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.goToPage(2)
+        advanceUntilIdle()
+
+        // Capture what was persisted
+        val savedBook = slot<Book>()
+        coVerify { bookRepository.updateBook(capture(savedBook)) }
+        assertEquals(2, savedBook.captured.currentPage)
+        assertNotNull(savedBook.captured.lastReadAt)
+
+        // Simulate restart: new ViewModel loads the saved state
+        val restartedBook = testBook.copy(
+            currentPage = savedBook.captured.currentPage,
+            lastReadAt = savedBook.captured.lastReadAt,
+        )
+        coEvery { bookRepository.getBookById("book1") } returns restartedBook
+
+        val vm2 = createViewModel()
+        advanceUntilIdle()
+
+        val state = vm2.uiState.value as ReaderUiState.ReaderReady
+        assertEquals("Should restore to page 2 after restart", 2, state.currentPage.index)
+        assertEquals(2f / 3f, state.book.progressPercent, 0.001f)
+        assertEquals("66%", state.book.progressLabel)
+        assertTrue(state.book.hasProgress)
+    }
 }

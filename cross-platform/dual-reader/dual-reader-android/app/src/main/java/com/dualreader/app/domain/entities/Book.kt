@@ -28,8 +28,17 @@ data class Book(
     val canBeOpened: Boolean
         get() = paginationStatus == PaginationStatus.COMPLETED && totalPages > 0
 
+    /** Progress as a 0..1 fraction. */
     val progressPercent: Float
         get() = if (totalPages > 0) currentPage.toFloat() / totalPages else 0f
+
+    /** Human-readable progress text, e.g. "45%" or "3/7". */
+    val progressLabel: String
+        get() = if (totalPages > 0) "${(progressPercent * 100).toInt()}%" else ""
+
+    /** Whether this book has any reading progress (not on first page). */
+    val hasProgress: Boolean
+        get() = currentPage > 0 && totalPages > 0
 }
 
 enum class BookFormat {

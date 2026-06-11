@@ -243,7 +243,10 @@ class ReaderViewModel @Inject constructor(
         if (index < 0 || index >= pages.size) return
 
         val currentPage = pages[index]
-        val updatedBook = book.copy(currentPage = index)
+        val updatedBook = book.copy(
+            currentPage = index,
+            lastReadAt = LocalDateTime.now(),
+        )
         _book = updatedBook
 
         _uiState.value = ReaderUiState.ReaderReady(
