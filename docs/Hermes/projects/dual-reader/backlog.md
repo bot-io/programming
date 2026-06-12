@@ -92,15 +92,15 @@
 - **Notes:** D1 database needs to be created via `wrangler d1 create dual-reader-cache` and migration applied. database_id placeholder in wrangler.toml needs updating.
 
 ### DR-009: Per-Device Free Quota
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Acceptance Criteria:**
-  1. Each installation gets a daily free quota (e.g. 50 pages/day)
-  2. Quota tracked via Installation ID (UUID generated on first install)
-  3. Worker checks quota before processing translation requests
-  4. App shows remaining quota in Settings
-  5. When quota exceeded: user-friendly message, option to wait or upgrade
-- **Notes:** Prevents abuse, enables freemium model. Requires D1 for quota storage.
+  1. Each installation gets a daily free quota (e.g. 50 pages/day) ✅ Default 50 pages/device/day
+  2. Quota tracked via Installation ID (UUID generated on first install) ✅ InstallationIdProvider stores UUID in DataStore
+  3. Worker checks quota before processing translation requests ✅ checkDeviceQuota / incrementDeviceQuota in src/quota.js
+  4. App shows remaining quota in Settings ✅ Daily Translation Quota section with progress bar, color-coded warnings
+  5. When quota exceeded: user-friendly message, option to wait or upgrade ✅ Error message + "resumes tomorrow at midnight UTC"
+- **Notes:** Prevents abuse, enables freemium model. D1 table device_quota with installation_id+date composite PK. Worker: quota.js (153 LOC, 30 tests). Android: InstallationIdProvider, QuotaApi, quota UI in SettingsScreen. All builds pass.
 
 ### DR-010: Book Context for Translation Quality
 - **Status:** ready

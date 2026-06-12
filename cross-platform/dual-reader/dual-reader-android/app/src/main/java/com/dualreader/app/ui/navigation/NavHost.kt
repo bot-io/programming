@@ -134,9 +134,11 @@ fun DualReaderNavHost() {
                 settings = settings,
                 cachedTranslationCount = cachedCount,
                 translationInfo = translationInfo,
+                quotaStatus = viewModel.quotaStatus,
                 onSettingsChanged = { viewModel.updateSettings(it) },
                 onClearTranslations = { viewModel.clearAllTranslations() },
                 onViewTranslationInfo = { viewModel.loadTranslationInfo() },
+                onRefreshQuota = { viewModel.refreshQuota() },
                 onBack = { navController.popBackStack() },
             )
         }

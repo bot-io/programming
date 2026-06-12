@@ -19,6 +19,7 @@ import com.dualreader.app.domain.entities.ReaderTheme
 import com.dualreader.app.domain.entities.ReadingSettings
 import com.dualreader.app.domain.entities.TranslationProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -28,9 +29,11 @@ fun SettingsScreen(
     settings: ReadingSettings,
     cachedTranslationCount: Int,
     translationInfo: List<PageTranslationInfo>,
+    quotaStatus: StateFlow<QuotaStatus>,
     onSettingsChanged: (ReadingSettings) -> Unit,
     onClearTranslations: () -> Unit,
     onViewTranslationInfo: () -> Unit,
+    onRefreshQuota: () -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -345,6 +348,97 @@ fun SettingsScreen(
                             }
                         },
                     )
+                }
+            }
+
+            // ── Daily Translation Quota ────────────────────────────
+            SettingsSection("Daily Translation Quota") {
+                val quota by quotaStatus.collectAsState()
+                Column(Modifier.fillMaxWidth()) {
+                    if (quota.isLoading) {
+                        Text(
+                            "Loading quota…",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else if (quota.error != null) {
+                        Column {
+                            Text(
+                                "Could not load quota",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            Text(
+                                quota.error ?: "Unknown error",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(onClick = { onRefreshQuota() }) {
+                                Text("Retry")
+                            }
+                        }
+                    } else {
+                        // Progress bar showing quota usage
+                        val progress = if (quota.dailyLimit > 0) {
+                            quota.pagesUsed.toFloat() / quota.dailyLimit.toFloat()
+                        } else 0f
+
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "${quota.remaining} pages remaining",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = when {
+                                    quota.remaining == 0 -> MaterialTheme.colorScheme.error
+                                    quota.remaining <= 10 -> MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                },
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                "${quota.pagesUsed} / ${quota.dailyLimit}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        Spacer(Modifier.height(4.dp))
+
+                        LinearProgressIndicator(
+                            progress = { progress.coerceIn(0f, 1f) },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = when {
+                                quota.remaining == 0 -> MaterialTheme.colorScheme.error
+                                quota.remaining <= 10 -> MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
+                                else -> MaterialTheme.colorScheme.primary
+                            },
+                        )
+
+                        Spacer(Modifier.height(4.dp))
+
+                        if (quota.remaining == 0) {
+                            Text(
+                                "Daily free quota reached. Translations will resume tomorrow at midnight UTC.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        } else if (quota.remaining <= 10) {
+                            Text(
+                                "Approaching daily limit. Consider translating fewer pages.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            Text(
+                                "Free tier: ${quota.dailyLimit} translated pages per day.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
             }
 

@@ -27,6 +27,7 @@ class CloudTranslationServiceImplTest {
     private lateinit var proxyApi: ProxyTranslationApi
     private lateinit var connectivityManager: ConnectivityManager
     private lateinit var networkCapabilities: NetworkCapabilities
+    private lateinit var installationIdProvider: InstallationIdProvider
     private lateinit var service: CloudTranslationServiceImpl
 
     @Before
@@ -34,13 +35,18 @@ class CloudTranslationServiceImplTest {
         proxyApi = mockk()
         connectivityManager = mockk()
         networkCapabilities = mockk()
+        installationIdProvider = mockk()
 
         // Simulate connected network
         every { connectivityManager.activeNetwork } returns mockk<Network>()
         every { connectivityManager.getNetworkCapabilities(any()) } returns networkCapabilities
         every { networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns true
 
-        service = CloudTranslationServiceImpl(proxyApi, connectivityManager)
+        // Provide a default installation ID for quota tracking
+        coEvery { installationIdProvider.getInstallationId() } returns "test-install-id-1234"
+        every { installationIdProvider.getInstallationIdSync() } returns "test-install-id-1234"
+
+        service = CloudTranslationServiceImpl(proxyApi, connectivityManager, installationIdProvider)
     }
 
     // ── Single translate — happy path ────────────────────────────────────────

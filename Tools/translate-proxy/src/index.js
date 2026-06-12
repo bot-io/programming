@@ -20,6 +20,12 @@ import {
   storeCachedTranslations,
   getCacheStats,
 } from './translation-cache.js';
+import {
+  checkDeviceQuota,
+  incrementDeviceQuota,
+  getDeviceQuotaStatus,
+  cleanupOldQuotaRows,
+} from './quota.js';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -48,6 +54,9 @@ const CONFIG = {
 
   // CORS
   allowedOrigins: ['*'],
+
+  // Per-device quota
+  dailyQuotaPerDevice: 50,       // free pages per device per day
 };
 
 // ─── Multi-Key Pool ─────────────────────────────────────────────────────────
@@ -134,6 +143,22 @@ export default {
       return corsResponse(await handleBatchTranslate(request, clientIp, env));
     }
 
+    // GET /quota — check per-device quota status
+    if (request.method === 'GET' && url.pathname === '/quota') {
+      const installationId = url.searchParams.get('installation_id');
+      if (!installationId) {
+        return corsResponse(jsonResponse(400, { error: 'Missing installation_id parameter' }));
+      }
+      const quotaStatus = await getDeviceQuotaStatus(
+        env.TRANSLATION_CACHE, installationId, CONFIG.dailyQuotaPerDevice
+      );
+      // Periodic cleanup (1% chance per quota request)
+      if (Math.random() < 0.01) {
+        await cleanupOldQuotaRows(env.TRANSLATION_CACHE);
+      }
+      return corsResponse(jsonResponse(200, quotaStatus));
+    }
+
     // GET /test/glm — diagnostic: test GLM connectivity from CF edge
     if (request.method === 'GET' && url.pathname === '/test/glm') {
       return corsResponse(await testGlm(env));
@@ -148,6 +173,7 @@ export default {
         geminiKeyCount: keys.length,
         glmKey: !!env.GLM_API_KEY,
         dailyLimitPerIp: CONFIG.dailyLimitPerIp,
+        dailyQuotaPerDevice: CONFIG.dailyQuotaPerDevice,
         maxBatchPages: CONFIG.maxBatchPages,
         cache: cacheStats,
       }));
@@ -171,7 +197,19 @@ export default {
         return corsResponse(jsonResponse(400, { error: 'Invalid JSON body' }));
       }
 
-      const { text, source_lang, target_lang } = body;
+      const { text, source_lang, target_lang, installation_id } = body;
+
+      // 2a. Device quota check (before any processing)
+      const quotaResult = await checkDeviceQuota(
+        env.TRANSLATION_CACHE, installation_id, 1, CONFIG.dailyQuotaPerDevice
+      );
+      if (!quotaResult.allowed) {
+        return corsResponse(jsonResponse(429, {
+          error: 'Daily free quota exceeded. Quota resets at midnight UTC.',
+          quota: { pages_used: quotaResult.pagesUsed, daily_limit: quotaResult.dailyLimit, remaining: 0 },
+          retry_after_hours: 24,
+        }));
+      }
 
       if (!text || typeof text !== 'string') {
         return corsResponse(jsonResponse(400, { error: 'Missing "text" field' }));
@@ -191,13 +229,19 @@ export default {
       const cached = await getCachedTranslation(env.TRANSLATION_CACHE, text, target_lang);
       if (cached) {
         console.log(`[cache] HIT for single page (${target_lang}, ${cached.model})`);
+        // Count cached hits toward quota too
+        await incrementDeviceQuota(env.TRANSLATION_CACHE, installation_id, 1);
         await recordRequest(request, clientIp, env);
+        const updatedQuota = await checkDeviceQuota(
+          env.TRANSLATION_CACHE, installation_id, 0, CONFIG.dailyQuotaPerDevice
+        );
         return corsResponse(jsonResponse(200, {
           translated_text: cached.translated_text,
           model: cached.model,
           source_lang: source_lang || 'auto',
           target_lang,
           cached: true,
+          quota: { pages_used: updatedQuota.pagesUsed, daily_limit: updatedQuota.dailyLimit, remaining: updatedQuota.remaining },
         }));
       }
       console.log(`[cache] MISS for single page (${target_lang})`);
@@ -280,14 +324,23 @@ export default {
       // 4. Store in D1 cache for cross-user sharing
       await storeCachedTranslation(env.TRANSLATION_CACHE, text, target_lang, translatedText, usedModel);
 
-      // 5. Record this request for rate limiting
+      // 5. Increment device quota
+      await incrementDeviceQuota(env.TRANSLATION_CACHE, installation_id, 1);
+
+      // 6. Record this request for rate limiting
       await recordRequest(request, clientIp, env);
+
+      // 7. Get updated quota for response
+      const finalQuota = await checkDeviceQuota(
+        env.TRANSLATION_CACHE, installation_id, 0, CONFIG.dailyQuotaPerDevice
+      );
 
       return corsResponse(jsonResponse(200, {
         translated_text: translatedText,
         model: usedModel,
         source_lang: source_lang || 'auto',
         target_lang,
+        quota: { pages_used: finalQuota.pagesUsed, daily_limit: finalQuota.dailyLimit, remaining: finalQuota.remaining },
       }));
 
     } catch (err) {
@@ -312,7 +365,7 @@ async function handleBatchTranslate(request, clientIp, env) {
     return jsonResponse(400, { error: 'Invalid JSON body' });
   }
 
-  const { pages, source_lang, target_lang } = body;
+  const { pages, source_lang, target_lang, installation_id } = body;
   if (!Array.isArray(pages) || pages.length === 0) {
     return jsonResponse(400, { error: 'Missing "pages" array' });
   }
@@ -321,6 +374,18 @@ async function handleBatchTranslate(request, clientIp, env) {
   }
   if (pages.length > CONFIG.maxBatchPages) {
     return jsonResponse(413, { error: `Too many pages (${pages.length}). Max ${CONFIG.maxBatchPages}.` });
+  }
+
+  // Device quota check (for the full batch)
+  const quotaResult = await checkDeviceQuota(
+    env.TRANSLATION_CACHE, installation_id, pages.length, CONFIG.dailyQuotaPerDevice
+  );
+  if (!quotaResult.allowed) {
+    return jsonResponse(429, {
+      error: 'Daily free quota exceeded. Quota resets at midnight UTC.',
+      quota: { pages_used: quotaResult.pagesUsed, daily_limit: quotaResult.dailyLimit, remaining: 0 },
+      retry_after_hours: 24,
+    });
   }
 
   // Validate pages
@@ -354,13 +419,19 @@ async function handleBatchTranslate(request, clientIp, env) {
         cached: true,
       };
     });
+    // Count cached hits toward quota
+    await incrementDeviceQuota(env.TRANSLATION_CACHE, installation_id, pages.length);
     await recordRequest(request, clientIp, env);
+    const batchQuota = await checkDeviceQuota(
+      env.TRANSLATION_CACHE, installation_id, 0, CONFIG.dailyQuotaPerDevice
+    );
     return jsonResponse(200, {
       translations: cachedResults,
       model: cachedPages.values().next().value.model,
       source_lang: source_lang || 'auto',
       target_lang,
       cached: true,
+      quota: { pages_used: batchQuota.pagesUsed, daily_limit: batchQuota.dailyLimit, remaining: batchQuota.remaining },
     });
   }
 
@@ -452,13 +523,29 @@ async function handleBatchTranslate(request, clientIp, env) {
     }
   }
 
+  // Increment device quota for pages translated (uncached pages cost quota;
+  // cached pages were already counted when they were first translated, so only count fresh ones)
+  const freshPages = Math.max(parsed.length, uncachedPages.length);
+  if (freshPages > 0) {
+    await incrementDeviceQuota(env.TRANSLATION_CACHE, installation_id, freshPages);
+  }
+  // Also count any cached pages from this batch (partial cache hit)
+  if (cachedPages.size > 0 && cachedPages.size < pages.length) {
+    await incrementDeviceQuota(env.TRANSLATION_CACHE, installation_id, cachedPages.size);
+  }
+
   await recordRequest(request, clientIp, env);
+
+  const batchFinalQuota = await checkDeviceQuota(
+    env.TRANSLATION_CACHE, installation_id, 0, CONFIG.dailyQuotaPerDevice
+  );
 
   return jsonResponse(200, {
     translations: allResults,
     model: usedModel,
     source_lang: source_lang || 'auto',
     target_lang,
+    quota: { pages_used: batchFinalQuota.pagesUsed, daily_limit: batchFinalQuota.dailyLimit, remaining: batchFinalQuota.remaining },
   });
 }
 
@@ -776,7 +863,7 @@ async function testGlm(env) {
 
 function corsResponse(response) {
   response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  response.headers.set('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
   return response;
 }

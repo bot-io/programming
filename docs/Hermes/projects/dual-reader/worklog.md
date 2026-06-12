@@ -127,3 +127,33 @@
 **Test results:** 51 tests (16 existing + 35 new), 0 failures
 **Branch:** `feat/DR-008-d1-translation-cache`
 **Action needed:** User must run `wrangler d1 create dual-reader-cache` to get the database_id, then apply migration with `wrangler d1 migrations apply dual-reader-cache`
+
+### 2026-06-12 — hermes-worker — DR-009: Per-Device Free Quota (Worker + Android)
+
+**Context:** Hermes worker picked DR-009 as next ready item (DR-007 blocked on user). Implemented per-device daily translation quota across both the Cloudflare Worker and Android app.
+
+**Work done:**
+
+**Cloudflare Worker (translate-proxy):**
+- `migrations/0002_create_device_quota.sql` — D1 table: device_quota (installation_id TEXT, date TEXT, pages_used INTEGER, updated_at TEXT) with composite PK
+- `src/quota.js` (153 lines) — checkDeviceQuota(), incrementDeviceQuota(), getDeviceQuotaStatus() with UTC date-based daily scoping
+- `src/index.js` — Added CONFIG.dailyQuotaPerDevice=50, GET /quota endpoint, quota check before translation, quota increment after success, quota info in all response payloads
+- `test/quota.test.js` — 30 tests covering check/increment/status/edge cases with mock D1
+- All 81 worker tests passing (16 batch + 35 cache + 30 quota)
+
+**Android (dual-reader-android):**
+- `InstallationIdProvider.kt` — @Singleton, generates/stores UUID in DataStore, memory cache, getInstallationId() + getInstallationIdSync()
+- `QuotaApi.kt` — Retrofit interface GET /quota + QuotaResponse data class (Moshi annotations)
+- `ProxyTranslationApi.kt` — Added installation_id to request models, QuotaInfo to response models
+- `CloudTranslationServiceImpl.kt` — Injected InstallationIdProvider, sends installation_id with all translation calls
+- `TranslationModule.kt` — Provides QuotaApi, updated cloud service constructor
+- `SettingsViewModel.kt` — QuotaStatus data class, quotaStatus StateFlow, refreshQuota() with error handling
+- `SettingsScreen.kt` — "Daily Translation Quota" section with progress bar, color-coded warnings (normal/warning/exhausted), retry on error
+- `NavHost.kt` — Wired quotaStatus and onRefreshQuota to SettingsScreen
+
+**Build:** Android assembleDebug passes (43 tasks, 0 errors, only deprecation warnings)
+**Commits:**
+  - Worker: `feat(DR-009): per-device daily quota module, D1 migration, quota endpoints`
+  - Android: `feat(DR-009): Android per-device quota with InstallationIdProvider, QuotaApi, and quota UI in Settings`
+**Branches:** Both repos on `feat/dr-009-per-device-quota`
+**Action needed:** User must apply D1 migration 0002 via `wrangler d1 migrations apply`
