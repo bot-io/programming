@@ -103,11 +103,11 @@
 - **Notes:** Prevents abuse, enables freemium model. Requires D1 for quota storage.
 
 ### DR-010: Book Context for Translation Quality
-- **Status:** ready
+- **Status:** done
 - **Priority:** P2
 - **Acceptance Criteria:**
   1. First 3 pages of each book extracted as system-level context
   2. Context injected into translation prompt as "book context" (title, author, setting)
   3. Context cached per-book so re-translation doesn't re-extract
   4. Unit tests for context extraction and injection
-- **Notes:** Low effort, high quality improvement. Helps with character names, setting, tone consistency from page 1.
+- **Notes:** Done. BookContextExtractor extracts title, author, language, opening text from first 3 pages. Injected into cloud proxy system prompt. 7 new Android tests + Worker prompt tests. Branch: feat/DR-010-book-context. Commit: 8446759.

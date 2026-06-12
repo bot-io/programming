@@ -127,3 +127,29 @@
 **Test results:** 51 tests (16 existing + 35 new), 0 failures
 **Branch:** `feat/DR-008-d1-translation-cache`
 **Action needed:** User must run `wrangler d1 create dual-reader-cache` to get the database_id, then apply migration with `wrangler d1 migrations apply dual-reader-cache`
+
+### 2026-06-12 — cron-worker — DR-010: Book Context for Translation Quality
+
+**Item:** DR-010 (P2)
+**Status:** done
+**Summary:** Implemented book context extraction and injection into the LLM translation prompt. Book metadata (title, author, language, opening text from first 3 pages) is now sent to the cloud proxy and injected into the system prompt for consistent character names, tone, and style across pages.
+
+**Changes:**
+- `BookContextExtractor.kt` — New use case: extracts BookContext (title, author, language, opening text ~1500 chars from first 3 pages), serializes to Map<String, String>
+- `TranslatePageUseCase.kt` — Added `bookContext: BookContext?` to `invoke()`, `translateBatchWithContext()`, `translateBatch()`; added `serializeBookContext()` helper
+- `TranslationService.kt` — Added `bookContext: SerializedBookContext?` to `translate()` and `translatePages()`
+- `CloudTranslationServiceImpl.kt` — Accepts and passes bookContext to ProxyTranslationApi
+- `ProxyTranslationApi.kt` — Added `ProxyBookContext` data class, `book_context` field to `ProxyTranslateRequest`
+- `FallbackTranslationService.kt` — Threads bookContext to primary/secondary services
+- `GlmTranslationServiceImpl.kt` — Accepts bookContext (unused, direct API doesn't use it)
+- `MlKitTranslationServiceImpl.kt` — Accepts bookContext (unused, ML Kit doesn't use it)
+- `ReaderViewModel.kt` — Extracts BookContext in `loadBook`/`rePaginate`, passes to translation calls
+- `ReaderViewModelTest.kt` — Updated all 23 mock setups for `translateBatchWithContext` from 4 to 6 `any()` matchers
+- `index.js` (Worker) — Updated single and batch endpoints to extract `book_context`, inject into system prompt under "BOOK CONTEXT" section
+- `BookContextExtractorTest.kt` — 7 new tests: extract, serialize, edge cases (no author, no pages, truncation)
+- `book-context.test.js` — Worker-side tests for prompt builders with book context
+
+**Test results:** 370 Android tests + 51 Worker tests, 0 failures
+**Branch:** `feat/DR-010-book-context`
+**Commit:** `8446759`
+**Note:** Worker-side changes (index.js) need deployment to Cloudflare. Android changes need app build + install to test end-to-end.

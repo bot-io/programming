@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-12 02:31 Sofia**
+> Last updated: **2026-06-12 04:01 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -13,10 +13,10 @@
 - _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-12T02:00:00Z
+- **Last run:** 2026-06-12T03:00:00Z
 - **Last project:** dual-reader
-- **Last item:** DR-008
-- **Total runs:** 14
+- **Last item:** DR-010
+- **Total runs:** 15
 
 ## 📁 Projects
 
@@ -38,10 +38,10 @@
 ### 🟢 dual-reader
 - **Status:** ** Active Development
 - **Updated:** ** 2026-06-12
-- **Ready:** DR-005:, DR-006:, DR-007:, DR-009:, DR-010:
+- **Ready:** DR-005:, DR-006:, DR-007:, DR-009:
 - **Needs Decision:** DR-004:
-- **Progress:** 4/10 done
-- **Last work:** 2026-06-12 — cron-worker — DR-008: D1 Translation Cache (Cross-User Sharing)
+- **Progress:** 5/10 done
+- **Last work:** 2026-06-12 — cron-worker — DR-010: Book Context for Translation Quality
 
 ### ⚪ machine-setup
 - **Status:** ** Complete
