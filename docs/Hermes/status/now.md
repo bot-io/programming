@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-12 04:31 Sofia**
+> Last updated: **2026-06-12 11:34 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -13,10 +13,10 @@
 - _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-12T01:11:48Z
+- **Last run:** 2026-06-12T11:31:00Z
 - **Last project:** dual-reader
-- **Last item:** DR-009
-- **Total runs:** 16
+- **Last item:** DR-idle-no-ready-items
+- **Total runs:** 17
 
 ## 📁 Projects
 
