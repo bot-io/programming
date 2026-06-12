@@ -12,7 +12,7 @@
 
 ## DR-005: Device sync (criterion 4)
 
-**Question:** Should reading progress sync across devices (e.g. via cloud)? Currently progress is local-only (Room DB). This was deferred — need decision before any cloud sync implementation.
+**Decision:** Deferred — local-only for now. Cloud sync is a future feature.
 
 ## Push Protection Block
 

@@ -34,7 +34,7 @@
 - **Notes:** Implemented NIGHT enum value, NightColorScheme Material3 theme, animatedReaderColors() with 400ms cross-fade, colorSchemeForTheme mapping for all 7 themes. 30 new tests all passing. WCAG AAA contrast (12.4:1) on true black.
 
 ### DR-004: Library Management (Tags, Collections, Sorting)
-- **Status:** needs-decision
+- **Status:** ready
 - **Priority:** P1
 - **Acceptance Criteria:**
   1. User can assign custom tags to books and filter library by tag
@@ -42,7 +42,12 @@
   3. Library supports sorting by: title, author, date added, last read, completion percentage
   4. Tag and collection data persists across app restarts (Room DB migration if needed)
   5. UI follows Material Design 3 patterns; Compose previews for key components
-- **Notes:** Needs user input on scope — full collections or simple tags-first approach? Also need to decide on DB schema changes.
+- **Scope Decision:** Implement tags-first, then collections. Tags are flat strings stored in a Room `book_tags` table (bookId + tag). Collections are a `collections` table + `collection_books` junction. Add new Room migration. Sorting uses existing `Book` entity with new `dateAdded` and `lastRead` columns. No cloud sync — local only.
+- **DB Schema:**
+  - `book_tags(bookId TEXT, tag TEXT, PRIMARY KEY(bookId, tag))`
+  - `collections(id INTEGER PK, name TEXT, createdAt INTEGER)`
+  - `collection_books(collectionId INTEGER, bookId TEXT, PRIMARY KEY(collectionId, bookId))`
+  - New columns on `Book`: `dateAdded INTEGER`, `lastRead INTEGER`
 
 ### DR-005: Reading Progress Tracking with Persistence
 - **Status:** done
@@ -67,7 +72,7 @@
 - **Notes:** Lower priority but straightforward to implement. Depends on having annotations/highlights data model in place.
 
 ### DR-007: Play Store Launch Preparation
-- **Status:** blocked
+- **Status:** ready
 - **Priority:** P0
 - **Acceptance Criteria:**
   1. App icon designed and integrated (adaptive icon for all densities)
@@ -77,7 +82,9 @@
   5. Play Store listing: description, screenshots (phone + tablet), feature graphic
   6. Signing config finalized (release keystore backed up securely)
   7. ProGuard/R8 rules verified ✅ Done by worker
-- **Notes:** Criteria 2 and 7 done. Items 1, 3–6 need user input (creative/Play Console work).
+- **Scope Decision:** Split into automated and manual tracks.
+  - **Worker does now:** Generate a placeholder adaptive icon (letter "D" on gradient background) in all required densities. Create a basic privacy policy HTML page. Generate a debug signing config for release builds. Write Play Store listing text (English + Bulgarian). Wire privacy policy URL into AndroidManifest. Set up release build type with minification enabled.
+  - **User does later:** Replace placeholder icon with final design. Deploy privacy policy to a real URL. Complete IARC content rating in Play Console. Upload screenshots. Create production keystore and replace debug one.
 
 ### DR-008: D1 Translation Cache (Cross-User Sharing)
 - **Status:** done
