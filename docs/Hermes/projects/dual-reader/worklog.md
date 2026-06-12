@@ -181,3 +181,38 @@
 
 **Git:** Merge commit on master (feat/dr-009-per-device-quota → master), plus `d4baff6` (test fixes) and `00c83ae` (.gitignore cleanup)
 
+### 2026-06-12 — cron-worker — DR-007: Splash Screen + R8 Verification
+
+**Item:** DR-007 (P0)
+**Status:** in-progress (criterion 2 splash screen done, criterion 7 R8 rules reviewed; items 1, 3–6 blocked on user)
+**Summary:** Implemented AndroidX SplashScreen compat library splash screen and reviewed ProGuard/R8 rules for release readiness.
+
+**Changes:**
+- `gradle/libs.versions.toml` — Added `splashscreen = "1.2.0-alpha02"` and `androidx-splashscreen` library entry
+- `app/build.gradle.kts` — Added `implementation(libs.androidx.splashscreen)` dependency
+- `app/src/main/res/values/themes.xml` — New `Theme.DualReader.Splash` parent `Theme.SplashScreen.IconBackground` with white background, indigo icon background, app icon as animated icon, `postSplashScreenTheme` → `Theme.DualReader`
+- `app/src/main/res/values/colors.xml` — New file: splash_background (#FFFFFF), splash_icon_background (#3F51B5)
+- `app/src/main/res/values/ic_launcher_background.xml` — Deleted (consolidated into colors.xml)
+- `app/src/main/AndroidManifest.xml` — Theme changed to `@style/Theme.DualReader.Splash`
+- `app/src/main/java/com/dualreader/app/ui/MainActivity.kt` — Added `installSplashScreen()` call before `super.onCreate()`
+
+**Verification:**
+- Debug build: BUILD SUCCESSFUL (assembleDebug)
+- Release build: BUILD SUCCESSFUL (assembleRelease) — R8/minification passes
+- Unit tests: 349 tests, 0 failures (testDebugUnitTest)
+
+**R8 Rules Review (criterion 7):**
+- Existing rules properly keep: domain layer, Moshi models, Room entities/DAOs/database, ViewModels (Hilt), repositories, use cases, mappers, epub4j, Kotlin coroutines, ML Kit
+- Rules are comprehensive — no missing keeps for the dependency set used
+- Release APK compiles without R8 errors or missing class warnings
+
+**Branch:** `feat/dr-007-splash-screen-2` pushed to bot-io/programming
+**Commit:** `3185e4c`
+
+**Remaining for DR-007 (needs user):**
+- Criterion 1: App icon review (adaptive icon exists but user may want custom design)
+- Criterion 3: Privacy policy URL
+- Criterion 4: Content rating questionnaire (Play Console)
+- Criterion 5: Play Store listing assets (description, screenshots, feature graphic)
+- Criterion 6: Release keystore creation and signing config
+

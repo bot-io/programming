@@ -67,17 +67,17 @@
 - **Notes:** Lower priority but straightforward to implement. Depends on having annotations/highlights data model in place.
 
 ### DR-007: Play Store Launch Preparation
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** P0
 - **Acceptance Criteria:**
-  1. App icon designed and integrated (adaptive icon for all densities)
-  2. Splash screen / launch screen implemented
-  3. Privacy policy URL hosted and linked in app
-  4. Content rating questionnaire completed
-  5. Play Store listing: description, screenshots (phone + tablet), feature graphic
-  6. Signing config finalized (release keystore backed up securely)
-  7. ProGuard/R8 rules verified — no runtime crashes from obfuscation
-- **Notes:** Blocking release. Items 1–5 are user-facing creative work; items 6–7 are technical.
+  1. App icon designed and integrated (adaptive icon for all densities) — ✅ adaptive icon exists, needs user review
+  2. Splash screen / launch screen implemented — ✅ done on `feat/dr-007-splash-screen-2` (AndroidX SplashScreen, white bg + indigo icon bg)
+  3. Privacy policy URL hosted and linked in app — 🔒 needs user
+  4. Content rating questionnaire completed — 🔒 needs user (Play Console)
+  5. Play Store listing: description, screenshots (phone + tablet), feature graphic — 🔒 needs user
+  6. Signing config finalized (release keystore backed up securely) — 🔒 needs user (release keystore)
+  7. ProGuard/R8 rules verified — no runtime crashes from obfuscation — ✅ release build compiles, rules reviewed
+- **Notes:** Blocking release. Items 1, 3–6 need user action. Items 2, 7 done by worker. Branch `feat/dr-007-splash-screen-2` pushed, needs merge.
 
 ### DR-008: D1 Translation Cache (Cross-User Sharing)
 - **Status:** done

@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-12 04:31 Sofia**
+> Last updated: **2026-06-12 06:48 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 46%
+- **Usage:** 1%
 - **Resets:** 01 Sofia |
 - **Spare capacity:** ?
 
@@ -13,10 +13,10 @@
 - _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-12T01:11:48Z
+- **Last run:** 2026-06-12T06:15:00Z
 - **Last project:** dual-reader
-- **Last item:** DR-009
-- **Total runs:** 16
+- **Last item:** DR-007
+- **Total runs:** 17
 
 ## 📁 Projects
 
@@ -38,10 +38,11 @@
 ### 🟢 dual-reader
 - **Status:** ** Active Development
 - **Updated:** ** 2026-06-12
-- **Ready:** DR-006:, DR-007:
+- **Ready:** DR-006:
+- **In Progress:** DR-007:
 - **Needs Decision:** DR-004:
 - **Progress:** 7/10 done
-- **Last work:** 2026-06-12 — cron-worker — DR-009: Merged to master + backlog cleanup
+- **Last work:** 2026-06-12 — cron-worker — DR-007: Splash Screen + R8 Verification
 
 ### ⚪ machine-setup
 - **Status:** ** Complete

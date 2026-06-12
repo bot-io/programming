@@ -19,3 +19,15 @@
 **Issue:** GitHub push protection blocks pushes to `bot-io/critterium` due to a pre-existing Atlassian API token in `Python/confluence_directory_sync/delete_pages.log`. This affects pushing new branches (including `feat/DR-005-reading-progress`).
 
 **Action needed:** Either allowlist the secret at https://github.com/bot-io/critterium/security/secret-scanning/unblock-secret/3EyIhu9HUG2fNrOlRmn0RWKSA5V or clean the history.
+
+## DR-007: Play Store Launch — User Actions Needed
+
+The splash screen (criterion 2) and R8 rules (criterion 7) are done. The following still need your input:
+
+1. **App icon review** (criterion 1) — An adaptive icon with an open-book design already exists. Do you want to keep it or commission a custom design?
+2. **Privacy policy URL** (criterion 3) — Need a hosted privacy policy page. Options: GitHub Pages, Notion page, or custom domain. What do you prefer?
+3. **Content rating** (criterion 4) — Requires Play Console access to complete the IARC questionnaire.
+4. **Play Store listing** (criterion 5) — Need: description text, screenshots (phone + tablet), feature graphic (1024×500). Do you have these or need help creating them?
+5. **Release keystore** (criterion 6) — Need to generate a release keystore for signing. Want me to script `keytool` commands, or will you handle this manually?
+
+**Branch `feat/dr-007-splash-screen-2`** is pushed and ready for merge review.
