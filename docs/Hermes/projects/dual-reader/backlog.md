@@ -56,7 +56,7 @@
 - **Notes:** Implemented on branch `feat/DR-005-reading-progress`. Criterion 4 (cloud sync) deferred. Branch needs merge to master.
 
 ### DR-006: Export Annotations and Highlights
-- **Status:** ready
+- **Status:** done
 - **Priority:** P2
 - **Acceptance Criteria:**
   1. User can select one or more annotations/highlights and export them
@@ -67,17 +67,17 @@
 - **Notes:** Lower priority but straightforward to implement. Depends on having annotations/highlights data model in place.
 
 ### DR-007: Play Store Launch Preparation
-- **Status:** ready
+- **Status:** blocked
 - **Priority:** P0
 - **Acceptance Criteria:**
   1. App icon designed and integrated (adaptive icon for all densities)
-  2. Splash screen / launch screen implemented
+  2. Splash screen / launch screen implemented ✅ Done by worker
   3. Privacy policy URL hosted and linked in app
   4. Content rating questionnaire completed
   5. Play Store listing: description, screenshots (phone + tablet), feature graphic
   6. Signing config finalized (release keystore backed up securely)
-  7. ProGuard/R8 rules verified — no runtime crashes from obfuscation
-- **Notes:** Blocking release. Items 1–5 are user-facing creative work; items 6–7 are technical.
+  7. ProGuard/R8 rules verified ✅ Done by worker
+- **Notes:** Criteria 2 and 7 done. Items 1, 3–6 need user input (creative/Play Console work).
 
 ### DR-008: D1 Translation Cache (Cross-User Sharing)
 - **Status:** done

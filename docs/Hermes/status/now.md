@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-12 12:47 Sofia**
+> Last updated: **2026-06-12 16:12 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 46%
+- **Usage:** 1%
 - **Resets:** 01 Sofia |
 - **Spare capacity:** ?
 
@@ -13,10 +13,10 @@
 - _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-12T12:45:00Z
+- **Last run:** 2026-06-12T16:10:00Z
 - **Last project:** dual-reader
-- **Last item:** DR-merge-005-010-006
-- **Total runs:** 18
+- **Last item:** DR-backlog-maintenance
+- **Total runs:** 19
 
 ## 📁 Projects
 
@@ -38,9 +38,9 @@
 ### 🟢 dual-reader
 - **Status:** ** Active Development
 - **Updated:** ** 2026-06-12
-- **Ready:** DR-006:, DR-007:
+- **Blocked:** DR-007:
 - **Needs Decision:** DR-004:
-- **Progress:** 7/10 done
+- **Progress:** 8/10 done
 - **Last work:** 2026-06-12 — cron-worker — Merge DR-005, DR-010, DR-006 to master
 
 ### ⚪ machine-setup
@@ -53,7 +53,7 @@
 
 - **critterium** — blocked: CRT-16; open questions: Q9:, Q10:, Q11:, Q12:, Q13:, Q14:, Q15:, Q16:, Q17:
   → Open that project's Telegram chat and respond, or tell this chat
-- **dual-reader** — needs-decision: DR-004:
+- **dual-reader** — blocked: DR-007:; needs-decision: DR-004:
   → Open that project's Telegram chat and respond, or tell this chat
 
 ## 🔗 Quick Links
