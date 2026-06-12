@@ -17,6 +17,8 @@ import com.dualreader.app.domain.repositories.TranslationCacheRepository
 import com.dualreader.app.domain.usecases.PageToTranslate
 import com.dualreader.app.domain.usecases.PaginateBookUseCase
 import com.dualreader.app.domain.usecases.TranslatePageUseCase
+import com.dualreader.app.domain.usecases.BookContext
+import com.dualreader.app.domain.usecases.BookContextExtractor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -88,6 +90,9 @@ class ReaderViewModel @Inject constructor(
     private var translationJob: Job? = null
     private val _isRePaginating = MutableStateFlow(false)
 
+    /** Extracted book-level context for translation quality. Cached per-book. */
+    private var _bookContext: BookContext? = null
+
     init {
         currentBookId?.let { loadBook(it) }
     }
@@ -107,6 +112,13 @@ class ReaderViewModel @Inject constructor(
 
                 val pages = bookRepository.getPagesForBook(bookId)
                 _pages.value = pages
+
+                // Extract book context from metadata + first pages for translation quality
+                _bookContext = if (pages.isNotEmpty()) {
+                    BookContextExtractor.extract(book, pages)
+                } else {
+                    null
+                }
 
                 val settings = settingsRepository.getSettings()
                 _settings.value = settings
@@ -222,6 +234,8 @@ class ReaderViewModel @Inject constructor(
                     newPages
                 }
                 _pages.value = restoredPages
+                // Re-extract book context with the new pages
+                _bookContext = BookContextExtractor.extract(book, restoredPages)
                 val updatedBook = bookRepository.getBookById(book.id) ?: book
                 _book = updatedBook
                 val transCount = restoredPages.count { it.translations.containsKey(targetLang) }
@@ -316,6 +330,7 @@ class ReaderViewModel @Inject constructor(
                         onPageTranslated = { pageIndex, translation ->
                             applyTranslation(pageIndex, targetLang, translation)
                         },
+                        bookContext = _bookContext,
                     )
                 } ?: run {
                     AppLogger.e("Translation timed out for ${pagesToTranslate.size} pages")
@@ -376,6 +391,7 @@ class ReaderViewModel @Inject constructor(
                     onPageTranslated = { pageIndex, translation ->
                         applyTranslation(pageIndex, targetLang, translation)
                     },
+                    bookContext = _bookContext,
                 )
 
                 result.fold(

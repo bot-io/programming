@@ -7,6 +7,13 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import javax.inject.Inject
 
+/** Serialized book context string sent to the Worker. */
+data class SerializedBookContext(
+    val title: String,
+    val author: String,
+    val openingText: String,
+)
+
 /**
  * Context-aware translation use case with local caching and batch optimization.
  *
@@ -45,6 +52,7 @@ class TranslatePageUseCase @Inject constructor(
         previousOriginal: String? = null,
         previousTranslation: String? = null,
         forceRetranslate: Boolean = false,
+        bookContext: BookContext? = null,
     ): Result<String> {
         return runCatching {
             // Check cache first (unless forced retranslate)
@@ -55,11 +63,13 @@ class TranslatePageUseCase @Inject constructor(
 
             // Cache miss or forced — call the service
             val context = buildContext(previousOriginal, previousTranslation)
+            val serializedBookCtx = bookContext?.let { serializeBookContext(it) }
             val translated = translationService.translate(
                 text = text,
                 targetLanguage = targetLanguage,
                 sourceLanguage = sourceLanguage,
                 context = context,
+                bookContext = serializedBookCtx,
             )
 
             // Store in cache (overwrites if exists = model upgrade)
@@ -82,10 +92,12 @@ class TranslatePageUseCase @Inject constructor(
         sourceLanguage: String? = null,
         onPageTranslated: (index: Int, translation: String) -> Unit = { _, _ -> },
         forceRetranslate: Boolean = false,
+        bookContext: BookContext? = null,
     ): Result<BatchTranslationResult> {
         val results = mutableMapOf<Int, String>()
         var lastTranslation: String? = null
         var lastModel = "unknown"
+        val serializedBookCtx = bookContext?.let { serializeBookContext(it) }
 
         try {
             var i = 0
@@ -115,7 +127,7 @@ class TranslatePageUseCase @Inject constructor(
                 }
 
                 // Try batch translation
-                val batchResult = translateBatch(batch, targetLanguage, sourceLanguage, lastTranslation)
+                val batchResult = translateBatch(batch, targetLanguage, sourceLanguage, lastTranslation, serializedBookCtx)
                 lastModel = batchResult.model
 
                 // Process results
@@ -185,6 +197,7 @@ class TranslatePageUseCase @Inject constructor(
         targetLanguage: String,
         sourceLanguage: String?,
         previousTranslation: String?,
+        serializedBookContext: SerializedBookContext? = null,
     ): BatchTranslationResult {
         if (batch.isEmpty()) return BatchTranslationResult(emptyMap())
 
@@ -197,6 +210,7 @@ class TranslatePageUseCase @Inject constructor(
                 targetLanguage = targetLanguage,
                 sourceLanguage = sourceLanguage,
                 context = context,
+                bookContext = serializedBookContext,
             )
             return BatchTranslationResult(mapOf(page.index to result), translationService.providerName)
         }
@@ -206,7 +220,7 @@ class TranslatePageUseCase @Inject constructor(
         val context = buildContext(null, previousTranslation)
 
         return try {
-            translationService.translatePages(indexedPages, targetLanguage, sourceLanguage, context)
+            translationService.translatePages(indexedPages, targetLanguage, sourceLanguage, context, serializedBookContext)
         } catch (e: Exception) {
             // Batch failed — fall back to individual calls
             val results = mutableMapOf<Int, String>()
@@ -217,6 +231,7 @@ class TranslatePageUseCase @Inject constructor(
                         targetLanguage = targetLanguage,
                         sourceLanguage = sourceLanguage,
                         context = context,
+                        bookContext = serializedBookContext,
                     )
                     results[page.index] = result
                 } catch (_: Exception) {
@@ -268,6 +283,17 @@ class TranslatePageUseCase @Inject constructor(
                 append("\n")
             }
         }
+    }
+
+    /**
+     * Serialize a [BookContext] into a compact format for the Worker.
+     */
+    private fun serializeBookContext(ctx: BookContext): SerializedBookContext {
+        return SerializedBookContext(
+            title = ctx.title,
+            author = ctx.author,
+            openingText = ctx.openingText,
+        )
     }
 }
 

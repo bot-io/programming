@@ -28,6 +28,15 @@ data class ProxyTranslateRequest(
     @Json(name = "source_lang") val sourceLang: String?,
     @Json(name = "target_lang") val targetLang: String,
     @Json(name = "installation_id") val installationId: String? = null,
+    @Json(name = "book_context") val bookContext: ProxyBookContext? = null,
+)
+
+/** Book context sent to the Worker for improved translation quality. */
+@JsonClass(generateAdapter = true)
+data class ProxyBookContext(
+    @Json(name = "title") val title: String,
+    @Json(name = "author") val author: String,
+    @Json(name = "opening_text") val openingText: String,
 )
 
 /** Response body from the Cloudflare Worker. */
@@ -55,6 +64,7 @@ data class ProxyBatchTranslateRequest(
     @Json(name = "source_lang") val sourceLang: String?,
     @Json(name = "target_lang") val targetLang: String,
     @Json(name = "installation_id") val installationId: String? = null,
+    @Json(name = "book_context") val bookContext: ProxyBookContext? = null,
 )
 
 @JsonClass(generateAdapter = true)

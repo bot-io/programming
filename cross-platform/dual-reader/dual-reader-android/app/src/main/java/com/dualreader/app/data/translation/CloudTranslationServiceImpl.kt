@@ -12,6 +12,8 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.dualreader.app.domain.usecases.SerializedBookContext
+
 /**
  * Primary translation backend — calls our Cloudflare Worker proxy
  * which forwards to Z.AI's GLM-4-Flash (free tier).
@@ -40,7 +42,8 @@ class CloudTranslationServiceImpl @Inject constructor(
         text: String,
         targetLanguage: String,
         sourceLanguage: String?,
-        context: String?
+        context: String?,
+        bookContext: SerializedBookContext?,
     ): String = withContext(Dispatchers.IO) {
         val installationId = installationIdProvider.getInstallationId()
         // Context is already formatted by TranslatePageUseCase with clear instructions.
@@ -50,6 +53,9 @@ class CloudTranslationServiceImpl @Inject constructor(
             sourceLang = sourceLanguage,
             targetLang = targetLanguage,
             installationId = installationId,
+            bookContext = bookContext?.let {
+                ProxyBookContext(title = it.title, author = it.author, openingText = it.openingText)
+            },
         )
 
         callProxy(request)
@@ -89,6 +95,7 @@ class CloudTranslationServiceImpl @Inject constructor(
         targetLanguage: String,
         sourceLanguage: String?,
         context: String?,
+        bookContext: SerializedBookContext?,
     ): BatchTranslationResult = withContext(Dispatchers.IO) {
         if (pages.isEmpty()) return@withContext BatchTranslationResult(emptyMap())
         val installationId = installationIdProvider.getInstallationId()
@@ -104,6 +111,9 @@ class CloudTranslationServiceImpl @Inject constructor(
                 sourceLang = sourceLanguage,
                 targetLang = targetLanguage,
                 installationId = installationId,
+                bookContext = bookContext?.let {
+                    ProxyBookContext(title = it.title, author = it.author, openingText = it.openingText)
+                },
             )
 
             val response = proxyApi.translateBatch(request)

@@ -199,7 +199,7 @@ class ReaderViewModelTest {
     @Test
     fun `translateCurrentPage - updates page with translation`() = runTest(testDispatcher) {
         coEvery {
-            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any())
         } returns Result.success(BatchTranslationResult(mapOf(0 to "Превод"), "test"))
         val vm = createViewModel()
         advanceUntilIdle()
@@ -217,7 +217,7 @@ class ReaderViewModelTest {
     @Test
     fun `translateCurrentPage - sets Error on failure`() = runTest(testDispatcher) {
         coEvery {
-            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any())
         } returns Result.failure(RuntimeException("Network error"))
         val vm = createViewModel()
         advanceUntilIdle()
@@ -237,7 +237,7 @@ class ReaderViewModelTest {
     fun `translateCurrentPage - prevents double translation`() = runTest(testDispatcher) {
         var callCount = 0
         coEvery {
-            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any())
         } coAnswers {
             callCount++
             kotlinx.coroutines.delay(1000)
@@ -257,7 +257,7 @@ class ReaderViewModelTest {
     @Test
     fun `cancelTranslation - resets isTranslating`() = runTest(testDispatcher) {
         coEvery {
-            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any())
         } coAnswers {
             kotlinx.coroutines.delay(5000)
             Result.success(BatchTranslationResult(mapOf(0 to "translated"), "test"))
@@ -279,7 +279,7 @@ class ReaderViewModelTest {
     @Test
     fun `cancelTranslation - while batch translating stops cleanly`() = runTest(testDispatcher) {
         var translatedCount = 0
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } coAnswers {
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } coAnswers {
             kotlinx.coroutines.delay(5000)
             translatedCount = 3
             Result.success(BatchTranslationResult(mapOf(0 to "t0", 1 to "t1", 2 to "t2"), "test"))
@@ -302,7 +302,7 @@ class ReaderViewModelTest {
             com.dualreader.app.domain.usecases.PageToTranslate(1, "Page one text"),
         )
         coEvery {
-            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any())
         } coAnswers {
             val callback = args[3] as ((Int, String) -> Unit)
             callback(0, "Превод нула")
@@ -322,7 +322,7 @@ class ReaderViewModelTest {
     @Test
     fun `translateCurrentPage - persists translated pages`() = runTest(testDispatcher) {
         coEvery {
-            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any())
         } returns Result.success(BatchTranslationResult(mapOf(0 to "превод"), "test"))
         val vm = createViewModel()
         advanceUntilIdle()
@@ -445,7 +445,7 @@ class ReaderViewModelTest {
     @Test
     fun `translateCurrentPage - caches translation per language`() = runTest(testDispatcher) {
         coEvery {
-            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any())
         } returns Result.success(BatchTranslationResult(mapOf(0 to "BG translation"), "test"))
         val vm = createViewModel()
         advanceUntilIdle()
@@ -460,7 +460,7 @@ class ReaderViewModelTest {
     @Test
     fun `hasTranslation - marks page as translated after translateCurrentPage`() = runTest(testDispatcher) {
         coEvery {
-            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any())
+            translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any())
         } returns Result.success(BatchTranslationResult(mapOf(0 to "Превод"), "test"))
         val vm = createViewModel()
         advanceUntilIdle()
@@ -818,7 +818,7 @@ class ReaderViewModelTest {
         )
         coEvery { bookRepository.getPagesForBook("book1") } returns longTextPages
 
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } returns
             Result.success(BatchTranslationResult(mapOf(0 to "Алфа Бета Гама Делта"), "test"))
 
         val vm = createViewModel()
@@ -863,7 +863,7 @@ class ReaderViewModelTest {
             }
         }
 
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } returns
             Result.success(BatchTranslationResult(mapOf(0 to "Напълно различен текст"), "test"))
 
         val vm = createViewModel()
@@ -887,7 +887,7 @@ class ReaderViewModelTest {
     @Test
     fun `translateCurrentPage - batch success with multiple pages`() = runTest(testDispatcher) {
         // Simulate: batch returns translations for pages 0, 1, 2
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } coAnswers {
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } coAnswers {
             val callback = args[3] as ((Int, String) -> Unit)
             callback(0, "Превод нула")
             callback(1, "Превод едно")
@@ -912,7 +912,7 @@ class ReaderViewModelTest {
     @Test
     fun `translateCurrentPage - partial success via callback updates pages incrementally`() = runTest(testDispatcher) {
         // Simulate: use case succeeds but only returns some pages (partial batch)
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } coAnswers {
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } coAnswers {
             val callback = args[3] as ((Int, String) -> Unit)
             callback(0, "Превод нула")
             // Page 1 and 2 not delivered via callback (simulating partial failure inside use case)
@@ -933,7 +933,7 @@ class ReaderViewModelTest {
 
     @Test
     fun `translateCurrentPage - use case throws network exception`() = runTest(testDispatcher) {
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } throws
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } throws
             java.io.IOException("Connection reset")
 
         val vm = createViewModel()
@@ -950,7 +950,7 @@ class ReaderViewModelTest {
 
     @Test
     fun `translateCurrentPage - use case returns 502 failure`() = runTest(testDispatcher) {
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } returns
             Result.failure(Exception("Translation proxy error 502: All providers failed"))
 
         val vm = createViewModel()
@@ -966,7 +966,7 @@ class ReaderViewModelTest {
 
     @Test
     fun `translateCurrentPage - use case returns 429 rate limit`() = runTest(testDispatcher) {
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } returns
             Result.failure(Exception("Translation proxy error 429: Too fast"))
 
         val vm = createViewModel()
@@ -996,7 +996,7 @@ class ReaderViewModelTest {
 
         // Translate should only send pages 1 and 2 (page 0 is already done)
         var capturedPages: List<com.dualreader.app.domain.usecases.PageToTranslate>? = null
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } coAnswers {
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } coAnswers {
             capturedPages = args[0] as List<com.dualreader.app.domain.usecases.PageToTranslate>
             Result.success(BatchTranslationResult(mapOf(1 to "Едно", 2 to "Две"), "test"))
         }
@@ -1052,7 +1052,7 @@ class ReaderViewModelTest {
 
     @Test
     fun `translateCurrentPage - second call to same language uses cached result`() = runTest(testDispatcher) {
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } returns
             Result.success(BatchTranslationResult(mapOf(0 to "Превод"), "test"))
 
         val vm = createViewModel()
@@ -1063,7 +1063,7 @@ class ReaderViewModelTest {
 
         // Reset mock to track second call
         val slot = slot<List<com.dualreader.app.domain.usecases.PageToTranslate>>()
-        coEvery { translatePageUseCase.translateBatchWithContext(capture(slot), any(), any(), any()) } returns
+        coEvery { translatePageUseCase.translateBatchWithContext(capture(slot), any(), any(), any(), any(), any()) } returns
             Result.success(BatchTranslationResult(emptyMap<Int, String>(), "test"))
 
         vm.translateCurrentPage()
@@ -1079,7 +1079,7 @@ class ReaderViewModelTest {
     @Test
     fun `collectTranslateWindow - at end of book collects pages before current`() = runTest(testDispatcher) {
         // Go to last page (index 2) — window should collect page 2, then page 1, then page 0
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } coAnswers {
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } coAnswers {
             val pages = args[0] as List<com.dualreader.app.domain.usecases.PageToTranslate>
             val result = pages.associate { it.index to "T${it.index}" }
             Result.success(BatchTranslationResult(result, "test"))
@@ -1110,7 +1110,7 @@ class ReaderViewModelTest {
         coEvery { bookRepository.getBookById("book1") } returns singlePageBook
         coEvery { bookRepository.getPagesForBook("book1") } returns singlePage
 
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } returns
             Result.success(BatchTranslationResult(mapOf(0 to "Единствена страница"), "test"))
 
         val vm = createViewModel()
@@ -1127,7 +1127,7 @@ class ReaderViewModelTest {
 
     @Test
     fun `translateCurrentPage then goToPage - translation persists`() = runTest(testDispatcher) {
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } returns
             Result.success(BatchTranslationResult(mapOf(0 to "Превод", 1 to "Едно", 2 to "Две"), "test"))
 
         val vm = createViewModel()
@@ -1152,7 +1152,7 @@ class ReaderViewModelTest {
 
     @Test
     fun `translateAllPages - sets error on failure`() = runTest(testDispatcher) {
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } returns
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } returns
             Result.failure(Exception("All providers failed"))
 
         val vm = createViewModel()
@@ -1177,7 +1177,7 @@ class ReaderViewModelTest {
         coEvery { bookRepository.getPagesForBook("book1") } returns preTranslated
 
         var capturedPages: List<com.dualreader.app.domain.usecases.PageToTranslate>? = null
-        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any()) } coAnswers {
+        coEvery { translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any()) } coAnswers {
             capturedPages = args[0] as List<com.dualreader.app.domain.usecases.PageToTranslate>
             val result = capturedPages!!.associate { it.index to "T${it.index}" }
             Result.success(BatchTranslationResult(result, "test"))

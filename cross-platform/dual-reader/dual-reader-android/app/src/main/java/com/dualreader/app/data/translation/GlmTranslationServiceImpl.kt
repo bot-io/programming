@@ -2,6 +2,7 @@ package com.dualreader.app.data.translation
 
 import com.dualreader.app.domain.services.TranslationException
 import com.dualreader.app.domain.services.TranslationService
+import com.dualreader.app.domain.usecases.SerializedBookContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -38,7 +39,8 @@ class GlmTranslationServiceImpl @Inject constructor(
         text: String,
         targetLanguage: String,
         sourceLanguage: String?,
-        context: String?
+        context: String?,
+        bookContext: SerializedBookContext?,
     ): String = withContext(Dispatchers.IO) {
         val userPrompt = buildString {
             append("Translate to $targetLanguage")
