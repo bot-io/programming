@@ -152,12 +152,14 @@
 - **Branch:** `feat/crt-14-export-import` pushed (PR needs manual creation — token scope issue)
 
 ### CRT-15 Capacitor Android build + background-pause
-- **Status:** ready
+- **Status:** blocked
 - **Milestone:** M4
 - **Acceptance Criteria:**
-  1. Debug APK produced in CI
-  2. Background-pause: sim pauses when app backgrounded, resumes on foreground
-  3. On-device perf check — **needs Svetlin** (block on human verification)
+  1. Debug APK produced in CI ✅ — android-debug-apk job in ci.yml, artifact uploaded
+  2. Background-pause: sim pauses when app backgrounded, resumes on foreground ✅ — already implemented (Capacitor pause/resume events), 12 tests added
+  3. On-device perf check — **needs Svetlin** (block on human verification) ⏳
+- **Branch:** `feat/crt-15-capacitor-android-ci` pushed
+- **Notes:** Criteria 1 & 2 complete. Criterion 3 (on-device perf) blocked on Svetlin installing debug APK and reporting FPS. PR needs manual creation (token scope).
 
 ### CRT-16 iOS + store readiness
 - **Status:** blocked

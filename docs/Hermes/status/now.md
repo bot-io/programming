@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-12 17:14 Sofia**
+> Last updated: **2026-06-12 17:40 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 18%
+- **Usage:** 41%
 - **Resets:** 01 Sofia |
 - **Spare capacity:** ?
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-13
-- **Total runs:** 3
+- **Last item:** CRT-15
+- **Total runs:** 4
 
 ## 📁 Projects
 
@@ -26,14 +26,12 @@
 - **Progress:** 2/2 done
 - **Last work:** 2026-06-10 — Initial project setup
 
-### ⚪ critterium
-- **Status:** ** M3 complete — CRT-14 done, all M3 items shipped
+### 🔴 critterium
+- **Status:** ** M4 in progress — CRT-15 blocked on on-device verification
 - **Updated:** ** 2026-06-12
-- **Ready:** CRT-15
-- **Blocked:** CRT-16
+- **Blocked:** CRT-15, CRT-16
 - **Progress:** 14/16 done
-- **❓ Open Questions:** Q9:, Q10:, Q11:, Q12:, Q13:, Q14:, Q15:, Q16:, Q17: → answer in `questions.md` or this chat
-- **Last work:** CRT-14 — Export/import config files (2026-06-12)
+- **Last work:** 2026-06-12 CRT-15: Capacitor Android build + background-pause
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development
@@ -51,7 +49,7 @@
 
 ## 🚨 Needs Your Input
 
-- **critterium** — blocked: CRT-16; open questions: Q9:, Q10:, Q11:, Q12:, Q13:, Q14:, Q15:, Q16:, Q17:
+- **critterium** — blocked: CRT-15, CRT-16
   → Open that project's Telegram chat and respond, or tell this chat
 - **dual-reader** — blocked: DR-007:; needs-decision: DR-004:
   → Open that project's Telegram chat and respond, or tell this chat
