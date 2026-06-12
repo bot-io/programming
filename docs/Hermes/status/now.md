@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-12 11:34 Sofia**
+> Last updated: **2026-06-12 12:47 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -13,10 +13,10 @@
 - _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-12T11:31:00Z
+- **Last run:** 2026-06-12T12:45:00Z
 - **Last project:** dual-reader
-- **Last item:** DR-idle-no-ready-items
-- **Total runs:** 17
+- **Last item:** DR-merge-005-010-006
+- **Total runs:** 18
 
 ## 📁 Projects
 
@@ -41,7 +41,7 @@
 - **Ready:** DR-006:, DR-007:
 - **Needs Decision:** DR-004:
 - **Progress:** 7/10 done
-- **Last work:** 2026-06-12 — cron-worker — DR-009: Merged to master + backlog cleanup
+- **Last work:** 2026-06-12 — cron-worker — Merge DR-005, DR-010, DR-006 to master
 
 ### ⚪ machine-setup
 - **Status:** ** Complete

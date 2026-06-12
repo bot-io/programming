@@ -179,5 +179,31 @@
 - Backlog updated: DR-005 and DR-010 marked "done" (were already implemented on feature branches but backlog was stale)
 - State.md updated with accurate item counts and pending merges list
 
-**Git:** Merge commit on master (feat/dr-009-per-device-quota → master), plus `d4baff6` (test fixes) and `00c83ae` (.gitignore cleanup)
+**Git:** Merge commit on master (feat/dr-009-per-device-quota → master), plus `d4baff6` (test fixes) and `00c83ae` (.gitignore cleanup).
+
+### 2026-06-12 — cron-worker — Merge DR-005, DR-010, DR-006 to master
+
+**Context:** All three feature branches were done but never merged to master. Worker cherry-picked the feature commits (avoiding noisy worker-status commits on the branches) and resolved merge conflicts.
+
+**Work done:**
+- Cherry-picked `6925885` (DR-005: reading progress tracking) — clean
+- Cherry-picked `8446759` (DR-010: book context for translation) — **conflicts resolved** in `CloudTranslationServiceImpl.kt` and `ProxyTranslationApi.kt` where DR-009's `installationId` and DR-010's `bookContext` both needed to coexist in request objects
+- Cherry-picked `4708d61` (DR-006: export annotations/highlights) — clean
+
+**Conflict resolution details:**
+- `ProxyTranslateRequest` and `ProxyBatchTranslateRequest` now have both `installationId: String?` (DR-009) and `bookContext: ProxyBookContext?` (DR-010) fields
+- `CloudTranslationServiceImpl.kt` single-translate and batch-translate methods both populate both fields
+- `ProxyBookContext` data class now present in `ProxyTranslationApi.kt`
+
+**Verification:**
+- `compileDebugKotlin` — BUILD SUCCESSFUL (only pre-existing deprecation warnings)
+- `testDebugUnitTest` — BUILD SUCCESSFUL (all tests pass)
+
+**Additional:**
+- Installed JDK 21 (Temurin 21.0.11) to `$HOME/.jdks/jdk-21.0.11+10/` for build verification (system only had JDK 17)
+
+**Commits on master:**
+- `f1cc0e2` feat(DR-005): reading progress tracking with persistence
+- `41e242e` feat(DR-010): Book context for translation quality
+- `01c1592` feat(export): add bookmark/annotation export in Plain Text, Markdown, and JSON formats (DR-006)
 
