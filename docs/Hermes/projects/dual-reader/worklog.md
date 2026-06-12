@@ -207,3 +207,39 @@
 - `41e242e` feat(DR-010): Book context for translation quality
 - `01c1592` feat(export): add bookmark/annotation export in Plain Text, Markdown, and JSON formats (DR-006)
 
+### 2026-06-12 — cron-worker — DR-007: Play Store Launch Preparation
+
+**Item:** DR-007 (P0)
+**Status:** done
+**Summary:** Implemented Play Store launch preparation — splash screen, privacy policy, Play Store listings in English and Bulgarian.
+
+**Changes:**
+- `libs.versions.toml` — Added `splashscreen = "1.0.1"` dependency (AndroidX core-splashscreen)
+- `app/build.gradle.kts` — Added `implementation(libs.androidx.splashscreen)`
+- `MainActivity.kt` — Install splash screen via `installSplashScreen()` before `super.onCreate()`
+- `themes.xml` — Added `Theme.DualReader.Splash` (parent `Theme.SplashScreen`) with branded background + foreground icon + `postSplashScreenTheme`
+- `colors.xml` — New `splash_background` color matching adaptive icon indigo (#3F51B5)
+- `AndroidManifest.xml` — App theme changed to splash theme; added `PrivacyPolicyActivity` declaration
+- `PrivacyPolicyActivity.kt` — New activity using WebView to render bundled privacy policy HTML
+- `privacy-policy.html` — Full privacy policy in assets (covers data collection, translation, local storage, third-party services)
+- `SettingsScreen.kt` — Added "Privacy Policy" clickable link in About section
+- `strings.xml` — Added `privacy_policy_title` and `privacy_policy_url` strings
+- `store-listing/en-US/` — English Play Store title, short description, full description
+- `store-listing/bg/` — Bulgarian Play Store title, short description, full description
+- `PrivacyPolicyActivityTest.kt` — 7 tests: activity registration, launch, HTML existence, content validation, key sections, no-data-collection statement, contact email
+- `SplashPlayStoreTest.kt` — 8 tests: splash theme exists, colors, strings, icons, adaptive icon, theme distinctness
+
+**Verification:**
+- `compileDebugKotlin` — BUILD SUCCESSFUL
+- `testDebugUnitTest` — BUILD SUCCESSFUL (439 tests, 0 failures)
+
+**Branch:** `feat/dr-007-play-store-launch` pushed
+**Commit:** `289ef4c`
+
+**Remaining (user action):**
+- Replace placeholder icon with final design
+- Deploy privacy policy to a real URL (currently bundled in-app)
+- Complete IARC content rating in Play Console
+- Upload screenshots to Play Console
+- Create production keystore and replace debug signing config
+
