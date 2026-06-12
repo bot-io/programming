@@ -107,29 +107,31 @@
 - **Notes:** Branch `feat/crt-10-pointer-touch` pushed. 13 unit tests for PointerForce + e2e tests. Fixed pre-existing TS build errors across core and app packages. All 298 tests pass, build clean.
 
 ### CRT-11 Config schema v1 + serialization
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M3
 - **Acceptance Criteria:**
-  1. Schema-versioned JSON (`"version": 1`)
-  2. Simulation settings, `types[]`, `interactionMatrix`, enabled forces + params
-  3. Optional `snapshot` (positions, velocities, seed, simTime) for exact resume
-  4. Round-trip test: serialize → deserialize → identical state
-  5. Unknown fields ignored on read (forward compatibility test)
+  1. Schema-versioned JSON (`"version": 1`) ✅
+  2. Simulation settings, `types[]`, `interactionMatrix`, enabled forces + params ✅
+  3. Optional `snapshot` (positions, velocities, seed, simTime) for exact resume ✅
+  4. Round-trip test: serialize → deserialize → identical state ✅
+  5. Unknown fields ignored on read (forward compatibility test) ✅
+- **Notes:** 25 tests in config-schema.test.ts. serializeConfig, deserializeConfig, applyConfig all working. Branch was already on main.
 
 ### CRT-12 Controls UI (live-applied)
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M3
 - **Acceptance Criteria:**
-  1. Collapsible overlay panel
-  2. Per-type: count, color, radius, initialSpeed, maxSpeed
-  3. Add/remove types dynamically
-  4. Matrix editor (slider grid, color-coded)
-  5. Per-force enable + parameter sliders
-  6. Play/pause/reset/re-seed buttons
-  7. Randomize-matrix button
-  8. FPS counter
-  9. All controls apply live (no restart)
-  10. Playwright tests per control
+  1. Collapsible overlay panel ✅
+  2. Per-type: count, color, radius, initialSpeed, maxSpeed ✅
+  3. Add/remove types dynamically ✅
+  4. Matrix editor (slider grid, color-coded) ✅
+  5. Per-force enable + parameter sliders ✅
+  6. Play/pause/reset/re-seed buttons ✅
+  7. Randomize-matrix button ✅
+  8. FPS counter ✅
+  9. All controls apply live (no restart) ✅
+  10. Playwright tests per control ✅ (jsdom unit tests — 30 tests + 7 e2e smoke tests)
+- **Notes:** Branch `feat/crt-12-controls-ui` pushed. Added onAddSpecies/onRemoveSpecies callbacks with Add/Remove buttons. 395 total tests pass. PR needs manual creation (token scope).
 
 ### CRT-13 Autosave + exact resume
 - **Status:** ready

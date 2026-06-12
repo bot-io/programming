@@ -47,3 +47,21 @@
 - Fixed FalloffType casts and force enabled checks
 - Build: all 3 packages pass. Tests: 298/298 pass.
 - Branch: feat/crt-10-pointer-touch, commit 46cf4a7
+
+## CRT-11 — Config schema v1 + serialization (2026-06-12)
+- Already fully implemented on main branch (from prior work)
+- 25 tests: serialize, deserialize, applyConfig, round-trip, forward compatibility
+- serializeConfig: serializes EcosystemWorld + InteractionMatrix + forces → CritteriumConfig
+- deserializeConfig: validates version, sim params, species, matrix, snapshot; ignores unknown fields
+- applyConfig: rebuilds EcosystemWorld and InteractionMatrix from config, restores snapshot
+- All 390 tests pass. No new code needed — marked done.
+
+## CRT-12 — Controls UI live-applied (2026-06-12)
+- Most controls already implemented on main (collapsible panel, species sliders, matrix editor, force toggles, play/pause/reset/reseed, FPS counter, presets, export/import)
+- Added onAddSpecies/onRemoveSpecies callbacks to ControlsPanelOptions
+- Added "+ Add Species" button at top of Species section
+- Added "✕" remove button on each species header (hidden when ≤1 species)
+- Wired handlers in main.ts: add creates default species, remove by index, both save pending config and reload page
+- 5 new unit tests for add/remove functionality
+- All 395 tests pass.
+- Branch: feat/crt-12-controls-ui, commit 87e0a3d

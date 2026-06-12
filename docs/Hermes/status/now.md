@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-12 16:12 Sofia**
+> Last updated: **2026-06-12 16:35 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -13,10 +13,10 @@
 - _No active locks_
 
 ## 🤖 Overnight Worker
-- **Last run:** 2026-06-12T16:10:00Z
-- **Last project:** dual-reader
-- **Last item:** DR-backlog-maintenance
-- **Total runs:** 19
+- **Last run:** never
+- **Last project:** critterium
+- **Last item:** CRT-12
+- **Total runs:** 1
 
 ## 📁 Projects
 
@@ -26,14 +26,14 @@
 - **Progress:** 2/2 done
 - **Last work:** 2026-06-10 — Initial project setup
 
-### ⚪ critterium
-- **Status:** ** M2 complete — M3 next
+### 🟢 critterium
+- **Status:** ** M3 in progress — CRT-11 and CRT-12 done
 - **Updated:** ** 2026-06-12
-- **Ready:** CRT-11, CRT-12, CRT-13, CRT-14, CRT-15
+- **Ready:** CRT-13, CRT-14, CRT-15
 - **Blocked:** CRT-16
-- **Progress:** 10/16 done
+- **Progress:** 12/16 done
 - **❓ Open Questions:** Q9:, Q10:, Q11:, Q12:, Q13:, Q14:, Q15:, Q16:, Q17: → answer in `questions.md` or this chat
-- **Last work:** CRT-10 — Pointer/touch interaction force (2026-06-12)
+- **Last work:** CRT-12 — Controls UI live-applied (2026-06-12)
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development
