@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-12 16:48 Sofia**
+> Last updated: **2026-06-12 17:14 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 1%
+- **Usage:** 18%
 - **Resets:** 01 Sofia |
 - **Spare capacity:** ?
 
@@ -26,14 +26,14 @@
 - **Progress:** 2/2 done
 - **Last work:** 2026-06-10 — Initial project setup
 
-### 🟢 critterium
-- **Status:** ** M3 in progress — CRT-13 done
+### ⚪ critterium
+- **Status:** ** M3 complete — CRT-14 done, all M3 items shipped
 - **Updated:** ** 2026-06-12
-- **Ready:** CRT-14, CRT-15
+- **Ready:** CRT-15
 - **Blocked:** CRT-16
-- **Progress:** 13/16 done
+- **Progress:** 14/16 done
 - **❓ Open Questions:** Q9:, Q10:, Q11:, Q12:, Q13:, Q14:, Q15:, Q16:, Q17: → answer in `questions.md` or this chat
-- **Last work:** CRT-13 — Autosave + exact resume (2026-06-12)
+- **Last work:** CRT-14 — Export/import config files (2026-06-12)
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development

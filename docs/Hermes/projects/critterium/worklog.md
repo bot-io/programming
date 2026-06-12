@@ -78,3 +78,25 @@
   3. beforeunload trigger: verify autosave fires on page close
 - All 395 unit tests pass. All 3 new E2E tests pass (8 e2e total pass, 1 pre-existing touch test failure)
 - Branch: feat/crt-13-autosave-resume, commit 66ddc38
+
+## CRT-14 — Export/import config files (2026-06-12)
+- Export/import functions already existed in persistence.ts from prior scaffolding
+- **Enhanced importConfig()** to use `deserializeConfig()` for full schema validation (previously only checked version number — now validates simulation params, species fields, interaction matrix, forces, snapshot)
+- **10 new unit tests** in persistence.test.ts:
+  1. importConfig resolves null for invalid JSON file
+  2. importConfig resolves null for config with wrong version
+  3. importConfig resolves null for config missing required fields
+  4. importConfig resolves validated config for valid file
+  5. importConfig resolves null when no file selected (empty file list)
+  6. Round-trip: export produces JSON that importConfig validates
+  7. exportConfig does not duplicate .json extension
+  8. exportConfig handles errors gracefully
+  9. autosave round-trip tests (2 existing, preserved)
+- **4 new E2E Playwright tests** in e2e/export-import.spec.ts:
+  1. Export button triggers download with valid JSON config
+  2. Exported config can be re-imported and applied
+  3. Full round-trip: export → import → reload restores simulation
+  4. Consistent exports when paused
+- All 398 unit tests pass (104 app + 278 core + 16 render)
+- Branch: feat/crt-14-export-import, commit 59e1535
+- PR creation blocked by token scope — needs manual `gh pr create`

@@ -143,12 +143,13 @@
 - **Branch:** `feat/crt-13-autosave-resume` pushed (PR needs manual creation — token scope issue)
 
 ### CRT-14 Export/import config files
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M3
 - **Acceptance Criteria:**
-  1. Export named configs as `.json` (download on web, share sheet on mobile)
-  2. Import configs with validation
-  3. E2E round-trip test
+  1. Export named configs as `.json` (download on web, share sheet on mobile) ✅
+  2. Import configs with validation ✅ (full `deserializeConfig` validation)
+  3. E2E round-trip test ✅ (4 Playwright tests + 10 unit tests)
+- **Branch:** `feat/crt-14-export-import` pushed (PR needs manual creation — token scope issue)
 
 ### CRT-15 Capacitor Android build + background-pause
 - **Status:** ready
