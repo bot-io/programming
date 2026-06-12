@@ -34,20 +34,22 @@
 - **Notes:** Implemented NIGHT enum value, NightColorScheme Material3 theme, animatedReaderColors() with 400ms cross-fade, colorSchemeForTheme mapping for all 7 themes. 30 new tests all passing. WCAG AAA contrast (12.4:1) on true black.
 
 ### DR-004: Library Management (Tags, Collections, Sorting)
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Acceptance Criteria:**
-  1. User can assign custom tags to books and filter library by tag
-  2. User can create named collections and add/remove books from them
-  3. Library supports sorting by: title, author, date added, last read, completion percentage
-  4. Tag and collection data persists across app restarts (Room DB migration if needed)
-  5. UI follows Material Design 3 patterns; Compose previews for key components
+  1. User can assign custom tags to books and filter library by tag ✅
+  2. User can create named collections and add/remove books from them ✅
+  3. Library supports sorting by: title, author, date added, last read, completion percentage ✅
+  4. Tag and collection data persists across app restarts (Room DB migration if needed) ✅ Room migration v5→v6
+  5. UI follows Material Design 3 patterns; Compose previews for key components ✅
 - **Scope Decision:** Implement tags-first, then collections. Tags are flat strings stored in a Room `book_tags` table (bookId + tag). Collections are a `collections` table + `collection_books` junction. Add new Room migration. Sorting uses existing `Book` entity with new `dateAdded` and `lastRead` columns. No cloud sync — local only.
 - **DB Schema:**
   - `book_tags(bookId TEXT, tag TEXT, PRIMARY KEY(bookId, tag))`
   - `collections(id INTEGER PK, name TEXT, createdAt INTEGER)`
   - `collection_books(collectionId INTEGER, bookId TEXT, PRIMARY KEY(collectionId, bookId))`
   - New columns on `Book`: `dateAdded INTEGER`, `lastRead INTEGER`
+- **Branch:** `feat/dr-004-library-management` pushed (PR creation blocked by token scope)
+- **Notes:** 32 new tests (25 repository + 7 entity), all 455 total tests pass. Tag management via bottom sheet, collection management via book context menu, sort dropdown in top bar, tag filter chips above book grid.
 
 ### DR-005: Reading Progress Tracking with Persistence
 - **Status:** done

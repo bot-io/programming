@@ -207,3 +207,37 @@
 - `41e242e` feat(DR-010): Book context for translation quality
 - `01c1592` feat(export): add bookmark/annotation export in Plain Text, Markdown, and JSON formats (DR-006)
 
+### 2026-06-13 — cron-worker — DR-004: Library Management (Tags, Collections, Sorting)
+
+**Item:** DR-004 (P1)
+**Status:** done
+**Summary:** Implemented full library management system with tags, collections, and sorting for the dual-reader Android app.
+
+**Changes:**
+
+**Data Layer:**
+- `Entities.kt` — New entities: BookTagEntity (bookId + tag composite PK), CollectionEntity (auto-gen id, name, createdAt), CollectionBookEntity (collectionId + bookId junction)
+- `Daos.kt` — New DAOs: BookTagDao (CRUD for tags, getBookIdsByTag), CollectionDao (CRUD for collections + junction)
+- `AppDatabase.kt` — Room v5→v6 migration creating book_tags, collections, collection_books tables. DB version bumped to 6.
+- `DataModule.kt` — Added BookTagDao, CollectionDao providers; bound LibraryRepositoryImpl
+- `BookRepositoryImpl.kt` — Added bookTagDao injection, cleanup tags on book delete
+
+**Domain Layer:**
+- `LibraryEntities.kt` — New domain entities: BookTag, BookCollection, SortOrder enum (LAST_READ, TITLE, AUTHOR, DATE_ADDED, PROGRESS)
+- `LibraryRepository.kt` — New interface for sorted books, tag CRUD, collection CRUD
+- `LibraryRepositoryImpl.kt` — Implementation with sort-order routing to BookDao queries, progress sort in-memory, tag/collection delegation
+
+**UI Layer:**
+- `LibraryViewModel.kt` — Added LibraryRepository injection, sort state (MutableStateFlow), tag filtering (per-book tag loading + filter), collection management methods, allTags/collections StateFlows
+- `LibraryScreen.kt` — Complete redesign: sort dropdown in top bar, tag filter chips (FlowRow), tag management bottom sheet, collection support in book context menu, AddTagDialog, AddToCollectionDialog, CreateCollectionDialog, tag badges on book cards
+- `NavHost.kt` — Wired all new ViewModel params (allTags, collections, sort, tag, collection callbacks)
+
+**Tests:**
+- `LibraryRepositoryImplTest.kt` — 25 tests: sorted book queries (5 sort orders), tag CRUD (6 tests), collection CRUD (9 tests), edge cases (4 tests)
+- `LibraryEntitiesTest.kt` — 7 tests: BookTag/BookCollection data classes, SortOrder enum values
+
+**Test results:** 455 tests total (32 new), 0 failures
+**Build:** assembleDebug BUILD SUCCESSFUL
+**Branch:** `feat/dr-004-library-management` (push blocked by token scope — same issue as all previous items)
+**Commit:** `f645b3a`
+
