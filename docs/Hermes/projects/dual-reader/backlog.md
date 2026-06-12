@@ -45,15 +45,15 @@
 - **Notes:** Needs user input on scope — full collections or simple tags-first approach? Also need to decide on DB schema changes.
 
 ### DR-005: Reading Progress Tracking with Persistence
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Acceptance Criteria:**
-  1. App remembers last-read position per book and reopens to that position
-  2. Progress percentage is displayed in library view for each book
-  3. Progress data persists across app restarts and survives app updates
-  4. Progress syncs correctly when switching between devices (if applicable — needs decision)
-  5. Unit tests for progress calculation, persistence, and restoration logic
-- **Notes:** Basic feature expectation. May need cloud sync scope clarification.
+  1. ~~App remembers last-read position per book and reopens to that position~~ ✅
+  2. ~~Progress percentage is displayed in library view for each book~~ ✅
+  3. ~~Progress data persists across app restarts and survives app updates~~ ✅ Room DB persistence
+  4. Progress syncs correctly when switching between devices (if applicable — needs decision) ⏳ Deferred — cloud sync not in scope
+  5. ~~Unit tests for progress calculation, persistence, and restoration logic~~ ✅
+- **Notes:** Implemented on branch `feat/DR-005-reading-progress`. Criterion 4 (cloud sync) deferred. Branch needs merge to master.
 
 ### DR-006: Export Annotations and Highlights
 - **Status:** ready
@@ -103,11 +103,11 @@
 - **Notes:** Prevents abuse, enables freemium model. D1 table device_quota with installation_id+date composite PK. Worker: quota.js (153 LOC, 30 tests). Android: InstallationIdProvider, QuotaApi, quota UI in SettingsScreen. All builds pass.
 
 ### DR-010: Book Context for Translation Quality
-- **Status:** ready
+- **Status:** done
 - **Priority:** P2
 - **Acceptance Criteria:**
-  1. First 3 pages of each book extracted as system-level context
-  2. Context injected into translation prompt as "book context" (title, author, setting)
-  3. Context cached per-book so re-translation doesn't re-extract
-  4. Unit tests for context extraction and injection
-- **Notes:** Low effort, high quality improvement. Helps with character names, setting, tone consistency from page 1.
+  1. ~~First 3 pages of each book extracted as system-level context~~ ✅ BookContextExtractor
+  2. ~~Context injected into translation prompt as "book context" (title, author, setting)~~ ✅ Injected into Worker system prompt
+  3. ~~Context cached per-book so re-translation doesn't re-extract~~ ✅ Extracted once in loadBook
+  4. ~~Unit tests for context extraction and injection~~ ✅ 7 Android tests + Worker tests
+- **Notes:** Branch `feat/DR-010-book-context`. Commit: 8446759. 370 Android tests + 51 Worker tests. Branch needs merge to master. Worker-side changes need deployment.

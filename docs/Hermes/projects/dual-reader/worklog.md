@@ -157,3 +157,27 @@
   - Android: `feat(DR-009): Android per-device quota with InstallationIdProvider, QuotaApi, and quota UI in Settings`
 **Branches:** Both repos on `feat/dr-009-per-device-quota`
 **Action needed:** User must apply D1 migration 0002 via `wrangler d1 migrations apply`
+
+### 2026-06-12 — cron-worker — DR-009: Merged to master + backlog cleanup
+
+**Item:** DR-009 (P1)
+**Status:** done (merged to master)
+**Summary:** Fixed compilation errors in test files (missing `installationIdProvider` constructor parameter), merged DR-009 branch to master, and cleaned up backlog/state docs.
+
+**Changes:**
+- `CloudTranslationServiceImplTest.kt` — Added `installationIdProvider` mock + `getInstallationId()`/`getInstallationIdSync()` stubs
+- `CloudTranslationServiceImplAdditionalTest.kt` — Same fix for 5 failing `detectLanguage` tests
+- `Tools/translate-proxy/.gitignore` — Added `.wrangler/` to prevent tracking build artifacts
+- Removed `.wrangler/` state files from git tracking (9 files deleted)
+
+**Verification:**
+- All 374 Android unit tests pass (`testDebugUnitTest` — BUILD SUCCESSFUL)
+- All 30 Worker quota tests pass
+- All 35 Worker translation-cache tests pass
+
+**Additional cleanup:**
+- Backlog updated: DR-005 and DR-010 marked "done" (were already implemented on feature branches but backlog was stale)
+- State.md updated with accurate item counts and pending merges list
+
+**Git:** Merge commit on master (feat/dr-009-per-device-quota → master), plus `d4baff6` (test fixes) and `00c83ae` (.gitignore cleanup)
+
