@@ -22,7 +22,8 @@ import javax.inject.Singleton
 @Singleton
 class CloudTranslationServiceImpl @Inject constructor(
     private val proxyApi: ProxyTranslationApi,
-    private val connectivityManager: ConnectivityManager
+    private val connectivityManager: ConnectivityManager,
+    private val installationIdProvider: InstallationIdProvider,
 ) : TranslationService {
 
     override val providerName: String = "Gemini 3.5 Flash / GLM-4.7-Flash (cloud)"
@@ -41,12 +42,14 @@ class CloudTranslationServiceImpl @Inject constructor(
         sourceLanguage: String?,
         context: String?
     ): String = withContext(Dispatchers.IO) {
+        val installationId = installationIdProvider.getInstallationId()
         // Context is already formatted by TranslatePageUseCase with clear instructions.
         // Just pass it through to the proxy — the worker adds it before the text.
         val request = ProxyTranslateRequest(
             text = if (context != null) "$context\n\n--- Text to translate ---\n$text" else text,
             sourceLang = sourceLanguage,
             targetLang = targetLanguage,
+            installationId = installationId,
         )
 
         callProxy(request)
@@ -60,6 +63,7 @@ class CloudTranslationServiceImpl @Inject constructor(
         sourceLanguage: String?
     ): List<String> = withContext(Dispatchers.IO) {
         if (texts.isEmpty()) return@withContext emptyList()
+        val installationId = installationIdProvider.getInstallationId()
 
         // Send texts one by one through the proxy to avoid oversized requests.
         // The worker rate-limits per IP so we add small delays between calls.
@@ -71,6 +75,7 @@ class CloudTranslationServiceImpl @Inject constructor(
                 text = text,
                 sourceLang = sourceLanguage,
                 targetLang = targetLanguage,
+                installationId = installationId,
             )
             results.add(callProxy(request))
         }
@@ -86,6 +91,7 @@ class CloudTranslationServiceImpl @Inject constructor(
         context: String?,
     ): BatchTranslationResult = withContext(Dispatchers.IO) {
         if (pages.isEmpty()) return@withContext BatchTranslationResult(emptyMap())
+        val installationId = installationIdProvider.getInstallationId()
 
         // Try the batch endpoint first
         try {
@@ -97,6 +103,7 @@ class CloudTranslationServiceImpl @Inject constructor(
                 pages = batchPages,
                 sourceLang = sourceLanguage,
                 targetLang = targetLanguage,
+                installationId = installationId,
             )
 
             val response = proxyApi.translateBatch(request)
@@ -155,10 +162,12 @@ class CloudTranslationServiceImpl @Inject constructor(
 
         // Ask the proxy to translate with auto-detect — then we infer language.
         // For simplicity, we use the same proxy endpoint with a special target.
+        val installationId = installationIdProvider.getInstallationIdSync()
         val request = ProxyTranslateRequest(
             text = "Detect the language of this text, reply with ISO 639-1 code only:\n$text",
             sourceLang = "auto",
             targetLang = "en",
+            installationId = installationId,
         )
 
         val result = callProxy(request).trim().lowercase()

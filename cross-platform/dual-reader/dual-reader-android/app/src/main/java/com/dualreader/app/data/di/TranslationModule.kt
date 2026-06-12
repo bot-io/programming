@@ -5,8 +5,10 @@ import android.net.ConnectivityManager
 import com.dualreader.app.data.translation.CloudTranslationServiceImpl
 import com.dualreader.app.data.translation.FallbackTranslationService
 import com.dualreader.app.data.translation.GlmTranslationServiceImpl
+import com.dualreader.app.data.translation.InstallationIdProvider
 import com.dualreader.app.data.translation.MlKitTranslationServiceImpl
 import com.dualreader.app.data.translation.ProxyTranslationApi
+import com.dualreader.app.data.translation.QuotaApi
 import com.dualreader.app.data.translation.TranslationApi
 import com.dualreader.app.domain.services.TranslationService
 import com.squareup.moshi.Moshi
@@ -64,6 +66,19 @@ abstract class TranslationModule {
 
         @Provides
         @Singleton
+        fun provideQuotaApi(
+            okHttpClient: OkHttpClient,
+            moshi: Moshi
+        ): QuotaApi =
+            Retrofit.Builder()
+                .baseUrl(PROXY_BASE_URL)
+                .client(okHttpClient)
+                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .build()
+                .create(QuotaApi::class.java)
+
+        @Provides
+        @Singleton
         fun provideTranslationApi(
             okHttpClient: OkHttpClient,
             moshi: Moshi
@@ -87,9 +102,10 @@ abstract class TranslationModule {
         @Named("cloud")
         fun provideCloudTranslationService(
             proxyApi: ProxyTranslationApi,
-            connectivityManager: ConnectivityManager
+            connectivityManager: ConnectivityManager,
+            installationIdProvider: InstallationIdProvider,
         ): TranslationService =
-            CloudTranslationServiceImpl(proxyApi, connectivityManager)
+            CloudTranslationServiceImpl(proxyApi, connectivityManager, installationIdProvider)
 
         @Provides
         @Singleton
