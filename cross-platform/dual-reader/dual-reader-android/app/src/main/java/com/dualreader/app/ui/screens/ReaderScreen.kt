@@ -222,6 +222,7 @@ fun ReaderScreen(
     searchQuery: String = "",
     searchResults: List<ReaderViewModel.SearchResult> = emptyList(),
     onRePaginate: (widthPx: Int, heightPx: Int, density: Float) -> Unit = { _, _, _ -> },
+    onExportBookmarks: (com.dualreader.app.domain.export.ExportFormat) -> Unit = {},
 ) {
     when (uiState) {
         is ReaderUiState.Loading -> {
@@ -269,6 +270,7 @@ fun ReaderScreen(
                 searchQuery = searchQuery,
                 searchResults = searchResults,
                 onRePaginate = onRePaginate,
+                onExportBookmarks = onExportBookmarks,
             )
         }
     }
@@ -302,6 +304,7 @@ private fun ReaderContent(
     searchQuery: String,
     searchResults: List<ReaderViewModel.SearchResult>,
     onRePaginate: (widthPx: Int, heightPx: Int, density: Float) -> Unit = { _, _, _ -> },
+    onExportBookmarks: (com.dualreader.app.domain.export.ExportFormat) -> Unit = {},
 ) {
     val colors = animatedReaderColors(settings.theme)
     val layoutMode = rememberLayoutMode()
@@ -312,6 +315,7 @@ private fun ReaderContent(
     var barsVisible by remember { mutableStateOf(false) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var showBookmarkList by remember { mutableStateOf(false) }
+    var showExportFormatPicker by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
     var searchInput by remember { mutableStateOf("") }
 
@@ -570,6 +574,21 @@ private fun ReaderContent(
             onNavigateToBookmark = { onGoToPage(it) },
             onDeleteBookmark = onRemoveBookmark,
             onDismiss = { showBookmarkList = false },
+            onExport = if (bookmarks.isNotEmpty()) {
+                { showExportFormatPicker = true }
+            } else null,
+        )
+    }
+
+    // Export format picker dialog
+    if (showExportFormatPicker) {
+        ExportFormatDialog(
+            onDismiss = { showExportFormatPicker = false },
+            onSelectFormat = { format ->
+                showExportFormatPicker = false
+                showBookmarkList = false
+                onExportBookmarks(format)
+            },
         )
     }
 
@@ -878,6 +897,7 @@ fun BookmarkListSheet(
     onNavigateToBookmark: (Int) -> Unit,
     onDeleteBookmark: (String) -> Unit,
     onDismiss: () -> Unit,
+    onExport: (() -> Unit)? = null,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)
@@ -911,6 +931,18 @@ fun BookmarkListSheet(
                     }
                 }
             } else {
+                // Export button above the bookmark list
+                if (onExport != null) {
+                    OutlinedButton(
+                        onClick = onExport,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    ) {
+                        Icon(Icons.Default.IosShare, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Export bookmarks")
+                    }
+                }
+
                 bookmarks.sortedByDescending { it.createdAt }.forEach { bookmark ->
                     val isCurrentPage = bookmark.pageIndex == currentPageIndex
                     Card(
@@ -958,4 +990,42 @@ fun BookmarkListSheet(
             }
         }
     }
+}
+
+// ─── Export Format Picker Dialog ─────────────────────────────────────────────
+
+@Composable
+fun ExportFormatDialog(
+    onDismiss: () -> Unit,
+    onSelectFormat: (com.dualreader.app.domain.export.ExportFormat) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Export format") },
+        text = {
+            Column {
+                Text(
+                    "Choose a format for the exported bookmarks:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+                listOf(
+                    com.dualreader.app.domain.export.ExportFormat.PLAIN_TEXT to "Plain Text (.txt)",
+                    com.dualreader.app.domain.export.ExportFormat.MARKDOWN to "Markdown (.md)",
+                    com.dualreader.app.domain.export.ExportFormat.JSON to "JSON (.json)",
+                ).forEach { (format, label) ->
+                    TextButton(
+                        onClick = { onSelectFormat(format) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(label)
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
 }

@@ -15,7 +15,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -26,6 +29,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.launch
 import com.dualreader.app.ui.screens.*
 import java.io.File
 import java.util.UUID
@@ -81,6 +85,24 @@ fun DualReaderNavHost() {
                     }
                 }
 
+                // SAF launcher for exporting bookmarks from library
+                val libraryScope = rememberCoroutineScope()
+                var pendingLibraryExport by remember { mutableStateOf<Pair<String, String>?>(null) }
+                val libraryExportLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.CreateDocument("text/plain")
+                ) { uri: Uri? ->
+                    uri?.let { u ->
+                        pendingLibraryExport?.let { (content, _) ->
+                            try {
+                                context.contentResolver.openOutputStream(u)?.use { os ->
+                                    os.write(content.toByteArray(Charsets.UTF_8))
+                                }
+                            } catch (_: Exception) { }
+                        }
+                        pendingLibraryExport = null
+                    }
+                }
+
                 LibraryScreen(
                     uiState = uiState,
                     onBookClick = { bookId -> navController.navigate("reader/$bookId") },
@@ -88,6 +110,18 @@ fun DualReaderNavHost() {
                     onSettingsClick = { navController.navigate("settings") },
                     onRetryPagination = { book -> viewModel.retryPagination(book, 1080, 1000) },
                     onDeleteBook = { viewModel.deleteBook(it) },
+                    onExportBookmarks = { bookId ->
+                        libraryScope.launch {
+                            val result = viewModel.formatBookmarksForExport(
+                                bookId,
+                                com.dualreader.app.domain.export.ExportFormat.MARKDOWN,
+                            )
+                            if (result != null) {
+                                pendingLibraryExport = result
+                                libraryExportLauncher.launch(result.second)
+                            }
+                        }
+                    },
                 )
             }
         }
@@ -102,6 +136,24 @@ fun DualReaderNavHost() {
             val uiState by viewModel.uiState.collectAsState()
             val searchQuery by viewModel.searchQuery.collectAsState()
             val searchResults by viewModel.searchResults.collectAsState()
+
+            // SAF launcher for exporting bookmarks
+            var pendingExportContent by remember { mutableStateOf<String?>(null) }
+
+            val safLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.CreateDocument("text/plain")
+            ) { uri: Uri? ->
+                uri?.let { u ->
+                    pendingExportContent?.let { content ->
+                        try {
+                            context.contentResolver.openOutputStream(u)?.use { os ->
+                                os.write(content.toByteArray(Charsets.UTF_8))
+                            }
+                        } catch (_: Exception) { }
+                    }
+                    pendingExportContent = null
+                }
+            }
 
             ReaderScreen(
                 uiState = uiState,
@@ -120,6 +172,12 @@ fun DualReaderNavHost() {
                 searchQuery = searchQuery,
                 searchResults = searchResults,
                 onRePaginate = { w, h, d -> viewModel.rePaginate(w, h, d) },
+                onExportBookmarks = { format ->
+                    val content = viewModel.formatBookmarks(format)
+                    val fileName = viewModel.exportFileName(format)
+                    pendingExportContent = content
+                    safLauncher.launch(fileName)
+                },
             )
         }
 

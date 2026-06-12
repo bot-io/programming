@@ -4,13 +4,18 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dualreader.app.domain.entities.Book
+import com.dualreader.app.domain.export.BookmarkExporter
+import com.dualreader.app.domain.export.ExportFormat
+import com.dualreader.app.domain.export.ExportableBookmark
 import com.dualreader.app.domain.repositories.BookRepository
+import com.dualreader.app.domain.repositories.BookmarkRepository
 import com.dualreader.app.domain.usecases.ImportBookUseCase
 import com.dualreader.app.domain.usecases.PaginateBookUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -27,6 +32,7 @@ sealed class LibraryUiState {
 class LibraryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val bookRepository: BookRepository,
+    private val bookmarkRepository: BookmarkRepository,
     private val importBookUseCase: ImportBookUseCase,
     private val paginateBookUseCase: PaginateBookUseCase
 ) : ViewModel() {
@@ -95,5 +101,37 @@ class LibraryViewModel @Inject constructor(
                 screenHeight = DEFAULT_PAGE_HEIGHT
             )
         }
+    }
+
+    private val exporter = BookmarkExporter()
+
+    /**
+     * Format all bookmarks for a book in the given export format.
+     * Returns the formatted content and suggested filename.
+     */
+    suspend fun formatBookmarksForExport(
+        bookId: String,
+        format: ExportFormat,
+    ): Pair<String, String>? {
+        val book = bookRepository.getBookById(bookId) ?: return null
+        val bookmarks = bookmarkRepository.getBookmarksForBook(bookId).first()
+        if (bookmarks.isEmpty()) return null
+
+        val exportable = bookmarks.map { bm ->
+            ExportableBookmark(
+                bookTitle = book.title,
+                bookAuthor = book.author,
+                pageIndex = bm.pageIndex,
+                chapterIndex = bm.chapterIndex,
+                textSnippet = bm.textSnippet,
+                note = bm.note,
+                createdAt = bm.createdAt,
+            )
+        }
+
+        val content = exporter.export(exportable, format)
+        val safeTitle = book.title.replace(Regex("[^a-zA-Z0-9 _-]"), "").take(50).trim()
+        val fileName = "${safeTitle}_annotations.${exporter.fileExtension(format)}"
+        return content to fileName
     }
 }

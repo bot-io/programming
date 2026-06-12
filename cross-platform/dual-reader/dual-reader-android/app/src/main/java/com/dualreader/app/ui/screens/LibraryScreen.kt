@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.ImportContacts
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -75,6 +76,7 @@ fun LibraryScreen(
     onSettingsClick: () -> Unit,
     onRetryPagination: (book: Book) -> Unit,
     onDeleteBook: (bookId: String) -> Unit,
+    onExportBookmarks: ((bookId: String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -121,6 +123,7 @@ fun LibraryScreen(
                 onBookClick = onBookClick,
                 onRetryPagination = onRetryPagination,
                 onDeleteBook = onDeleteBook,
+                onExportBookmarks = onExportBookmarks,
                 modifier = Modifier.padding(innerPadding),
             )
             is LibraryUiState.Error -> ErrorState(
@@ -246,6 +249,7 @@ private fun BookGrid(
     onBookClick: (bookId: String) -> Unit,
     onRetryPagination: (book: Book) -> Unit,
     onDeleteBook: (bookId: String) -> Unit,
+    onExportBookmarks: ((bookId: String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var bookToDelete by remember { mutableStateOf<Book?>(null) }
@@ -290,6 +294,7 @@ private fun BookGrid(
                 onClick = { onBookClick(book.id) },
                 onRetryPagination = { onRetryPagination(book) },
                 onDeleteRequest = { bookToDelete = book },
+                onExportBookmarks = onExportBookmarks?.let { cb -> { cb(book.id) } },
             )
         }
     }
@@ -305,6 +310,7 @@ private fun BookCard(
     onClick: () -> Unit,
     onRetryPagination: () -> Unit,
     onDeleteRequest: () -> Unit,
+    onExportBookmarks: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -379,6 +385,21 @@ private fun BookCard(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
                     ) {
+                        if (onExportBookmarks != null) {
+                            DropdownMenuItem(
+                                text = { Text("Export Bookmarks") },
+                                onClick = {
+                                    showMenu = false
+                                    onExportBookmarks()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Share,
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text("Delete") },
                             onClick = {

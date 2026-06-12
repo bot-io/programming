@@ -5,6 +5,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.dualreader.app.util.AppLogger
 import androidx.lifecycle.viewModelScope
+import com.dualreader.app.domain.export.BookmarkExporter
+import com.dualreader.app.domain.export.ExportFormat
+import com.dualreader.app.domain.export.ExportableBookmark
 import com.dualreader.app.domain.entities.Book
 import com.dualreader.app.domain.entities.Bookmark
 import com.dualreader.app.domain.entities.Page
@@ -507,6 +510,50 @@ class ReaderViewModel @Inject constructor(
                 bookmarkRepository.deleteBookmark(id)
             } catch (_: Exception) { }
         }
+    }
+
+    private val exporter = BookmarkExporter()
+
+    /**
+     * Convert current bookmarks to exportable format with book metadata.
+     */
+    fun getExportableBookmarks(): List<ExportableBookmark> {
+        val book = _book ?: return emptyList()
+        val bookmarks = _bookmarks.value
+        return bookmarks.map { bm ->
+            ExportableBookmark(
+                bookTitle = book.title,
+                bookAuthor = book.author,
+                pageIndex = bm.pageIndex,
+                chapterIndex = bm.chapterIndex,
+                textSnippet = bm.textSnippet,
+                note = bm.note,
+                createdAt = bm.createdAt,
+            )
+        }
+    }
+
+    /**
+     * Format bookmarks for export in the given format.
+     */
+    fun formatBookmarks(format: ExportFormat): String {
+        val exportable = getExportableBookmarks()
+        return exporter.export(exportable, format)
+    }
+
+    /**
+     * Returns the file extension for the given export format.
+     */
+    fun exportFileExtension(format: ExportFormat): String = exporter.fileExtension(format)
+
+    /**
+     * Returns a suggested filename for export.
+     */
+    fun exportFileName(format: ExportFormat): String {
+        val book = _book ?: return "annotations"
+        val safeTitle = book.title.replace(Regex("[^a-zA-Z0-9 _-]"), "").take(50).trim()
+        val ext = exporter.fileExtension(format)
+        return "${safeTitle}_annotations.$ext"
     }
 
     fun updateSettings(transform: (ReadingSettings) -> ReadingSettings) {
