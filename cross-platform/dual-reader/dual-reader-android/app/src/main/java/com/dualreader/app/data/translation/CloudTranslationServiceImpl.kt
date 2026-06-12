@@ -12,6 +12,8 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.dualreader.app.domain.usecases.SerializedBookContext
+
 /**
  * Primary translation backend — calls our Cloudflare Worker proxy
  * which forwards to Z.AI's GLM-4-Flash (free tier).
@@ -39,7 +41,8 @@ class CloudTranslationServiceImpl @Inject constructor(
         text: String,
         targetLanguage: String,
         sourceLanguage: String?,
-        context: String?
+        context: String?,
+        bookContext: SerializedBookContext?,
     ): String = withContext(Dispatchers.IO) {
         // Context is already formatted by TranslatePageUseCase with clear instructions.
         // Just pass it through to the proxy — the worker adds it before the text.
@@ -47,6 +50,9 @@ class CloudTranslationServiceImpl @Inject constructor(
             text = if (context != null) "$context\n\n--- Text to translate ---\n$text" else text,
             sourceLang = sourceLanguage,
             targetLang = targetLanguage,
+            bookContext = bookContext?.let {
+                ProxyBookContext(title = it.title, author = it.author, openingText = it.openingText)
+            },
         )
 
         callProxy(request)
@@ -84,6 +90,7 @@ class CloudTranslationServiceImpl @Inject constructor(
         targetLanguage: String,
         sourceLanguage: String?,
         context: String?,
+        bookContext: SerializedBookContext?,
     ): BatchTranslationResult = withContext(Dispatchers.IO) {
         if (pages.isEmpty()) return@withContext BatchTranslationResult(emptyMap())
 
@@ -97,6 +104,9 @@ class CloudTranslationServiceImpl @Inject constructor(
                 pages = batchPages,
                 sourceLang = sourceLanguage,
                 targetLang = targetLanguage,
+                bookContext = bookContext?.let {
+                    ProxyBookContext(title = it.title, author = it.author, openingText = it.openingText)
+                },
             )
 
             val response = proxyApi.translateBatch(request)

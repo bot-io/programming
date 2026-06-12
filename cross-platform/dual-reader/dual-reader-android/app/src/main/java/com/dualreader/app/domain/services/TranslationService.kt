@@ -30,6 +30,7 @@ interface TranslationService {
         targetLanguage: String,
         sourceLanguage: String? = null,
         context: String? = null,
+        bookContext: com.dualreader.app.domain.usecases.SerializedBookContext? = null,
     ): String
 
     /**
@@ -52,11 +53,12 @@ interface TranslationService {
         targetLanguage: String,
         sourceLanguage: String? = null,
         context: String? = null,
+        bookContext: com.dualreader.app.domain.usecases.SerializedBookContext? = null,
     ): BatchTranslationResult {
         // Default: fall back to individual calls
         val results = mutableMapOf<Int, String>()
         for ((index, text) in pages) {
-            results[index] = translate(text, targetLanguage, sourceLanguage, context)
+            results[index] = translate(text, targetLanguage, sourceLanguage, context, bookContext)
         }
         return BatchTranslationResult(results, providerName)
     }

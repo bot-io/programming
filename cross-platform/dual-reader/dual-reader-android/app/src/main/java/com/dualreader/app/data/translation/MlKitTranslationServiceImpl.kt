@@ -2,6 +2,7 @@ package com.dualreader.app.data.translation
 
 import com.dualreader.app.domain.services.TranslationException
 import com.dualreader.app.domain.services.TranslationService
+import com.dualreader.app.domain.usecases.SerializedBookContext
 import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
@@ -27,6 +28,7 @@ class MlKitTranslationServiceImpl @Inject constructor() : TranslationService {
         targetLanguage: String,
         sourceLanguage: String?,
         context: String?,
+        bookContext: SerializedBookContext?,
     ): String = withContext(Dispatchers.IO) {
         try {
             val src = sourceLanguage ?: detectLanguage(text)

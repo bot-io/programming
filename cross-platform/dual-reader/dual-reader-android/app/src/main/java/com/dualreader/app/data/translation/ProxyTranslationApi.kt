@@ -27,6 +27,16 @@ data class ProxyTranslateRequest(
     @Json(name = "text") val text: String,
     @Json(name = "source_lang") val sourceLang: String?,
     @Json(name = "target_lang") val targetLang: String,
+    @Json(name = "installation_id") val installationId: String? = null,
+    @Json(name = "book_context") val bookContext: ProxyBookContext? = null,
+)
+
+/** Book context sent to the Worker for improved translation quality. */
+@JsonClass(generateAdapter = true)
+data class ProxyBookContext(
+    @Json(name = "title") val title: String,
+    @Json(name = "author") val author: String,
+    @Json(name = "opening_text") val openingText: String,
 )
 
 /** Response body from the Cloudflare Worker. */
@@ -37,6 +47,14 @@ data class ProxyTranslateResponse(
     @Json(name = "source_lang") val sourceLang: String = "",
     @Json(name = "target_lang") val targetLang: String = "",
     @Json(name = "error") val error: String? = null,
+    @Json(name = "quota") val quota: QuotaInfo? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class QuotaInfo(
+    @Json(name = "pages_used") val pagesUsed: Int = 0,
+    @Json(name = "daily_limit") val dailyLimit: Int = 50,
+    @Json(name = "remaining") val remaining: Int = 50,
 )
 
 /** Batch request — multiple pages in a single API call. */
@@ -45,6 +63,8 @@ data class ProxyBatchTranslateRequest(
     @Json(name = "pages") val pages: List<BatchPage>,
     @Json(name = "source_lang") val sourceLang: String?,
     @Json(name = "target_lang") val targetLang: String,
+    @Json(name = "installation_id") val installationId: String? = null,
+    @Json(name = "book_context") val bookContext: ProxyBookContext? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -61,6 +81,7 @@ data class ProxyBatchTranslateResponse(
     @Json(name = "source_lang") val sourceLang: String = "",
     @Json(name = "target_lang") val targetLang: String = "",
     @Json(name = "error") val error: String? = null,
+    @Json(name = "quota") val quota: QuotaInfo? = null,
 )
 
 @JsonClass(generateAdapter = true)

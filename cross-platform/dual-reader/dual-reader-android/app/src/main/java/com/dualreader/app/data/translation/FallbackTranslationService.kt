@@ -6,6 +6,7 @@ import android.util.Log
 import com.dualreader.app.domain.services.TranslationException
 import com.dualreader.app.domain.services.BatchTranslationResult
 import com.dualreader.app.domain.services.TranslationService
+import com.dualreader.app.domain.usecases.SerializedBookContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -45,18 +46,19 @@ class FallbackTranslationService @Inject constructor(
         targetLanguage: String,
         sourceLanguage: String?,
         context: String?,
+        bookContext: SerializedBookContext?,
     ): String {
         // If text is long, split into paragraphs and translate each
         val chunks = splitIntoChunks(text)
         if (chunks.size <= 1) {
-            return translateSingle(text, targetLanguage, sourceLanguage, context)
+            return translateSingle(text, targetLanguage, sourceLanguage, context, bookContext)
         }
 
         // For multi-chunk: pass context only to first chunk (most relevant)
         val results = chunks.mapIndexed { index, chunk ->
             if (index > 0) delay(300L)
             val chunkContext = if (index == 0) context else null
-            translateSingle(chunk, targetLanguage, sourceLanguage, chunkContext)
+            translateSingle(chunk, targetLanguage, sourceLanguage, chunkContext, bookContext)
         }
         return results.joinToString("\n\n")
     }
@@ -71,12 +73,13 @@ class FallbackTranslationService @Inject constructor(
         targetLanguage: String,
         sourceLanguage: String?,
         context: String? = null,
+        bookContext: SerializedBookContext? = null,
     ): String {
         var cloudError: String? = null
 
         // Tier 1: Try cloud (always attempt — don't gate on ConnectivityManager)
         try {
-            val result = cloudService.translate(text, targetLanguage, sourceLanguage, context)
+            val result = cloudService.translate(text, targetLanguage, sourceLanguage, context, bookContext)
             Log.d(TAG, "Cloud translation succeeded (${result.length} chars)")
             return result
         } catch (e: Exception) {
@@ -117,10 +120,11 @@ class FallbackTranslationService @Inject constructor(
         targetLanguage: String,
         sourceLanguage: String?,
         context: String?,
+        bookContext: SerializedBookContext?,
     ): BatchTranslationResult {
         // Try cloud batch first
         try {
-            val cloudResult = cloudService.translatePages(pages, targetLanguage, sourceLanguage, context)
+            val cloudResult = cloudService.translatePages(pages, targetLanguage, sourceLanguage, context, bookContext)
             if (cloudResult.translations.size == pages.size) {
                 Log.d(TAG, "Cloud batch translation succeeded (${cloudResult.translations.size} pages) model=${cloudResult.model}")
                 return cloudResult
@@ -143,7 +147,7 @@ class FallbackTranslationService @Inject constructor(
         }
 
         // Fallback: individual calls through the full fallback chain
-        return super.translatePages(pages, targetLanguage, sourceLanguage, context)
+        return super.translatePages(pages, targetLanguage, sourceLanguage, context, bookContext)
     }
 
     // ── detectLanguage ─────────────────────────────────────────────────────────
