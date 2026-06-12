@@ -103,6 +103,9 @@ fun DualReaderNavHost() {
                     }
                 }
 
+                val allTags by viewModel.allTags.collectAsState()
+                val collections by viewModel.collections.collectAsState()
+
                 LibraryScreen(
                     uiState = uiState,
                     onBookClick = { bookId -> navController.navigate("reader/$bookId") },
@@ -121,6 +124,22 @@ fun DualReaderNavHost() {
                                 libraryExportLauncher.launch(result.second)
                             }
                         }
+                    },
+                    allTags = allTags,
+                    selectedTag = viewModel.selectedTag,
+                    onTagSelected = { viewModel.setSelectedTag(it) },
+                    sortOrder = viewModel.currentSortOrder,
+                    onSortOrderChanged = { viewModel.setSortOrder(it) },
+                    onAddTagToBook = { bookId, tag -> viewModel.addTagToBook(bookId, tag) },
+                    onRemoveTagFromBook = { bookId, tag -> viewModel.removeTagFromBook(bookId, tag) },
+                    collections = collections,
+                    onCreateCollection = { viewModel.createCollection(it) },
+                    onDeleteCollection = { viewModel.deleteCollection(it) },
+                    onAddBookToCollection = { collectionId, bookId ->
+                        viewModel.addBookToCollection(collectionId, bookId)
+                    },
+                    onRemoveBookFromCollection = { collectionId, bookId ->
+                        viewModel.removeBookFromCollection(collectionId, bookId)
                     },
                 )
             }

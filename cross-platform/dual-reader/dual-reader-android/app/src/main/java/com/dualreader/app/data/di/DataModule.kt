@@ -11,14 +11,18 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.dualreader.app.data.local.AppDatabase
 import com.dualreader.app.data.local.dao.BookDao
 import com.dualreader.app.data.local.dao.BookmarkDao
+import com.dualreader.app.data.local.dao.BookTagDao
+import com.dualreader.app.data.local.dao.CollectionDao
 import com.dualreader.app.data.local.dao.PageDao
 import com.dualreader.app.data.local.dao.TranslationCacheDao
 import com.dualreader.app.data.repository.BookmarkRepositoryImpl
 import com.dualreader.app.data.repository.BookRepositoryImpl
+import com.dualreader.app.data.repository.LibraryRepositoryImpl
 import com.dualreader.app.data.repository.SettingsRepositoryImpl
 import com.dualreader.app.data.repository.TranslationCacheRepositoryImpl
 import com.dualreader.app.domain.repositories.BookmarkRepository
 import com.dualreader.app.domain.repositories.BookRepository
+import com.dualreader.app.domain.repositories.LibraryRepository
 import com.dualreader.app.domain.repositories.SettingsRepository
 import com.dualreader.app.domain.repositories.TranslationCacheRepository
 import dagger.Binds
@@ -49,6 +53,10 @@ abstract class DataModule {
     @Singleton
     abstract fun bindTranslationCacheRepository(impl: TranslationCacheRepositoryImpl): TranslationCacheRepository
 
+    @Binds
+    @Singleton
+    abstract fun bindLibraryRepository(impl: LibraryRepositoryImpl): LibraryRepository
+
     companion object {
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -74,7 +82,13 @@ abstract class DataModule {
         @Singleton
         fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "dualreader.db")
-                .addMigrations(MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5)
+                .addMigrations(
+                    MIGRATION_1_2,
+                    AppDatabase.MIGRATION_2_3,
+                    AppDatabase.MIGRATION_3_4,
+                    AppDatabase.MIGRATION_4_5,
+                    AppDatabase.MIGRATION_5_6,
+                )
                 .fallbackToDestructiveMigration()
                 .build()
 
@@ -89,6 +103,12 @@ abstract class DataModule {
 
         @Provides
         fun provideTranslationCacheDao(db: AppDatabase): TranslationCacheDao = db.translationCacheDao()
+
+        @Provides
+        fun provideBookTagDao(db: AppDatabase): BookTagDao = db.bookTagDao()
+
+        @Provides
+        fun provideCollectionDao(db: AppDatabase): CollectionDao = db.collectionDao()
 
         @Provides
         @Singleton

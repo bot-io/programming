@@ -25,6 +25,7 @@ class BookRepositoryImpl @Inject constructor(
     private val bookDao: BookDao,
     private val pageDao: PageDao,
     private val bookmarkDao: BookmarkDao,
+    private val bookTagDao: com.dualreader.app.data.local.dao.BookTagDao,
     private val translationCacheRepository: TranslationCacheRepository,
 ) : BookRepository {
 
@@ -47,6 +48,7 @@ class BookRepositoryImpl @Inject constructor(
 
         pageDao.deletePagesForBook(id)
         bookmarkDao.deleteBookmarksForBook(id)
+        bookTagDao.deleteTagsForBook(id)
         bookDao.deleteById(id)
 
         // Clear translation cache for this book's pages

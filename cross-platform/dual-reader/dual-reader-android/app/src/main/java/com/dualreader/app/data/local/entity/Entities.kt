@@ -71,3 +71,57 @@ data class BookmarkEntity(
     val note: String = "",
     val createdAt: Long = System.currentTimeMillis(),
 )
+
+// ── Tags ──────────────────────────────────────────────────────────────────────
+
+@Entity(
+    tableName = "book_tags",
+    primaryKeys = ["bookId", "tag"],
+    foreignKeys = [
+        ForeignKey(
+            entity = BookEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bookId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index(value = ["tag"])],
+)
+data class BookTagEntity(
+    val bookId: String,
+    val tag: String,
+)
+
+// ── Collections ──────────────────────────────────────────────────────────────
+
+@Entity(tableName = "collections")
+data class CollectionEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val name: String,
+    val createdAt: Long = System.currentTimeMillis(),
+)
+
+@Entity(
+    tableName = "collection_books",
+    primaryKeys = ["collectionId", "bookId"],
+    foreignKeys = [
+        ForeignKey(
+            entity = CollectionEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["collectionId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
+            entity = BookEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bookId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index(value = ["bookId"])],
+)
+data class CollectionBookEntity(
+    val collectionId: Long,
+    val bookId: String,
+)
