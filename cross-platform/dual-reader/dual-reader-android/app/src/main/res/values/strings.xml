@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Dual Reader</string>
+    <string name="privacy_policy_title">Privacy Policy</string>
+    <string name="privacy_policy_url">file:///android_asset/privacy-policy.html</string>
 </resources>
