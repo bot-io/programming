@@ -134,12 +134,13 @@
 - **Notes:** Branch `feat/crt-12-controls-ui` pushed. Added onAddSpecies/onRemoveSpecies callbacks with Add/Remove buttons. 395 total tests pass. PR needs manual creation (token scope).
 
 ### CRT-13 Autosave + exact resume
-- **Status:** ready
+- **Status:** done
 - **Milestone:** M3
 - **Acceptance Criteria:**
-  1. Autosave on pause/exit (IndexedDB / Capacitor Filesystem)
-  2. Restore exact state on launch (positions, velocities, seed, simTime)
-  3. E2E reload-continuity test
+  1. ~~Autosave on pause/exit (IndexedDB / Capacitor Filesystem)~~ ✅ localStorage autosave on pause button, visibilitychange, beforeunload, Capacitor pause event
+  2. ~~Restore exact state on launch (positions, velocities, seed, simTime)~~ ✅ Full snapshot restore via serializeConfig/applyConfig with positions, velocities, energy, alive, infection, seed, simTime
+  3. ~~E2E reload-continuity test~~ ✅ 3 Playwright tests: full reload-continuity, snapshot validation, beforeunload trigger
+- **Branch:** `feat/crt-13-autosave-resume` pushed (PR needs manual creation — token scope issue)
 
 ### CRT-14 Export/import config files
 - **Status:** ready

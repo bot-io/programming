@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-12 16:39 Sofia**
+> Last updated: **2026-06-12 16:48 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -14,9 +14,9 @@
 
 ## 🤖 Overnight Worker
 - **Last run:** never
-- **Last project:** dual-reader
-- **Last item:** none-ready
-- **Total runs:** 2
+- **Last project:** critterium
+- **Last item:** CRT-13
+- **Total runs:** 3
 
 ## 📁 Projects
 
@@ -27,13 +27,13 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🟢 critterium
-- **Status:** ** M3 in progress — CRT-11 and CRT-12 done
+- **Status:** ** M3 in progress — CRT-13 done
 - **Updated:** ** 2026-06-12
-- **Ready:** CRT-13, CRT-14, CRT-15
+- **Ready:** CRT-14, CRT-15
 - **Blocked:** CRT-16
-- **Progress:** 12/16 done
+- **Progress:** 13/16 done
 - **❓ Open Questions:** Q9:, Q10:, Q11:, Q12:, Q13:, Q14:, Q15:, Q16:, Q17: → answer in `questions.md` or this chat
-- **Last work:** CRT-12 — Controls UI live-applied (2026-06-12)
+- **Last work:** CRT-13 — Autosave + exact resume (2026-06-12)
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development

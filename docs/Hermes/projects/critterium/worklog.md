@@ -65,3 +65,16 @@
 - 5 new unit tests for add/remove functionality
 - All 395 tests pass.
 - Branch: feat/crt-12-controls-ui, commit 87e0a3d
+
+## CRT-13 — Autosave + exact resume (2026-06-12)
+- Autosave infrastructure was already complete from prior work (CRT-14 scaffolding in persistence.ts)
+- persistence.ts: autosave(), loadAutosave(), clearAutosave() using localStorage
+- main.ts wires autosave on: pause button, visibilitychange, beforeunload, Capacitor pause event
+- On startup, loadAutosave() restores config with snapshot via applyConfig()
+- serializeConfig() includes full particle snapshot (positions, velocities, energy, alive, infection, seed, simTime)
+- Added 3 Playwright E2E tests in e2e/autosave.spec.ts:
+  1. Full reload-continuity: run sim → trigger autosave → reload → verify restored state
+  2. Snapshot validation: verify positions, velocities, seed, simTime present and valid
+  3. beforeunload trigger: verify autosave fires on page close
+- All 395 unit tests pass. All 3 new E2E tests pass (8 e2e total pass, 1 pre-existing touch test failure)
+- Branch: feat/crt-13-autosave-resume, commit 66ddc38
