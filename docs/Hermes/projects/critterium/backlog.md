@@ -269,3 +269,18 @@
 - **Decision:** D9 — "Predator/Prey/Vegetation" in curated preset list
 - **Branch:** `feat/crt-18-food-chain` pushed
 - **Tests:** 457 total (301 core + 16 render + 140 app), all pass
+
+### CRT-19 Birds preset — Starling murmuration + Hawk (D9)
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. Flocking/murmuration preset: large flock with strong cohesion ✅ 350 Starlings, +55 cohesion r100
+  2. Predator that hunts the flock (chase/flee asymmetry) ✅ 5 Hawks chase (+70, r170); Starlings flee (−95, r140)
+  3. Flock birds stick together but don't collapse (cohesion + universal repulsion) ✅
+  4. Predator is solitary/territorial (self-repulsion) ✅ Hawks −35 r90
+  5. Preset passes all structural validation tests ✅ 15 new tests
+  6. Preset added to BUILTIN_PRESETS and dropdown ✅ Auto-populated via BUILTIN_PRESET_NAMES
+- **Decision:** D9 — "Birds" in curated preset list
+- **Branch:** `feat/crt-19-birds-preset` pushed (based on feat/crt-18-food-chain; PR needs manual creation — token scope)
+- **Tests:** 472 total (301 core + 16 render + 155 app), all pass

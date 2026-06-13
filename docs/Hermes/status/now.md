@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 13:16 Sofia**
+> Last updated: **2026-06-13 13:34 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-17
-- **Total runs:** 10
+- **Last item:** CRT-19
+- **Total runs:** 11
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🔴 critterium
-- **Status:** ** M6 ecosystem mode active — CRT-18 (Grasslands/food chain preset) done, CRT-15 blocked on device verification
+- **Status:** ** M6 ecosystem mode active — CRT-19 (Birds/murmuration preset) done, CRT-15 blocked on device verification
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 22/24 done
-- **Last work:** 2026-06-13 CRT-18: Grasslands preset — Predator/Prey/Vegetation
+- **Progress:** 23/25 done
+- **Last work:** 2026-06-13 CRT-19: Birds preset — Starling murmuration + Hawk
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development

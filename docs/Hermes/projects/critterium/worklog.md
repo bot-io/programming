@@ -45,3 +45,19 @@
 - **Tests:** 457 total (301 core + 16 render + 140 app) — all pass
 - **Based on:** feat/crt-17-rps-preset branch (RPS not yet merged to main)
 - **Status:** Done — branch pushed, PR needs manual creation (token scope)
+
+## 2026-06-13 CRT-19: Birds preset — Starling murmuration + Hawk
+- **Branch:** `feat/crt-19-birds-preset`
+- **Commit:** 3900f88
+- **What was done:**
+  1. No "ready" backlog items existed — all done or blocked on Svetlin. Dual-reader also had no ready items.
+  2. Mined D9 curated-preset wishlist: "Birds" was listed but never implemented (distinct from the existing "Swarm Intelligence" which already has a Birds *species* but no dedicated flocking-with-predator preset).
+  3. Created CRT-19 for a murmuration preset following CRT-17/CRT-18 precedent.
+  4. Designed "Birds" preset: 350 Starlings (dark #1b1b2f) form a shifting cloud via strong cohesion (+55, r100); 5 Hawks (#8b5a2b) hunt stragglers.
+  5. Asymmetric interaction matrix drives emergent chase/flee: Starlings flee Hawk (−95, r140), Hawk chases Starlings (+70, r170), Hawks solitary (self-repel −35, r90), Starlings flock (self-cohesion +55).
+  6. Confirmed config schema has no `alignment` force field — flocking emerges from the interaction matrix (cohesion + universal short-range repulsion), exactly as the existing Swarm Intelligence preset does. Followed the proven pattern rather than guessing.
+  7. 15 new structural tests: species identity, population balance, diet/energy flow, interaction directions (cohesion/flee/chase/territorial), radius relationships, distinct colors, population-cap.
+- **Tests:** 472 total (301 core + 16 render + 155 app) — all pass
+- **Based on:** feat/crt-18-food-chain branch (RPS + Grasslands not yet merged to main)
+- **Status:** Done — branch pushed, PR needs manual creation (token scope)
+- **D9 wishlist status:** Simple Particles✅ Predator/Prey✅ Predator/Prey/Vegetation✅ Rock/Paper/Scissors✅ Birds✅ — Fishes⏳ remains. "Predator/Prey/Sickness Center" blocked: the infection/sickness feature was previously removed from the codebase.
