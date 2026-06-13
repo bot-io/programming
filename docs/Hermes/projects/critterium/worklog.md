@@ -183,3 +183,17 @@
 - **Open PRs:** PR #1 (crt-23 build fixes), PR #2 (crt-24 ESLint), PR #3 (crt-25 README)
 - **Status:** Done — branch pushed, PR #3 created
 
+## 2026-06-13 CRT-26: Fix ESLint MODULE_TYPELESS_PACKAGE_JSON warning
+- **Branch:** `feat/crt-26-eslint-mjs`
+- **PR:** https://github.com/bot-io/critterium/pull/4
+- **Commit:** 31267ef
+- **What was done:**
+  1. No "ready" backlog items existed — all done or blocked on Svetlin. Dual-reader also had no ready items (all done). Quota at 38%.
+  2. Health check: 502 tests pass, build clean, lint clean (with warning), format clean, typecheck clean.
+  3. Identified ESLint `MODULE_TYPELESS_PACKAGE_JSON` warning: root `package.json` lacks `"type": "module"` (unlike all 3 sub-packages which correctly have it) while `eslint.config.js` uses ES module `import`/`export` syntax. Node.js reparses the file at runtime, emitting a warning on every `npm run lint` invocation. This warning would also appear in CI logs.
+  4. Fix: Renamed `eslint.config.js` → `eslint.config.mjs` using `git mv` (preserves history). The `.mjs` extension explicitly declares the file as an ES module, eliminating the ambiguity. This is the ESLint-recommended approach for flat config files in projects where the root package.json isn't `"type": "module"`.
+  5. Updated the redundant self-referencing ignore entry in the config from `'eslint.config.js'` to `'eslint.config.mjs'` for consistency. (The file is also covered by the broader `'**/*.config.{js,ts,mjs,cjs}'` glob pattern.)
+  6. Verified: lint runs completely clean — zero warnings. 502 tests pass. Build, typecheck, format check all clean.
+- **Tests:** 502 total (303 core + 16 render + 183 app), all pass
+- **Status:** Done — branch pushed, PR #4 created
+

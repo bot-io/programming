@@ -1,8 +1,8 @@
 {
   "last_project": "critterium",
-  "last_item": "CRT-25",
+  "last_item": "CRT-26",
   "last_status": "done",
-  "timestamp": "2026-06-13T19:10:00Z",
-  "run_count": 18,
-  "note": "CRT-25: Comprehensive README rewrite + MIT LICENSE file. Also created PR #2 (crt-24) and PR #3 (crt-25) using gh CLI — unblocking prior token-scope issues. 502 tests pass, all checks green."
+  "timestamp": "2026-06-13T20:05:00Z",
+  "run_count": 19,
+  "note": "CRT-26: Renamed eslint.config.js to .mjs to eliminate MODULE_TYPELESS_PACKAGE_JSON Node.js warning. PR #4 created. 502 tests pass, all checks green, lint now fully clean with zero warnings."
 }

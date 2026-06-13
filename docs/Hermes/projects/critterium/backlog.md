@@ -378,3 +378,18 @@
 - **PR:** https://github.com/bot-io/critterium/pull/3
 - **Commit:** 9b636ab
 - **Notes:** README was minimal 24-line stub from CRT-1 scaffold. Rewrote to full project documentation. Also used this run to create PR #2 for CRT-24 (ESLint/Prettier work) which had been blocked by token scope for all prior workers — gh CLI was available.
+
+### CRT-26 Fix ESLint MODULE_TYPELESS_PACKAGE_JSON warning
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. `npm run lint` produces zero warnings (previously emitted `MODULE_TYPELESS_PACKAGE_JSON` Node.js warning on every run) ✅
+  2. ESLint flat config file uses correct module type ✅ Renamed `eslint.config.js` → `eslint.config.mjs`
+  3. Ignore entry updated to match new filename ✅
+  4. All 502 tests still pass ✅
+  5. Build, typecheck, and format check remain clean ✅
+- **Branch:** `feat/crt-26-eslint-mjs` pushed
+- **PR:** https://github.com/bot-io/critterium/pull/4
+- **Commit:** 31267ef
+- **Notes:** Root cause: root `package.json` lacks `"type": "module"` (unlike all 3 sub-packages which correctly have it) while `eslint.config.js` used ES module `import`/`export` syntax. Node.js reparsed the file at runtime, emitting a warning. Fix: rename to `.mjs` — the ESLint-recommended approach for flat config in mixed CJS/ESM projects.
