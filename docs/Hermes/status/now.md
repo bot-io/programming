@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 20:40 Sofia**
+> Last updated: **2026-06-13 21:17 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 38%
+- **Usage:** 72%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-28
-- **Total runs:** 21
+- **Last item:** CRT-29
+- **Total runs:** 22
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🔴 critterium
-- **Status:** ** M6 ecosystem mode active — all backlog items done or blocked. CRT-28 fixed 7 high-severity npm audit vulnerabilities (tar + esbuild) via npm overrides → 0 vulnerabilities. 6 open PRs: #1-#5 stacked + #6 (crt-28 dep vuln fix). CRT-15 blocked on device verification, CRT-16 blocked pending M4.
+- **Status:** ** M6 ecosystem mode active — all backlog items done or blocked. CRT-29 added 34 tests for error-log.ts (previously zero coverage) + removed 6 unnecessary `as any` casts. 7 open PRs: #1-#5 stacked + #6 (crt-28 dep vuln fix) + #7 (crt-29 error-log tests). CRT-15 blocked on device verification, CRT-16 blocked pending M4.
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 32/34 done
-- **Last work:** 2026-06-13 CRT-28: Fix 7 high-severity npm audit vulnerabilities (tar + esbuild)
+- **Progress:** 33/35 done
+- **Last work:** 2026-06-13 CRT-29: Add missing error-log.ts test coverage + remove unnecessary `
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user

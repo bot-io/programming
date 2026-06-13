@@ -1,8 +1,8 @@
 {
   "last_project": "critterium",
-  "last_item": "CRT-28",
+  "last_item": "CRT-29",
   "last_status": "done",
-  "timestamp": "2026-06-13T20:40:00Z",
-  "run_count": 21,
-  "note": "CRT-28: Fixed 7 high-severity npm audit vulnerabilities via npm overrides (tar→7.5.16, vite>esbuild→0.28.1). 0 vulnerabilities now. Branch pushed, PR creation blocked by token scope."
+  "timestamp": "2026-06-13T21:15:00Z",
+  "run_count": 22,
+  "note": "CRT-29: Added 34 tests for error-log.ts (was the only source file with zero coverage) + removed 6 unnecessary as-any casts in main.ts. Also created PR #6 for CRT-28 (was pushed but never had a PR). All 532 tests pass."
 }

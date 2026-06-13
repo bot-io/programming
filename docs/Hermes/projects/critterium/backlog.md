@@ -420,7 +420,23 @@
   4. All existing tests still pass ✅ (498 on main; 502 when stacked with PR #5)
   5. No changes to application source code — only root package.json overrides ✅
 - **Branch:** `feat/crt-28-dep-vuln-fix` pushed
+- **PR:** https://github.com/bot-io/critterium/pull/6
 - **Notes:** Both vulnerabilities were in dev/build-time dependencies only (not in the production app bundle):
   - `tar` — transitive dep of `@capacitor/cli` (Capacitor build tooling)
   - `esbuild` — transitive dep of `vite` via `vitest` (dev server/test runner)
   Key technique: flat override `"esbuild": "0.28.1"` failed with EOVERRIDE (conflicts with direct dependency). Solution: nested override `"vite": { "esbuild": "0.28.1" }` which targets esbuild within vite's dep tree specifically. npm `ls` shows `invalid: "^0.25.0"` cosmetic warning (vite wanted ^0.25.0) but esbuild 0.28.1 works correctly at runtime — all tests confirm.
+
+### CRT-29 Add missing error-log.ts test coverage + remove unnecessary `as any` casts
+- **Status:** done
+- **Priority:** P2
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. `error-log.ts` has comprehensive unit tests covering all 5 exported functions (captureError, getErrors, clearErrors, formatErrors, installErrorCapture) ✅
+  2. Tests cover: Error objects, string messages, unknown values, stack trace handling, ring buffer overflow (MAX_ERRORS=200), format output correctness, error types (error/unhandledrejection/window-error) ✅
+  3. Unnecessary `as any` casts in main.ts removed (deserializeConfig already accepts `unknown`) ✅
+  4. All existing tests still pass ✅
+  5. Build and typecheck remain clean ✅
+- **Branch:** `feat/crt-29-error-log-tests` pushed
+- **PR:** https://github.com/bot-io/critterium/pull/7
+- **Tests:** 532 unit tests (498 existing + 34 new), all pass
+- **Notes:** error-log.ts was the only source file in the project with zero test coverage. 34 tests added covering captureError (Error/string/null/undefined/object/number), ring buffer overflow (MAX_ERRORS=200, oldest-first eviction, multi-cycle), getErrors (empty/readonly), clearErrors (removal/safe-empty/re-capture), formatErrors (placeholder/header/type-notation/stack-indentation/multi-error/time-format), and installErrorCapture (console.error wrapping with original passthrough, Error objects, window-error events, unhandledrejection events, fallback messages). Also identified and removed 6 unnecessary `as any` casts in main.ts — deserializeConfig already accepts `unknown`, making the casts dead code.

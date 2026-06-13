@@ -236,3 +236,26 @@
 - **Status:** Done — branch pushed. PR #6 to be created.
 - **Security Note:** Both vulnerabilities affected dev/build tooling only (Capacitor CLI, Vite/Vitest). The production app bundle (web or Android APK) does not include these packages. Risk was limited to development environment supply-chain attacks.
 
+## 2026-06-13 CRT-29: Add missing error-log.ts test coverage + remove unnecessary `as any` casts
+- **Branch:** `feat/crt-29-error-log-tests`
+- **Commit:** 2c59ea5
+- **PR:** https://github.com/bot-io/critterium/pull/7
+- **What was done:**
+  1. Identified test coverage gap: `error-log.ts` was the only source file with zero tests
+  2. Created CRT-29 backlog item for this work (no "ready" items existed)
+  3. Also created PR #6 for CRT-28 (branch was pushed but PR never created — completed previous delivery)
+  4. Wrote 34 comprehensive tests for error-log.ts covering all 5 exported functions:
+     - **captureError**: Error objects, strings, numbers, null, undefined, objects, timestamps, type variety
+     - **Ring buffer**: MAX_ERRORS=200, overflow eviction (oldest-first), multi-cycle operation
+     - **getErrors**: empty state, readonly return
+     - **clearErrors**: removal, safe-on-empty, re-capture after clear
+     - **formatErrors**: placeholder, ISO timestamp header, type bracket notation, stack indentation, no-stack omission, multi-error, time format (HH:MM:SS.mmm)
+     - **installErrorCapture**: console.error wrapping with original passthrough, Error objects via console.error, window-error events (with/without error property), unhandledrejection events
+  5. Used `// @vitest-environment jsdom` annotation for installErrorCapture tests (needs `window`)
+  6. Fixed unhandled rejection warning in PromiseRejectionEvent test (suppressed with `.catch()`)
+  7. Identified and removed 6 unnecessary `as any` casts in main.ts — `deserializeConfig(json: unknown)` already accepts `unknown`, so all cast types are assignable without `as any`
+  8. Prettier-formatted the test file
+- **Tests:** 532 unit tests (498 existing + 34 new), all pass. Zero new TypeScript errors.
+- **Status:** Done — branch pushed, PR #7 created via GitHub API.
+- **Notes:** This was proactive work — the backlog had no "ready" items (all done or blocked on Svetlin). Followed CRT-18/19/20 precedent of identifying and creating new work items when backlog is exhausted.
+
