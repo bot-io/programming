@@ -218,3 +218,21 @@
 - **Status:** Done — branch pushed, PR #5 created
 - **PR Merge Guidance for Svetlin:** The 5 PRs are stacked linearly (each builds on the previous). Simplest path: merge PR #5 (contains ALL changes from #1-#4 + gradlew fix) and close #1-#4. Or merge in order #1→#2→#3→#4→#5.
 
+## 2026-06-13 CRT-28: Fix 7 high-severity npm audit vulnerabilities (tar + esbuild)
+- **Branch:** `feat/crt-28-dep-vuln-fix`
+- **What was done:**
+  1. No "ready" backlog items existed — all done or blocked. Dual-reader also all done. Quota at 38%.
+  2. Project health check: all 502 tests pass, build/lint/format clean (on crt-27 branch). On main: 498 tests pass (species-clone tests from unmerged CRT-23).
+  3. `npm audit` found 7 high-severity vulnerabilities in two transitive dependency chains:
+     - **tar <=7.5.10** (path traversal/symlink poisoning) via `@capacitor/cli@6.2.1` → dev/build-time only
+     - **esbuild 0.17.0-0.28.0** (RCE via NPM_CONFIG_REGISTRY in Deno) via `vite@6.4.3` → `vitest@3.2.6` → dev/test-time only
+  4. Non-breaking `npm audit fix` couldn't resolve (both require major version upgrades: Capacitor 6→8, vite 6→8).
+  5. Applied npm `overrides` in root package.json — no application code changes:
+     - `"tar": "7.5.16"` (flat override — works cleanly)
+     - `"vite": { "esbuild": "0.28.1" }` (nested override — flat override failed with EOVERRIDE error)
+  6. Key learning: flat `"esbuild": "0.28.1"` override fails with `EOVERRIDE: conflicts with direct dependency` because vite's `esbuild@^0.25.0` is a strict range. Nested override targeting vite's dep tree works around this. npm `ls` shows a cosmetic `invalid` warning but all tests pass.
+  7. Result: `npm audit` reports **0 vulnerabilities** (was 7 high).
+- **Tests:** 498 on main (303 core + 16 render + 179 app). 502 when stacked with PR #5.
+- **Status:** Done — branch pushed. PR #6 to be created.
+- **Security Note:** Both vulnerabilities affected dev/build tooling only (Capacitor CLI, Vite/Vitest). The production app bundle (web or Android APK) does not include these packages. Risk was limited to development environment supply-chain attacks.
+

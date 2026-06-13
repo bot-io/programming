@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 20:22 Sofia**
+> Last updated: **2026-06-13 20:40 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-27
-- **Total runs:** 20
+- **Last item:** CRT-28
+- **Total runs:** 21
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🔴 critterium
-- **Status:** ** M6 ecosystem mode active — all backlog items done or blocked. CRT-27 fixed android/gradlew missing executable permission (CI exit code 126). 5 open PRs: #1-#4 stacked + #5 (crt-27 gradlew fix). CRT-15 blocked on device verification, CRT-16 blocked pending M4.
+- **Status:** ** M6 ecosystem mode active — all backlog items done or blocked. CRT-28 fixed 7 high-severity npm audit vulnerabilities (tar + esbuild) via npm overrides → 0 vulnerabilities. 6 open PRs: #1-#5 stacked + #6 (crt-28 dep vuln fix). CRT-15 blocked on device verification, CRT-16 blocked pending M4.
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 31/33 done
-- **Last work:** 2026-06-13 CRT-27: Fix android/gradlew missing executable permission in CI
+- **Progress:** 32/34 done
+- **Last work:** 2026-06-13 CRT-28: Fix 7 high-severity npm audit vulnerabilities (tar + esbuild)
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user

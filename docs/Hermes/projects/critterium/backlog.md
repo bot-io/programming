@@ -408,3 +408,19 @@
 - **PR:** https://github.com/bot-io/critterium/pull/5
 - **Commit:** 09e8405
 - **Notes:** Root cause: `android/gradlew` committed from Windows with `core.filemode=false`, so git stored mode `100644` instead of `100755`. On Linux CI, `./gradlew` couldn't execute → exit code 126. Fix: `git update-index --chmod=+x` (primary) + `chmod +x gradlew` in CI workflow (belt-and-suspenders). This was blocking ALL 4 open PRs from having green CI.
+
+### CRT-28 Fix 7 high-severity npm audit vulnerabilities (tar + esbuild)
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. `npm audit` reports 0 vulnerabilities (was 7 high) ✅
+  2. tar vulnerability (path traversal, <=7.5.10) resolved via npm override to 7.5.16 ✅
+  3. esbuild vulnerability (RCE via NPM_CONFIG_REGISTRY, 0.17.0-0.28.0) resolved via npm override to 0.28.1 ✅
+  4. All existing tests still pass ✅ (498 on main; 502 when stacked with PR #5)
+  5. No changes to application source code — only root package.json overrides ✅
+- **Branch:** `feat/crt-28-dep-vuln-fix` pushed
+- **Notes:** Both vulnerabilities were in dev/build-time dependencies only (not in the production app bundle):
+  - `tar` — transitive dep of `@capacitor/cli` (Capacitor build tooling)
+  - `esbuild` — transitive dep of `vite` via `vitest` (dev server/test runner)
+  Key technique: flat override `"esbuild": "0.28.1"` failed with EOVERRIDE (conflicts with direct dependency). Solution: nested override `"vite": { "esbuild": "0.28.1" }` which targets esbuild within vite's dep tree specifically. npm `ls` shows `invalid: "^0.25.0"` cosmetic warning (vite wanted ^0.25.0) but esbuild 0.28.1 works correctly at runtime — all tests confirm.

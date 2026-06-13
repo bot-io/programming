@@ -1,8 +1,8 @@
 {
   "last_project": "critterium",
-  "last_item": "CRT-27",
+  "last_item": "CRT-28",
   "last_status": "done",
-  "timestamp": "2026-06-13T20:15:00Z",
-  "run_count": 20,
-  "note": "CRT-27: Fixed android/gradlew missing executable permission (git mode 100644→100755). CI android-debug-apk was failing with exit code 126. Added chmod +x in CI as belt-and-suspenders. PR #5 created. 502 tests pass, all checks green."
+  "timestamp": "2026-06-13T20:40:00Z",
+  "run_count": 21,
+  "note": "CRT-28: Fixed 7 high-severity npm audit vulnerabilities via npm overrides (tar→7.5.16, vite>esbuild→0.28.1). 0 vulnerabilities now. Branch pushed, PR creation blocked by token scope."
 }
