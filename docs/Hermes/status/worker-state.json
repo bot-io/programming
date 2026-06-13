@@ -1,8 +1,8 @@
 {
   "last_project": "critterium",
-  "last_item": "CRT-29",
+  "last_item": "CRT-31",
   "last_status": "done",
-  "timestamp": "2026-06-13T21:15:00Z",
-  "run_count": 22,
-  "note": "CRT-29: Added 34 tests for error-log.ts (was the only source file with zero coverage) + removed 6 unnecessary as-any casts in main.ts. Also created PR #6 for CRT-28 (was pushed but never had a PR). All 532 tests pass."
+  "timestamp": "2026-06-13T22:25:00Z",
+  "run_count": 24,
+  "note": "CRT-31: Upgraded Capacitor v6.2.1→v8.4.0. Resolved tar vulnerability natively (0 npm audit vulns), unified dual @capacitor/core version, updated Android toolchain (AGP 8.13.0, Gradle 8.14.3, Java 21, minSdk 24, compileSdk 36). PR #8 created. All 536 tests pass. No ready items remain."
 }

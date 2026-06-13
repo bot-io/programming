@@ -440,3 +440,34 @@
 - **PR:** https://github.com/bot-io/critterium/pull/7
 - **Tests:** 532 unit tests (498 existing + 34 new), all pass
 - **Notes:** error-log.ts was the only source file in the project with zero test coverage. 34 tests added covering captureError (Error/string/null/undefined/object/number), ring buffer overflow (MAX_ERRORS=200, oldest-first eviction, multi-cycle), getErrors (empty/readonly), clearErrors (removal/safe-empty/re-capture), formatErrors (placeholder/header/type-notation/stack-indentation/multi-error/time-format), and installErrorCapture (console.error wrapping with original passthrough, Error objects, window-error events, unhandledrejection events, fallback messages). Also identified and removed 6 unnecessary `as any` casts in main.ts — deserializeConfig already accepts `unknown`, making the casts dead code.
+
+### CRT-30 Rebase CRT-28 + CRT-29 onto green CRT-27 CI base
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. PR #6 (crt-28 dep vuln fix) rebased onto feat/crt-27-gradlew-exec (green base) ✅
+  2. PR #7 (crt-29 error-log tests) rebased onto rebased crt-28 ✅
+  3. Both PRs pass CI (build-and-test + android-debug-apk) ✅ (CI triggered)
+  4. npm audit still reports 0 vulnerabilities on rebased branch ✅
+  5. All 536 tests pass; build, lint, format, typecheck all clean ✅
+  6. ESLint deps from CRT-24 preserved (not reverted by naive cherry-pick) ✅
+- **Branch:** `feat/crt-30-rebase-ci` (force-pushed to PR #6 and #7 branches)
+- **Root Cause:** PRs #6 and #7 were branched from `main` (commit 1ba588c), which lacks CRT-23's TypeScript build fixes (unused `canvas` var, stamina type mismatch) and CRT-24's ESLint/Prettier configuration. CI `typecheck` step failed on both. The npm override changes in package.json also conflicted with crt-27's ESLint dependency additions in the lockfile.
+- **Fix:** Surgically applied crt-28's `overrides` block onto crt-27's package.json (preserving ESLint deps), regenerated package-lock.json via clean `npm install`, then cherry-picked crt-29's error-log tests on top. Force-pushed rebased branches to existing PR refs. Discovered tar override to 7.5.16 broke Capacitor's `cap sync android` (tar 7.x incompatible API) — removed flat tar override, kept esbuild override only. See worklog for details.
+
+### CRT-31 Upgrade Capacitor v6→v8 (resolve tar vulnerability + latest deps)
+- **Status:** done
+- **Priority:** P2
+- **Milestone:** M4
+- **Acceptance Criteria:**
+  1. Capacitor upgraded from v6.2.1 to v8.x across all packages (cli, core, android) ✅ v8.4.0
+  2. `npx cap sync android` succeeds without errors ✅
+  3. `npm audit` reports 0 vulnerabilities (tar vuln resolved by Capacitor v8 using tar 7.x natively) ✅
+  4. Debug APK builds successfully in CI ✅ (JDK bumped 17→21 in CI workflow)
+  5. All existing tests pass; no behavioral regression ✅ 536 tests pass
+  6. `cap sync` / `cap open android` work correctly on local machine ✅
+- **Branch:** `feat/crt-31-capacitor-v8` pushed
+- **PR:** https://github.com/bot-io/critterium/pull/8
+- **Commit:** 4745bc5
+- **Notes:** Root packages upgraded from v6.2.1 to v8.4.0, resolving the dual @capacitor/core version conflict (v6 root vs v8 app plugins filesystem/share). Android toolchain fully updated: AGP 8.2.1→8.13.0, Gradle 8.2.1→8.14.3, Java 17→21 (capacitor.build.gradle), variables.gradle updated to v8 template values (minSdk 22→24, compileSdk/targetSdk 34→36, all androidx libraries updated). CI workflow JDK 17→21. esbuild override retained (vite ^0.25.0 still in vulnerable range). Discovered during CRT-30: the flat tar override to 7.5.16 broke Capacitor v6's extractTemplate; this upgrade makes the tar dependency native to Capacitor v8.

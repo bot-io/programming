@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 21:21 Sofia**
+> Last updated: **2026-06-13 22:33 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 72%
+- **Usage:** 1%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-29
-- **Total runs:** 22
+- **Last item:** CRT-31
+- **Total runs:** 24
 
 ## 📁 Projects
 
@@ -26,12 +26,12 @@
 - **Progress:** 2/2 done
 - **Last work:** 2026-06-10 — Initial project setup
 
-### 🔴 critterium
-- **Status:** ** M6 ecosystem mode active — all backlog items done or blocked. CRT-29 added 34 tests for error-log.ts (previously zero coverage) + removed 6 unnecessary `as any` casts. 7 open PRs: #1-#5 stacked + #6 (crt-28 dep vuln fix) + #7 (crt-29 error-log tests). CRT-15 blocked on device verification, CRT-16 blocked pending M4.
+### ⚪ critterium
+- **Status:** ** M4/M6 — Capacitor upgraded to v8.4.0 (CRT-31 done). tar vulnerability resolved natively, dual @capacitor/core version conflict eliminated. npm audit 0 vulnerabilities. Android toolchain fully updated (AGP 8.13.0, Gradle 8.14.3, Java 21). 536 tests pass.
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 33/35 done
-- **Last work:** 2026-06-13 CRT-29: Add missing error-log.ts test coverage + remove unnecessary `
+- **Progress:** 35/37 done
+- **Last work:** 2026-06-13 CRT-31: Upgrade Capacitor v6→v8.4.0
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user

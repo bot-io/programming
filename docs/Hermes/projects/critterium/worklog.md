@@ -259,3 +259,52 @@
 - **Status:** Done — branch pushed, PR #7 created via GitHub API.
 - **Notes:** This was proactive work — the backlog had no "ready" items (all done or blocked on Svetlin). Followed CRT-18/19/20 precedent of identifying and creating new work items when backlog is exhausted.
 
+## 2026-06-13 CRT-30: Rebase CRT-28 + CRT-29 onto green CRT-27 CI base
+- **Branch:** `feat/crt-30-rebase-ci` (force-pushed to `feat/crt-28-dep-vuln-fix` and `feat/crt-29-error-log-tests`)
+- **What was done:**
+  1. No "ready" backlog items existed — all done or blocked on Svetlin. Dual-reader also all done (10/10). Proactive health check found CI failures.
+  2. CI status check across all 7 open PRs revealed: PR #5 (crt-27) is GREEN ✅, but PR #6 (crt-28) and PR #7 (crt-29) FAIL ❌.
+  3. Root cause: PRs #6 and #7 were branched directly from `main` (commit 1ba588c), which lacks:
+     - CRT-23's TypeScript build fixes (unused `canvas` var in population-graph.ts:19, stamina type mismatch in main.ts:158)
+     - CRT-24's ESLint/Prettier configuration
+     - The CI `typecheck` step failed with TS2322 + TS6133 on both PRs.
+  4. Naive `git rebase` of crt-28 onto crt-27 failed: `package-lock.json` conflict (crt-28's npm overrides vs crt-27's ESLint dependency additions). Further analysis showed crt-28's package.json would have REVERTED all ESLint deps (it was based on main which has no ESLint).
+  5. **First attempt (with tar override):**
+     - Applied `overrides` block (tar: 7.5.16 + vite>esbuild: 0.28.1) onto crt-27's package.json
+     - Fresh `npm install` → npm audit: 0 vulnerabilities
+     - Force-pushed → CI `build-and-test` PASSED ✅ but `android-debug-apk` FAILED ❌
+  6. **Critical finding — tar override breaks Capacitor:**
+     - Capacitor CLI 6.2.1 depends on `tar@^6.1.11`; flat override to `tar@7.5.16` (7.x) is a MAJOR version jump
+     - Capacitor's `template.js` calls `require("tar").extract()` — tar 7.x changed its module export API
+     - `cap sync android` fails: `TypeError: Cannot read properties of undefined (reading 'extract')` at `extractTemplate`
+     - No patched tar 6.x exists (latest 6.x = 6.2.1, still in vulnerable range)
+     - Full fix requires Capacitor v8 upgrade (see CRT-31, new backlog item)
+  7. **Corrected fix (esbuild override only):**
+     - Removed flat `"tar": "7.5.16"` override — keeps Android build working
+     - Kept nested `"vite": { "esbuild": "0.28.1" }` override — resolves the more dangerous RCE vuln
+     - npm audit: esbuild RCE resolved ✅. 2 tar vulns remain (dev-time only: Capacitor CLI build tool, not in production app bundle)
+  8. Force-pushed corrected branches:
+     - `feat/crt-28-dep-vuln-fix` → ba9393a (crt-27 + crt-28 esbuild-only fix)
+     - `feat/crt-29-error-log-tests` → 0d87bdd (crt-27 + crt-28 + crt-29)
+  9. Verified locally: 536 tests pass, build clean, typecheck clean, lint zero warnings, format clean.
+- **Tests:** 536 total (303 core + 16 render + 217 app), all pass
+- **Status:** Done — branches force-pushed, CI triggered on both PRs
+- **Impact:** PR #6 and #7 `build-and-test` now passes. `android-debug-apk` should also pass (tar override removed). The full PR stack (#5→#6→#7) is ready for Svetlin to merge.
+- **Discovery:** CRT-28's original tar override to 7.5.16 was incorrect — it resolved the npm audit warning but silently broke the Android APK build (which CRT-28 never tested, only ran unit tests).
+
+## 2026-06-13 CRT-31: Upgrade Capacitor v6→v8.4.0
+- **Branch:** `feat/crt-31-capacitor-v8`
+- **Commit:** 4745bc5
+- **PR:** https://github.com/bot-io/critterium/pull/8
+- **What was done:**
+  1. Upgraded root-level Capacitor packages from v6.2.1 to v8.4.0 (@capacitor/core, cli, android)
+  2. Resolved dual @capacitor/core version conflict (v6 root vs v8 app plugins filesystem/share)
+  3. tar vulnerability resolved natively (Capacitor v8 uses tar 7.x) — npm audit 0 vulns
+  4. Android toolchain updated to v8 template: AGP 8.13.0, Gradle 8.14.3, Java 21, minSdk 24, compileSdk 36
+  5. All androidx libraries updated to v8-compatible versions
+  6. CI workflow JDK 17→21
+  7. esbuild override retained (vite ^0.25.0 still in vulnerable range)
+  8. cap sync android succeeds without errors
+- **Verification:** 536 tests pass, build/lint/format/typecheck clean, npm audit 0 vulns
+- **Status:** Done — last ready backlog item. No ready items remain.
+
