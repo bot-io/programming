@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-12 22:22 Sofia**
+> Last updated: **2026-06-13 02:53 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 26%
+- **Usage:** 35%
 - **Resets:** 10 Sofia |
 - **Spare capacity:** ?
 
@@ -14,9 +14,9 @@
 
 ## 🤖 Overnight Worker
 - **Last run:** never
-- **Last project:** critterium
-- **Last item:** none-ready
-- **Total runs:** 10
+- **Last project:** dual-reader
+- **Last item:** DR-004
+- **Total runs:** 1
 
 ## 📁 Projects
 
@@ -35,11 +35,10 @@
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development
-- **Updated:** ** 2026-06-12
-- **Blocked:** DR-007:
-- **Needs Decision:** DR-004:
-- **Progress:** 8/10 done
-- **Last work:** 2026-06-12 — cron-worker — Merge DR-005, DR-010, DR-006 to master
+- **Updated:** ** 2026-06-13
+- **Ready:** DR-007:
+- **Progress:** 9/10 done
+- **Last work:** 2026-06-13 — cron-worker — DR-004: Library Management (Tags, Collections, Sortin
 
 ### ⚪ machine-setup
 - **Status:** ** Complete
@@ -50,8 +49,6 @@
 ## 🚨 Needs Your Input
 
 - **critterium** — blocked: CRT-15, CRT-16
-  → Open that project's Telegram chat and respond, or tell this chat
-- **dual-reader** — blocked: DR-007:; needs-decision: DR-004:
   → Open that project's Telegram chat and respond, or tell this chat
 
 ## 🔗 Quick Links

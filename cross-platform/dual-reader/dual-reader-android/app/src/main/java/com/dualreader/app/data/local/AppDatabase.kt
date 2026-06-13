@@ -7,16 +7,29 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.dualreader.app.data.local.dao.BookDao
 import com.dualreader.app.data.local.dao.BookmarkDao
+import com.dualreader.app.data.local.dao.BookTagDao
+import com.dualreader.app.data.local.dao.CollectionDao
 import com.dualreader.app.data.local.dao.PageDao
 import com.dualreader.app.data.local.dao.TranslationCacheDao
 import com.dualreader.app.data.local.entity.BookEntity
+import com.dualreader.app.data.local.entity.BookTagEntity
 import com.dualreader.app.data.local.entity.BookmarkEntity
+import com.dualreader.app.data.local.entity.CollectionBookEntity
+import com.dualreader.app.data.local.entity.CollectionEntity
 import com.dualreader.app.data.local.entity.PageEntity
 import com.dualreader.app.data.local.entity.TranslationCacheEntity
 
 @Database(
-    entities = [BookEntity::class, PageEntity::class, BookmarkEntity::class, TranslationCacheEntity::class],
-    version = 5,
+    entities = [
+        BookEntity::class,
+        PageEntity::class,
+        BookmarkEntity::class,
+        TranslationCacheEntity::class,
+        BookTagEntity::class,
+        CollectionEntity::class,
+        CollectionBookEntity::class,
+    ],
+    version = 6,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -25,6 +38,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pageDao(): PageDao
     abstract fun bookmarkDao(): BookmarkDao
     abstract fun translationCacheDao(): TranslationCacheDao
+    abstract fun bookTagDao(): BookTagDao
+    abstract fun collectionDao(): CollectionDao
 
     companion object {
         /** Migration v2→v3: add translatedLang column to pages table. */
@@ -86,6 +101,43 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE pages ADD COLUMN translationModelsJson TEXT DEFAULT NULL")
+            }
+        }
+
+        /** Migration v5→v6: add book_tags, collections, collection_books tables. */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // book_tags table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `book_tags` (
+                        `bookId` TEXT NOT NULL,
+                        `tag` TEXT NOT NULL,
+                        PRIMARY KEY(`bookId`, `tag`),
+                        FOREIGN KEY(`bookId`) REFERENCES `books`(`id`) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_book_tags_tag` ON `book_tags` (`tag`)")
+
+                // collections table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `collections` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+
+                // collection_books junction table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `collection_books` (
+                        `collectionId` INTEGER NOT NULL,
+                        `bookId` TEXT NOT NULL,
+                        PRIMARY KEY(`collectionId`, `bookId`),
+                        FOREIGN KEY(`collectionId`) REFERENCES `collections`(`id`) ON DELETE CASCADE,
+                        FOREIGN KEY(`bookId`) REFERENCES `books`(`id`) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_collection_books_bookId` ON `collection_books` (`bookId`)")
             }
         }
     }
