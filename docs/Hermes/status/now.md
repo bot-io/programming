@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 12:34 Sofia**
+> Last updated: **2026-06-13 12:55 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -10,13 +10,16 @@
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- _No active locks_
+- ⚠️ **WORKER RUNNING** — 7 min ago
+  > session: cron-critterium
+  > started: 2026-06-13T12:42 Sofia
+  > item: CRT-17 — Rock/Paper/Scissors preset (D9)
 
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** none
-- **Total runs:** 9
+- **Last item:** CRT-17
+- **Total runs:** 10
 
 ## 📁 Projects
 
@@ -27,11 +30,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🔴 critterium
-- **Status:** ** M4 in progress — CRT-15 blocked on on-device verification
-- **Updated:** ** 2026-06-12
+- **Status:** ** M6 ecosystem mode active — CRT-17 (R/P/S preset) done, CRT-15 blocked on device verification
+- **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 14/16 done
-- **Last work:** 2026-06-12 CRT-15: Capacitor Android build + background-pause
+- **Progress:** 21/23 done
+- **Last work:** 2026-06-13 CRT-17: Rock/Paper/Scissors preset
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development

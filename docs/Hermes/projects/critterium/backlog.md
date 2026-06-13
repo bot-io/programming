@@ -169,3 +169,87 @@
   1. iOS build via Capacitor
   2. App Store submission readiness
   3. Store listing assets prepared
+
+---
+
+## Retrospective: Ecosystem Mode (M6) — Already Implemented
+
+> **Note:** The codebase on `main` (v1.3.8) already contains substantial ecosystem work
+> that was done during interactive sessions but never tracked as backlog items.
+> These items are documented here retroactively for completeness.
+
+### CRT-E1 Ecosystem data model + world (D7)
+- **Status:** done
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. EcosystemState companion (energy, age, health, stamina) ✅
+  2. EcosystemWorld extends World with spawn/kill/energy/lifecycle hooks ✅
+  3. Typed-array storage, zero hot-loop allocations ✅
+- **Branch:** `crt-7-ecosystem-data-model`, `crt-8-ecosystem-world` (merged to main)
+- **Notes:** 35+ tests in ecosystem-world.test.ts, ecosystem.test.ts
+
+### CRT-E2 Eating system (D7)
+- **Status:** done
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. Instant consumption on overlap with canEat diet rules ✅
+  2. Energy gain from eaten prey ✅
+  3. Predator fullness check (won't eat if energy would exceed max) ✅
+- **Branch:** `crt-9-eating-force` (merged to main)
+- **Notes:** 12 tests in eating.test.ts
+
+### CRT-E3 Lifecycle system (D7)
+- **Status:** done
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. Aging with maxAgeSec ✅
+  2. Starvation damage when energy at 0 ✅
+  3. Reproduction with cooldown + energy cost ✅
+  4. Stamina system (sprint/cooldown) ✅
+- **Notes:** 5 tests in lifecycle.test.ts
+
+### CRT-E4 Interaction rule matrix (D12)
+- **Status:** done
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. 12×12 sparse interaction matrix with bit-flag forces ✅
+  2. Per-species-pair: attract, repel, eat, infect, flock, orbit, flee, wander ✅
+  3. Toggleable forces per species pair ✅
+- **Branch:** `crt-12-interaction-rules` (merged to main)
+- **Notes:** 17 tests in interaction-rules.test.ts
+
+### CRT-E5 Built-in ecosystem presets (D9)
+- **Status:** done
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. Curated presets with interesting emergent behavior ✅
+  2. Save/load custom presets via localStorage ✅
+  3. Preset dropdown in controls UI ✅
+- **Notes:** 6 presets: Classic, Plankton Bloom, Swarm Intelligence, Predator Arena, Tiny Pond, Zen Garden
+
+### CRT-E6 App polish: population graph, adaptive quality, error log, species management
+- **Status:** done
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. Population graph HUD showing species counts over time ✅
+  2. Adaptive quality system (auto-reduce particles on slow frames) ✅
+  3. Error log viewer in settings ✅
+  4. Add/delete species at runtime ✅
+- **Branch:** `crt-app-visual` and others (merged to main)
+
+---
+
+## Active Backlog
+
+### CRT-17 Rock/Paper/Scissors preset (D9)
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. Three-species preset with circular eating: A eats B, B eats C, C eats A
+  2. Each species chases its prey and flees its predator (interaction matrix)
+  3. Energy balance tuned so no species permanently dominates
+  4. Preset passes all structural validation tests (version, dimensions, N×N matrix, diet indices)
+  5. Preset added to BUILTIN_PRESETS and dropdown
+- **Decision:** D9 — curated presets including "Rock/Paper/Scissors"
+- **Branch:** `feat/crt-17-rps-preset`
