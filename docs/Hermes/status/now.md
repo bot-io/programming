@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 14:43 Sofia**
+> Last updated: **2026-06-13 14:49 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-21
-- **Total runs:** 14
+- **Last item:** CRT-HEALTH-CHECK
+- **Total runs:** 15
 
 ## 📁 Projects
 
