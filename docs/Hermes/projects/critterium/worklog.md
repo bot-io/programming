@@ -61,3 +61,24 @@
 - **Based on:** feat/crt-18-food-chain branch (RPS + Grasslands not yet merged to main)
 - **Status:** Done — branch pushed, PR needs manual creation (token scope)
 - **D9 wishlist status:** Simple Particles✅ Predator/Prey✅ Predator/Prey/Vegetation✅ Rock/Paper/Scissors✅ Birds✅ — Fishes⏳ remains. "Predator/Prey/Sickness Center" blocked: the infection/sickness feature was previously removed from the codebase.
+
+## 2026-06-13 CRT-20: Fishes preset — Coral reef + cleaner-fish symbiosis
+- **Branch:** `feat/crt-20-fishes-preset`
+- **Commit:** 57ba5da
+- **What was done:**
+  1. No "ready" backlog items existed — all done or blocked on Svetlin. Dual-reader also had no ready items (all done).
+  2. Mined D9 curated-preset wishlist: "Fishes" was the last remaining unimplemented preset.
+  3. Created CRT-20 for a coral reef preset following CRT-17/CRT-18/CRT-19 precedent.
+  4. Designed "Fishes" preset with a unique **cleaner-fish symbiosis** dynamic not present in any other preset:
+     - Tetras (250, #2e86de): small schooling prey, tight cohesion (+40 r80), flee Barracuda (−85 r130)
+     - Cleaner Wrasse (12, #feca57): symbiotic cleaner, follows Barracuda (+30 r90), opportunistic Tetra eater
+     - Barracuda (10, #7f8c8d): apex predator, chases Tetras (+60 r150), territorial (−25 r70)
+  5. **Signature mechanic:** Barracuda→Wrasse interaction is null — the predator completely ignores the cleaner fish that follows it, modeling real-world cleaner-fish symbiosis. This is unique across all 10 presets.
+  6. 3×3 asymmetric interaction matrix. Wrasse gains energy from Tetras opportunistically (diet [0], gain 20). Barracuda eats Tetras only (diet [0], gain 35), does NOT eat Wrasse.
+  7. 19 new structural tests: species identity, population balance, symbiotic tolerance (Barracuda doesn't eat Wrasse, null interaction), diet rules, energy flow, interaction directions (cohesion/flee/chase/symbiotic-following), size hierarchy, distinct colors, population cap.
+  8. Updated EXPECTED_PRESET_NAMES (10) and preset count assertion (10→10).
+- **Tests:** 76 preset tests all pass (19 new). 11 pre-existing eating/sim test failures from uncommitted eating.ts refactor in working tree — NOT caused by CRT-20.
+- **Based on:** feat/crt-19-birds-preset branch (CRT-17/18/19 not yet merged to main)
+- **Status:** Done — branch pushed, PR needs manual creation (token scope)
+- **Pre-existing uncommitted changes noted:** eating.ts (O(n²)→spatial-hash refactor), index.ts (rebuild() with alive/hwm params), main.ts (processEating call site) — from a prior session, incomplete. Not touched or committed by CRT-20.
+- **D9 wishlist: ALL COMPLETE** ✅ — Simple Particles, Predator/Prey, Predator/Prey/Vegetation, Rock/Paper/Scissors, Birds, Fishes. Only "Predator/Prey/Sickness Center" remains blocked (infection feature removed).

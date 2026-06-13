@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 13:34 Sofia**
+> Last updated: **2026-06-13 14:13 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 1%
+- **Usage:** 43%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-19
-- **Total runs:** 11
+- **Last item:** CRT-20
+- **Total runs:** 12
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🔴 critterium
-- **Status:** ** M6 ecosystem mode active — CRT-19 (Birds/murmuration preset) done, CRT-15 blocked on device verification
+- **Status:** ** M6 ecosystem mode active — D9 preset wishlist complete (CRT-20 Fishes done). CRT-15 blocked on device verification
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 23/25 done
-- **Last work:** 2026-06-13 CRT-19: Birds preset — Starling murmuration + Hawk
+- **Progress:** 24/26 done
+- **Last work:** 2026-06-13 CRT-20: Fishes preset — Coral reef + cleaner-fish symbiosis
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development

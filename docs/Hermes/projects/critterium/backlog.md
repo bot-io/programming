@@ -284,3 +284,19 @@
 - **Decision:** D9 — "Birds" in curated preset list
 - **Branch:** `feat/crt-19-birds-preset` pushed (based on feat/crt-18-food-chain; PR needs manual creation — token scope)
 - **Tests:** 472 total (301 core + 16 render + 155 app), all pass
+
+### CRT-20 Fishes preset — Coral reef + cleaner-fish symbiosis (D9)
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. Three-species coral reef preset with distinct underwater dynamics ✅ Tetras, Cleaner Wrasse, Barracuda
+  2. Unique symbiosis: predator tolerates a small fish that follows it ✅ Barracuda→Wrasse is null (predator ignores cleaner)
+  3. Cleaner fish actively seeks out predator (symbiotic following) ✅ Wrasse→Barracuda is +30 attract
+  4. Schooling prey with predator chase/flee ✅ Tetras cohesion +40, flee Barracuda −85, Barracuda chases +60
+  5. Energy balance tuned for self-sustaining dynamics ✅ Wrasse opportunistic eater, Barracuda territorial
+  6. Preset passes all structural validation tests ✅ 19 new tests
+  7. Preset added to BUILTIN_PRESETS and dropdown ✅ Auto-populated via BUILTIN_PRESET_NAMES
+- **Decision:** D9 — "Fishes" in curated preset list (final D9 preset)
+- **Branch:** `feat/crt-20-fishes-preset` pushed (based on feat/crt-19-birds-preset; PR needs manual creation — token scope)
+- **Tests:** 491 total preset tests (76 in presets.test.ts + others), all preset tests pass
