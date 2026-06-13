@@ -502,3 +502,20 @@
 - **PR:** https://github.com/bot-io/critterium/pull/10
 - **Commit:** 5155ed9
 - **Notes:** Root causes: (1) Export-import tests failed because the controls panel is closed by default (CSS `transform: translateX(380px)`) and the Export/Import buttons are at the bottom of a scrollable panel — tests never opened the panel or scrolled. Fixed with `openPanelAndScrollToActions()` helper. (2) Settings-stress test timed out because helper functions used O(n) DOM iteration (looping through all elements calling `textContent()`) which generated hundreds of browser round-trips. Replaced with Playwright's `filter({ hasText: ... })` for O(1) lookups, reducing test time from 120s+ timeout to 22s. Also added `scrollIntoView({ block: 'nearest' })` before each interaction within the `position: fixed; overflow-y: auto` panel.
+
+### CRT-34 Remove dead infection/sickness rendering code
+- **Status:** done
+- **Priority:** P2
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. `sicknessContainer` field removed from CritteriumRenderer (was created, added to stage, never had children) ✅
+  2. `pulsePhase` field removed (was updated every frame via `pulsePhase += dt * 4`, value never read) ✅
+  3. `sicknessGfx` field removed (declared as `null`, checked every frame via `if (this.sicknessGfx)`, never assigned) ✅
+  4. Header documentation updated to remove stale sickness/infection/sicknessRingsEnabled references ✅
+  5. Regression-guard tests added verifying dead properties stay gone ✅ 4 new tests
+  6. All existing tests pass ✅ 540 total (303 core + 20 render + 217 app)
+  7. Build, lint, format, typecheck remain clean ✅
+- **Branch:** `feat/crt-34-remove-dead-sickness-code` pushed
+- **PR:** https://github.com/bot-io/critterium/pull/11
+- **Commit:** 72782df
+- **Notes:** The infection/sickness system was removed from the simulation core during ecosystem refactoring, but the render module retained vestigial code: a PixiJS Container allocation, per-frame pulse phase computation, and a per-frame null check on a graphics object that was never created. This is a pure dead-code removal — no behavior change, just fewer wasted allocations and CPU cycles per frame.

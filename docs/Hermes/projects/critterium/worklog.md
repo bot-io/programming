@@ -338,3 +338,22 @@
 - **Verification:** Build, typecheck, lint — all clean
 - **Status:** Done — PR #10 created. No ready items remain.
 
+## 2026-06-14 CRT-34: Remove dead infection/sickness rendering code
+- **Branch:** `feat/crt-34-remove-dead-sickness-code`
+- **Commit:** 72782df
+- **PR:** https://github.com/bot-io/critterium/pull/11
+- **What was done:**
+  1. No ready backlog items existed — proactive code-quality scan of all source files
+  2. Searched for `as any`, `@ts-ignore`, `TODO/FIXME`, and dead code patterns across all packages
+  3. Discovered vestigial infection/sickness rendering code in `render/src/index.ts` — the infection system was removed from the simulation core during ecosystem refactoring (CRT-15 noted "Fixed infection feature removal inconsistencies") but the render module still had:
+     - `sicknessContainer: Container` — PixiJS Container allocated and added to the stage but never had children added
+     - `pulsePhase: number` — updated every frame via `this.pulsePhase += dt * 4` but the value was never read
+     - `sicknessGfx: Graphics | null` — declared as `null`, checked every frame via `if (this.sicknessGfx)`, but never assigned to anything
+     - Stale header documentation mentioning "Sickness rings (pulsing red)", "Infection aura", and non-existent `sicknessRingsEnabled` property
+  4. Removed all 9 instances of dead sickness/infection code from the render module (22 lines deleted)
+  5. Added 4 regression-guard tests verifying `sicknessContainer`, `pulsePhase`, `sicknessGfx`, and `sicknessRingsEnabled` are not present on the CritteriumRenderer prototype
+  6. Decided NOT to remove the `'infect'` ForceType from `interaction-rules.ts` — it's part of the public API surface (type union, ALL_FORCE_TYPES array, FORCE_FLAGS record) and removing it could break configs that reference it
+- **Tests:** 540 total (303 core + 20 render + 217 app), all pass — was 536, +4 new regression tests
+- **Verification:** Build, typecheck, lint, format — all clean. npm audit 0 vulns.
+- **Status:** Done — PR #11 created. No ready items remain.
+

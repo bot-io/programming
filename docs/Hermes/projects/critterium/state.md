@@ -1,12 +1,12 @@
 # Critterium — State
 
-**Status:** M4/M6 — CRT-33 done (e2e tests fixed + Playwright added to CI). All PRs merged except PR #9 (CRT-32) and PR #10 (CRT-33), both pending review. 536 unit + 12 e2e tests pass.
-**Last Updated:** 2026-06-13
-**Version:** v1.4.3
+**Status:** M4/M6 — CRT-34 done (dead infection/sickness rendering code removed). All PRs merged except PR #9 (CRT-32), PR #10 (CRT-33), PR #11 (CRT-34), all pending review. 540 unit + 12 e2e tests pass.
+**Last Updated:** 2026-06-14
+**Version:** v1.4.4
 **Active Items:** CRT-15 (blocked — needs Svetlin for on-device perf check), CRT-16 (blocked — after M4)
-**Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅ CRT-21 ✅ CRT-22 ✅ CRT-23 ✅ CRT-24 ✅ CRT-25 ✅ CRT-26 ✅ CRT-27 ✅ CRT-28 ✅ CRT-29 ✅ CRT-30 ✅ CRT-31 ✅ CRT-32 ✅ CRT-33 ✅
+**Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅ CRT-21 ✅ CRT-22 ✅ CRT-23 ✅ CRT-24 ✅ CRT-25 ✅ CRT-26 ✅ CRT-27 ✅ CRT-28 ✅ CRT-29 ✅ CRT-30 ✅ CRT-31 ✅ CRT-32 ✅ CRT-33 ✅ CRT-34 ✅
 **Ecosystem (retrospective):** CRT-E1 ✅ CRT-E2 ✅ CRT-E3 ✅ CRT-E4 ✅ CRT-E5 ✅ CRT-E6 ✅
-**Tests:** 536 unit tests + 12 e2e tests (7 smoke + 4 export-import + 1 settings-stress), all pass
+**Tests:** 540 unit tests (303 core + 20 render + 217 app) + 12 e2e tests (7 smoke + 4 export-import + 1 settings-stress), all pass
 **Build:** `npm run build` passes for all 3 packages
 **Lint:** ESLint v10 configured, `npm run lint` clean — zero warnings
 **Format:** Prettier `endOfLine: lf` + `.gitattributes`, `npm run format:check` clean
@@ -15,7 +15,7 @@
 **E2E CI:** Playwright e2e job in CI — runs on every PR/push, installs Chromium, uploads report on failure
 **Built-in presets:** Classic, Plankton Bloom, Swarm Intelligence, Predator Arena, Tiny Pond, Zen Garden, Rock Paper Scissors, Grasslands, Birds, Fishes
 **Working tree:** Clean
-**Open PRs:** PR #9 (CRT-32 loadAutosave hardening — pending review), PR #10 (CRT-33 e2e fixes + CI — pending review). PRs #1-#8 all merged.
+**Open PRs:** PR #9 (CRT-32 loadAutosave hardening — pending review), PR #10 (CRT-33 e2e fixes + CI — pending review), PR #11 (CRT-34 dead sickness code removal — pending review). PRs #1-#8 all merged.
 **Documentation:** Comprehensive README with features, presets table, architecture, dev commands. MIT LICENSE file added.
 **Open Questions:** CRT-15 criterion 3 needs Svetlin to install debug APK and verify 60fps on device.
 **Repo:** https://github.com/bot-io/critterium

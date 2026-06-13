@@ -1,8 +1,8 @@
 {
   "last_project": "critterium",
-  "last_item": "CRT-32",
+  "last_item": "CRT-34",
   "last_status": "done",
-  "timestamp": "2026-06-13T19:50:00Z",
-  "run_count": 25,
-  "note": "CRT-32: Hardened loadAutosave() with full deserializeConfig validation (was unsafe cast). 5 new tests. Closed stale PR #4. 541 tests pass. No ready items remain."
+  "timestamp": "2026-06-14T00:40:00Z",
+  "run_count": 26,
+  "note": "CRT-34: Removed dead infection/sickness rendering code from render module (sicknessContainer, pulsePhase, sicknessGfx). 4 regression-guard tests added. 540 tests pass. PR #11 created."
 }
