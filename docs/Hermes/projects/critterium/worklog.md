@@ -98,3 +98,18 @@
 - **Tests:** 492 total (490 existing + 2 new), all pass. TypeScript compiles cleanly.
 - **Based on:** feat/crt-20-fishes-preset branch (CRT-17/18/19/20 not yet merged to main)
 - **Status:** Done — branch pushed, PR needs manual creation (token scope)
+
+## 2026-06-13 CRT-22: Commit orphaned UI improvements + revert untested repulsion change
+- **Branch:** `feat/crt-22-ui-fixes`
+- **Commit:** edc1594
+- **What was done:**
+  1. No "ready" backlog items existed — all done or blocked on Svetlin. Dual-reader also had no ready items. Quota had just reset from 88% to 1%.
+  2. Health check of working tree revealed 3 uncommitted files from a prior session: `controls.ts`, `main.ts`, `index.ts`.
+  3. Triage:
+     - **controls.ts** (KEEP): Added `getSliderValue()` and `getAllSpeciesCounts()` exports for reading registered slider values; `maxCount` option (default 600) replacing hardcoded 200 count slider cap.
+     - **main.ts** (KEEP): `onReset` now uses full `applyConfig` pipeline (`deserializeConfig` → `applyConfig`) to properly rebuild the interaction matrix from CONFIG's interaction rules — previous `deepCloneConfig` + `buildInteractionMatrix` didn't rebuild from rules; `onReseed` now commits pending species counts from sliders before reseeding (bug fix: slider changes were lost); passes `liveConfig.populationCap` as `maxCount`.
+     - **index.ts** (REVERT): Changed universal short-range repulsion to `if (entry && dist < repulsion.radius)` — gating repulsion on matrix entry existence. This violated the charter's "Universal short-range repulsion to prevent particle collapse" (CRT-4 AC3) and broke the test "repulsion is stronger at closer distances". Reverted to `if (dist < repulsion.radius)`.
+  4. Added 6 new tests in `controls.test.ts` covering `getSliderValue`, `getAllSpeciesCounts`, and `maxCount` option behavior.
+  5. All 498 tests pass (303 core + 16 render + 179 app). Pre-existing typecheck errors confirmed unchanged (stamina type mismatch at main.ts:158, unused canvas in population-graph.ts).
+- **Tests:** 498 total (492 + 6 new), all pass
+- **Status:** Done — branch pushed, PR needs manual creation (token scope)

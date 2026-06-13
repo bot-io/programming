@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 14:49 Sofia**
+> Last updated: **2026-06-13 17:31 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 43%
+- **Usage:** 1%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🔴 critterium
-- **Status:** ** M6 ecosystem mode active — D9 preset wishlist complete (CRT-20 Fishes done). CRT-21 spatial-hash eating refactor complete (9 failing tests fixed). CRT-15 blocked on device verification
+- **Status:** ** M6 ecosystem mode active — all backlog items done or blocked. CRT-22 committed orphaned UI improvements and reverted an untested repulsion change. CRT-15 blocked on device verification, CRT-16 blocked pending M4.
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 25/27 done
-- **Last work:** 2026-06-13 CRT-21: Complete eating.ts spatial-hash refactor — fix 9 failing test
+- **Progress:** 26/28 done
+- **Last work:** 2026-06-13 CRT-22: Commit orphaned UI improvements + revert untested repulsion c
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user

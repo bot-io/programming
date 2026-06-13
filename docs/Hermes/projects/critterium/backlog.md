@@ -316,3 +316,20 @@
 - **Branch:** `feat/crt-21-spatial-hash-eating-fix` pushed
 - **Commit:** b610d13
 - **Notes:** Completed an incomplete refactor left in the working tree by a prior session. Root cause of test failures: queryRadius filtered `dSq > 0` which excluded ALL co-located particles, not just self. Fixed by adding optional `selfIdx` parameter for index-based self-exclusion.
+
+### CRT-22 Commit orphaned UI improvements + revert untested repulsion change
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. Orphaned uncommitted changes in working tree identified and triaged ✅
+  2. Legitimate UI improvements (controls.ts, main.ts) committed with test coverage ✅
+  3. Untested repulsion behavioral change (index.ts) reverted — it violated charter-mandated "universal short-range repulsion" and broke 1 test ✅
+  4. Full test suite green before commit ✅
+- **Branch:** `feat/crt-22-ui-fixes` pushed
+- **Commit:** edc1594
+- **Notes:** Found orphaned uncommitted changes from a prior session in the working tree. Three categories:
+  - **controls.ts** — `getSliderValue()`/`getAllSpeciesCounts()` exports for reading slider values; `maxCount` option (default 600) replacing hardcoded 200 slider cap. KEPT.
+  - **main.ts** — `onReset` now uses `applyConfig` pipeline (deserializeConfig → applyConfig) to properly rebuild interaction matrix from CONFIG's interaction rules (was just deepCloneConfig which didn't rebuild matrix); `onReseed` now commits pending species counts from sliders before reseeding (bug fix: slider changes were lost on reseed); passes `populationCap` as `maxCount`. KEPT.
+  - **index.ts** — Changed universal short-range repulsion to be conditional on matrix entry existing (`if (entry && ...)`). This broke the charter's "Universal short-range repulsion to prevent particle collapse" design principle and the test "repulsion is stronger at closer distances". REVERTED.
+  - Added 6 new tests for `getSliderValue`, `getAllSpeciesCounts`, `maxCount` option. 498 total tests, all pass.
