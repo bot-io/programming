@@ -317,6 +317,19 @@
 - **Commit:** b610d13
 - **Notes:** Completed an incomplete refactor left in the working tree by a prior session. Root cause of test failures: queryRadius filtered `dSq > 0` which excluded ALL co-located particles, not just self. Fixed by adding optional `selfIdx` parameter for index-based self-exclusion.
 
+### CRT-24 Fix ESLint (missing) + Prettier line-endings (CRLF→LF)
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. ESLint installed and configured (flat config, typescript-eslint) ✅
+  2. `npm run lint` passes for all workspaces (root + core + render + app) ✅
+  3. Prettier `endOfLine: lf` + `.gitattributes` to enforce LF in repo ✅
+  4. `npm run format:check` passes (0 files with issues, down from 213) ✅
+  5. `npm run lint` step added to CI pipeline ✅
+  6. All 502 tests still pass; build still clean ✅
+- **Context:** CRT-1 claims "ESLint + Prettier configured ✅" but ESLint was never installed or configured. Prettier's format check reports 213 files with issues (all CRLF→LF). CI has a "Format check" step that would fail.
+
 ### CRT-23 Fix app package build failures (TypeScript errors)
 - **Status:** done
 - **Priority:** P0

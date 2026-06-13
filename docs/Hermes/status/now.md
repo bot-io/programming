@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 17:59 Sofia**
+> Last updated: **2026-06-13 18:41 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 1%
+- **Usage:** 18%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-23
-- **Total runs:** 16
+- **Last item:** CRT-24
+- **Total runs:** 17
 
 ## 📁 Projects
 
@@ -27,10 +27,10 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🔴 critterium
-- **Status:** ** M6 ecosystem mode active — all backlog items done or blocked. CRT-23 fixed production build failures (2 TS errors). CRT-15 blocked on device verification, CRT-16 blocked pending M4.
+- **Status:** ** M6 ecosystem mode active — all backlog items done or blocked. CRT-24 added ESLint + fixed Prettier line-endings (213 files CRLF→LF). CRT-15 blocked on device verification, CRT-16 blocked pending M4.
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 27/29 done
+- **Progress:** 28/30 done
 - **Last work:** 2026-06-13 CRT-23: Fix app package build failures (TypeScript errors)
 
 ### ⚪ dual-reader

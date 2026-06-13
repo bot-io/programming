@@ -114,6 +114,31 @@
 - **Tests:** 498 total (492 + 6 new), all pass
 - **Status:** Done — branch pushed, PR needs manual creation (token scope)
 
+## 2026-06-13 CRT-24: Fix ESLint (missing) + Prettier line-endings (CRLF→LF)
+- **Branch:** `feat/crt-24-eslint-prettier`
+- **Commit:** a493710
+- **What was done:**
+  1. No "ready" backlog items existed — all done or blocked on Svetlin. Dual-reader also had no ready items. Health check of codebase revealed two issues.
+  2. **ESLint was completely absent** — CRT-1 claimed "ESLint configured ✅" but it was never installed. Root `npm run lint` script pointed to `npm run lint --workspaces` which failed because no workspace had a `lint` script and no ESLint config existed.
+  3. Installed ESLint v10 + typescript-eslint + eslint-config-prettier. Created `eslint.config.js` (flat config format) with:
+     - Separate ignore block for `**/dist/**`, `android/**`, `**/coverage/**`, config files
+     - Source file rules: `@typescript-eslint/no-unused-vars` (with `_` prefix ignore), `no-console: off` (app uses console.log legitimately)
+     - Test file overrides: relaxed unused-vars and no-console for `*.test.ts` / `*.spec.ts`
+     - Browser globals (window, document, etc.) + Vitest globals (describe, it, expect, vi)
+  4. **Prettier line-ending issue** — 213 files had CRLF (Windows) line endings, but Prettier 3.8.4 defaults to LF. The CI "Format check" step would fail.
+     - Added `"endOfLine": "lf"` to `.prettierrc`
+     - Added `.gitattributes` with `* text=auto eol=lf` to enforce LF in repository
+     - Added `.prettierignore` for `android/`, `dist/`, `node_modules/`, `coverage/`, `*.apk`
+     - Ran `prettier --write` to normalize all 213 files → `format:check` now passes clean
+  5. **Fixed real source code lint issues found by ESLint:**
+     - `main.ts`: Removed dead variables `stepCount` and `extinctionCount` (incremented but never read — dead telemetry code)
+     - `ecosystem-world.ts`: Fixed `no-useless-assignment` — `totalCount` was assigned on line 56 then overwritten on line 67. Refactored to compute once as `const`.
+  6. Added `Lint` step to CI pipeline (between `Typecheck` and `Format check`)
+  7. Updated `.gitignore`: added `test-results/` and `playwright-report/`. Removed tracked `test-results/.last-run.json`.
+  8. Changed root `lint` script from broken `"npm run lint --workspaces"` to `"eslint ."`
+- **Tests:** 502 total (303 core + 16 render + 183 app), all pass. Build clean. Lint clean. Format clean. Typecheck clean.
+- **Status:** Done — branch pushed, PR needs manual creation (token scope)
+
 ## 2026-06-13 CRT-23: Fix app package build failures (TypeScript errors)
 - **Branch:** `feat/crt-23-fix-build-errors`
 - **PR:** https://github.com/bot-io/critterium/pull/1 (first PR in repo!)
