@@ -1,22 +1,25 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 02:53 Sofia**
+> Last updated: **2026-06-13 03:57 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 35%
+- **Usage:** 78%
 - **Resets:** 10 Sofia |
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- _No active locks_
+- `critterium.lock` — 44 min ago
+  > session: interactive-telegram
+  > started: 2026-06-11T10:23 Sofia
+  > item: architecture planning (ecosystem mode)
 
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** dual-reader
 - **Last item:** DR-004
-- **Total runs:** 1
+- **Total runs:** 3
 
 ## 📁 Projects
 
@@ -38,7 +41,7 @@
 - **Updated:** ** 2026-06-13
 - **Ready:** DR-007:
 - **Progress:** 9/10 done
-- **Last work:** 2026-06-13 — cron-worker — DR-004: Library Management (Tags, Collections, Sortin
+- **Last work:** 2026-06-13 — cron-worker — DR-004: Merged to master
 
 ### ⚪ machine-setup
 - **Status:** ** Complete

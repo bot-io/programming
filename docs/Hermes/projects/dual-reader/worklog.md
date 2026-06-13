@@ -241,3 +241,23 @@
 **Branch:** `feat/dr-004-library-management` (push blocked by token scope — same issue as all previous items)
 **Commit:** `f645b3a`
 
+### 2026-06-13 — cron-worker — DR-004: Merged to master
+
+**Item:** DR-004 (P1)
+**Status:** done (merged to master)
+**Summary:** Verified DR-004 implementation on feat/dr-004-library-management branch — all 485 tests pass. Merged to master via `--no-ff`. Backlog updated to done.
+
+**Verification:**
+- All 485 unit tests pass (`testDebugUnitTest` — BUILD SUCCESSFUL)
+- Acceptance criteria all met: tags, collections, sorting by 5 criteria, Room migration v5→v6, Material3 UI
+- 31 library management tests (25 repository + 6 entities)
+
+**Acceptance criteria verification:**
+1. ✅ User can assign custom tags to books and filter library by tag
+2. ✅ User can create named collections and add/remove books from them
+3. ✅ Library supports sorting by: title, author, date added, last read, completion percentage
+4. ✅ Tag and collection data persists across app restarts (Room DB migration v5→v6)
+5. ✅ UI follows Material Design 3 patterns; Compose UI with dialogs, chips, bottom sheets
+
+**Git:** Merge commit on master (feat/dr-004-library-management → master)
+
