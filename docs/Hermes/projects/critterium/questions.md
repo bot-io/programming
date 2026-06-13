@@ -10,3 +10,9 @@
 4. Any visual glitches or crashes?
 
 Once you confirm, we can mark CRT-15 as done and move to CRT-16 (iOS + store readiness).
+
+## FYI (no action needed): Vault remote was corrupted — fixed 2026-06-13
+**Noted:** 2026-06-13
+**What happened:** The `D:\programming` vault repo's `origin` had drifted to `https://github.com/bot-io/critterium.git` (the critterium *code* repo) instead of the correct vault repo `https://github.com/bot-io/programming.git`. This silently blocked the last 3 vault pushes (CRT-17, CRT-18, CRT-19 worker commits were stuck local-only). The push to critterium:master was rejected by repo rules (no `master` branch there; default is `main`).
+**What I did:** Corrected `origin` back to `https://github.com/bot-io/programming.git` and pushed all 3 pending worker commits (`17148e1..79e7167 master -> master`). The vault is now in sync.
+**Side note:** A misconfigured git credential helper (`credential-netrc` is not installed) causes git network ops to hang/timeout; I worked around it with token-in-URL pushes. You may want to remove the bad `credential-netrc` helper from your git config to speed up future syncs.
