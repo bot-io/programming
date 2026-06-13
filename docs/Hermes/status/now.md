@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 14:13 Sofia**
+> Last updated: **2026-06-13 14:36 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-20
-- **Total runs:** 12
+- **Last item:** CRT-21
+- **Total runs:** 14
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🔴 critterium
-- **Status:** ** M6 ecosystem mode active — D9 preset wishlist complete (CRT-20 Fishes done). CRT-15 blocked on device verification
+- **Status:** ** M6 ecosystem mode active — D9 preset wishlist complete (CRT-20 Fishes done). CRT-21 spatial-hash eating refactor complete (9 failing tests fixed). CRT-15 blocked on device verification
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 24/26 done
-- **Last work:** 2026-06-13 CRT-20: Fishes preset — Coral reef + cleaner-fish symbiosis
+- **Progress:** 25/27 done
+- **Last work:** 2026-06-13 CRT-21: Complete eating.ts spatial-hash refactor — fix 9 failing test
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development

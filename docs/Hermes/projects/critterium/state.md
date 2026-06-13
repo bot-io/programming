@@ -1,12 +1,12 @@
 # Critterium — State
 
-**Status:** M6 ecosystem mode active — D9 preset wishlist complete (CRT-20 Fishes done). CRT-15 blocked on device verification
+**Status:** M6 ecosystem mode active — D9 preset wishlist complete (CRT-20 Fishes done). CRT-21 spatial-hash eating refactor complete (9 failing tests fixed). CRT-15 blocked on device verification
 **Last Updated:** 2026-06-13
 **Version:** v1.3.8
 **Active Items:** CRT-15 (blocked — needs Svetlin for on-device perf check), CRT-16 (blocked — after M4)
-**Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅
+**Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅ CRT-21 ✅
 **Ecosystem (retrospective):** CRT-E1 ✅ CRT-E2 ✅ CRT-E3 ✅ CRT-E4 ✅ CRT-E5 ✅ CRT-E6 ✅
-**Tests:** 491 preset tests, all pass (note: 11 pre-existing eating/sim test failures from uncommitted refactor in working tree — not from CRT-20)
+**Tests:** 492 unit tests, all pass (9 previously-failing eating/sim tests now fixed via CRT-21)
 **Built-in presets:** Classic, Plankton Bloom, Swarm Intelligence, Predator Arena, Tiny Pond, Zen Garden, Rock Paper Scissors, Grasslands, Birds, Fishes
 **Open Questions:** CRT-15 criterion 3 needs Svetlin to install debug APK and verify 60fps on device
 **Repo:** https://github.com/bot-io/critterium

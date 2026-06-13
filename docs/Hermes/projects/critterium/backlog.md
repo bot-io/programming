@@ -300,3 +300,19 @@
 - **Decision:** D9 — "Fishes" in curated preset list (final D9 preset)
 - **Branch:** `feat/crt-20-fishes-preset` pushed (based on feat/crt-19-birds-preset; PR needs manual creation — token scope)
 - **Tests:** 491 total preset tests (76 in presets.test.ts + others), all preset tests pass
+
+### CRT-21 Complete eating.ts spatial-hash refactor — fix 9 failing tests
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. processEating uses spatial hash grid for O(n) neighbor lookups (not O(n²) brute force) ✅
+  2. Co-located particles (dSq=0) correctly detected for eating (queryRadius selfIdx param) ✅
+  3. SpatialHashGrid.rebuild accepts optional alive/hwm for dead-particle skipping ✅
+  4. PairwiseForce pre-allocates velocity delta buffers (zero per-step allocation) ✅
+  5. config-schema defensive range-clamping for deserialized values ✅
+  6. All 492 unit tests pass (was 490 + 2 new selfIdx tests), 0 failures ✅
+  7. TypeScript compiles cleanly ✅
+- **Branch:** `feat/crt-21-spatial-hash-eating-fix` pushed
+- **Commit:** b610d13
+- **Notes:** Completed an incomplete refactor left in the working tree by a prior session. Root cause of test failures: queryRadius filtered `dSq > 0` which excluded ALL co-located particles, not just self. Fixed by adding optional `selfIdx` parameter for index-based self-exclusion.

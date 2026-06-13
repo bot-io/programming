@@ -82,3 +82,19 @@
 - **Status:** Done — branch pushed, PR needs manual creation (token scope)
 - **Pre-existing uncommitted changes noted:** eating.ts (O(n²)→spatial-hash refactor), index.ts (rebuild() with alive/hwm params), main.ts (processEating call site) — from a prior session, incomplete. Not touched or committed by CRT-20.
 - **D9 wishlist: ALL COMPLETE** ✅ — Simple Particles, Predator/Prey, Predator/Prey/Vegetation, Rock/Paper/Scissors, Birds, Fishes. Only "Predator/Prey/Sickness Center" remains blocked (infection feature removed).
+
+## 2026-06-13 CRT-21: Complete eating.ts spatial-hash refactor — fix 9 failing tests
+- **Branch:** `feat/crt-21-spatial-hash-eating-fix`
+- **Commit:** b610d13
+- **What was done:**
+  1. No "ready" backlog items existed — all done or blocked on Svetlin. Dual-reader also had no ready items (all done). D9 preset wishlist fully complete.
+  2. Identified an incomplete refactor left in the working tree by a prior session: eating.ts was changed from O(n²) brute-force to spatial-hash O(n) neighbor lookups, but 9 tests were failing because the refactor was incomplete.
+  3. Root cause analysis: `SpatialHashGrid.queryRadius` filtered `dSq > 0` to exclude self, but this also excluded ALL co-located particles (dSq === 0). In eating tests, predator and prey were placed at identical coordinates, so the spatial hash never found them.
+  4. Fix: Added optional `selfIdx` parameter to `queryRadius`. When provided (≥0), self is excluded by index instead of by distance, allowing co-located particles to be found. When not provided (default -1), backward-compatible `dSq > 0` behavior is preserved for PairwiseForce and other callers that divide by `dist = sqrt(dSq)`.
+  5. Updated `processEating` to pass `selfIdx = i` to queryRadius.
+  6. Completed the rest of the prior session's refactor: SpatialHashGrid.rebuild accepts optional `alive` and `hwm` params (dead-particle skipping); PairwiseForce pre-allocates dvx/dvy buffers (zero per-step allocation); config-schema defensive range-clamping; population-graph readonly canvas + setColors; controls.ts cleanup.
+  7. Added 2 new tests for selfIdx co-located particle detection in index.test.ts.
+  8. Updated simulation.test.ts and eating.test.ts call sites for new processEating signature.
+- **Tests:** 492 total (490 existing + 2 new), all pass. TypeScript compiles cleanly.
+- **Based on:** feat/crt-20-fishes-preset branch (CRT-17/18/19/20 not yet merged to main)
+- **Status:** Done — branch pushed, PR needs manual creation (token scope)
