@@ -317,6 +317,21 @@
 - **Commit:** b610d13
 - **Notes:** Completed an incomplete refactor left in the working tree by a prior session. Root cause of test failures: queryRadius filtered `dSq > 0` which excluded ALL co-located particles, not just self. Fixed by adding optional `selfIdx` parameter for index-based self-exclusion.
 
+### CRT-23 Fix app package build failures (TypeScript errors)
+- **Status:** done
+- **Priority:** P0
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. `npm run build` passes for all 3 packages (app, core, render) ✅
+  2. population-graph.ts unused `canvas` field removed (TS6133) ✅
+  3. main.ts deepCloneSpeciesConfig optional stamina spread guarded (TS2322) ✅
+  4. Dead code in index.test.ts removed (wrong vy index + ?? precedence) ✅
+  5. Regression tests cover the stamina-optional clone path ✅ 4 new tests
+- **Branch:** `feat/crt-23-fix-build-errors` pushed
+- **PR:** https://github.com/bot-io/critterium/pull/1
+- **Tests:** 502 total (303 core + 16 render + 183 app), all pass
+- **Commit:** 88c3052
+
 ### CRT-22 Commit orphaned UI improvements + revert untested repulsion change
 - **Status:** done
 - **Priority:** P1

@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 17:36 Sofia**
+> Last updated: **2026-06-13 17:59 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-HEALTH-CHECK
-- **Total runs:** 15
+- **Last item:** CRT-23
+- **Total runs:** 16
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🔴 critterium
-- **Status:** ** M6 ecosystem mode active — all backlog items done or blocked. CRT-22 committed orphaned UI improvements and reverted an untested repulsion change. CRT-15 blocked on device verification, CRT-16 blocked pending M4.
+- **Status:** ** M6 ecosystem mode active — all backlog items done or blocked. CRT-23 fixed production build failures (2 TS errors). CRT-15 blocked on device verification, CRT-16 blocked pending M4.
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 26/28 done
-- **Last work:** 2026-06-13 CRT-22: Commit orphaned UI improvements + revert untested repulsion c
+- **Progress:** 27/29 done
+- **Last work:** 2026-06-13 CRT-23: Fix app package build failures (TypeScript errors)
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user

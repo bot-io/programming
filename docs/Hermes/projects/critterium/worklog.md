@@ -113,3 +113,24 @@
   5. All 498 tests pass (303 core + 16 render + 179 app). Pre-existing typecheck errors confirmed unchanged (stamina type mismatch at main.ts:158, unused canvas in population-graph.ts).
 - **Tests:** 498 total (492 + 6 new), all pass
 - **Status:** Done — branch pushed, PR needs manual creation (token scope)
+
+## 2026-06-13 CRT-23: Fix app package build failures (TypeScript errors)
+- **Branch:** `feat/crt-23-fix-build-errors`
+- **PR:** https://github.com/bot-io/critterium/pull/1 (first PR in repo!)
+- **Commit:** 88c3052
+- **What was done:**
+  1. No "ready" backlog items existed — all done or blocked on Svetlin. Dual-reader also had no ready items. Quota at 1%.
+  2. Health check: ran `npm run build` and discovered it was BROKEN with 2 TypeScript errors in the `app` package:
+     - `population-graph.ts:19` — TS6133: `canvas` field declared but never read (CRT-22 worklog noted this as "pre-existing typecheck error" but didn't fix it)
+     - `main.ts:158` — TS2322: `deepCloneSpeciesConfig` used `{ ...sp.stamina }` which spreads the optional `stamina?: StaminaConfig` field, making `sprintDurationSec` become `number | undefined` instead of `number`
+  3. Also found an orphaned uncommitted change on `feat/crt-22-ui-fixes` that reverted `onReset` to use `rebuildSimulation()` instead of the `applyConfig` pipeline that CRT-22 deliberately implemented. This made Reset behave identically to Reseed. Discarded it.
+  4. Fixed dead code in `index.test.ts` line 160: `const spd = Math.sqrt(world.vx[0] ** 2 + world.vy[1] ?? 0)` — wrong `vy[1]` index (should be `[0]`), wrong `??` operator precedence, and the variable was never used (the assertion used `actualSpd` on the next line). Removed the dead line.
+  5. Added 4 regression tests in `species-clone.test.ts` covering species config cloning with and without stamina.
+- **Fixes applied:**
+  - `population-graph.ts`: Removed unused `private readonly canvas: HTMLCanvasElement` field and `this.canvas = canvas` assignment. Constructor still uses the `canvas` parameter directly.
+  - `main.ts`: Changed `stamina: { ...sp.stamina }` to `stamina: sp.stamina ? { ...sp.stamina } : undefined` to preserve the optional type correctly.
+  - `index.test.ts`: Removed dead `spd` variable line.
+- **Tests:** 502 total (303 core + 16 render + 183 app), all pass
+- **Build:** `npm run build` now passes for all 3 packages (was broken)
+- **Status:** Done — branch pushed, PR #1 created
+
