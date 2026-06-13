@@ -1,8 +1,8 @@
 {
   "last_project": "critterium",
-  "last_item": "CRT-34",
+  "last_item": "CRT-35",
   "last_status": "done",
-  "timestamp": "2026-06-14T00:40:00Z",
-  "run_count": 26,
-  "note": "CRT-34: Removed dead infection/sickness rendering code from render module (sicknessContainer, pulsePhase, sicknessGfx). 4 regression-guard tests added. 540 tests pass. PR #11 created."
+  "timestamp": "2026-06-14T01:30:00Z",
+  "run_count": 27,
+  "note": "CRT-35: Force Registry & Factory in core. 7 force types registered (drag, wander, gravity, flow-field, vortex, pointer, alignment). New AlignmentForce class. 26 new tests, 566 total. Build/lint/format clean. Branch pushed, PR needs manual creation."
 }

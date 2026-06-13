@@ -519,3 +519,436 @@
 - **PR:** https://github.com/bot-io/critterium/pull/11
 - **Commit:** 72782df
 - **Notes:** The infection/sickness system was removed from the simulation core during ecosystem refactoring, but the render module retained vestigial code: a PixiJS Container allocation, per-frame pulse phase computation, and a per-frame null check on a graphics object that was never created. This is a pure dead-code removal — no behavior change, just fewer wasted allocations and CPU cycles per frame.
+
+---
+
+## Dynamic Force Pipeline + Test Coverage Wave (CRT-35 → CRT-50)
+
+> **Note:** These items refactor the force system from hardcoded variables into a
+> registry-driven pipeline, add integration/stress/edge-case test coverage, ship
+> four new presets, and introduce two new force types. Each item is independently
+> completable in a single 20-min worker run. P1 items (CRT-35 → CRT-38) form a
+> dependency chain and should be implemented in ID order; P2/P3 items are
+> independent of each other. Worker picks highest-priority `ready` item; among
+> equal priority, lowest CRT ID first.
+
+### CRT-35 Force Registry & Factory in core
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Description:** Create a central `ForceRegistry` class that maps string type IDs to factory functions, decoupling force *types* from force *configuration*. This replaces scattered hardcoded force instantiation and enables dynamic add/remove of forces at runtime. The registry also exports `FORCE_TYPES` metadata (id, displayName, description, defaultParams, paramSchema) so the UI can auto-generate parameter controls without knowing each force's internals.
+- **Files to create/modify:**
+  - CREATE: `packages/core/src/force-registry.ts`
+  - CREATE: `packages/core/src/force-registry.test.ts`
+  - MODIFY: `packages/core/src/index.ts` (re-export `ForceRegistry`, `FORCE_TYPES`, `ForceTypeMeta`)
+- **Acceptance Criteria:**
+  1. `ForceRegistry` class maps type IDs `'drag'`, `'wander'`, `'gravity'`, `'flow-field'`, `'vortex'`, `'pointer'`, and `'alignment'` (7 total) to factory functions
+  2. Each factory signature is `(params: Record<string, unknown>) => Force` and returns a fully-configured `Force` instance
+  3. `FORCE_TYPES` is an exported array of metadata objects, each containing: `id`, `displayName`, `description`, `defaultParams`, and `paramSchema` (declares each param's name, type, min, max, step)
+  4. `registry.create(typeId, params)` returns a `Force` instance; unknown type ID throws a descriptive `Error`
+  5. `registry.has(typeId)` returns boolean; `registry.list()` returns all registered type IDs
+  6. Unknown/extra params in the params object are ignored gracefully (forward-compatible)
+  7. All 7 force types can be instantiated via the registry and produce functionally identical forces to the existing hardcoded constructors
+- **Test Requirements:**
+  - One test per force type (7 tests): create via registry, verify the returned instance is the correct class with correct default params
+  - Test `registry.create('nonexistent', {})` throws
+  - Test `registry.has` / `registry.list` behavior
+  - Test extra params are ignored without throwing
+  - Test `FORCE_TYPES` has an entry for every registered ID (no drift)
+- **Test File:** `packages/core/src/force-registry.test.ts`
+- **Dependencies:** None (foundational; CRT-36/37/38/49/50 depend on this)
+- **Branch:** `feat/crt-35-force-registry` pushed (PR needs manual creation — token scope)
+- **Notes:** Implemented functional registry API (`createForce`, `registerForceType`, `getForceDescriptor`, `listForceTypes`, `getRegisteredTypes`) with `ForceTypeDescriptor` + `ParamSchema` metadata for UI auto-generation. Registered all 7 force types: drag, wander, gravity, flow-field, vortex, pointer, alignment. Added new `AlignmentForce` class (standalone neighborhood flocking force — steer toward average heading of same-type neighbors via spatial hash grid, `crossType` param) since 'alignment' previously existed only as a 'flock' flag inside the interaction matrix. 26 new tests. 329 core tests pass, build clean for all 3 packages, ESLint + Prettier clean. A concurrent sibling subagent had started the same item with a functional design; reconciled by adopting their API and completing the missing 'alignment' type + fixing re-export corruption from concurrent edits.
+
+### CRT-36 Dynamic Force Serialization
+- **Status:** ready
+- **Priority:** P1
+- **Milestone:** M6
+- **Description:** Refactor `JsonForcesConfig` in `config-schema.ts` from a fixed object with named slots (`drag?`, `wander?`, `gravity?`, …) to a dynamic array of `{ type, enabled, params }` objects. This makes the config schema extensible (new force types added without schema changes) and aligns serialization with the `ForceRegistry` from CRT-35. Old-format configs must auto-migrate on deserialize so existing presets, autosaves, and exported configs continue to work.
+- **Files to modify:**
+  - MODIFY: `packages/core/src/config-schema.ts` — change `JsonForcesConfig` type, `serializeForces()`, `deserializeConfig()` validation/normalization
+  - MODIFY: `packages/core/src/config-schema.test.ts` — add migration + round-trip tests
+  - MODIFY: `packages/app/src/presets.ts` — if presets embed `forces:` in old object format, migrate to new array format (or rely on deserializer migration)
+- **Acceptance Criteria:**
+  1. New `JsonForcesConfig` type: `{ forces: Array<{ type: string; enabled: boolean; params: Record<string, unknown> }> }`
+  2. `serializeConfig` / `serializeForces` emits the new dynamic array format
+  3. `deserializeConfig` accepts BOTH old object-slot format AND new array format; old format is auto-migrated to array during normalization (backward compatible)
+  4. Round-trip test: serialize → deserialize → serialize produces identical output
+  5. Migration test: a hardcoded old-format config object deserializes to the correct array of force entries with correct `type`, `enabled`, and `params`
+  6. Force order is preserved in the array (drag before wander before gravity, matching existing instantiation order)
+  7. All existing config-schema tests still pass; `npx vitest run` green
+- **Test Requirements:**
+  - Old-format → new-format migration test (at least 2 old configs: one with all forces, one with partial)
+  - Round-trip test (new format serialize → deserialize → serialize equality)
+  - Round-trip test (old format → deserialize → serialize → produces new format)
+  - Empty forces (`{}` or `forces: []`) handled without error
+  - All pre-existing config-schema tests pass unchanged
+- **Test File:** expand `packages/core/src/config-schema.test.ts`
+- **Dependencies:** CRT-35 (uses `FORCE_TYPES` defaultParams to validate param keys)
+
+### CRT-37 Wire ForceRegistry into main.ts
+- **Status:** ready
+- **Priority:** P1
+- **Milestone:** M6
+- **Description:** Replace the hardcoded `dragForce` / `wanderForce` / `pointerForce` / etc. variables in `main.ts` with a single `ForcePipeline` (an ordered array of `Force` instances built from the registry). The `applyForces()` step iterates the pipeline instead of running hardcoded `if (config.forces.drag)` checks. Force add/remove at runtime uses the same serialize-and-reload pattern already used for species (serialize config → mutate → deserialize → rebuild pipeline).
+- **Files to modify:**
+  - MODIFY: `packages/app/src/main.ts` — remove hardcoded force variables, introduce `forcePipeline: Force[]`, rewrite `applyForces()` to iterate pipeline, add `addForce(typeId, params)` / `removeForce(index)` / `setForceEnabled(index, enabled)` helpers
+  - MODIFY: `packages/app/src/main.test.ts` — update any tests that reference hardcoded force variables
+- **Acceptance Criteria:**
+  1. No hardcoded per-force variables remain in `main.ts`; all forces live in a `forcePipeline` array
+  2. `applyForces()` iterates `forcePipeline` and calls each enabled force's `apply()` method
+  3. `addForce(typeId, params)` appends a registry-created force to the pipeline and re-serializes config
+  4. `removeForce(index)` removes from pipeline and re-serializes config
+  5. `setForceEnabled(index, enabled)` toggles without removing the instance
+  6. Default simulation (no manual force changes) produces visually identical behavior to before the refactor
+  7. All existing tests pass; no behavioral regression
+- **Test Requirements:**
+  - Verify default pipeline matches the pre-refactor set of active forces
+  - Verify `addForce('vortex', {...})` adds a working vortex (velocity change observable)
+  - Verify `removeForce(0)` removes drag and sim still runs
+  - All pre-existing `main.test.ts` tests pass
+- **Test File:** expand `packages/app/src/main.test.ts`
+- **Dependencies:** CRT-35 (ForceRegistry), CRT-36 (dynamic force config format)
+
+### CRT-38 Force Add/Remove UI
+- **Status:** ready
+- **Priority:** P1
+- **Milestone:** M6
+- **Description:** Add a "+ Add Force" button and per-force controls to the forces section of `controls.ts`, mirroring the existing species add/remove UX. Each force row gets a type dropdown, enable/disable toggle, delete button, and auto-generated parameter sliders driven by `FORCE_TYPES` param schemas from CRT-35. This makes the force system fully user-editable at runtime without touching config JSON.
+- **Files to modify:**
+  - MODIFY: `packages/app/src/controls.ts` — add force management UI (add button, dropdown, per-force rows, parameter sliders, delete buttons, enable toggles); wire to `onAddForce` / `onRemoveForce` / `onSetForceEnabled` / `onSetForceParam` callbacks
+  - MODIFY: `packages/app/src/main.ts` — pass force-management callbacks into `createControls`
+  - MODIFY: `packages/app/src/controls.test.ts` — add tests for force UI
+  - MODIFY: `packages/app/src/main.test.ts` — integration tests for callback wiring
+- **Acceptance Criteria:**
+  1. "+ Add Force" button renders in the forces section; clicking it shows a dropdown of available force types (drag, wander, gravity, flow-field, vortex, alignment) from `FORCE_TYPES`
+  2. Selecting a force type creates a new force row with: type label, enable/disable toggle, delete button, and parameter sliders auto-generated from that force's `paramSchema`
+  3. Per-force delete button removes the force from the pipeline and re-renders
+  4. Per-force enable/disable toggle calls `setForceEnabled` without removing the instance
+  5. Parameter sliders update force params live (no restart) via `setForceParam`
+  6. UX mirrors the existing species add/remove pattern (consistent styling, callbacks, re-render)
+  7. All existing tests pass; new controls tests cover add/delete/toggle/slider
+- **Test Requirements:**
+  - Test "+ Add Force" creates a force row
+  - Test force dropdown lists correct types
+  - Test delete button removes the row
+  - Test enable/disable toggle calls the correct callback
+  - Test parameter sliders render with correct min/max/step from paramSchema
+  - Test slider change invokes `onSetForceParam` with correct index + param name + value
+- **Test File:** expand `packages/app/src/controls.test.ts`
+- **Dependencies:** CRT-35 (FORCE_TYPES metadata), CRT-36 (dynamic config), CRT-37 (force pipeline + add/remove helpers)
+
+### CRT-39 main.ts Integration Tests
+- **Status:** ready
+- **Priority:** P2
+- **Milestone:** M6
+- **Description:** Add comprehensive integration tests for `main.ts` covering the force pipeline, preset loading lifecycle, the v1.4.0 reseed-commits-sliders bug fix, reset safety, and extinction auto-reseed. These tests exercise the full main-module orchestration layer (config → world → forces → lifecycle → render hooks) rather than individual units. Target 20+ new tests.
+- **Files to create/modify:**
+  - CREATE: `packages/app/src/main-integration.test.ts` (preferred) OR expand `packages/app/src/main.test.ts`
+- **Acceptance Criteria:**
+  1. 20+ new integration tests added, all passing
+  2. Force pipeline integration: add a force via the pipeline, step the simulation, verify particle velocity changes as expected
+  3. Preset loading lifecycle: load a preset, verify species config, interaction matrix, and active forces all match the preset definition
+  4. Reseed commits slider values: change a species count slider, call reseed, verify the world respawns with the slider value (regression test for v1.4.0 bug fix from CRT-22)
+  5. Reset safety: load a multi-species preset, call reset, verify no crash and world returns to initial state
+  6. Extinction auto-reseed: simulate total species extinction, verify auto-reseed triggers and repopulates
+- **Test Requirements:**
+  - Minimum 20 new tests (ideally 25+)
+  - Each test is self-contained (creates its own main instance / world)
+  - Cover both happy path and edge conditions (empty forces, single species, etc.)
+- **Test File:** `packages/app/src/main-integration.test.ts`
+- **Dependencies:** CRT-37 (force pipeline) for force-integration tests; otherwise standalone
+
+### CRT-40 lifecycle.ts Deep Tests
+- **Status:** ready
+- **Priority:** P2
+- **Milestone:** M6
+- **Description:** Add deep unit tests for `lifecycle.ts` covering aging, starvation, reproduction, and stamina subsystems with both normal operation and edge cases. The current `lifecycle.test.ts` has only 5 tests — this expands it to comprehensively cover death triggers, cooldown enforcement, energy cost deduction, sprint/cooldown cycles, and degenerate inputs. Target 25+ new tests.
+- **Files to modify:**
+  - MODIFY: `packages/core/src/lifecycle.test.ts`
+- **Acceptance Criteria:**
+  1. 25+ new tests added, all passing
+  2. Aging: particle with `maxAge` dies when age exceeds limit; particle with very large `maxAge` survives
+  3. Starvation: energy depletion to 0 increases damage over time; partial energy reduces damage proportionally
+  4. Reproduction: cooldown enforced (no spawn during cooldown); energy cost deducted on spawn; offspring spawned at correct position/parent
+  5. Stamina: sprint cycle (sprint → cooldown → sprint); speed multiplier applied during sprint; speed reduced during cooldown
+  6. Edge cases: `maxAge = 0` (immediate death), negative energy (clamped/handled), simultaneous death triggers (age + starvation at once), reproduction with insufficient energy (no spawn)
+- **Test Requirements:**
+  - Minimum 25 new tests
+  - Test each subsystem (aging, starvation, reproduction, stamina) independently
+  - Test edge cases explicitly (zero maxAge, negative energy, simultaneous triggers, insufficient energy for reproduction)
+  - Verify no off-by-one errors in cooldown timers
+- **Test File:** expand `packages/core/src/lifecycle.test.ts`
+- **Dependencies:** None (lifecycle.ts exists and is stable)
+
+### CRT-41 New Preset — Coral Reef
+- **Status:** ready
+- **Priority:** P2
+- **Milestone:** M6
+- **Description:** Add a "Coral Reef" preset with a 5-species underwater ecosystem: Coral (stationary), Zooplankton, Clownfish, Moray Eel, and Reef Shark. The food chain flows Coral waste → Zooplankton → Clownfish → Eel → Shark. Gentle flow-field current and mild drag forces create organic underwater motion. Population cap: 500.
+- **Files to modify:**
+  - MODIFY: `packages/app/src/presets.ts` — add `coralReef` preset to `BUILTIN_PRESETS`
+  - MODIFY: `packages/app/src/presets.test.ts` — add structural validation tests
+- **Acceptance Criteria:**
+  1. 5 species defined: Coral (stationary, zero maxSpeed), Zooplankton (slow, tiny), Clownfish (medium, schooling), Moray Eel (fast predator), Reef Shark (apex predator, solitary)
+  2. Food chain: Zooplankton eats Coral waste (or Coral), Clownfish eats Zooplankton, Eel eats Clownfish, Shark eats Eel
+  3. Forces: gentle flow field (current direction) + mild drag coefficient
+  4. `populationCap: 500`
+  5. Interaction matrix is 5×5 with correct predator/prey entries and reasonable attract/flee values
+  6. Preset passes all structural validation tests (version, dimensions, N×N matrix, diet indices in range, force params valid)
+  7. Preset auto-appears in dropdown via `BUILTIN_PRESET_NAMES`
+- **Test Requirements:**
+  - Structural validation: species count = 5, matrix is 5×5, diet indices valid (0-4), all fields present and typed correctly
+  - Verify populationCap = 500
+  - Verify forces array includes flow-field and drag
+  - Verify Coral has maxSpeed = 0 (stationary)
+  - Follow the exact test pattern used by existing presets (Grasslands, Birds, Fishes)
+- **Test File:** expand `packages/app/src/presets.test.ts`
+- **Dependencies:** None (uses existing preset format; works with old or new force config)
+
+### CRT-42 New Preset — Tornado Alley
+- **Status:** ready
+- **Priority:** P2
+- **Milestone:** M6
+- **Description:** Add a "Tornado Alley" preset with chaotic vortex-driven motion. Three species — Dust Motes, Debris, and Birds — swirl around a central vortex with turbulent flow fields and heavy wander for chaotic, unpredictable motion. The vortex force is centered with high strength (300) and inward radial pull. Population cap: 400.
+- **Files to modify:**
+  - MODIFY: `packages/app/src/presets.ts` — add `tornadoAlley` preset to `BUILTIN_PRESETS`
+  - MODIFY: `packages/app/src/presets.test.ts` — add structural validation tests
+- **Acceptance Criteria:**
+  1. 3 species defined: Dust Motes (light, fast, small), Debris (heavy, medium, large), Birds (medium, fast, flocking)
+  2. Vortex force at center of canvas with strength ~300, inward radial component
+  3. Turbulent flow field force (chaotic directional variation)
+  4. Heavy wander force (high wander rate for chaotic motion)
+  5. `populationCap: 400`
+  6. Interaction matrix is 3×3; Birds mildly flock (+cohesion), Debris repels everything (collision)
+  7. Preset passes all structural validation tests
+  8. Preset auto-appears in dropdown via `BUILTIN_PRESET_NAMES`
+- **Test Requirements:**
+  - Structural validation: species count = 3, matrix is 3×3, diet indices valid, all fields present
+  - Verify vortex params: strength ~300, center at canvas midpoint
+  - Verify populationCap = 400
+  - Verify forces include vortex + flow-field + wander
+  - Follow existing preset test patterns
+- **Test File:** expand `packages/app/src/presets.test.ts`
+- **Dependencies:** None
+
+### CRT-43 New Preset — Deep Sea Vent
+- **Status:** ready
+- **Priority:** P2
+- **Milestone:** M6
+- **Description:** Add a "Deep Sea Vent" preset simulating a hydrothermal vent ecosystem. Four species — Chemosynthetic Bacteria, Tube Worms, Crabs, and Octopus — inhabit a vertical environment with gravity-like downward force (sinking) counterbalanced by an upward flow field at the center (the vent plume). Population cap: 600.
+- **Files to modify:**
+  - MODIFY: `packages/app/src/presets.ts` — add `deepSeaVent` preset to `BUILTIN_PRESETS`
+  - MODIFY: `packages/app/src/presets.test.ts` — add structural validation tests
+- **Acceptance Criteria:**
+  1. 4 species defined: Chemosynthetic Bacteria (tiny, slow, stationary-leaning), Tube Worms (medium, very slow, stationary), Crabs (medium, bottom-dweller), Octopus (fast, mobile predator)
+  2. Gravity-like downward force (sinking effect, low strength)
+  3. Upward flow field centered at canvas midpoint (vent plume pushing up)
+  4. `populationCap: 600`
+  5. Food chain: Bacteria (producer, fast reproduction), Tube Worms eat Bacteria, Crabs eat Tube Worms, Octopus eats Crabs
+  6. Interaction matrix is 4×4 with correct predator/prey entries
+  7. Preset passes all structural validation tests
+  8. Preset auto-appears in dropdown via `BUILTIN_PRESET_NAMES`
+- **Test Requirements:**
+  - Structural validation: species count = 4, matrix is 4×4, diet indices valid
+  - Verify gravity force present (downward)
+  - Verify flow field present (upward at center)
+  - Verify populationCap = 600
+  - Follow existing preset test patterns
+- **Test File:** expand `packages/app/src/presets.test.ts`
+- **Dependencies:** None
+
+### CRT-44 New Preset — Symbiosis
+- **Status:** ready
+- **Priority:** P2
+- **Milestone:** M6
+- **Description:** Add a "Symbiosis" preset demonstrating positive/neutral interactions with no predation. Three species — Algae, Coral, and Cleaner Shrimp — coexist through mutual attraction. Algae and Coral have mutual attraction (both benefit), and Cleaner Shrimp are attracted to Coral (cleaning symbiosis). No species eats another. Population cap: 400.
+- **Files to modify:**
+  - MODIFY: `packages/app/src/presets.ts` — add `symbiosis` preset to `BUILTIN_PRESETS`
+  - MODIFY: `packages/app/src/presets.test.ts` — add structural validation tests
+- **Acceptance Criteria:**
+  1. 3 species defined: Algae (tiny, slow, high reproduction), Coral (stationary, medium), Cleaner Shrimp (small, fast, mobile)
+  2. Algae ↔ Coral: mutual attraction (symmetric positive strength in both matrix directions)
+  3. Cleaner Shrimp → Coral: positive attraction (shrimp seek coral to clean)
+  4. No predation: all `canEat` entries are empty/null across the matrix
+  5. All interactions are positive (attract) or neutral (null); no negative/repel entries except universal short-range repulsion
+  6. `populationCap: 400`
+  7. Interaction matrix is 3×3, symmetric where appropriate
+  8. Preset passes all structural validation tests
+  9. Preset auto-appears in dropdown via `BUILTIN_PRESET_NAMES`
+- **Test Requirements:**
+  - Structural validation: species count = 3, matrix is 3×3
+  - Verify no `canEat` entries (no predation) across all species pairs
+  - Verify Algae↔Coral attraction is symmetric and positive
+  - Verify Shrimp→Coral attraction is positive
+  - Verify populationCap = 400
+  - Follow existing preset test patterns
+- **Test File:** expand `packages/app/src/presets.test.ts`
+- **Dependencies:** None
+
+### CRT-45 Stress Test Suite
+- **Status:** ready
+- **Priority:** P2
+- **Milestone:** M6
+- **Description:** Add a dedicated stress test suite that verifies the simulation remains stable and leak-free under heavy load and rapid mutation. Tests cover max-capacity particle counts with the full force pipeline, rapid species add/remove cycles, rapid force toggling, max-size config serialization, and memory stability over 10,000 simulation steps. These tests protect against performance regressions and allocation leaks.
+- **Files to create:**
+  - CREATE: `packages/core/src/stress.test.ts`
+- **Acceptance Criteria:**
+  1. Test 800 particles (current max cap) with the full force pipeline (drag + wander + gravity + flow-field + vortex + pairwise) — no crash, simulation completes 100+ steps
+  2. Test rapid add/remove species: 5 consecutive add + reseed cycles — world remains consistent, no orphaned state
+  3. Test rapid force toggle: toggle all forces on/off 100 times — no crash, force pipeline state correct at end
+  4. Test config serialization with max species (10) + max forces (7): `serializeConfig` → `deserializeConfig` round-trip succeeds and produces identical config
+  5. Test memory stability: run 10,000 simulation steps, verify no unbounded growth in array buffers (alive count stays within cap, no leaked allocations inflating typed arrays)
+  6. All stress tests complete within reasonable time (no infinite loops, no timeouts under default vitest timeout)
+- **Test Requirements:**
+  - Max-capacity particle test (800 particles, 100+ steps)
+  - Rapid species add/remove (5 cycles)
+  - Rapid force toggle (100 iterations)
+  - Max config serialization round-trip (10 species + 7 forces)
+  - 10,000-step memory stability test (assert array lengths bounded)
+  - Use generous timeouts where needed but verify completion
+- **Test File:** `packages/core/src/stress.test.ts`
+- **Dependencies:** CRT-37 (force pipeline) for toggle tests; otherwise uses existing World/force APIs
+
+### CRT-46 Edge Case Test Suite
+- **Status:** ready
+- **Priority:** P2
+- **Milestone:** M6
+- **Description:** Add a dedicated edge-case test suite covering degenerate simulation configurations that must not crash. Tests include zero species (empty world), single species (no interactions), maximum species (10, verify 10×10 matrix), zero-radius interactions, negative strength (repel instead of attract), minimum population cap (2), and minimum canvas dimensions (100×100). These tests document and enforce graceful handling of boundary conditions.
+- **Files to create:**
+  - CREATE: `packages/core/src/edge-cases.test.ts`
+- **Acceptance Criteria:**
+  1. 0 species: empty world initializes and steps without crashing; no particles rendered
+  2. 1 species: solitary particle — no interaction forces applied, sim runs normally
+  3. 10 species: max species count — verify interaction matrix is 10×10 and all indices valid
+  4. Zero-radius interaction: matrix entry with radius 0 applies no force (no division by zero, no NaN)
+  5. Negative strength: interaction entry with negative strength repels instead of attracts (verify direction reversal)
+  6. Population cap = 2: minimum cap — spawn respects cap, sim stable
+  7. Width/height = 100: minimum canvas — boundary forces (bounce/wrap) work correctly at small dimensions
+  8. All edge-case tests pass without crashes, NaN values, or uncaught exceptions
+- **Test Requirements:**
+  - One test per edge case (minimum 7 tests, aim for 10+ with sub-variants)
+  - Each test explicitly asserts no NaN/Infinity in position or velocity arrays
+  - Each test asserts no exception thrown during init + step
+  - Verify graceful degradation (not just "doesn't crash" but produces sensible state)
+- **Test File:** `packages/core/src/edge-cases.test.ts`
+- **Dependencies:** None
+
+### CRT-47 Config Validation Hardening
+- **Status:** ready
+- **Priority:** P3
+- **Milestone:** M6
+- **Description:** Harden `deserializeConfig` against malformed, out-of-range, and adversarial input. Add tests verifying rejection of NaN/Infinity/negative values, range clamping for bounded fields, graceful handling of missing/mistyped fields, oversized-value clamping (e.g., populationCap 99999 → 5000), and mismatched interaction matrix dimensions. This expands the existing `config-schema.test.ts` with adversarial input coverage.
+- **Files to modify:**
+  - MODIFY: `packages/core/src/config-schema.ts` (add/extend range-clamping and validation if gaps found)
+  - MODIFY: `packages/core/src/config-schema.test.ts` (add adversarial input tests)
+- **Acceptance Criteria:**
+  1. `deserializeConfig` rejects or clamps NaN values in numeric fields (maxSpeed, radius, etc.)
+  2. `deserializeConfig` rejects or clamps Infinity values
+  3. `deserializeConfig` rejects or clamps negative values where non-negative is required (counts, radii, speeds)
+  4. Range clamping enforced: `maxSpeed` clamped to [0.01, 5000], `radius` clamped to [1, 500] (or project-defined ranges)
+  5. Malformed JSON handled gracefully: missing required fields throw descriptive error or use safe defaults; wrong types (string where number expected) rejected/clamped
+  6. Oversized values clamped: `populationCap` 99999 → clamped to max (5000 or current project max)
+  7. Interaction matrix with mismatched dimensions (e.g., 3 species but 4×4 matrix) rejected with descriptive error
+  8. All existing config-schema tests still pass
+- **Test Requirements:**
+  - Test NaN rejection/clamping for at least 3 numeric fields
+  - Test Infinity rejection/clamping
+  - Test negative value handling
+  - Test range clamping (maxSpeed, radius, populationCap)
+  - Test missing fields (version, types, interactionMatrix) → descriptive error or safe default
+  - Test wrong types (string→number, number→boolean)
+  - Test oversized populationCap clamping
+  - Test mismatched matrix dimensions → error
+  - Minimum 12 new tests
+- **Test File:** expand `packages/core/src/config-schema.test.ts`
+- **Dependencies:** None
+
+### CRT-48 Force Isolation Tests
+- **Status:** ready
+- **Priority:** P3
+- **Milestone:** M6
+- **Description:** Add isolation tests that verify each global force type (GravityForce, FlowFieldForce, VortexForce, and others) produces correct, predictable physics when applied independently. Tests verify velocity changes match expected physics formulas, all falloff modes (linear, inverse, constant) behave correctly, and forces handle zero-particle and all-dead-particle scenarios without error. This catches force regressions that pairwise/integration tests might mask.
+- **Files to create/modify:**
+  - CREATE: `packages/core/src/force-isolation.test.ts` (preferred) OR expand `packages/core/src/index.test.ts`
+- **Acceptance Criteria:**
+  1. GravityForce: applied alone, velocity increases by `strength * dt` per step in the configured direction; verify after N steps velocity = initial + N × strength × dt
+  2. FlowFieldForce: applied alone, velocity changes toward the flow field direction at the particle's position; verify direction matches the field function output
+  3. VortexForce: applied alone, particles gain tangential velocity around the vortex center; verify angular momentum direction and magnitude
+  4. Falloff modes: test linear falloff (force ∝ distance), inverse falloff (force ∝ 1/distance), and constant falloff (force independent of distance) — verify the force magnitude matches the expected formula at multiple distances
+  5. Zero particles: force applied to an empty world — no crash, no error
+  6. Dead particles only: force applied to a world where all particles are dead — no velocity changes, no crash
+  7. Each force tested in complete isolation (no other forces active)
+- **Test Requirements:**
+  - One isolated test per force type (gravity, flow-field, vortex minimum; add drag, wander if not already covered)
+  - Falloff mode tests (linear, inverse, constant) — verify magnitude at 2+ distances each
+  - Zero-particle test
+  - All-dead-particle test
+  - Minimum 10 new tests
+- **Test File:** `packages/core/src/force-isolation.test.ts`
+- **Dependencies:** None
+
+### CRT-49 Boids Flocking Force
+- **Status:** ready
+- **Priority:** P3
+- **Milestone:** M6
+- **Description:** Implement a new `BoidsForce` class that combines the three classic Reynolds flocking behaviors — separation (short-range repulsion), alignment (match neighbor heading), and cohesion (move toward group center) — into a single configurable force. Uses the existing spatial hash grid for O(n) neighbor queries. Each sub-behavior has independent radius and strength parameters. Registered in the `ForceRegistry` from CRT-35 as type `'boids'`.
+- **Files to create/modify:**
+  - CREATE: `packages/core/src/boids-force.ts` (or add to `index.ts` if convention prefers single-file)
+  - CREATE: `packages/core/src/boids-force.test.ts`
+  - MODIFY: `packages/core/src/force-registry.ts` — register `'boids'` type
+  - MODIFY: `packages/core/src/index.ts` — export `BoidsForce`
+  - MODIFY: `packages/app/src/controls.ts` — include `'boids'` in the Add Force dropdown (if CRT-38 done)
+- **Acceptance Criteria:**
+  1. `BoidsForce` class implements the `Force` interface with `id`, `apply()`, and serialization support
+  2. Separation: particles within `separationRadius` repel each other with `separationStrength` — verify two close particles move apart
+  3. Alignment: particles within `alignmentRadius` steer toward average heading with `alignmentStrength` — verify headings converge over steps
+  4. Cohesion: particles within `cohesionRadius` steer toward group center with `cohesionStrength` — verify particles move toward centroid
+  5. Neighbor queries use the spatial hash grid (O(n), not O(n²))
+  6. Params: `separationRadius`, `separationStrength`, `alignmentRadius`, `alignmentStrength`, `cohesionRadius`, `cohesionStrength` — all configurable via constructor and serialized
+  7. Registered in `ForceRegistry` as type `'boids'` with full `FORCE_TYPES` metadata
+  8. Force operates within same species (cross-species flocking optional via param, default off)
+  9. All tests pass; existing tests unaffected
+- **Test Requirements:**
+  - Separation test: two particles within separationRadius move apart over N steps
+  - Alignment test: particles with divergent headings converge toward average heading
+  - Cohesion test: scattered particles move toward their group centroid
+  - Param sensitivity test: increasing separationStrength increases repulsion velocity
+  - Zero-particle and single-particle tests (no crash, no force applied)
+  - Registry test: `registry.create('boids', {...})` returns a `BoidsForce` instance
+  - Minimum 8 new tests
+- **Test File:** `packages/core/src/boids-force.test.ts`
+- **Dependencies:** CRT-35 (register in ForceRegistry); spatial hash grid (CRT-3, already done)
+
+### CRT-50 Magnetic / Attraction Point Force
+- **Status:** ready
+- **Priority:** P3
+- **Milestone:** M6
+- **Description:** Implement a new `AttractorForce` class that applies point-based attraction or repulsion (like a gravity well at an arbitrary position). Unlike `VortexForce`, it has no tangential/swirl component — force is purely radial toward (positive strength) or away from (negative strength) the point. Params include x, y position, strength, radius (cutoff), and falloff mode. Registered in the `ForceRegistry` from CRT-35 as type `'attractor'`.
+- **Files to create/modify:**
+  - CREATE: `packages/core/src/attractor-force.ts` (or add to `index.ts`)
+  - CREATE: `packages/core/src/attractor-force.test.ts`
+  - MODIFY: `packages/core/src/force-registry.ts` — register `'attractor'` type
+  - MODIFY: `packages/core/src/index.ts` — export `AttractorForce`
+  - MODIFY: `packages/app/src/controls.ts` — include `'attractor'` in the Add Force dropdown (if CRT-38 done)
+- **Acceptance Criteria:**
+  1. `AttractorForce` class implements the `Force` interface with `id`, `apply()`, and serialization support
+  2. Positive `strength`: particles within `radius` accelerate toward the point (x, y) — verify velocity direction points toward attractor
+  3. Negative `strength`: particles within `radius` accelerate away from the point — verify velocity direction points away (repulsion)
+  4. Radius cutoff: particles beyond `radius` from the point receive zero force — verify no velocity change
+  5. Falloff modes: linear (force ∝ 1 − dist/radius), inverse (force ∝ 1/dist), constant (force independent of distance) — all produce correct magnitude at test distances
+  6. No tangential component: verify force is purely radial (cross-product with radial direction ≈ 0), distinguishing from VortexForce
+  7. Params: `x`, `y`, `strength`, `radius`, `falloff` — all configurable and serialized
+  8. Registered in `ForceRegistry` as type `'attractor'` with full `FORCE_TYPES` metadata
+  9. All tests pass; existing tests unaffected
+- **Test Requirements:**
+  - Attraction test: particle accelerates toward point with positive strength (verify direction + magnitude)
+  - Repulsion test: particle accelerates away with negative strength (verify direction)
+  - Radius cutoff test: particle beyond radius gets zero force
+  - Falloff tests: linear, inverse, constant — verify magnitude at 2+ distances each
+  - No-tangential test: verify force vector is parallel to radial direction (no swirl component)
+  - Zero-particle and dead-particle tests
+  - Registry test: `registry.create('attractor', {...})` returns an `AttractorForce` instance
+  - Minimum 8 new tests
+- **Test File:** `packages/core/src/attractor-force.test.ts`
+- **Dependencies:** CRT-35 (register in ForceRegistry)

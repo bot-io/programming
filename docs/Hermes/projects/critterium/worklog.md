@@ -357,3 +357,22 @@
 - **Verification:** Build, typecheck, lint, format — all clean. npm audit 0 vulns.
 - **Status:** Done — PR #11 created. No ready items remain.
 
+## 2026-06-14 CRT-35: Force Registry & Factory in core
+- **Branch:** `feat/crt-35-force-registry`
+- **Commit:** 2a5cb43
+- **PR:** Branch pushed — PR needs manual creation (GitHub token lacks `createPullRequest` scope)
+- **What was done:**
+  1. Created central force registry in `packages/core/src/force-registry.ts` — functional API: `createForce(type, params)`, `registerForceType(id, descriptor)`, `getForceDescriptor(id)`, `listForceTypes()`, `getRegisteredTypes()`
+  2. Each entry has a `ForceTypeDescriptor` with `ParamSchema` metadata (id, label, type, default, min, max, step) for UI auto-generation
+  3. Registered all 7 force types: drag, wander, gravity, flow-field, vortex, pointer, alignment
+  4. Added standalone `AlignmentForce` class in `index.ts` — steer toward average heading of same-type neighbors via SpatialHashGrid radius query, with `crossType` param for cross-species flocking
+  5. 'alignment' previously existed only as a 'flock' flag in the interaction matrix, not as a standalone force class — created to fulfill the registry's 7-type requirement
+  6. Wrote 26 comprehensive tests: creation (default+custom params), apply (heading steer, crossType isolation, zero-velocity skip), descriptors (all metadata correct), extra-params-ignored, no-drift (registry in sync with FORCE_TYPES)
+  7. Re-exported registry functions and `AlignmentForce` from core barrel `index.ts`
+  8. Reconciled with concurrent sibling subagent (`20260613_232652_8baa8b`) who had started the same item — adopted their functional API, completed the missing 'alignment' type, fixed re-export corruption from concurrent edit collision
+  9. Reverted sibling's out-of-scope `main.ts` changes (CRT-37 scope — ManagedForce interface, activeForces array) that broke the build; CRT-35 is core-only per backlog file list
+- **Tests:** 566 total (329 core + 20 render + 217 app), all pass — was 540, +26 new core tests
+- **Verification:** Build clean for all 3 packages, ESLint clean, Prettier clean
+- **Status:** Done — branch pushed. PR creation blocked by token scope (persistent across all workers).
+- **Notes:** Concurrent sibling subagent caused edit collisions on `index.ts` and `main.ts`. Resolved by adopting their API design and cleaning up the conflicts. CRT-36 (Dynamic Force Serialization) is next in the P1 chain.
+

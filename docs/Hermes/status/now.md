@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 00:39 Sofia**
+> Last updated: **2026-06-14 01:20 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 62%
+- **Usage:** 73%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-34
-- **Total runs:** 26
+- **Last item:** CRT-35
+- **Total runs:** 27
 
 ## 📁 Projects
 
@@ -27,11 +27,12 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M4/M6 — CRT-34 done (dead infection/sickness rendering code removed). All PRs merged except PR #9 (CRT-32), PR #10 (CRT-33), PR #11 (CRT-34), all pending review. 540 unit + 12 e2e tests pass.
+- **Status:** ** M4/M6 — CRT-35 done (Force Registry & Factory in core). 329 core tests pass. Branch pushed for PR.
 - **Updated:** ** 2026-06-14
+- **Ready:** CRT-36, CRT-37, CRT-38, CRT-39, CRT-40, CRT-41, CRT-42, CRT-43, CRT-44, CRT-45, CRT-46, CRT-47, CRT-48, CRT-49, CRT-50
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 38/40 done
-- **Last work:** 2026-06-14 CRT-34: Remove dead infection/sickness rendering code
+- **Progress:** 39/56 done
+- **Last work:** 2026-06-14 CRT-35: Force Registry & Factory in core
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user
