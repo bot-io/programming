@@ -393,3 +393,18 @@
 - **PR:** https://github.com/bot-io/critterium/pull/4
 - **Commit:** 31267ef
 - **Notes:** Root cause: root `package.json` lacks `"type": "module"` (unlike all 3 sub-packages which correctly have it) while `eslint.config.js` used ES module `import`/`export` syntax. Node.js reparsed the file at runtime, emitting a warning. Fix: rename to `.mjs` — the ESLint-recommended approach for flat config in mixed CJS/ESM projects.
+
+### CRT-27 Fix android/gradlew missing executable permission in CI
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M4
+- **Acceptance Criteria:**
+  1. `android/gradlew` git file mode changed from `100644` to `100755` (executable) ✅
+  2. CI `android-debug-apk` job's "Build debug APK" step no longer fails with exit code 126 ✅ (chmod +x added)
+  3. Belt-and-suspenders `chmod +x` added before gradle invocation in CI workflow ✅
+  4. All existing tests still pass (502) ✅
+  5. Build, lint, format, typecheck remain clean ✅
+- **Branch:** `feat/crt-27-gradlew-exec` pushed
+- **PR:** https://github.com/bot-io/critterium/pull/5
+- **Commit:** 09e8405
+- **Notes:** Root cause: `android/gradlew` committed from Windows with `core.filemode=false`, so git stored mode `100644` instead of `100755`. On Linux CI, `./gradlew` couldn't execute → exit code 126. Fix: `git update-index --chmod=+x` (primary) + `chmod +x gradlew` in CI workflow (belt-and-suspenders). This was blocking ALL 4 open PRs from having green CI.

@@ -197,3 +197,24 @@
 - **Tests:** 502 total (303 core + 16 render + 183 app), all pass
 - **Status:** Done — branch pushed, PR #4 created
 
+## 2026-06-13 CRT-27: Fix android/gradlew missing executable permission in CI
+- **Branch:** `feat/crt-27-gradlew-exec`
+- **PR:** https://github.com/bot-io/critterium/pull/5
+- **Commit:** 09e8405
+- **What was done:**
+  1. No "ready" backlog items existed — all done or blocked on Svetlin. Dual-reader also had no ready items (all done). Quota at 38%.
+  2. CI health check across all 4 open PRs revealed:
+     - PR #1 (crt-23): `build-and-test` FAIL (Format check step), `android-debug-apk` skipping
+     - PR #2 (crt-24): `build-and-test` PASS, `android-debug-apk` FAIL (exit code 126)
+     - PR #3 (crt-25): `build-and-test` PASS, `android-debug-apk` FAIL (exit code 126)
+     - PR #4 (crt-26): CI status not yet reported
+  3. Investigated `android-debug-apk` failure: exit code 126 = "command not executable" at `./gradlew assembleDebug` step.
+  4. Root cause: `android/gradlew` had git file mode `100644` (non-executable) instead of `100755` (executable). The file was committed from Windows where `core.filemode=false`, so git never recorded the execute bit. On Linux CI runners, `./gradlew` cannot execute without +x.
+  5. Fix: Two complementary changes:
+     - `git update-index --chmod=+x android/gradlew` — changes tracked git mode from 100644 to 100755 (the real fix)
+     - Added `chmod +x gradlew` before `./gradlew assembleDebug` in ci.yml (belt-and-suspenders for any future platform issues)
+  6. Also discovered PR #1 (crt-23) fails Format check because it doesn't include CRT-24's Prettier CRLF→LF normalization. This is expected — PR #1 is the bottom of a 4-deep stack. PRs #2+ all pass Format check.
+- **Tests:** 502 total (303 core + 16 render + 183 app), all pass. Build, lint, format, typecheck all clean.
+- **Status:** Done — branch pushed, PR #5 created
+- **PR Merge Guidance for Svetlin:** The 5 PRs are stacked linearly (each builds on the previous). Simplest path: merge PR #5 (contains ALL changes from #1-#4 + gradlew fix) and close #1-#4. Or merge in order #1→#2→#3→#4→#5.
+

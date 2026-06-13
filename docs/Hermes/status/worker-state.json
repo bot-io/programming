@@ -1,8 +1,8 @@
 {
   "last_project": "critterium",
-  "last_item": "CRT-26",
+  "last_item": "CRT-27",
   "last_status": "done",
-  "timestamp": "2026-06-13T20:05:00Z",
-  "run_count": 19,
-  "note": "CRT-26: Renamed eslint.config.js to .mjs to eliminate MODULE_TYPELESS_PACKAGE_JSON Node.js warning. PR #4 created. 502 tests pass, all checks green, lint now fully clean with zero warnings."
+  "timestamp": "2026-06-13T20:15:00Z",
+  "run_count": 20,
+  "note": "CRT-27: Fixed android/gradlew missing executable permission (git mode 100644→100755). CI android-debug-apk was failing with exit code 126. Added chmod +x in CI as belt-and-suspenders. PR #5 created. 502 tests pass, all checks green."
 }

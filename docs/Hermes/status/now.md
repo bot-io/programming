@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 19:54 Sofia**
+> Last updated: **2026-06-13 20:17 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-26
-- **Total runs:** 19
+- **Last item:** CRT-27
+- **Total runs:** 20
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🔴 critterium
-- **Status:** ** M6 ecosystem mode active — all backlog items done or blocked. CRT-26 fixed ESLint MODULE_TYPELESS_PACKAGE_JSON warning (eslint.config.js → .mjs). 4 open PRs stacked: #1 (crt-23), #2 (crt-24), #3 (crt-25), #4 (crt-26). CRT-15 blocked on device verification, CRT-16 blocked pending M4.
+- **Status:** ** M6 ecosystem mode active — all backlog items done or blocked. CRT-27 fixed android/gradlew missing executable permission (CI exit code 126). 5 open PRs: #1-#4 stacked + #5 (crt-27 gradlew fix). CRT-15 blocked on device verification, CRT-16 blocked pending M4.
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 30/32 done
-- **Last work:** 2026-06-13 CRT-26: Fix ESLint MODULE_TYPELESS_PACKAGE_JSON warning
+- **Progress:** 31/33 done
+- **Last work:** 2026-06-13 CRT-27: Fix android/gradlew missing executable permission in CI
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user
