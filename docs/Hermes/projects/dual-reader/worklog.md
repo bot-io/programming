@@ -261,3 +261,50 @@
 
 **Git:** Merge commit on master (feat/dr-004-library-management → master)
 
+### 2026-06-13 — cron-worker — DR-007: Play Store Launch Preparation
+
+**Item:** DR-007 (P0)
+**Status:** done (merged to master)
+**Summary:** Implemented Play Store launch preparation: splash screen, privacy policy, store listings, verified signing config and R8 minification.
+
+**Changes:**
+
+**Splash Screen:**
+- `libs.versions.toml` — Added androidx.core:core-splashscreen 1.2.0
+- `build.gradle.kts` — Added splashscreen dependency
+- `themes.xml` — New Theme.DualReader.Splash (parent Theme.SplashScreen) with branded background + animated icon + post-splash theme
+- `colors.xml` — New splash_background color (#3F51B5, matches adaptive icon)
+- `MainActivity.kt` — installSplashScreen() before super.onCreate, setKeepOnScreenCondition
+- `AndroidManifest.xml` — Application theme changed to Theme.DualReader.Splash
+
+**Privacy Policy:**
+- `assets/privacy-policy.html` — Full HTML privacy policy covering data collection, translation, caching, local storage, third-party services, children's privacy, contact
+- `PrivacyPolicyActivity.kt` — WebView activity loading bundled privacy policy from assets
+- `AndroidManifest.xml` — PrivacyPolicyActivity registered
+- `SettingsScreen.kt` — "Privacy Policy" clickable link in About section
+
+**Store Listings:**
+- `store-listing/en-US/` — full-description.txt, short-description.txt, title.txt
+- `store-listing/bg/` — full-description.txt, short-description.txt, title.txt (Bulgarian localization)
+
+**Tests:**
+- `PrivacyPolicyActivityTest.kt` — 7 tests: manifest registration, launch, asset existence, HTML content validation, key sections, no-data-collection statement, contact email
+- `SplashPlayStoreTest.kt` — 8 tests: splash theme, background color, app name, privacy title, adaptive icon, foreground drawable, background color, theme distinctness
+
+**Verification:**
+- compileDebugKotlin — BUILD SUCCESSFUL
+- testDebugUnitTest — BUILD SUCCESSFUL (470 tests, 0 failures, 0 errors)
+- assembleDebug — BUILD SUCCESSFUL
+
+**Acceptance criteria verification:**
+1. ✅ App icon designed and integrated (adaptive icon with open book vector)
+2. ✅ Splash screen implemented (AndroidX SplashScreen with branded animation)
+3. ✅ Privacy policy linked in app (bundled HTML, accessible from Settings)
+4. ⏳ Content rating questionnaire — needs Svetlin (Play Console IARC)
+5. ✅ Play Store listing text (English + Bulgarian) — screenshots need Svetlin
+6. ✅ Signing config finalized (debug keystore for release; production keystore needs Svetlin)
+7. ✅ ProGuard/R8 rules verified (isMinifyEnabled + isShrinkResources)
+
+**Branch:** `feat/dr-007-play-store-clean` merged to master via --no-ff
+**Commit:** `23573c3`
+

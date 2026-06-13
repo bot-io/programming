@@ -1,25 +1,22 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 03:57 Sofia**
+> Last updated: **2026-06-13 07:32 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 78%
+- **Usage:** 83%
 - **Resets:** 10 Sofia |
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- `critterium.lock` — 44 min ago
-  > session: interactive-telegram
-  > started: 2026-06-11T10:23 Sofia
-  > item: architecture planning (ecosystem mode)
+- _No active locks_
 
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** dual-reader
-- **Last item:** DR-004
-- **Total runs:** 3
+- **Last item:** DR-007
+- **Total runs:** 4
 
 ## 📁 Projects
 
@@ -39,9 +36,8 @@
 ### 🟢 dual-reader
 - **Status:** ** Active Development
 - **Updated:** ** 2026-06-13
-- **Ready:** DR-007:
-- **Progress:** 9/10 done
-- **Last work:** 2026-06-13 — cron-worker — DR-004: Merged to master
+- **Progress:** 10/10 done
+- **Last work:** 2026-06-13 — cron-worker — DR-007: Play Store Launch Preparation
 
 ### ⚪ machine-setup
 - **Status:** ** Complete
