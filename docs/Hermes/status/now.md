@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 12:55 Sofia**
+> Last updated: **2026-06-13 13:16 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -10,10 +10,7 @@
 - **Spare capacity:** ?
 
 ## 🔒 Active Locks
-- ⚠️ **WORKER RUNNING** — 7 min ago
-  > session: cron-critterium
-  > started: 2026-06-13T12:42 Sofia
-  > item: CRT-17 — Rock/Paper/Scissors preset (D9)
+- _No active locks_
 
 ## 🤖 Overnight Worker
 - **Last run:** never
@@ -30,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### 🔴 critterium
-- **Status:** ** M6 ecosystem mode active — CRT-17 (R/P/S preset) done, CRT-15 blocked on device verification
+- **Status:** ** M6 ecosystem mode active — CRT-18 (Grasslands/food chain preset) done, CRT-15 blocked on device verification
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 21/23 done
-- **Last work:** 2026-06-13 CRT-17: Rock/Paper/Scissors preset
+- **Progress:** 22/24 done
+- **Last work:** 2026-06-13 CRT-18: Grasslands preset — Predator/Prey/Vegetation
 
 ### 🟢 dual-reader
 - **Status:** ** Active Development

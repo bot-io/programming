@@ -26,3 +26,22 @@
   7. Added 8 new structural tests for R/P/S cyclic properties
 - **Tests:** 441 total (301 core + 16 render + 124 app) — all pass
 - **Notes:** Quota had reset from 99% to 1% — resumed work. Stale critterium.lock from 2026-06-11 cleaned up.
+
+## 2026-06-13 CRT-18: Grasslands preset — Predator/Prey/Vegetation
+- **Branch:** `feat/crt-18-food-chain`
+- **Commit:** 99d8448
+- **What was done:**
+  1. Identified gap in D9 preset wishlist: "Predator/Prey/Vegetation" was listed but never implemented
+  2. No "ready" backlog items existed — all items done or blocked on Svetlin
+  3. Created CRT-18 for the three-tier food chain preset following CRT-17 precedent
+  4. Implemented "Grasslands" preset: Grass (producer), Rabbits (primary consumer), Foxes (apex predator)
+  5. Grass auto-regenerates: fast reproduction (1.5s cooldown, 5 energy cost), nearly stationary
+  6. Rabbits forage grass (+15 energy/gain), flee foxes (-80 flee radius 130), flock (+20)
+  7. Foxes hunt rabbits (+60 chase radius 160), territorial self-repulsion (-30)
+  8. Grass has mild self-repulsion (-15) to spread out; ignores animals (null entries)
+  9. 3x3 asymmetric interaction matrix, tuned for self-sustaining Lotka-Volterra dynamics
+  10. 16 new structural tests covering food chain, diet rules, energy flow, reproduction rates,
+      interaction directions, species colors, population cap
+- **Tests:** 457 total (301 core + 16 render + 140 app) — all pass
+- **Based on:** feat/crt-17-rps-preset branch (RPS not yet merged to main)
+- **Status:** Done — branch pushed, PR needs manual creation (token scope)

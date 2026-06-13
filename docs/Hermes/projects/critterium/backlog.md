@@ -253,3 +253,19 @@
   5. Preset added to BUILTIN_PRESETS and dropdown
 - **Decision:** D9 — curated presets including "Rock/Paper/Scissors"
 - **Branch:** `feat/crt-17-rps-preset`
+
+### CRT-18 Grasslands preset — Predator/Prey/Vegetation (D9)
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. ~~Three-tier food chain: Plants (producer) → Herbivores (primary consumer) → Predators (apex)~~ ✅ Grass, Rabbits, Foxes
+  2. ~~Vegetation auto-regenerates through fast reproduction~~ ✅ Grass: 1.5s cooldown, 5 energy cost
+  3. ~~Herbivores forage plants and flee predators~~ ✅ Rabbits: +40 attract to Grass, -80 flee Foxes
+  4. ~~Predators hunt herbivores~~ ✅ Foxes: +60 chase Rabbits, territorial self-repulsion
+  5. ~~Balanced for self-sustaining dynamics (no species permanently extinct)~~ ✅ Tuned reproduction rates, energy flow
+  6. ~~Preset passes all structural validation tests~~ ✅ 16 new tests
+  7. ~~Preset added to BUILTIN_PRESETS and dropdown~~ ✅ Auto-populated via BUILTIN_PRESET_NAMES
+- **Decision:** D9 — "Predator/Prey/Vegetation" in curated preset list
+- **Branch:** `feat/crt-18-food-chain` pushed
+- **Tests:** 457 total (301 core + 16 render + 140 app), all pass
