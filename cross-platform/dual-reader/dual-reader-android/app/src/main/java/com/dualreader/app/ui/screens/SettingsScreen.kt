@@ -472,6 +472,17 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Privacy Policy",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable {
+                            context.startActivity(
+                                android.content.Intent(context, com.dualreader.app.ui.PrivacyPolicyActivity::class.java)
+                            )
+                        }
+                    )
 
                     if (showDebugPanel) {
                         DebugPanel(

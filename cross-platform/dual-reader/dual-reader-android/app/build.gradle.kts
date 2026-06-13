@@ -113,6 +113,9 @@ dependencies {
     // DataStore for settings
     implementation(libs.datastore.preferences)
 
+    // Splash screen
+    implementation(libs.splashscreen)
+
     // Networking (for LLM translation API)
     implementation(libs.retrofit)
     implementation(libs.retrofit.moshi)
