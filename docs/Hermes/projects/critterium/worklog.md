@@ -324,3 +324,17 @@
 - **Verification:** Build, typecheck, lint, format — all clean. npm audit 0 vulns.
 - **Status:** Done — PR #9 created. No ready items remain.
 
+## 2026-06-13 CRT-33: Fix 5 failing e2e tests + add Playwright e2e to CI pipeline
+- **Branch:** `feat/crt-33-e2e-fixes-ci`
+- **Commit:** 5155ed9
+- **PR:** https://github.com/bot-io/critterium/pull/10
+- **What was done:**
+  1. No ready backlog items — proactive improvement. Discovered e2e tests existed but were never run in CI. Ran them: 7/12 pass, 5 fail.
+  2. **Export-import tests (4 fail):** Root cause — controls panel is closed by default (`panelOpen = false`, `.crit-panel.hidden { transform: translateX(380px) }`). Export/Import buttons are at the bottom of a scrollable panel. Tests never opened the panel or scrolled. Fix: added `openPanelAndScrollToActions(page)` helper that clicks `.crit-controls-toggle` then sets `panel.scrollTop = panel.scrollHeight`.
+  3. **Settings-stress test (1 fail):** Root cause — test timed out. Helper functions (`expandSection`, `moveSliderByLabel`, etc.) iterated through ALL elements calling `textContent()` in a loop, generating hundreds of browser round-trips. Fix: replaced iteration with Playwright's `filter({ hasText: ... })` for O(1) lookups. Also added `scrollIntoView({ block: 'nearest' })` before interactions in the `position: fixed; overflow-y: auto` panel. Reduced wait timeouts from 200-3000ms to 20-100ms. Test time: 120s+ timeout → 22s.
+  4. **playwright.config.ts:** timeout 30s→60s, added `hasTouch: true` for touch interaction tests.
+  5. **ci.yml:** New `e2e` job — ubuntu-latest, Node 22, installs Playwright Chromium, runs `npm run e2e`, uploads HTML report on failure.
+- **Tests:** 536 unit tests + 12 e2e tests (7 smoke + 4 export-import + 1 settings-stress), all pass
+- **Verification:** Build, typecheck, lint — all clean
+- **Status:** Done — PR #10 created. No ready items remain.
+

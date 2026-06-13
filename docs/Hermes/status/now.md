@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 22:53 Sofia**
+> Last updated: **2026-06-14 00:03 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M4/M6 — CRT-32 done (loadAutosave hardened with full validation). All PRs merged except PR #9 (CRT-32, pending review). Stale PR #4 closed. 541 tests pass.
+- **Status:** ** M4/M6 — CRT-33 done (e2e tests fixed + Playwright added to CI). All PRs merged except PR #9 (CRT-32) and PR #10 (CRT-33), both pending review. 536 unit + 12 e2e tests pass.
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 36/38 done
-- **Last work:** 2026-06-13 CRT-32: Harden loadAutosave with full deserializeConfig validation
+- **Progress:** 37/39 done
+- **Last work:** 2026-06-13 CRT-33: Fix 5 failing e2e tests + add Playwright e2e to CI pipeline
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user

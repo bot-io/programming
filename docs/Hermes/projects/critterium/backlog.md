@@ -486,3 +486,19 @@
 - **PR:** https://github.com/bot-io/critterium/pull/9
 - **Commit:** 153d9a0
 - **Notes:** Proactive code-quality improvement. `loadAutosave()` returned `parsed as CritteriumConfig` without full validation — its return type lied about safety. While `main.ts` validated downstream, any future consumer trusting the type would get unsafe data. Now uses the same `deserializeConfig` path as `importConfig()`. Also closed stale PR #4 (changes already on main via PR #8 merge).
+
+### CRT-33 Fix 5 failing e2e tests + add Playwright e2e to CI pipeline
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. All 12 e2e tests pass locally (was 7 pass, 5 fail) ✅
+  2. Export-import tests fixed: openPanelAndScrollToActions() helper opens panel + scrolls to Actions section ✅
+  3. Touch interaction test fixed: `hasTouch: true` in Playwright config ✅
+  4. Settings-stress test fixed: O(1) filter() lookups + scrollIntoView + reduced waits (22s, was timing out) ✅
+  5. `e2e` CI job added: installs Playwright Chromium, runs `npm run e2e`, uploads report on failure ✅
+  6. All existing 536 unit tests still pass ✅
+- **Branch:** `feat/crt-33-e2e-fixes-ci` pushed
+- **PR:** https://github.com/bot-io/critterium/pull/10
+- **Commit:** 5155ed9
+- **Notes:** Root causes: (1) Export-import tests failed because the controls panel is closed by default (CSS `transform: translateX(380px)`) and the Export/Import buttons are at the bottom of a scrollable panel — tests never opened the panel or scrolled. Fixed with `openPanelAndScrollToActions()` helper. (2) Settings-stress test timed out because helper functions used O(n) DOM iteration (looping through all elements calling `textContent()`) which generated hundreds of browser round-trips. Replaced with Playwright's `filter({ hasText: ... })` for O(1) lookups, reducing test time from 120s+ timeout to 22s. Also added `scrollIntoView({ block: 'nearest' })` before each interaction within the `position: fixed; overflow-y: auto` panel.
