@@ -1,0 +1,39 @@
+Dual Reader — Bilingual Ebook Reader
+
+Read any book in two languages, side by side.
+
+Dual Reader is a bilingual ebook reader that makes reading foreign-language books effortless. Import any EPUB file and read the original text alongside an AI-powered translation — no dictionaries needed, no tab-switching, just immersive reading.
+
+Key Features:
+
+📖 Split-Screen Reading
+Read the original text and your target language side by side. Vertical layout on phones, side-by-side on tablets and landscape mode.
+
+🌍 AI-Powered Translation
+Tap any page to get an instant, context-aware translation. Our AI understands the full book context for natural, accurate translations — not word-by-word machine output.
+
+📚 Your Library, Organized
+Import EPUB files from your device. Track reading progress, add bookmarks with notes, and search through text. Your library is always ready.
+
+🎨 Beautiful Themes
+Choose from 7 carefully crafted themes including Night Mode with true black for OLED screens, Sepia for warm reading, Ocean, Forest, and more.
+
+🔤 Fully Customizable
+Adjust font size, line height, and reading preferences. Toggle sentence numbers for language learning.
+
+📱 Works Offline
+On-device translation fallback via ML Kit means you can keep reading even without internet.
+
+🔒 Privacy First
+No accounts required. No tracking. Your books stay on your device. Translation text is processed securely and not stored permanently.
+
+Perfect for:
+• Language learners reading graded readers or native content
+• Bilingual readers who enjoy books in two languages
+• Students studying foreign literature
+• Anyone who wants to read books in a language they're learning
+
+Supported formats: EPUB
+Supported translation languages: 50+ languages via AI + on-device ML Kit
+
+Download Dual Reader and start reading in two languages today!
