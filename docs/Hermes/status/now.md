@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-13 22:38 Sofia**
+> Last updated: **2026-06-13 22:53 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-31
-- **Total runs:** 24
+- **Last item:** CRT-32
+- **Total runs:** 25
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M4/M6 — Capacitor upgraded to v8.4.0 (CRT-31 done). tar vulnerability resolved natively, dual @capacitor/core version conflict eliminated. npm audit 0 vulnerabilities. Android toolchain fully updated (AGP 8.13.0, Gradle 8.14.3, Java 21). 536 tests pass.
+- **Status:** ** M4/M6 — CRT-32 done (loadAutosave hardened with full validation). All PRs merged except PR #9 (CRT-32, pending review). Stale PR #4 closed. 541 tests pass.
 - **Updated:** ** 2026-06-13
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 35/37 done
-- **Last work:** 2026-06-13 CRT-31: Upgrade Capacitor v6→v8.4.0
+- **Progress:** 36/38 done
+- **Last work:** 2026-06-13 CRT-32: Harden loadAutosave with full deserializeConfig validation
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user

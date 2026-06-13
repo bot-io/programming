@@ -308,3 +308,19 @@
 - **Verification:** 536 tests pass, build/lint/format/typecheck clean, npm audit 0 vulns
 - **Status:** Done — last ready backlog item. No ready items remain.
 
+## 2026-06-13 CRT-32: Harden loadAutosave with full deserializeConfig validation
+- **Branch:** `feat/crt-32-harden-loadAutosave`
+- **Commit:** 153d9a0
+- **PR:** https://github.com/bot-io/critterium/pull/9
+- **What was done:**
+  1. No "ready" backlog items existed — all done or blocked on Svetlin. Proactive code-quality scan.
+  2. Found: `loadAutosave()` returned `parsed as CritteriumConfig` without full validation. Its return type promised a valid config, but could return any garbage. `importConfig()` already validated via `deserializeConfig`, creating an inconsistency.
+  3. Changed `loadAutosave()` to use `deserializeConfig(parsed)` — same validation path as `importConfig()`. Types checked, values range-clamped, structure validated.
+  4. Removed redundant `version !== 1` check (deserializeConfig handles it).
+  5. While `main.ts` validated downstream (belt-and-suspenders), the function itself was not safe for direct use by any consumer.
+  6. Added 5 new tests: missing required fields, invalid species (no energy/lifecycle/diet), out-of-range value clamping (width/height/cap), null JSON, non-object JSON.
+  7. Closed stale PR #4 (eslint.config.mjs rename — changes already on main via PR #8 merge stack).
+- **Tests:** 541 total (303 core + 16 render + 222 app), all pass
+- **Verification:** Build, typecheck, lint, format — all clean. npm audit 0 vulns.
+- **Status:** Done — PR #9 created. No ready items remain.
+

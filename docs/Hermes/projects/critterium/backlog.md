@@ -471,3 +471,18 @@
 - **PR:** https://github.com/bot-io/critterium/pull/8
 - **Commit:** 4745bc5
 - **Notes:** Root packages upgraded from v6.2.1 to v8.4.0, resolving the dual @capacitor/core version conflict (v6 root vs v8 app plugins filesystem/share). Android toolchain fully updated: AGP 8.2.1→8.13.0, Gradle 8.2.1→8.14.3, Java 17→21 (capacitor.build.gradle), variables.gradle updated to v8 template values (minSdk 22→24, compileSdk/targetSdk 34→36, all androidx libraries updated). CI workflow JDK 17→21. esbuild override retained (vite ^0.25.0 still in vulnerable range). Discovered during CRT-30: the flat tar override to 7.5.16 broke Capacitor v6's extractTemplate; this upgrade makes the tar dependency native to Capacitor v8.
+
+### CRT-32 Harden loadAutosave with full deserializeConfig validation
+- **Status:** done
+- **Priority:** P2
+- **Milestone:** M6
+- **Acceptance Criteria:**
+  1. `loadAutosave()` validates loaded config via `deserializeConfig` (not just version check) ✅
+  2. Invalid/corrupt autosave data returns null instead of unsafe cast ✅
+  3. Out-of-range values are range-clamped to safe defaults ✅
+  4. Behavior is consistent with `importConfig()` which already validates ✅
+  5. All existing tests pass; 5 new tests for hardened validation ✅
+- **Branch:** `feat/crt-32-harden-loadAutosave` pushed
+- **PR:** https://github.com/bot-io/critterium/pull/9
+- **Commit:** 153d9a0
+- **Notes:** Proactive code-quality improvement. `loadAutosave()` returned `parsed as CritteriumConfig` without full validation — its return type lied about safety. While `main.ts` validated downstream, any future consumer trusting the type would get unsafe data. Now uses the same `deserializeConfig` path as `importConfig()`. Also closed stale PR #4 (changes already on main via PR #8 merge).
