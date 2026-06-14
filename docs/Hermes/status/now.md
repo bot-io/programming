@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 23:14 Sofia**
+> Last updated: **2026-06-14 23:23 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 100%
+- **Usage:** 1%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -14,9 +14,9 @@
 
 ## 🤖 Overnight Worker
 - **Last run:** never
-- **Last project:** dual-reader
+- **Last project:** critterium
 - **Last item:** None — backlog exhausted
-- **Total runs:** 58
+- **Total runs:** 59
 
 ## 📁 Projects
 
