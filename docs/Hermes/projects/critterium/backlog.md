@@ -734,7 +734,7 @@
 - **Notes:** Motion-physics showcase preset (not an ecosystem food chain) — no predation, all `canEat` empty, all `energyGainPerPrey` zero. Species given generous energy + low idle drain + long maxAge so the storm scene stays lively for several minutes even without eating. VortexForce sign convention confirmed from source: `radialStrength < 0` pulls inward (nx points outward from center, negative reverses it). Debris row is entirely negative (collides with all species); Birds self-cohere (+30); Dust Motes weakly cohere (+20, dust wisps) and flee Debris (−40, pushed by heavy objects).
 
 ### CRT-43 New Preset — Deep Sea Vent
-- **Status:** ready
+- **Status:** done
 - **Priority:** P2
 - **Milestone:** M6
 - **Description:** Add a "Deep Sea Vent" preset simulating a hydrothermal vent ecosystem. Four species — Chemosynthetic Bacteria, Tube Worms, Crabs, and Octopus — inhabit a vertical environment with gravity-like downward force (sinking) counterbalanced by an upward flow field at the center (the vent plume). Population cap: 600.
@@ -758,6 +758,10 @@
   - Follow existing preset test patterns
 - **Test File:** expand `packages/app/src/presets.test.ts`
 - **Dependencies:** None
+- **Branch:** `feat/crt-43-deep-sea-vent` pushed (PR needs manual creation — token scope)
+- **Commit:** d01e393
+- **Tests:** 739 unit tests (370 core + 16 render + 353 app), all pass. 21 new Deep Sea Vent tests.
+- **Notes:** 4-species hydrothermal vent food chain: Bacteria (producer, 250 count, fast 2s repro) → Tube Worms (sessile filter-feeder, eats bacteria) → Crabs (scuttling scavenger, eats worms, flees octopus) → Octopus (apex predator, solitary, eats crabs). Forces: gravity (accel 30, gentle sinking) + flow-field (uniform, angle -π/2 = pure upward, strength 25) modeling the vent plume's buoyancy-driven upwelling counteracting gravity. The uniform upward current is a reasonable physical approximation — in real hydrothermal vents, heated plume water creates broad upward convection throughout the vent field. Net downward drift of ~5 units/s² (gravity 30 − flow 25) creates slow circulation with wrap boundaries. 4×4 asymmetric interaction matrix. populationCap 600. PRESET_NAMES count updated 12→13.
 
 ### CRT-44 New Preset — Symbiosis
 - **Status:** ready

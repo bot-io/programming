@@ -487,3 +487,25 @@
   - No predation: this is a motion-physics showcase, not an ecosystem food chain. Species given generous energy + low idle drain + long maxAge so the storm scene stays lively for several minutes even without eating (they eventually starve, but slowly).
   - Vortex radius 320 > half-diagonal of 800×600 (~500) but covers the canvas center region where the storm action concentrates; boundaryMode 'wrap' keeps particles circulating.
 - **Status:** Done — branch pushed. PR needs manual creation (token scope: `Resource not accessible by personal access token (createPullRequest)`).
+
+## 2026-06-14 CRT-43: Deep Sea Vent preset
+- **Branch:** feat/crt-43-deep-sea-vent
+- **Commit:** d01e393
+- **What was done:**
+  1. Quota at 40%. No locks active. Dual-reader had no ready items (all done). CRT-43 was highest-priority ready critterium item (P2, lowest ID among ready P2 items).
+  2. Added DEEP_SEA_VENT preset to packages/app/src/presets.ts and registered it in BUILTIN_PRESETS (now 13 presets).
+  3. 4 species: Bacteria (tiny/slow, r1.5 maxSpeed 15, 250 count, producer), Tube Worms (medium/very-slow, r3 maxSpeed 10, 80 count, filter-feeder), Crabs (medium, r4 maxSpeed 65, 40 count, scavenger), Octopus (large/fast, r6 maxSpeed 100, 8 count, apex predator). Total initial pop 378, cap 600.
+  4. Food chain: Bacteria (producer, canEat []) -> Tube Worms (eat Bacteria [0], gain 12) -> Crabs (eat Worms [1], gain 28) -> Octopus (eat Crabs [2], gain 48).
+  5. 4 forces: drag (0.6), wander (25/1.5 gentle), gravity (accel 30 gentle downward sinking), flow-field (uniform mode, angle -pi/2 = pure upward, strength 25 vent plume). Net downward drift approx 5 units/s2 creates slow circulation with wrap boundaries.
+  6. 4x4 asymmetric interaction matrix: Bacteria mildly self-repel (-10); Worms seek Bacteria (+35) + self-space (-15); Crabs chase Worms (+45) + self-space (-12) + flee Octopus (-55); Octopus chases Crabs (+55) + solitary self-repel (-25).
+  7. Added 21 new structural validation tests to presets.test.ts; updated count (12 to 13) and EXPECTED_PRESET_NAMES.
+- **Files modified:**
+  - packages/app/src/presets.ts - added DEEP_SEA_VENT preset + registered in BUILTIN_PRESETS
+  - packages/app/src/presets.test.ts - 21 new Deep Sea Vent tests + count/name updates
+- **Tests:** 739 unit tests pass (was 715; +24): 370 core + 16 render + 353 app. Build, lint, format, typecheck all clean.
+- **Design decisions:**
+  - FlowFieldForce angle convention confirmed from source (index.ts:1067): uniform mode returns [cos(angle), sin(angle)]. Angle -pi/2 gives [0, -1] = pure upward force (negative y = up on screen). Used (-Math.PI) / 2 in TS source for precision.
+  - Upward flow field centered at canvas midpoint interpreted as uniform upward current: the FlowFieldForce has only uniform and turbulence modes - no spatially-localized plume mode exists. Uniform upward current is a reasonable physical approximation: real hydrothermal vents create broad buoyancy-driven convection throughout the vent field.
+  - Gravity (30) vs flow-field (25): net approx 5 units/s2 downward. Creates gentle sinking that, combined with wrap boundaries, produces slow vertical circulation. The vent plume partially counteracts gravity.
+  - Bacteria uses maxSpeed=15 (not 0): same convention as Grasslands Grass (maxSpeed 5). True zero causes division-by-zero in movement-cost calculation and config-schema clamps maxSpeed to min 1.
+- **Status:** Done - branch pushed. PR needs manual creation (token scope).

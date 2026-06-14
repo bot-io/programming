@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 06:35 Sofia**
+> Last updated: **2026-06-14 06:58 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -27,12 +27,12 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M6 — CRT-42 done (Tornado Alley preset). 715 unit tests pass. Branch pushed.
+- **Status:** ** M6 — CRT-43 done (Deep Sea Vent preset). 739 unit tests pass. Branch pushed.
 - **Updated:** ** 2026-06-14
-- **Ready:** CRT-43, CRT-44, CRT-45, CRT-46, CRT-47, CRT-48, CRT-49, CRT-50
+- **Ready:** CRT-44, CRT-45, CRT-46, CRT-47, CRT-48, CRT-49, CRT-50
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 46/56 done
-- **Last work:** 2026-06-14 CRT-42: Tornado Alley preset — chaotic vortex storm
+- **Progress:** 47/56 done
+- **Last work:** 2026-06-14 CRT-43: Deep Sea Vent preset
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user
