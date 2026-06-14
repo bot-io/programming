@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 14:08 Sofia**
+> Last updated: **2026-06-14 14:37 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-48
-- **Total runs:** 43
+- **Last item:** CRT-50
+- **Total runs:** 44
 
 ## 📁 Projects
 
@@ -27,11 +27,10 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M6 — CRT-49 done (Boids Flocking Force). 628 unit tests pass (19 new). Branch pushed.
+- **Status:** ** M6 — CRT-50 done (AttractorForce — point-based attraction/repulsion). 658 unit tests pass (30 new). Branch pushed.
 - **Updated:** ** 2026-06-14
-- **Ready:** CRT-50
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 53/56 done
+- **Progress:** 54/56 done
 - **Last work:** 2026-06-14 CRT-49: Boids Flocking Force
 
 ### ⚪ dual-reader

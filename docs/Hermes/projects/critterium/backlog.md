@@ -940,7 +940,7 @@
 - **Notes:** BoidsForce uses per-behavior independent radii (separation=25, alignment=60, cohesion=60) and strengths (separation=50, alignment=30, cohesion=20). Velocity buffers pre-allocated for zero hot-loop allocation. Add Force dropdown auto-populates 'boids' via listForceTypes() — no UI code changes needed.
 
 ### CRT-50 Magnetic / Attraction Point Force
-- **Status:** ready
+- **Status:** done
 - **Priority:** P3
 - **Milestone:** M6
 - **Description:** Implement a new `AttractorForce` class that applies point-based attraction or repulsion (like a gravity well at an arbitrary position). Unlike `VortexForce`, it has no tangential/swirl component — force is purely radial toward (positive strength) or away from (negative strength) the point. Params include x, y position, strength, radius (cutoff), and falloff mode. Registered in the `ForceRegistry` from CRT-35 as type `'attractor'`.
@@ -951,23 +951,27 @@
   - MODIFY: `packages/core/src/index.ts` — export `AttractorForce`
   - MODIFY: `packages/app/src/controls.ts` — include `'attractor'` in the Add Force dropdown (if CRT-38 done)
 - **Acceptance Criteria:**
-  1. `AttractorForce` class implements the `Force` interface with `id`, `apply()`, and serialization support
-  2. Positive `strength`: particles within `radius` accelerate toward the point (x, y) — verify velocity direction points toward attractor
-  3. Negative `strength`: particles within `radius` accelerate away from the point — verify velocity direction points away (repulsion)
-  4. Radius cutoff: particles beyond `radius` from the point receive zero force — verify no velocity change
-  5. Falloff modes: linear (force ∝ 1 − dist/radius), inverse (force ∝ 1/dist), constant (force independent of distance) — all produce correct magnitude at test distances
-  6. No tangential component: verify force is purely radial (cross-product with radial direction ≈ 0), distinguishing from VortexForce
-  7. Params: `x`, `y`, `strength`, `radius`, `falloff` — all configurable and serialized
-  8. Registered in `ForceRegistry` as type `'attractor'` with full `FORCE_TYPES` metadata
-  9. All tests pass; existing tests unaffected
+  1. ✅ `AttractorForce` class implements the `Force` interface with `id`, `apply()`, and serialization support (readonly params)
+  2. ✅ Positive `strength`: particles within `radius` accelerate toward the point (x, y) — velocity direction verified
+  3. ✅ Negative `strength`: particles within `radius` accelerate away — repulsion direction verified + attraction/repulsion symmetry test
+  4. ✅ Radius cutoff: particles beyond `radius` receive zero force; boundary (dist==radius) excluded; just-inside included
+  5. ✅ Falloff modes: linear, inverse, constant — all produce correct magnitude at test distances (2+ distances each for inverse & constant; linear verified at 2 distances)
+  6. ✅ No tangential component: cross-product of force × radial direction ≈ 0 for two off-axis geometries; VortexForce comparison test confirms attractor is purely radial while vortex has tangential
+  7. ✅ Params: `x`, `y`, `strength`, `radius`, `falloff` — all configurable via constructor and serialized in params
+  8. ✅ Registered in `ForceRegistry` as type `'attractor'` with full `FORCE_TYPES` metadata (5-param schema with min/max/step/options)
+  9. ✅ All 658 tests pass; existing tests updated for force type count 8→9
 - **Test Requirements:**
-  - Attraction test: particle accelerates toward point with positive strength (verify direction + magnitude)
-  - Repulsion test: particle accelerates away with negative strength (verify direction)
-  - Radius cutoff test: particle beyond radius gets zero force
-  - Falloff tests: linear, inverse, constant — verify magnitude at 2+ distances each
-  - No-tangential test: verify force vector is parallel to radial direction (no swirl component)
-  - Zero-particle and dead-particle tests
-  - Registry test: `registry.create('attractor', {...})` returns an `AttractorForce` instance
-  - Minimum 8 new tests
+  - ✅ Attraction test: direction + magnitude verified (diagonal + axis-aligned)
+  - ✅ Repulsion test: direction verified + attraction/repulsion magnitude symmetry
+  - ✅ Radius cutoff test: beyond, boundary, and just-inside all tested
+  - ✅ Falloff tests: linear (2 distances), inverse (2 distances), constant (2 distances) — analytic magnitude checks
+  - ✅ No-tangential test: cross-product ≈ 0 for two geometries + VortexForce comparison
+  - ✅ Zero-particle test; particle-at-exact-center test (div-by-zero guard); multi-particle test; no-NaN/Infinity test
+  - ✅ Registry test: createForce('attractor', {...}) returns AttractorForce; descriptor metadata validated; registry-vs-direct physics equivalence
+  - ✅ 30 new tests (28 attractor-force + 2 registry) — well above minimum of 8
 - **Test File:** `packages/core/src/attractor-force.test.ts`
 - **Dependencies:** CRT-35 (register in ForceRegistry)
+- **Branch:** `feat/crt-50-attractor-force` pushed
+- **Commit:** efeafe7
+- **Tests:** 658 total (was 628), all pass. Build, typecheck, lint clean.
+- **Notes:** AttractorForce is the 9th built-in force type. Added AttractorParams interface + AttractorForce class to `packages/core/src/index.ts` (following the established pattern of co-locating force classes in index.ts — same as VortexForce, GravityForce, BoidsForce). Registered in force-registry.ts with 5-param schema: x, y, strength (-1000 to 1000), radius (10-2000), falloff (linear/inverse/constant). Falloff conventions match VortexForce exactly (linear: 1-t, inverse: 1/(t+0.1), constant: 1) for consistency. The force is constructed as purely radial: `vx += nx * strength * falloffMult * dt` where (nx,ny) is the normalized direction TO the point — this guarantees zero tangential component by construction (verified by cross-product test). Division-by-zero guard: particles at exact center (distSq < 0.0001) are skipped. Add Force dropdown auto-populates 'attractor' via listForceTypes() — no UI code changes needed (CRT-38's dropdown is registry-driven).
