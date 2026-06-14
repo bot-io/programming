@@ -886,7 +886,7 @@
 
 
 ### CRT-48 Force Isolation Tests
-- **Status:** ready
+- **Status:** done
 - **Priority:** P3
 - **Milestone:** M6
 - **Description:** Add isolation tests that verify each global force type (GravityForce, FlowFieldForce, VortexForce, and others) produces correct, predictable physics when applied independently. Tests verify velocity changes match expected physics formulas, all falloff modes (linear, inverse, constant) behave correctly, and forces handle zero-particle and all-dead-particle scenarios without error. This catches force regressions that pairwise/integration tests might mask.
@@ -908,6 +908,10 @@
   - Minimum 10 new tests
 - **Test File:** `packages/core/src/force-isolation.test.ts`
 - **Dependencies:** None
+- **Branch:** `feat/crt-48-force-isolation-tests` pushed (PR needs manual creation — token scope)
+- **Commit:** f895e32
+- **Tests:** 366 core tests pass (341 existing + 25 new), build/lint/format/typecheck clean
+- **Notes:** Created `packages/core/src/force-isolation.test.ts` with 25 tests across 8 describe blocks: (1) GravityForce (3) — linear vy growth (accel*dt/step), vx untouched, negative accel = upward. (2) DragForce (3) — exponential decay `(1-coeff*dt)^N`, coeff=0 no-op, large-dt clamp to 0 prevents velocity inversion. (3) FlowFieldForce (4) — uniform angle=0→+x, angle=π/2→+y, custom field matches fn output, turbulence non-zero. (4) VortexForce isolated (4) — CCW tangential direction, inward radial pull, radius cutoff, exact-center skip. (5) VortexForce falloff modes (3) — linear/inverse/constant verified at 2 distances each via integrated |Δv|. (6) InteractionMatrix.forceAtDistance (4) — linear/inverse/constant pure-function magnitudes + boundary (0 at dist≥radius and dist≤0). (7) Zero-particle world (1) — all 5 global forces apply without throwing. (8) Dead-particle handling (3) — PairwiseForce respects `grid.rebuild(world, alive)`: all-alive control (repulsion observed), all-dead (empty grid → zero velocity change), one-dead exerts no repulsion on alive neighbour. **Architecture note:** global forces (gravity/drag/vortex/flow-field/wander) iterate `world.count` by design and don't track per-particle alive state — they are "field" forces. Per-particle alive/dead semantics live in the neighbor-based PairwiseForce, which only "sees" particles present in the spatial hash grid (rebuilt with an optional alive array). The dead-particle tests exercise that path. Used Float32-appropriate tolerance (4 decimals) for the 10-step gravity accumulation test (single-precision rounding ~3.8e-6). Spotted an orphaned uncommitted `config-schema.ts` change (`idleDrainPerSec` clamp 0→-1000) left by a concurrent session — left untouched, not part of CRT-48.
 
 ### CRT-49 Boids Flocking Force
 - **Status:** ready

@@ -650,3 +650,38 @@ Species fields were already well-validated via clampNum(). Two critical gaps:
 
 ### Blocked
 None.
+
+---
+
+## CRT-48 — Force Isolation Tests (DONE)
+**Date:** 2026-06-14 (cron worker)
+**Branch:** `feat/crt-48-force-isolation-tests` (off `bbf2159` CRT-47)
+**Commit:** f895e32
+**Priority:** P3
+
+### What
+Created `packages/core/src/force-isolation.test.ts` — 25 tests across 8 describe blocks verifying each global force produces correct, predictable physics in complete isolation (no other forces active).
+
+### Coverage by block
+1. **GravityForce (3)** — linear `vy` growth (`accel*dt` per step, verified over 10 steps), `vx` untouched, negative accel = upward. Used 4-decimal tolerance for the 10-step Float32 accumulation (single-precision rounding ~3.8e-6 > `toBeCloseTo(_,6)`'s 5e-7).
+2. **DragForce (3)** — exponential decay `(1-coeff*dt)^N`, `coeff=0` no-op, large-dt clamp (`coeff*dt=20` -> factor clamped to 0, not -19) prevents velocity inversion.
+3. **FlowFieldForce (4)** — uniform angle=0 -> +x; angle=pi/2 -> +y; custom field matches provided fn output (0.6,0.8 unit vector); turbulence produces non-zero force.
+4. **VortexForce isolated (4)** — positive strength swirls CCW (right-of-center particle pushed +y); negative radialStrength pulls inward; zero force beyond cutoff radius; zero force at exact center (dist<0.001 skip).
+5. **VortexForce falloff modes (3)** — linear/inverse/constant each verified at 2 distances via integrated |delta v| magnitude; linear and inverse stronger near center, constant distance-independent, inverse > linear near center.
+6. **InteractionMatrix.forceAtDistance (4)** — linear `strength*(1-t)`, inverse `strength/(t+0.1)`, constant `strength`, all at 2 distances; returns 0 at dist>=radius and dist<=0.
+7. **Zero-particle world (1)** — all 5 global forces (gravity/drag/flow-field/vortex/wander) apply to an empty world without throwing.
+8. **Dead-particle handling (3)** — PairwiseForce respects `grid.rebuild(world, alive)`: all-alive control (repulsion observed), all-dead (empty grid -> no neighbours -> zero velocity change), one-dead exerts no repulsion on its alive neighbour.
+
+### Architecture finding (documented in test file)
+Global forces (gravity/drag/vortex/flow-field/wander) iterate `world.count` by design and do NOT track per-particle alive state — they are "field" forces applying to everything. Per-particle alive/dead semantics live in the neighbor-based PairwiseForce, which only "sees" particles present in the spatial hash grid (rebuilt with an optional `alive` Uint8Array). Criterion #6 ("dead particles only — no velocity changes") is therefore meaningful for PairwiseForce (all-dead grid -> zero neighbour queries -> zero force), not for the field forces. The test file documents this rather than writing a false "no velocity change" assertion for forces that legitimately operate on `count`.
+
+### Verification
+- 25 new tests pass; full core suite 366 (341 + 25) all pass
+- ESLint clean, Prettier clean, tsc --noEmit clean, build clean for core
+- Branch pushed to origin
+
+### Orphaned change noted
+Spotted an uncommitted modification to `packages/core/src/config-schema.ts` (`idleDrainPerSec` clamp `0`->`-1000`) that appeared in the working tree during this run (tree was clean at start; the change materialized after commit f895e32, indicating a concurrent session). NOT part of CRT-48 — left untouched. Flagged in state.md working-tree note for triage.
+
+### Blocked
+None.

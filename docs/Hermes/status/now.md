@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 09:41 Sofia**
+> Last updated: **2026-06-14 13:36 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 41%
+- **Usage:** 1%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -14,9 +14,9 @@
 
 ## 🤖 Overnight Worker
 - **Last run:** never
-- **Last project:** dual-reader
-- **Last item:** DR-010
-- **Total runs:** 42
+- **Last project:** critterium
+- **Last item:** CRT-48
+- **Total runs:** 43
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M6 — CRT-47 done (Config Validation Hardening). 63 config-schema tests pass. Branch pushed.
+- **Status:** ** M6 — CRT-48 done (Force Isolation Tests). 366 core tests pass. Branch pushed.
 - **Updated:** ** 2026-06-14
-- **Ready:** CRT-48, CRT-49, CRT-50
+- **Ready:** CRT-49, CRT-50
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 51/56 done
+- **Progress:** 52/56 done
 - **Last work:** Blocked
 
 ### ⚪ dual-reader
