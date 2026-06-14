@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 19:53 Sofia**
+> Last updated: **2026-06-14 20:12 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 57%
+- **Usage:** 67%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -16,7 +16,7 @@
 - **Last run:** never
 - **Last project:** dual-reader
 - **Last item:** none
-- **Total runs:** 49
+- **Total runs:** 50
 
 ## 📁 Projects
 
@@ -37,7 +37,7 @@
 - **Status:** ** Backlog Exhausted — awaiting new items from user
 - **Updated:** ** 2026-06-14
 - **Progress:** 10/10 done
-- **Last work:** 2026-06-14 — dual-reader cron (run 47) — Quota reset, backlog still exhausted
+- **Last work:** 2026-06-14 — dual-reader cron (run 50) — Backlog exhausted, no-op
 
 ### ⚪ machine-setup
 - **Status:** ** Complete
