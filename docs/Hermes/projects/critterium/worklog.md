@@ -570,3 +570,51 @@ Created a dedicated stress test suite covering 5 categories per the acceptance c
 
 ### Blocked
 PR creation blocked by GitHub token scope (Resource not accessible by personal access token). Branch pushed; PR needs manual creation.
+
+
+## CRT-46 — Edge Case Test Suite (2026-06-14, run #40)
+
+**Status:** done
+**Branch:** feat/crt-46-edge-cases (commit ff78b73)
+**Tests:** 30 new edge-case tests in packages/core/src/edge-cases.test.ts (596 total on branch, all pass)
+
+### What was done
+Created a dedicated edge-case test suite covering 10 categories of degenerate simulation configurations, exceeding the minimum 7 required acceptance criteria:
+
+1. **Empty world (0 species) - 4 tests:** World with empty types array initializes with count=0 and zero-length arrays. Steps without crashing. Full force pipeline (DragForce + GravityForce + WanderForce + PairwiseForce) on empty world produces no NaN. SimLoop.advance on empty world returns without error.
+
+2. **Single species (1 type) - 3 tests:** Solitary particle with no interaction matrix entries runs 500 steps normally. InteractionMatrix(1) returns null for all entries. Two same-type particles with self-repulsion produce valid velocity changes.
+
+3. **Maximum species (10 types) - 4 tests:** InteractionMatrix(10) has 10x10 dimensions with all 100 entries null. World with 10 species (5 particles each = 50 total) initializes with valid type indices [0,9]. 300-step circular chase chain (type i chases type (i+1)%10) produces no NaN. Set/get verifies asymmetric matrix (setting [3,7] does not auto-set [7,3]).
+
+4. **Zero-radius interaction - 3 tests:** forceAtDistance with radius=0 returns 0 at any distance. PairwiseForce with zero-radius entries on closely-spaced particles produces no NaN. Inverse falloff at distance=0 returns finite value (no Infinity from the +0.1 singularity guard).
+
+5. **Negative strength (repulsion) - 3 tests:** Negative strength produces opposite-sign force vs positive at same distance. Two particles with negative strength: particle 0 gains leftward velocity (repelled by particle 1 to its right). Linear and inverse falloff with negative strength both produce repulsive forces.
+
+6. **Population cap = 2 - 4 tests:** EcosystemWorld with populationCap=2 initializes with exactly 2 particles. Third spawn returns -1 (cap respected). 200-step simulation stable, no NaN. Initial count exceeding cap is proportionally reduced.
+
+7. **Minimum canvas (100x100) - 4 tests:** World initializes with all particles in [0,100] range. Bounce mode: 500 steps, particles stay within [-10,110]. Wrap mode: 500 steps, particles stay within strict [0,100). Spatial hash with cellSize=200 (larger than world) creates single-cell grid, queries still find neighbors.
+
+8. **Zero timestep (dt=0) - 2 tests:** Stepping with dt=0 preserves all positions (integration adds vx*0). Forces (DragForce, GravityForce) with dt=0 produce zero velocity change.
+
+9. **Co-located particles - 2 tests:** Five particles at identical (400,300) position: PairwiseForce produces no NaN (queryRadius self-exclusion by dSq>0 prevents division by zero). selfIdx-based query finds co-located neighbors correctly (dSq=0 entries returned when selfIdx is used).
+
+10. **Oversized radius - 1 test:** Interaction radius 10000 on a 200x200 world: 100 steps with linear falloff, no NaN, no crash.
+
+### Key findings
+- The codebase is robust against all degenerate inputs tested. No crashes, no NaN, no Infinity in any edge case.
+- InteractionMatrix.forceAtDistance correctly guards against zero radius (dist >= radius check returns 0 before any division).
+- The +0.1 singularity guard in inverse falloff (strength / (t + 0.1)) prevents Infinity at distance=0.
+- World with empty types array produces zero-length typed arrays that all force/step methods iterate safely (count=0 means loops don't execute).
+- SpatialHashGrid handles single-cell worlds (cellSize > worldSize) correctly.
+- EcosystemWorld proportional reduction correctly handles initial counts exceeding populationCap.
+
+### Quality gates
+- Build: clean (all 3 packages)
+- Lint: zero warnings
+- Format: Prettier clean (fixed one formatting pass)
+- 566 unit tests pass on main, 596 with edge-case tests, 0 failures
+- 3 Playwright e2e spec collection failures (pre-existing, not from this change)
+
+### Blocked
+PR creation blocked by GitHub token scope (Resource not accessible by personal access token). Branch pushed; PR needs manual creation.

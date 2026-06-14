@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 08:54 Sofia**
+> Last updated: **2026-06-14 09:05 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-45
-- **Total runs:** 39
+- **Last item:** CRT-46
+- **Total runs:** 40
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M6 — CRT-45 done (Stress Test Suite). 777 unit tests pass. Branch pushed.
+- **Status:** ** M6 — CRT-46 done (Edge Case Test Suite). 566 unit tests pass. Branch pushed.
 - **Updated:** ** 2026-06-14
-- **Ready:** CRT-46, CRT-47, CRT-48, CRT-49, CRT-50
+- **Ready:** CRT-47, CRT-48, CRT-49, CRT-50
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 49/56 done
+- **Progress:** 50/56 done
 - **Last work:** Blocked
 
 ### ⚪ dual-reader

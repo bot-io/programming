@@ -824,7 +824,7 @@
 - **Notes:** Created `packages/core/src/stress.test.ts` with 14 tests across 5 describe blocks: (1) max-capacity particles — 800 particles with full force pipeline (PairwiseForce + DragForce + WanderForce + GravityForce + FlowFieldForce + VortexForce + AlignmentForce) for 120 steps; all 7 registry force types; aggressive reproduction never exceeds cap. (2) rapid species add/remove — 5 add+reseed, 5 remove+reseed, and 5 alternating cycles verifying consistent aliveCount, valid type indices, and no orphaned dead slots. (3) rapid force pipeline toggle — 100 iterations of toggling all 6 forces on/off; single-force toggle 100x; rapid add/remove preserves simTime. (4) config serialization round-trip — 10 species + 7 forces through serializeConfig → JSON.stringify → JSON.parse → deserializeConfig, verifying force types preserved in order and 10×10 matrix dimensions. (5) memory stability — 10,000-step runs verifying world arrays never exceed populationCap, eco arrays stay at cap size, no NaN/Infinity, and wrap boundaries keep all particles in-bounds. PR creation blocked by token scope (same as all prior workers).
 
 ### CRT-46 Edge Case Test Suite
-- **Status:** ready
+- **Status:** done
 - **Priority:** P2
 - **Milestone:** M6
 - **Description:** Add a dedicated edge-case test suite covering degenerate simulation configurations that must not crash. Tests include zero species (empty world), single species (no interactions), maximum species (10, verify 10×10 matrix), zero-radius interactions, negative strength (repel instead of attract), minimum population cap (2), and minimum canvas dimensions (100×100). These tests document and enforce graceful handling of boundary conditions.
@@ -846,6 +846,9 @@
   - Verify graceful degradation (not just "doesn't crash" but produces sensible state)
 - **Test File:** `packages/core/src/edge-cases.test.ts`
 - **Dependencies:** None
+- **Branch:** `feat/crt-46-edge-cases` pushed (commit ff78b73)
+- **Tests:** 30 new edge-case tests (566 total on main, all pass)
+- **Notes:** Created `packages/core/src/edge-cases.test.ts` with 30 tests across 10 describe blocks covering all 8 acceptance criteria plus 3 additional edge cases (zero timestep, co-located particles, oversized radius). (1) Empty world (0 species): 4 tests — init, step, force pipeline, SimLoop with zero particles. (2) Single species: 3 tests — solitary particle steps normally, null matrix entries, same-type repulsion. (3) 10 species (max): 4 tests — 10x10 InteractionMatrix dimensions, 50-particle world init, 300-step circular chase chain, set/get asymmetry verification. (4) Zero-radius interaction: 3 tests — forceAtDistance returns 0 at any distance, PairwiseForce with zero-radius entries produces no NaN, inverse falloff at distance 0 is finite. (5) Negative strength: 3 tests — direction reversal verification, two particles with negative strength move apart, linear+inverse falloff repulsion. (6) Population cap=2: 4 tests — init with 2 particles, spawn beyond cap returns -1, 200-step stability, proportional reduction when initial count exceeds cap. (7) Minimum canvas 100x100: 4 tests — init with correct bounds, bounce mode particles stay in bounds, wrap mode strict [0,100), spatial hash with single cell. (8) Zero timestep: 2 tests — dt=0 preserves positions, dt=0 applies zero velocity change. (9) Co-located particles: 2 tests — identical positions produce no NaN in PairwiseForce, selfIdx exclusion finds co-located neighbors. (10) Oversized radius: 1 test — radius 10000 on 200x200 world runs 100 steps without NaN. PR creation blocked by token scope (same as all prior workers).
 
 ### CRT-47 Config Validation Hardening
 - **Status:** ready
