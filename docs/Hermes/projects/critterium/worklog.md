@@ -444,3 +444,26 @@
   - Reproduction cooldown minimum is `max(1, config)` even when config is 0 (prevents infinite reproduction)
 - **Status:** Done — branch pushed. PR needs manual creation (token scope issue).
 - **Notes:** Next items: CRT-41 (P2, Coral Reef preset), CRT-42-44 (3 more presets), CRT-45-46 (stress/edge test suites).
+
+## 2026-06-14 CRT-41: Coral Reef preset (5-species reef food chain)
+- **Branch:** `feat/crt-41-coral-reef-preset`
+- **Commit:** c8bdf1f
+- **Base:** `feat/crt-40-lifecycle-deep-tests` (1b0a086) — latest stacked branch tip
+- **Files modified:**
+  - `packages/app/src/presets.ts` — added CORAL_REEF preset (5 species, 5x5 matrix, 3 forces) to BUILTIN_PRESETS
+  - `packages/app/src/presets.test.ts` — 26 new Coral Reef tests + updated count (10 to 11) + names list
+- **Tests:** 696 unit tests pass (was 670; +26 new). Build, lint, typecheck clean. Prettier clean on modified files (2 pre-existing core package format warnings unrelated to this work).
+- **Design:**
+  - 5 species: Coral (producer, maxSpeed 5), Zooplankton (tiny prey, maxSpeed 35), Clownfish (schooling, maxSpeed 75), Moray Eel (predator, maxSpeed 100), Reef Shark (apex, maxSpeed 115)
+  - Five-tier food chain: Coral -> Zooplankton -> Clownfish -> Eel -> Shark (linear diet: each eats only its direct prey)
+  - 5x5 interaction matrix: Zooplankton forage Coral (+35) and flee Clownfish (-50); Clownfish chase Zooplankton (+50), school (+30), flee Eel (-70); Eel chase Clownfish (+55), territorial (-20), flee Shark (-40); Shark chase Eel (+45), solitary (-35); Coral ignores all (null row)
+  - Forces: drag (0.6, mild underwater damping) + wander (strength 20, rate 2) + flow-field (strength 15, turbulence mode 0.02 scale — gentle current)
+  - populationCap: 500. Total initial pop: 393 (150+120+90+25+8)
+  - Colors: coral-pink, translucent blue, Nemo orange, charcoal, gray — all 5 distinct
+- **Deviation documented (Coral maxSpeed):**
+  - Spec requested "zero maxSpeed (stationary)" but ecosystem-world.ts:199 computes movementCost = movementCostPerSec * (speed / maxSpeed) * dt — maxSpeed=0 causes division by zero (Infinity/NaN).
+  - config-schema.ts:526 clamps maxSpeed to minimum 1 (clampNum(sp.maxSpeed, 1, 1000, 100, ...)).
+  - Generic structural test 'each species has positive radius, speed, and energy' requires maxSpeed greater than 0.
+  - Resolution: followed established Grasslands convention (Grass = maxSpeed 5, "nearly stationary"). Coral uses maxSpeed=5, initialSpeed=0 (starts at rest, negligible drift). Inline comment documents the constraint. If true stationary is needed later, guard the movement-cost division first (CRT-47/48 scope).
+- **Status:** Done — branch pushed. PR needs manual creation (token scope issue).
+- **Notes:** Next items: CRT-42 (Tornado Alley), CRT-43 (Deep Sea Vent), CRT-44 (Symbiosis) — 3 more P2 presets.

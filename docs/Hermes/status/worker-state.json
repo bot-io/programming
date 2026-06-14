@@ -1,8 +1,8 @@
 {
-  "last_project": "dual-reader",
-  "last_item": "—",
-  "last_status": "skipped",
-  "timestamp": "2026-06-14T05:55:00Z",
-  "run_count": 34,
-  "note": "Dual-reader backlog exhausted (DR-001..010 all done, 0 ready). Yielded to critterium. Situation unchanged — awaiting new backlog items from user."
+  "last_project": "critterium",
+  "last_item": "CRT-41",
+  "last_status": "done",
+  "timestamp": "2026-06-14T03:15:00Z",
+  "run_count": 35,
+  "note": "CRT-41 Coral Reef preset done. 5-species reef food chain, 26 new tests, 696 total pass. Branch pushed. Next: CRT-42 (Tornado Alley)."
 }
