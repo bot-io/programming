@@ -2,7 +2,7 @@
   "last_project": "dual-reader",
   "last_item": "skip",
   "last_status": "skipped",
-  "timestamp": "2026-06-14T00:53:09Z",
-  "run_count": 29,
-  "note": "Quota reset from 100% to 1%. Dual-reader backlog exhausted (DR-001..010 all done, 0 ready). Critterium has P1 ready items (CRT-37 Wire ForceRegistry into main.ts). Skipped per cross-project priority rule."
+  "timestamp": "2026-06-14T05:11:09Z",
+  "run_count": 30,
+  "note": "Dual-reader backlog exhausted (DR-001..010 all done, 0 ready). Critterium top ready item now CRT-39 (P2) — P1 items CRT-35..38 completed. Skipped per cross-project priority rule."
 }
