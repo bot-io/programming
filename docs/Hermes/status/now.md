@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 21:17 Sofia**
+> Last updated: **2026-06-14 21:33 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-51
-- **Total runs:** 55
+- **Last item:** CRT-51-e2e-fix
+- **Total runs:** 56
 
 ## 📁 Projects
 
@@ -31,7 +31,7 @@
 - **Updated:** ** 2026-06-14 (run #51)
 - **Blocked:** CRT-15, CRT-16
 - **Progress:** 54/56 done
-- **Last work:** 2026-06-14 CRT-51 (run #55): Complete integration branch — add missing CRT-33 + 
+- **Last work:** Impact
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user

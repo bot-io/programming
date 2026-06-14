@@ -774,3 +774,43 @@ Both backlogs exhausted (all ready items done; CRT-51 needs-decision, CRT-15/16 
 - **Commits:** cc08951 (crt-33), fa813ca (crt-34 dead code + tests), bb3076d (prettier format)
 - **Status:** Integration branch now feature-complete: contains ALL work CRT-32 through CRT-50. PR #12 ready for merge decision. Only Svetlin's merge-strategy call remains.
 - **Next step:** Awaiting Svetlin's merge decision for CRT-51. No other ready items in either backlog.
+
+---
+
+## Run #56 — 2026-06-14 21:30 Sofia time
+**Item:** CRT-51 (sub-task: fix e2e CI failure on integration branch)
+**Quota:** 79% (< 80% — proceed)
+**Locks:** None active (worker.lock + critterium.lock both clear)
+
+### Discovery
+Run #55 reported "PR #12 CI green" but only checked `build-and-test` job. On closer inspection, the **e2e CI job was FAILING** — all 12 Playwright tests failed with `net::ERR_CONNECTION_REFUSED at http://localhost:3000/`. This meant the Vite dev server never started in CI.
+
+### Root Cause
+The Vite dev server crashed during esbuild dependency pre-bundling with **264 errors**:
+```
+ERROR: Transforming destructuring to the configured target environment
+("chrome87", "edge88", "es2020", "firefox78", "safari14") is not supported yet
+```
+This affects `pixi.js` v8 and `@capacitor/core` — both use destructuring patterns that esbuild cannot down-level to the default `optimizeDeps` target. The `build.target` was already `es2022`, but the dev server's dependency optimizer used the lower default target (es2020/chrome87).
+
+### Fix
+Added to `packages/app/vite.config.ts`:
+```ts
+optimizeDeps: {
+  esbuildOptions: { target: 'es2022' },
+},
+esbuild: { target: 'es2022' },
+```
+
+### Verification
+1. **Local dev server:** `npx vite --port 3000` -> HTTP 200 on localhost:3000 (was: crash with 264 errors)
+2. **Build:** `npm run build` -> built in 8.66s
+3. **Unit tests:** 1124 tests pass (561 app + 543 core + 20 render), 0 failures
+4. **Format/typecheck:** Prettier clean, tsc --noEmit clean
+5. **CI (run 27508081206):** All 3 jobs PASS: build-and-test (51s), **e2e (1m22s, was FAILING)**, android-debug-apk (1m11s)
+
+### Commit
+- `41be35e` on `integration/crt-35-50` — "fix(crt-51): set optimizeDeps target to es2022 to fix e2e CI"
+
+### Impact
+PR #12 (integration CRT-32->50) is now **fully CI-green with all 3 jobs passing**. The only remaining blocker for CRT-51 is Svetlin's merge-strategy decision (Option 2: merge PR #12 is the clear fastest path now that all CI is green).

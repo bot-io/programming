@@ -53,3 +53,5 @@ Once you confirm, we can mark CRT-15 as done and move to CRT-16 (iOS + store rea
 
 **Update (run #55, 2026-06-14):** The integration branch is now FEATURE-COMPLETE — CRT-33 (e2e fixes + Playwright CI) and CRT-34 (dead sickness code removal) have been cherry-picked onto `integration/crt-35-50`. The branch now contains ALL work from CRT-32 through CRT-50 (1124 tests, build/lint/format/typecheck green). PR #12 is ready to merge with a single click — no additional work needed regardless of which option you pick. This simplifies the decision: **Option 2 (merge PR #12) is now the clear fastest path** since the integration branch is complete and CI is green.
 
+**Update (run #56, 2026-06-14):** Fixed the e2e CI job that was FAILING (all 12 Playwright tests got ERR_CONNECTION_REFUSED because Vite dev server crashed during esbuild pre-bundling — Pixi.js v8 destructuring couldn't be down-leveled to es2020 target). PR #12 now has **all 3 CI jobs green**: build-and-test ✓, e2e ✓, android-debug-apk ✓. **PR #12 is ready to merge right now — just click the merge button.**
+
