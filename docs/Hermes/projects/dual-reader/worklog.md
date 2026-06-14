@@ -332,3 +332,17 @@
 
 **Action needed from user:** Dual-reader backlog remains exhausted since 2026-06-13. Add new backlog items (status "ready") to resume autonomous work on dual-reader. See questions.md for candidate features.
 
+### 2026-06-14 — dual-reader cron (run 47) — Quota reset, backlog still exhausted
+
+**Context:** Scheduled cron run for dual-reader. Subscription usage at 1% (window reset from prior 82% exhausted state). Stale quota-skip file still present (recorded exhausted state from 15:47 Sofia).
+
+**Quota action:** Deleted .quota-skip-dual-reader.json — quota now 1% (next reset 23:11 Sofia), well below 80% threshold.
+
+**Lock Check:** No worker.lock or dual-reader.lock present. No contention.
+
+**Priority Check:** Dual-reader backlog fully exhausted (DR-001..DR-010 all done, 0 ready items). Critterium backlog also exhausted: CRT-1..CRT-50 done, CRT-51 (PR merge triage) needs-decision (P0), CRT-15/16 blocked on user. No ready items in either project.
+
+**Outcome:** No work implemented — no ready items exist in dual-reader backlog (backlog discipline: only ready items may be worked autonomously). worker-state.json updated (run_count=47). Quota-skip file cleaned up.
+
+**Action needed from user:** Dual-reader backlog has been exhausted since 2026-06-13. Add new backlog items (status ready) to resume autonomous work. 6 candidate features listed in questions.md: cloud reading-progress sync, in-app dictionary, TTS, localization, annotation styles, close-out DR-007 manual items. Or confirm project is v1 feature-complete and worker should go SILENT.
+

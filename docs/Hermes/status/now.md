@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 18:24 Sofia**
+> Last updated: **2026-06-14 18:36 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -14,9 +14,9 @@
 
 ## 🤖 Overnight Worker
 - **Last run:** never
-- **Last project:** critterium
-- **Last item:** CRT-51 (needs-decision) — no ready items; backlog exhausted
-- **Total runs:** 46
+- **Last project:** dual-reader
+- **Last item:** none — dual-reader backlog exhausted (DR-001..010 done), 0 ready items
+- **Total runs:** 47
 
 ## 📁 Projects
 
@@ -38,7 +38,7 @@
 - **Status:** ** Backlog Exhausted — awaiting new items from user
 - **Updated:** ** 2026-06-14
 - **Progress:** 10/10 done
-- **Last work:** 2026-06-14 — dual-reader cron (run 32) — Skipped: backlog exhausted, critterium 
+- **Last work:** 2026-06-14 — dual-reader cron (run 47) — Quota reset, backlog still exhausted
 
 ### ⚪ machine-setup
 - **Status:** ** Complete
