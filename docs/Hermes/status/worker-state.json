@@ -1,8 +1,8 @@
 {
   "last_project": "critterium",
-  "last_item": "CRT-46",
+  "last_item": "CRT-47",
   "last_status": "done",
-  "timestamp": "2026-06-14T09:05:00Z",
-  "run_count": 40,
-  "note": "CRT-46 Edge Case Test Suite done. Branch feat/crt-46-edge-cases pushed (PR needs manual creation - token scope). 30 new edge-case tests, all pass. Next: CRT-47."
+  "timestamp": "2026-06-14T09:45:00Z",
+  "run_count": 41,
+  "note": "CRT-47 Config Validation Hardening done. Branch feat/crt-47-config-validation-hardening pushed (PR needs manual creation - token scope). Added validateInteractionMatrix(), seed clamping, 38 new adversarial tests. 63 config-schema tests pass. Next: CRT-48."
 }

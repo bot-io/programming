@@ -618,3 +618,35 @@ Created a dedicated edge-case test suite covering 10 categories of degenerate si
 
 ### Blocked
 PR creation blocked by GitHub token scope (Resource not accessible by personal access token). Branch pushed; PR needs manual creation.
+
+## 2026-06-14 CRT-47: Config Validation Hardening
+- **Branch:** feat/crt-47-config-validation-hardening
+- **Commit:** bbf2159
+- **What was done:**
+  1. Added validateInteractionMatrix() function to config-schema.ts:
+     - Dimension validation: matrix rows must equal species count when species > 0
+     - Square matrix check: rejects jagged matrices with mismatched row lengths
+     - Row-type validation: each row must be an array
+     - Entry clamping: strength NaN/Infinity to 0, radius NaN/Inf/negative to 100, radius over 5000 to 5000, invalid/missing falloff to linear
+     - Non-object entries throw descriptive error
+  2. Added NaN/Infinity seed clamping: simulation.seed NaN or Infinity to 0
+  3. Replaced inline interactionMatrix is-array check with validateInteractionMatrix()
+  4. Added 38 new adversarial tests in config-schema.test.ts in 8 describe blocks:
+     - NaN clamping (5), Infinity clamping (4), Negative value clamping (2)
+     - Range clamping (5), Wrong type handling (4), Missing required fields (4)
+     - Matrix dimension validation (4), Matrix entry clamping (10)
+  5. Reverted unrelated app/package.json version bump from build side-effect
+
+### Root cause
+Species fields were already well-validated via clampNum(). Two critical gaps:
+- Interaction matrix entries were completely unvalidated (NaN, Infinity, invalid falloff, dimension mismatches)
+- Simulation seed was type-checked but NaN/Infinity not clamped (breaks determinism)
+
+### Quality gates
+- Build: clean (all 3 packages)
+- Lint: zero warnings, Format: Prettier clean, TypeScript: clean
+- 63 config-schema tests pass (25 original + 38 new), 341 core tests pass
+- PR creation blocked by token scope (same as all prior workers)
+
+### Blocked
+None.

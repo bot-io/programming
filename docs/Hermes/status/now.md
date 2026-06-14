@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 09:13 Sofia**
+> Last updated: **2026-06-14 09:38 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 1%
+- **Usage:** 41%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-46
-- **Total runs:** 40
+- **Last item:** CRT-47
+- **Total runs:** 41
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M6 — CRT-46 done (Edge Case Test Suite). 566 unit tests pass. Branch pushed.
+- **Status:** ** M6 — CRT-47 done (Config Validation Hardening). 63 config-schema tests pass. Branch pushed.
 - **Updated:** ** 2026-06-14
-- **Ready:** CRT-47, CRT-48, CRT-49, CRT-50
+- **Ready:** CRT-48, CRT-49, CRT-50
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 50/56 done
+- **Progress:** 51/56 done
 - **Last work:** Blocked
 
 ### ⚪ dual-reader

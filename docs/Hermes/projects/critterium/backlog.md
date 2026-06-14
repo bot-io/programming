@@ -851,7 +851,7 @@
 - **Notes:** Created `packages/core/src/edge-cases.test.ts` with 30 tests across 10 describe blocks covering all 8 acceptance criteria plus 3 additional edge cases (zero timestep, co-located particles, oversized radius). (1) Empty world (0 species): 4 tests — init, step, force pipeline, SimLoop with zero particles. (2) Single species: 3 tests — solitary particle steps normally, null matrix entries, same-type repulsion. (3) 10 species (max): 4 tests — 10x10 InteractionMatrix dimensions, 50-particle world init, 300-step circular chase chain, set/get asymmetry verification. (4) Zero-radius interaction: 3 tests — forceAtDistance returns 0 at any distance, PairwiseForce with zero-radius entries produces no NaN, inverse falloff at distance 0 is finite. (5) Negative strength: 3 tests — direction reversal verification, two particles with negative strength move apart, linear+inverse falloff repulsion. (6) Population cap=2: 4 tests — init with 2 particles, spawn beyond cap returns -1, 200-step stability, proportional reduction when initial count exceeds cap. (7) Minimum canvas 100x100: 4 tests — init with correct bounds, bounce mode particles stay in bounds, wrap mode strict [0,100), spatial hash with single cell. (8) Zero timestep: 2 tests — dt=0 preserves positions, dt=0 applies zero velocity change. (9) Co-located particles: 2 tests — identical positions produce no NaN in PairwiseForce, selfIdx exclusion finds co-located neighbors. (10) Oversized radius: 1 test — radius 10000 on 200x200 world runs 100 steps without NaN. PR creation blocked by token scope (same as all prior workers).
 
 ### CRT-47 Config Validation Hardening
-- **Status:** ready
+- **Status:** done
 - **Priority:** P3
 - **Milestone:** M6
 - **Description:** Harden `deserializeConfig` against malformed, out-of-range, and adversarial input. Add tests verifying rejection of NaN/Infinity/negative values, range clamping for bounded fields, graceful handling of missing/mistyped fields, oversized-value clamping (e.g., populationCap 99999 → 5000), and mismatched interaction matrix dimensions. This expands the existing `config-schema.test.ts` with adversarial input coverage.
@@ -859,26 +859,31 @@
   - MODIFY: `packages/core/src/config-schema.ts` (add/extend range-clamping and validation if gaps found)
   - MODIFY: `packages/core/src/config-schema.test.ts` (add adversarial input tests)
 - **Acceptance Criteria:**
-  1. `deserializeConfig` rejects or clamps NaN values in numeric fields (maxSpeed, radius, etc.)
-  2. `deserializeConfig` rejects or clamps Infinity values
-  3. `deserializeConfig` rejects or clamps negative values where non-negative is required (counts, radii, speeds)
-  4. Range clamping enforced: `maxSpeed` clamped to [0.01, 5000], `radius` clamped to [1, 500] (or project-defined ranges)
-  5. Malformed JSON handled gracefully: missing required fields throw descriptive error or use safe defaults; wrong types (string where number expected) rejected/clamped
-  6. Oversized values clamped: `populationCap` 99999 → clamped to max (5000 or current project max)
-  7. Interaction matrix with mismatched dimensions (e.g., 3 species but 4×4 matrix) rejected with descriptive error
-  8. All existing config-schema tests still pass
+  1. `deserializeConfig` rejects or clamps NaN values in numeric fields (maxSpeed, radius, etc.) ✅ clampNum for species, NaN→0 for matrix strength, NaN→0 for seed
+  2. `deserializeConfig` rejects or clamps Infinity values ✅ same paths handle Infinity
+  3. `deserializeConfig` rejects or clamps negative values where non-negative is required (counts, radii, speeds) ✅ clampNum min bounds
+  4. Range clamping enforced: `maxSpeed` clamped to [0.01, 5000], `radius` clamped to [1, 500] (or project-defined ranges) ✅ maxSpeed [1,1000], radius [0.5,50], matrix radius [0,5000]
+  5. Malformed JSON handled gracefully: missing required fields throw descriptive error or use safe defaults; wrong types (string where number expected) rejected/clamped ✅
+  6. Oversized values clamped: `populationCap` 99999 → clamped to max (5000 or current project max) ✅
+  7. Interaction matrix with mismatched dimensions (e.g., 3 species but 4×4 matrix) rejected with descriptive error ✅ validateInteractionMatrix()
+  8. All existing config-schema tests still pass ✅ 25 original + 38 new = 63 all pass
 - **Test Requirements:**
-  - Test NaN rejection/clamping for at least 3 numeric fields
-  - Test Infinity rejection/clamping
-  - Test negative value handling
-  - Test range clamping (maxSpeed, radius, populationCap)
-  - Test missing fields (version, types, interactionMatrix) → descriptive error or safe default
-  - Test wrong types (string→number, number→boolean)
-  - Test oversized populationCap clamping
-  - Test mismatched matrix dimensions → error
-  - Minimum 12 new tests
+  - Test NaN rejection/clamping for at least 3 numeric fields ✅ 5 tests
+  - Test Infinity rejection/clamping ✅ 4 tests
+  - Test negative value handling ✅ 2 tests
+  - Test range clamping (maxSpeed, radius, populationCap) ✅ 5 tests
+  - Test missing fields (version, types, interactionMatrix) → descriptive error or safe default ✅ 4 tests
+  - Test wrong types (string→number, number→boolean) ✅ 4 tests
+  - Test oversized populationCap clamping ✅ covered in range clamping
+  - Test mismatched matrix dimensions → error ✅ 4 tests
+  - Minimum 12 new tests ✅ 38 new tests
 - **Test File:** expand `packages/core/src/config-schema.test.ts`
 - **Dependencies:** None
+- **Branch:** `feat/crt-47-config-validation-hardening` pushed (PR needs manual creation — token scope)
+- **Commit:** bbf2159
+- **Tests:** 63 config-schema tests pass (25 original + 38 new), 341 core tests pass, build/lint/format/typecheck clean
+- **Notes:** Added `validateInteractionMatrix()` function to `config-schema.ts` covering: (1) dimension validation — matrix rows must equal species count when species > 0; (2) square matrix check — rejects jagged matrices; (3) row-type validation — each row must be an array; (4) entry clamping — strength NaN/Infinity→0, radius NaN/Infinity/negative→100, radius>5000→5000, invalid/missing falloff→'linear'. Also added NaN/Infinity seed clamping to 0. The existing `clampNum` helper already handled NaN/Infinity for species fields (maxSpeed, radius, count, initialSpeed, energy, lifecycle); the main gaps were matrix entries (completely unvalidated) and the simulation seed. 38 new tests organized in 7 describe blocks: NaN clamping (5), Infinity clamping (4), negative value clamping (2), range clamping (5), wrong type handling (4), missing required fields (4), matrix dimension validation (4), matrix entry clamping (10).
+
 
 ### CRT-48 Force Isolation Tests
 - **Status:** ready
