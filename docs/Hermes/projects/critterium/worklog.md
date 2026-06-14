@@ -390,3 +390,20 @@
   7. presets.test.ts - Force assertions updated from property access to array lookup
 - **Test results:** 567/567 pass (20 test files). TS builds clean for both core + app packages.
 - **Acceptance criteria met:** All 7 criteria satisfied. Backward compat verified with migration tests. Force order preserved.
+
+## 2026-06-14 CRT-38: Force Add/Remove UI
+- **Branch:** feat/crt-38-force-add-remove-ui (off feat/crt-37-force-pipeline)
+- **Commit:** 418c027
+- **What was done:**
+  1. controls.ts — Added `PipelineForceEntry` interface and `ForceTypeDescriptor` import. Added new controls options: `pipelineForces`, `forceTypeDescriptors`, `onAddForce`, `onRemoveForce`, `onSetForceEnabled`, `onSetForceParam`
+  2. controls.ts — Added CSS styles for `.crit-force-row`, `.crit-force-name`, `.crit-force-add-btn`, `.crit-force-toggle`, `.crit-force-delete`, `.crit-force-param`
+  3. controls.ts — Added helper functions: `makeForceTypeSelect` (dropdown of force types), `buildForceRow` (single force row with type label, toggle, delete, param sliders from paramSchema), `buildAddForceDropdown` (dropdown of available unregistered types)
+  4. controls.ts — Rewrote `buildForcesSection` to dynamically render force rows from `pipelineForces` data, with backward-compatible fallback to legacy hardcoded sliders when `pipelineForces` not provided
+  5. main.ts — Wired `listForceTypes()` import, passed `pipelineForces: getPipelineForceEntries()` and `forceTypeDescriptors: listForceTypes()` to createControlsPanel
+  6. main.ts — Added 4 callback handlers: `onAddForce(typeId)` → `addForce(typeId)` + re-render, `onRemoveForce(index)` → `removeForce(index)` + re-render, `onSetForceEnabled(index, enabled)` → `setForceEnabled(index, enabled)`, `onSetForceParam(forceId, param, value)` → `setForceParam(forceId, param, value)`
+  7. controls.test.ts — Added 21 new tests in `describe('dynamic force pipeline UI (CRT-38)')`: row rendering, data attributes, toggle callbacks, delete buttons, parameter slider generation from paramSchema, add force dropdown, force type select, legacy fallback when pipelineForces absent
+  8. main.test.ts — Added 12 integration tests covering `listForceTypes`, `getRegisteredTypes`, `createForce`, `getForceDescriptor`, param round-trips via setForceParam/getForceParam
+- **Test results:** 600/600 pass (20 test files). TypeScript compiles clean (zero errors). ESLint clean. Prettier clean.
+- **Acceptance criteria met:** All 7 criteria satisfied. Force rows render dynamically from pipeline data with auto-generated param sliders from FORCE_TYPES paramSchema. Legacy sliders preserved as fallback.
+- **Status:** Done — branch pushed. PR creation blocked by token scope (persistent across all workers).
+- **Notes:** This completes the P1 force-system chain (CRT-35→38). Next items are P2: CRT-39 (main.ts integration tests), CRT-40 (lifecycle deep tests), CRT-41-44 (4 new presets).

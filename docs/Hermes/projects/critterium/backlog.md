@@ -616,7 +616,7 @@
 - **Notes:** Replaced all hardcoded force variables (`dragForce`, `wanderForce`, `pointerForce`, `dragEnabled`, `wanderEnabled`, `pointerEnabled`) with a `forcePipeline: PipelineEntry[]` initialized via `createForce()` from the registry. Added 8 pipeline helper functions: `findForceEntry`, `addForce`, `removeForce`, `setForceEnabled`, `setForceParam`, `getForceParam`, `getPipelineForceEntries`, `rebuildPipelineFromConfig`. Rewrote `applyForces()` to iterate pipeline entries checking `enabled` flag. Updated all consumers: `getCurrentConfig()` (serialization), pointer event handlers (via `getPointerForce()`/`isPointerEnabled()`), `onForceToggle`/`onForceChange` (pipeline index lookups), `onLoadBuiltinPreset` (via `rebuildPipelineFromConfig()`), pending configs for add/delete species, `resetAllSliders` forceValues, and `onReset` slider sync. Exposed `window.__critterium` debug API for runtime add/remove/toggle/param-update (satisfies CRT-37 runtime management requirement). 567 unit tests pass, TypeScript compiles cleanly (zero errors), ESLint clean.
 
 ### CRT-38 Force Add/Remove UI
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Milestone:** M6
 - **Description:** Add a "+ Add Force" button and per-force controls to the forces section of `controls.ts`, mirroring the existing species add/remove UX. Each force row gets a type dropdown, enable/disable toggle, delete button, and auto-generated parameter sliders driven by `FORCE_TYPES` param schemas from CRT-35. This makes the force system fully user-editable at runtime without touching config JSON.

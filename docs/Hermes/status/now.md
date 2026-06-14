@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 04:24 Sofia**
+> Last updated: **2026-06-14 05:01 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 13%
+- **Usage:** 24%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -27,12 +27,12 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M4/M6 — CRT-37 done (Wire ForceRegistry into main.ts). 567 unit tests pass. Branch pushed.
+- **Status:** ** M6 — CRT-38 done (Force Add/Remove UI). 600 unit tests pass. Branch pushed.
 - **Updated:** ** 2026-06-14
-- **Ready:** CRT-38, CRT-39, CRT-40, CRT-41, CRT-42, CRT-43, CRT-44, CRT-45, CRT-46, CRT-47, CRT-48, CRT-49, CRT-50
+- **Ready:** CRT-39, CRT-40, CRT-41, CRT-42, CRT-43, CRT-44, CRT-45, CRT-46, CRT-47, CRT-48, CRT-49, CRT-50
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 41/56 done
-- **Last work:** 2026-06-14 CRT-36: Dynamic Force Serialization
+- **Progress:** 42/56 done
+- **Last work:** 2026-06-14 CRT-38: Force Add/Remove UI
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user
