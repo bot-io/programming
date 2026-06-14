@@ -1,8 +1,8 @@
 {
-  "last_project": "critterium",
+  "last_project": "dual-reader",
   "last_item": "None (backlog exhausted)",
-  "last_status": "No-op run. Critterium backlog exhausted (CRT-1..50 + CRT-E1..E6 done; CRT-51 needs-decision; CRT-15/16 blocked on Svetlin). Dual-reader also exhausted. main still at CRT-31 (4745bc5), 4 open PRs unchanged, 0 issues. No work implemented.",
-  "timestamp": "2026-06-14T20:38:00Z",
-  "run_count": 53,
-  "note": "Scheduled cron run #53 for critterium. Backlogs exhausted in both projects. No ready items. Verified: main=4745bc5 (CRT-31), PRs #9/#10/#11/#12 open & unmerged, 0 open issues. worker.lock created and removed. Awaiting Svetlin: CRT-51 merge-strategy decision + CRT-15 device perf check."
+  "last_status": "No-op run. Dual-reader backlog exhausted (DR-001..010 all done, 0 ready). Critterium also exhausted. No work implemented.",
+  "timestamp": "2026-06-14T20:47:00Z",
+  "run_count": 54,
+  "note": "Scheduled cron run #54 for dual-reader. Backlogs exhausted in both projects. No ready items. Quota at 77% (below 80% threshold). worker.lock created and removed."
 }
