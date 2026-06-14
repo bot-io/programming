@@ -975,3 +975,29 @@
 - **Commit:** efeafe7
 - **Tests:** 658 total (was 628), all pass. Build, typecheck, lint clean.
 - **Notes:** AttractorForce is the 9th built-in force type. Added AttractorParams interface + AttractorForce class to `packages/core/src/index.ts` (following the established pattern of co-locating force classes in index.ts — same as VortexForce, GravityForce, BoidsForce). Registered in force-registry.ts with 5-param schema: x, y, strength (-1000 to 1000), radius (10-2000), falloff (linear/inverse/constant). Falloff conventions match VortexForce exactly (linear: 1-t, inverse: 1/(t+0.1), constant: 1) for consistency. The force is constructed as purely radial: `vx += nx * strength * falloffMult * dt` where (nx,ny) is the normalized direction TO the point — this guarantees zero tangential component by construction (verified by cross-product test). Division-by-zero guard: particles at exact center (distSq < 0.0001) are skipped. Add Force dropdown auto-populates 'attractor' via listForceTypes() — no UI code changes needed (CRT-38's dropdown is registry-driven).
+
+---
+
+## Merge / PR Triage
+
+### CRT-51 Triage + create PRs for CRT-35→50 branches + merge open PRs
+- **Status:** needs-decision
+- **Priority:** P0
+- **Milestone:** M6
+- **Description:** `main` is stuck at CRT-31 while 19 items of completed, tested work sit on unmerged feature branches. `gh` CLI **is** authenticated (bot-io) — the "PR creation blocked by token scope" notes on CRT-35→50 are stale (a prior worker already used `gh` to create PR #2). This item creates the missing PRs and establishes a merge plan.
+- **Current state (discovered by worker run #45, 2026-06-14):**
+  - `main` HEAD = CRT-31 (4745bc5)
+  - **Open, unreviewed PRs:** #9 (crt-32), #10 (crt-33), #11 (crt-34)
+  - **No PR exists** for: crt-35, crt-36, crt-37, crt-38, crt-39, crt-40, crt-41, crt-42, crt-43, crt-44, crt-45, crt-46, crt-47, crt-48, crt-49, crt-50 (16 branches)
+  - Branches form **2 separate chains** (not a single clean stack):
+    - Stack A (linear): crt-35→45 — each ahead-of-main by 1..11
+    - Stack B: crt-46(↑1), crt-47(↑1), crt-48(↑2), crt-49(↑6), crt-50(↑8) — branched from a different point
+  - `feat/crt-50` HEAD (17365ec) has an extra commit beyond the attractor work: a bugfix restoring negative `idleDrainPerSec`/cannibalism values that CRT-47's hardening had over-stripped.
+- **Acceptance Criteria:**
+  1. A PR exists for every feature branch crt-35 through crt-50 (16 PRs), each with correct title + body referencing the backlog item
+  2. PR bases are correct (parent branch for stacked chains, or rebased onto a single integration branch) — no PR shows the wrong cumulative diff
+  3. Merge order documented (lowest CRT first; Stack A and Stack B reconciled)
+  4. Open PRs #9/#10/#11 (crt-32/33/34) either merged or explicitly deferred with a reason
+  5. After merge, `main` reaches CRT-50 (or documented final state); full test suite green on main
+- **Decision needed from Svetlin:** merge strategy — (a) rebase all onto `main` and merge one-by-one, (b) create a single integration PR from crt-50 tip, or (c) merge the open PRs #9-#11 first then handle 35-50. See questions.md.
+- **Why needs-decision:** the two-chain structure + the extra crt-50 commit mean a naive `gh pr create` per branch would produce PRs with wrong bases. Needs a human merge-strategy call.

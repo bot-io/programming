@@ -30,3 +30,24 @@ Once you confirm, we can mark CRT-15 as done and move to CRT-16 (iOS + store rea
 
 **Why this matters:** Every new worker session has to branch from the tip of this stack. Merging will simplify future work and give you a clean `main` with ESLint, README, working CI, and all bug fixes.
 
+## CRT-51: Merge strategy decision needed — 19 items of work unmerged, main stuck at CRT-31
+**Asked:** 2026-06-14
+**Item:** CRT-51 (needs-decision)
+**Context:** The always-on worker has completed CRT-35→CRT-50 (16 items, 658 tests, all green) but **none of it is on `main`** — main is still at CRT-31. Meanwhile `gh` CLI turns out to be **fully authenticated** (bot-io), so the "PR creation blocked by token scope" notes repeated on CRT-35→50 were stale. The work is preserved on feature branches but not mergeable without a strategy call because the branches form two separate chains.
+
+**Current state:**
+- `main` HEAD = CRT-31 (4745bc5)
+- Open/unreviewed PRs: #9 (crt-32), #10 (crt-33), #11 (crt-34)
+- 16 branches with **no PR at all**: crt-35 … crt-50
+- Two chains: Stack A = crt-35→45 (linear, +11 commits); Stack B = crt-46→50 (branched separately, crt-50 tip = +8 commits)
+- `feat/crt-50` tip (17365ec) includes an extra bugfix: negative `idleDrainPerSec`/cannibalism values restored (CRT-47's hardening had over-stripped them)
+
+**Decision needed — pick one:**
+1. **Rebase + merge one-by-one (clean history):** I rebase Stack A and Stack B onto `main`, create 16 PRs each targeting its parent, you merge lowest-CRT-first.
+2. **Single integration PR (fast):** I create one PR from `feat/crt-50` tip → `main` containing all CRT-35→50 work; you review/merge once.
+3. **Merge open PRs first:** you merge #9/#10/#11 now, then I handle 35-50 on a clean base.
+
+**Why I didn't just create the PRs autonomously:** the two-chain structure means naive `gh pr create` per branch would produce PRs with wrong bases and messy cumulative diffs. Also note `feat/crt-50` has that extra bugfix commit that should be reviewed, not silently merged.
+
+**My recommendation:** Option 2 (single integration PR) is fastest if you trust the test suite; Option 1 is cleanest for history. Just tell me which and I'll execute it as CRT-51 next run.
+

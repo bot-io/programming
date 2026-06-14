@@ -1,8 +1,8 @@
 {
   "last_project": "critterium",
-  "last_item": "CRT-50",
-  "last_status": "done",
-  "timestamp": "2026-06-14T14:40:00Z",
-  "run_count": 44,
-  "note": "CRT-50 AttractorForce done. 30 new tests, 658 total, all pass. Branch feat/crt-50-attractor-force pushed (commit efeafe7). 9th force type. Backlog exhausted — 0 ready items remaining."
+  "last_item": "CRT-51 (needs-decision) — no ready items; backlog exhausted",
+  "last_status": "triage-reported",
+  "timestamp": "2026-06-14T15:05:00Z",
+  "run_count": 45,
+  "note": "Backlog still exhausted (0 ready items). Discovered gh CLI IS authenticated (bot-io) — 'token scope' notes stale. main stuck at CRT-31; 19 items (CRT-32->50) unmerged across 2 branch chains. Added CRT-51 (needs-decision) + question for merge-strategy call. No code work performed."
 }

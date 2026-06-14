@@ -718,3 +718,25 @@ None.
 - **Tests:** 628 unit tests pass (22 test files). 3 e2e tests fail (pre-existing, no Playwright browser in env). Build, typecheck, lint, format all clean.
 - **Verification:** `npm run build` clean, `npx tsc --noEmit` clean, `npm run lint` clean, `prettier --check` clean on modified files.
 - **Status:** Done — branch pushed. PR needs manual creation (token scope).
+
+## Run #45 — 2026-06-14 15:02 Sofia — Backlog exhausted; PR/merge triage discovered
+
+**Item:** No ready backlog item (CRT-1→50 + CRT-E1→E6 all done; CRT-15/16 blocked on user).
+**Outcome:** No code work performed. Backlog confirmed exhausted (0 ready items). Discovered actionable operational finding:
+
+- gh CLI is authenticated as bot-io (verified gh auth status). The "PR creation blocked by token scope" notes repeated on CRT-35→50 are stale — a prior worker already used gh to create PR #2.
+- main is stuck at CRT-31 (4745bc5). 19 items of completed, tested work (CRT-32→50) are unmerged:
+  - Open/unreviewed: PR #9 (crt-32), #10 (crt-33), #11 (crt-34)
+  - No PR exists for crt-35 through crt-50 (16 branches)
+- Branch structure (via git rev-list --count origin/main..branch):
+  - Stack A (linear): crt-35(ahead 1) to crt-45(ahead 11)
+  - Stack B: crt-46(ahead 1), crt-47(ahead 1), crt-48(ahead 2), crt-49(ahead 6), crt-50(ahead 8) — branched from a different point than Stack A
+  - feat/crt-50 tip = 17365ec "fix: negative idleDrain and cannibalism were stripped by config-schema + UI" — extra bugfix commit (restores negative idleDrainPerSec/cannibalism values over-stripped by CRT-47 hardening) beyond the attractor work (efeafe7).
+
+**Action taken:** Did NOT autonomously create 16 PRs — the two-chain structure + extra crt-50 commit mean naive gh pr create per branch would produce wrong-base PRs with messy cumulative diffs. Instead:
+- Added CRT-51 (needs-decision, P0) to backlog.md: triage + create PRs for crt-35→50 + merge open PRs, with full acceptance criteria and current-state documentation.
+- Added a question to questions.md presenting 3 merge-strategy options (rebase one-by-one / single integration PR / merge open PRs first) with a recommendation.
+- Updated state.md with the merge-backlog summary.
+
+**Why not SILENT:** This run surfaced a genuinely new, actionable finding (gh works; main is 19 items behind; merge needs a strategy call) — not "nothing to report." Awaiting Svetlin's merge-strategy decision to unblock CRT-51.
+

@@ -21,3 +21,4 @@
 **Repo:** https://github.com/bot-io/critterium
 **Ready Items Remaining:** 0 — backlog exhausted. All 50 tracked items (CRT-1 through CRT-50) plus 6 retrospective ecosystem items are complete.
 **Backlog Status:** Complete. Only CRT-15 and CRT-16 remain blocked on user action (device verification + iOS/store readiness).
+**Merge Backlog (2026-06-14, run #45):** `main` is stuck at CRT-31. 19 items of completed work (CRT-32→50, 658 tests green) sit on unmerged branches: open PRs #9/#10/#11 (crt-32/33/34) + 16 branches (crt-35→50) with NO PR. `gh` CLI is authenticated (bot-io) — "token scope" notes were stale. Added CRT-51 (needs-decision) for PR creation + merge strategy. Branches form 2 chains (Stack A: 35→45 linear; Stack B: 46→50). See questions.md for the merge-strategy decision.

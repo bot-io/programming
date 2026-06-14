@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 14:52 Sofia**
+> Last updated: **2026-06-14 15:20 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 56%
+- **Usage:** 59%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-50
-- **Total runs:** 44
+- **Last item:** CRT-51 (needs-decision) — no ready items; backlog exhausted
+- **Total runs:** 45
 
 ## 📁 Projects
 
@@ -30,8 +30,9 @@
 - **Status:** ** M6 — CRT-50 done (AttractorForce — point-based attraction/repulsion). 658 unit tests pass (30 new). Branch pushed.
 - **Updated:** ** 2026-06-14
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 54/56 done
-- **Last work:** 2026-06-14 CRT-49: Boids Flocking Force
+- **Needs Decision:** CRT-51
+- **Progress:** 54/57 done
+- **Last work:** Run #45 — 2026-06-14 15:02 Sofia — Backlog exhausted; PR/merge triage discovered
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user
@@ -47,7 +48,7 @@
 
 ## 🚨 Needs Your Input
 
-- **critterium** — blocked: CRT-15, CRT-16
+- **critterium** — blocked: CRT-15, CRT-16; needs-decision: CRT-51
   → Open that project's Telegram chat and respond, or tell this chat
 
 ## 🔗 Quick Links
