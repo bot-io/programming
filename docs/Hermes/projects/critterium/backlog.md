@@ -561,7 +561,7 @@
 - **Notes:** Implemented functional registry API (`createForce`, `registerForceType`, `getForceDescriptor`, `listForceTypes`, `getRegisteredTypes`) with `ForceTypeDescriptor` + `ParamSchema` metadata for UI auto-generation. Registered all 7 force types: drag, wander, gravity, flow-field, vortex, pointer, alignment. Added new `AlignmentForce` class (standalone neighborhood flocking force — steer toward average heading of same-type neighbors via spatial hash grid, `crossType` param) since 'alignment' previously existed only as a 'flock' flag inside the interaction matrix. 26 new tests. 329 core tests pass, build clean for all 3 packages, ESLint + Prettier clean. A concurrent sibling subagent had started the same item with a functional design; reconciled by adopting their API and completing the missing 'alignment' type + fixing re-export corruption from concurrent edits.
 
 ### CRT-36 Dynamic Force Serialization
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Milestone:** M6
 - **Description:** Refactor `JsonForcesConfig` in `config-schema.ts` from a fixed object with named slots (`drag?`, `wander?`, `gravity?`, …) to a dynamic array of `{ type, enabled, params }` objects. This makes the config schema extensible (new force types added without schema changes) and aligns serialization with the `ForceRegistry` from CRT-35. Old-format configs must auto-migrate on deserialize so existing presets, autosaves, and exported configs continue to work.
@@ -585,6 +585,8 @@
   - All pre-existing config-schema tests pass unchanged
 - **Test File:** expand `packages/core/src/config-schema.test.ts`
 - **Dependencies:** CRT-35 (uses `FORCE_TYPES` defaultParams to validate param keys)
+- **Branch:** `feat/crt-36-dynamic-force-serialization` (off `feat/crt-35-force-registry`)
+- **Notes:** Implemented `JsonForceEntry` interface + `JsonForcesConfig = JsonForceEntry[]` type alias. `normalizeForces()` function handles backward compat — accepts old object-slot format (`{ drag?: ..., wander?: ..., flowField?: ... }`), new array format, and undefined/null. Old slot names mapped to canonical type IDs (flowField→flow-field). Added 5 new migration/normalization tests (old format migration, slot name mapping, null/undefined defaults, invalid entry filtering, new array format deserialization). All 10 presets migrated to array format. 567 tests pass, TS builds clean for both packages.
 
 ### CRT-37 Wire ForceRegistry into main.ts
 - **Status:** ready

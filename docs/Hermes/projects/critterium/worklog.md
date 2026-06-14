@@ -376,3 +376,17 @@
 - **Status:** Done — branch pushed. PR creation blocked by token scope (persistent across all workers).
 - **Notes:** Concurrent sibling subagent caused edit collisions on `index.ts` and `main.ts`. Resolved by adopting their API design and cleaning up the conflicts. CRT-36 (Dynamic Force Serialization) is next in the P1 chain.
 
+
+## 2026-06-14 CRT-36: Dynamic Force Serialization
+- **Branch:** feat/crt-36-dynamic-force-serialization (off feat/crt-35-force-registry)
+- **Commit:** 8ff870c
+- **What was done:**
+  1. config-schema.ts - Replaced JsonForcesConfig interface (named-slot object: drag, wander, gravity, flowField, vortex) with JsonForceEntry interface + JsonForcesConfig = JsonForceEntry[] type alias
+  2. config-schema.ts - Rewrote serializeForces() from per-force switch/case to simple map producing array entries
+  3. config-schema.ts - Added normalizeForces() function (60 lines) handling backward compatibility: new array format validated/filtered, old object-slot format migrated via OLD_SLOT_TO_TYPE mapping (flowField to flow-field, etc.), undefined/null to empty array
+  4. presets.ts - All 10 built-in presets migrated from object-slot format to array format
+  5. main.ts - Force config access updated from cfg.forces.drag property access to validated.forces.find(f => f.type === drag) array lookup
+  6. config-schema.test.ts - 5 new tests: array format deserialization, old format migration, flowField/vortex slot name mapping, null/undefined defaults, invalid entry filtering
+  7. presets.test.ts - Force assertions updated from property access to array lookup
+- **Test results:** 567/567 pass (20 test files). TS builds clean for both core + app packages.
+- **Acceptance criteria met:** All 7 criteria satisfied. Backward compat verified with migration tests. Force order preserved.

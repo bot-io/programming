@@ -1,8 +1,8 @@
 {
   "last_project": "critterium",
-  "last_item": "CRT-35",
+  "last_item": "CRT-36",
   "last_status": "done",
-  "timestamp": "2026-06-14T01:30:00Z",
-  "run_count": 27,
-  "note": "CRT-35: Force Registry & Factory in core. 7 force types registered (drag, wander, gravity, flow-field, vortex, pointer, alignment). New AlignmentForce class. 26 new tests, 566 total. Build/lint/format clean. Branch pushed, PR needs manual creation."
+  "timestamp": "2026-06-14T03:45:00Z",
+  "run_count": 28,
+  "note": "CRT-36: Dynamic Force Serialization. JsonForcesConfig migrated to array format [{type,enabled,params}]. normalizeForces() handles backward compat (old object-slot format auto-migrates). 5 new migration tests, 567 total pass. TS builds clean. Branch pushed."
 }
