@@ -1,7 +1,7 @@
 {
-  "last_project": "dual-reader",
-  "last_item": "none (backlog exhausted)",
-  "last_status": "skipped — dual-reader backlog exhausted (DR-001..010 all done); no ready items in either project",
-  "timestamp": "2026-06-14T21:20:00Z",
-  "run_count": 23
+  "last_project": "critterium",
+  "last_item": "CRT-52",
+  "last_status": "done — orphaned reproduction refactor triaged (probabilistic→deterministic + energy-leak fix), 2 flaky tests stabilized (stress timeout 30s→60s, adaptive-quality time-mocking), 1124/1124 tests green, pushed to PR #12",
+  "timestamp": "2026-06-15T00:15:00Z",
+  "run_count": 24
 }

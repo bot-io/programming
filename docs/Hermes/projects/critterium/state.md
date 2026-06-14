@@ -1,12 +1,12 @@
 # Critterium — State
 
-**Status:** M6 — CRT-50 done (AttractorForce — point-based attraction/repulsion). 658 unit tests pass (30 new). Branch pushed.
-**Last Updated:** 2026-06-14 (run #51)
+**Status:** M6 — CRT-52 done (orphaned reproduction refactor triaged + test stabilization). Integration branch fully green with 1124 tests. PR #12 awaiting Svetlin's merge decision.
+**Last Updated:** 2026-06-15 (run #57)
 **Version:** v1.4.18
 **Active Items:** All backlog items complete. CRT-15 (blocked — needs Svetlin for on-device perf check), CRT-16 (blocked — after M4). Backlog exhausted — ready items remaining: 0.
-**Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅ CRT-21 ✅ CRT-22 ✅ CRT-23 ✅ CRT-24 ✅ CRT-25 ✅ CRT-26 ✅ CRT-27 ✅ CRT-28 ✅ CRT-29 ✅ CRT-30 ✅ CRT-31 ✅ CRT-32 ✅ CRT-33 ✅ CRT-34 ✅ CRT-35 ✅ CRT-36 ✅ CRT-37 ✅ CRT-38 ✅ CRT-39 ✅ CRT-40 ✅ CRT-41 ✅ CRT-42 ✅ CRT-43 ✅ CRT-44 ✅ CRT-45 ✅ CRT-46 ✅ CRT-47 ✅ CRT-48 ✅ CRT-49 ✅ CRT-50 ✅
+**Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅ CRT-21 ✅ CRT-22 ✅ CRT-23 ✅ CRT-24 ✅ CRT-25 ✅ CRT-26 ✅ CRT-27 ✅ CRT-28 ✅ CRT-29 ✅ CRT-30 ✅ CRT-31 ✅ CRT-32 ✅ CRT-33 ✅ CRT-34 ✅ CRT-35 ✅ CRT-36 ✅ CRT-37 ✅ CRT-38 ✅ CRT-39 ✅ CRT-40 ✅ CRT-41 ✅ CRT-42 ✅ CRT-43 ✅ CRT-44 ✅ CRT-45 ✅ CRT-46 ✅ CRT-47 ✅ CRT-48 ✅ CRT-49 ✅ CRT-50 ✅ CRT-52 ✅ (CRT-51 review-ready, awaiting merge decision)
 **Ecosystem (retrospective):** CRT-E1 ✅ CRT-E2 ✅ CRT-E3 ✅ CRT-E4 ✅ CRT-E5 ✅ CRT-E6 ✅
-**Tests:** 658 unit tests on feat/crt-50-attractor-force branch (392 core + 16 render + 250 app; includes 30 new attractor-force + registry tests). 3 e2e test files fail (pre-existing, no Playwright browser in env). Build/lint/format/typecheck all clean.
+**Tests:** 1124 unit tests on `integration/crt-35-50` branch (543 core + 20 render + 561 app). 3 e2e test files fail locally (expected — need dev server). Build/lint/format/typecheck all clean.
 **Build:** `npm run build` passes for all 3 packages
 **Lint:** ESLint v10 configured, `npm run lint` clean — zero warnings
 **Format:** Prettier `endOfLine: lf` + `.gitattributes`, `npm run format:check` clean (pre-existing config-schema.ts format warnings from CRT-36 branch chain)
@@ -21,4 +21,4 @@
 **Repo:** https://github.com/bot-io/critterium
 **Ready Items Remaining:** 0 — backlog exhausted. All 50 tracked items (CRT-1 through CRT-50) plus 6 retrospective ecosystem items are complete.
 **Backlog Status:** Complete. Only CRT-15 and CRT-16 remain blocked on user action (device verification + iOS/store readiness).
-**Merge Backlog (2026-06-14, run #56):** `main` is stuck at CRT-31. 19 items of completed work (CRT-32→50, 1124 tests green) sit on unmerged branches. PR #12 (integration CRT-32→50) is now feature-complete AND fully CI-green: all 3 CI jobs pass (build-and-test ✓, e2e ✓, android-debug-apk ✓). Run #56 fixed a critical e2e CI failure — Vite dev server crashed during esbuild pre-bundling (264 errors from Pixi.js v8 destructuring); fixed by setting `optimizeDeps.esbuildOptions.target: 'es2022'` in vite.config.ts. Open PRs #9/#10/#11 (crt-32/33/34) are superseded by PR #12. Merge-strategy decision still needed from Svetlin (Option 2 = merge PR #12 is now the clear fastest path).
+**Merge Backlog (2026-06-15, run #57):** `main` is stuck at CRT-31. 19 items of completed work (CRT-32→50, 1124 tests green) sit on unmerged branches. PR #12 (integration CRT-32→50) is now feature-complete AND fully CI-green: all 3 CI jobs pass (build-and-test ✓, e2e ✓, android-debug-apk ✓). Run #56 fixed e2e CI (Vite optimizeDeps target). Run #57 triaged orphaned reproduction refactor (probabilistic→deterministic cooldown + energy-leak fix) and stabilized two flaky tests (stress.test.ts timeout 30s→60s, adaptive-quality cooldown test time-mocking). Commits 7e053d0 + cc4b3cd pushed to PR #12. Open PRs #9/#10/#11 (crt-32/33/34) are superseded by PR #12. Merge-strategy decision still needed from Svetlin (Option 2 = merge PR #12 is now the clear fastest path).

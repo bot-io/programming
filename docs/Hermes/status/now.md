@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 23:23 Sofia**
+> Last updated: **2026-06-15 00:09 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 1%
+- **Usage:** 9%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -27,10 +27,10 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M6 — CRT-50 done (AttractorForce — point-based attraction/repulsion). 658 unit tests pass (30 new). Branch pushed.
-- **Updated:** ** 2026-06-14 (run #51)
+- **Status:** ** M6 — CRT-52 done (orphaned reproduction refactor triaged + test stabilization). Integration branch fully green with 1124 tests. PR #12 awaiting Svetlin's merge decision.
+- **Updated:** ** 2026-06-15 (run #57)
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 54/56 done
+- **Progress:** 55/57 done
 - **Last work:** Impact
 
 ### ⚪ dual-reader
