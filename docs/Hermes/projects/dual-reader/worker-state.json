@@ -1,8 +1,8 @@
 {
   "last_project": "dual-reader",
-  "last_run": "2026-06-13T19:36:00 Sofia",
+  "last_run": "2026-06-14T08:20:00 Sofia",
   "item": null,
-  "run_count": 5,
-  "outcome": "no-ready-items",
-  "note": "Dual-reader backlog fully exhausted (DR-001..DR-010 done). Critterium has no ready items either (CRT-15/16 blocked on user). No autonomous work available. SILENT — waiting for new backlog items from user."
+  "run_count": 6,
+  "outcome": "skipped-critterium-higher-priority",
+  "note": "Dual-reader backlog exhausted (DR-001..DR-010 done). Critterium has 6 ready items (CRT-45..CRT-50, P2/P3). Yielded to critterium worker per cross-project priority check."
 }
