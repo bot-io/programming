@@ -1,12 +1,12 @@
 # Critterium — State
 
-**Status:** M6 — CRT-38 done (Force Add/Remove UI). 600 unit tests pass. Branch pushed.
+**Status:** M6 — CRT-39 done (main.ts Integration Tests). 632 unit tests pass. Branch pushed.
 **Last Updated:** 2026-06-14
-**Version:** v1.4.7
-**Active Items:** CRT-39 → CRT-50 (12 ready items, P2-P3). CRT-15 (blocked — needs Svetlin for on-device perf check), CRT-16 (blocked — after M4). Next up: CRT-39 (P2, main.ts Integration Tests).
-**Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅ CRT-21 ✅ CRT-22 ✅ CRT-23 ✅ CRT-24 ✅ CRT-25 ✅ CRT-26 ✅ CRT-27 ✅ CRT-28 ✅ CRT-29 ✅ CRT-30 ✅ CRT-31 ✅ CRT-32 ✅ CRT-33 ✅ CRT-34 ✅ CRT-35 ✅ CRT-36 ✅ CRT-37 ✅ CRT-38 ✅
+**Version:** v1.4.8
+**Active Items:** CRT-40 → CRT-50 (11 ready items, P2-P3). CRT-15 (blocked — needs Svetlin for on-device perf check), CRT-16 (blocked — after M4). Next up: CRT-40 (P2, lifecycle.ts Deep Tests).
+**Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅ CRT-21 ✅ CRT-22 ✅ CRT-23 ✅ CRT-24 ✅ CRT-25 ✅ CRT-26 ✅ CRT-27 ✅ CRT-28 ✅ CRT-29 ✅ CRT-30 ✅ CRT-31 ✅ CRT-32 ✅ CRT-33 ✅ CRT-34 ✅ CRT-35 ✅ CRT-36 ✅ CRT-37 ✅ CRT-38 ✅ CRT-39 ✅
 **Ecosystem (retrospective):** CRT-E1 ✅ CRT-E2 ✅ CRT-E3 ✅ CRT-E4 ✅ CRT-E5 ✅ CRT-E6 ✅
-**Tests:** 600 unit tests (338 core + 20 render + 242 app) + 12 e2e tests (7 smoke + 4 export-import + 1 settings-stress), all pass
+**Tests:** 632 unit tests (338 core + 20 render + 274 app) + 12 e2e tests (7 smoke + 4 export-import + 1 settings-stress), all pass
 **Build:** `npm run build` passes for all 3 packages
 **Lint:** ESLint v10 configured, `npm run lint` clean — zero warnings
 **Format:** Prettier `endOfLine: lf` + `.gitattributes`, `npm run format:check` clean

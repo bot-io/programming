@@ -407,3 +407,16 @@
 - **Acceptance criteria met:** All 7 criteria satisfied. Force rows render dynamically from pipeline data with auto-generated param sliders from FORCE_TYPES paramSchema. Legacy sliders preserved as fallback.
 - **Status:** Done — branch pushed. PR creation blocked by token scope (persistent across all workers).
 - **Notes:** This completes the P1 force-system chain (CRT-35→38). Next items are P2: CRT-39 (main.ts integration tests), CRT-40 (lifecycle deep tests), CRT-41-44 (4 new presets).
+
+## 2026-06-14 CRT-39: main.ts Integration Tests
+- **Branch:** `feat/crt-39-main-integration-tests`
+- **Commit:** 584fd56
+- **What was done:**
+  1. Created `packages/app/src/main-integration.test.ts` — 884 lines, 32 integration tests across 9 describe blocks
+  2. Built a `SimContext` harness that mirrors main.ts's setup (EcosystemWorld + InteractionMatrix + PairwiseForce + SpatialHashGrid + force pipeline) and a `simStep()` function replicating the main.ts loop body (applyForces → processStamina → world.step → processLifecycle → processEating → processReproduction)
+  3. Since main.ts is a browser-coupled bootstrap script (PixiJS renderer, DOM, rAF) with no exports, tests replicate its orchestration patterns via core library APIs directly — same proven approach as existing main.test.ts
+  4. Coverage: Force pipeline (6 tests), Preset loading (6, all 10 presets verified), Reseed commits sliders (3, regression for v1.4.0 bug from CRT-22), Reset safety (3), Extinction auto-reseed (3), Population overflow (2), Config serialization round-trip (4), Determinism (1), Full simulation stability (4)
+- **Test results:** 632/632 pass (21 test files, 14.52s). TypeScript clean. ESLint clean. Prettier clean. `npm run build` clean.
+- **Acceptance criteria met:** All 6 criteria + test requirements satisfied (32 tests exceeds 20+ target, each self-contained, happy + edge paths covered).
+- **Status:** Done — branch pushed. PR creation blocked by token scope (persistent issue across all workers).
+- **Notes:** Next items: CRT-40 (P2, lifecycle.ts deep tests), CRT-41-44 (4 new presets).

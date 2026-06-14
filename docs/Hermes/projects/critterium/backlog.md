@@ -644,25 +644,29 @@
 - **Dependencies:** CRT-35 (FORCE_TYPES metadata), CRT-36 (dynamic config), CRT-37 (force pipeline + add/remove helpers)
 
 ### CRT-39 main.ts Integration Tests
-- **Status:** ready
+- **Status:** done
 - **Priority:** P2
 - **Milestone:** M6
 - **Description:** Add comprehensive integration tests for `main.ts` covering the force pipeline, preset loading lifecycle, the v1.4.0 reseed-commits-sliders bug fix, reset safety, and extinction auto-reseed. These tests exercise the full main-module orchestration layer (config → world → forces → lifecycle → render hooks) rather than individual units. Target 20+ new tests.
 - **Files to create/modify:**
   - CREATE: `packages/app/src/main-integration.test.ts` (preferred) OR expand `packages/app/src/main.test.ts`
 - **Acceptance Criteria:**
-  1. 20+ new integration tests added, all passing
-  2. Force pipeline integration: add a force via the pipeline, step the simulation, verify particle velocity changes as expected
-  3. Preset loading lifecycle: load a preset, verify species config, interaction matrix, and active forces all match the preset definition
-  4. Reseed commits slider values: change a species count slider, call reseed, verify the world respawns with the slider value (regression test for v1.4.0 bug fix from CRT-22)
-  5. Reset safety: load a multi-species preset, call reset, verify no crash and world returns to initial state
-  6. Extinction auto-reseed: simulate total species extinction, verify auto-reseed triggers and repopulates
+  1. ~~20+ new integration tests added, all passing~~ ✅ 32 tests
+  2. ~~Force pipeline integration: add a force via the pipeline, step the simulation, verify particle velocity changes as expected~~ ✅
+  3. ~~Preset loading lifecycle: load a preset, verify species config, interaction matrix, and active forces all match the preset definition~~ ✅ All 10 presets verified
+  4. ~~Reseed commits slider values: change a species count slider, call reseed, verify the world respawns with the slider value (regression test for v1.4.0 bug fix from CRT-22)~~ ✅
+  5. ~~Reset safety: load a multi-species preset, call reset, verify no crash and world returns to initial state~~ ✅
+  6. ~~Extinction auto-reseed: simulate total species extinction, verify auto-reseed triggers and repopulates~~ ✅
 - **Test Requirements:**
-  - Minimum 20 new tests (ideally 25+)
-  - Each test is self-contained (creates its own main instance / world)
-  - Cover both happy path and edge conditions (empty forces, single species, etc.)
+  - Minimum 20 new tests (ideally 25+) ✅ 32 tests
+  - Each test is self-contained (creates its own main instance / world) ✅
+  - Cover both happy path and edge conditions (empty forces, single species, etc.) ✅
 - **Test File:** `packages/app/src/main-integration.test.ts`
 - **Dependencies:** CRT-37 (force pipeline) for force-integration tests; otherwise standalone
+- **Branch:** `feat/crt-39-main-integration-tests` pushed
+- **Commit:** 584fd56
+- **Tests:** 632 total (600 existing + 32 new), all pass. Build, lint, typecheck, format all clean.
+- **Notes:** Since main.ts is a browser-coupled bootstrap script (PixiJS renderer, DOM, rAF) with no exports, integration tests replicate its orchestration patterns using the core library APIs directly — same proven approach as the existing main.test.ts. Created a SimContext harness that mirrors main.ts's setup (EcosystemWorld + InteractionMatrix + PairwiseForce + SpatialHashGrid + force pipeline) and a simStep() function that replicates the main.ts loop body (applyForces → processStamina → world.step → processLifecycle → processEating → processReproduction). Coverage spans 9 describe blocks: force pipeline (6), preset loading (6), reseed commits sliders (3), reset safety (3), extinction auto-reseed (3), population overflow (2), config serialization round-trip (4), determinism (1), full simulation stability (4).
 
 ### CRT-40 lifecycle.ts Deep Tests
 - **Status:** ready
