@@ -589,7 +589,7 @@
 - **Notes:** Implemented `JsonForceEntry` interface + `JsonForcesConfig = JsonForceEntry[]` type alias. `normalizeForces()` function handles backward compat — accepts old object-slot format (`{ drag?: ..., wander?: ..., flowField?: ... }`), new array format, and undefined/null. Old slot names mapped to canonical type IDs (flowField→flow-field). Added 5 new migration/normalization tests (old format migration, slot name mapping, null/undefined defaults, invalid entry filtering, new array format deserialization). All 10 presets migrated to array format. 567 tests pass, TS builds clean for both packages.
 
 ### CRT-37 Wire ForceRegistry into main.ts
-- **Status:** ready
+- **Status:** done
 - **Priority:** P1
 - **Milestone:** M6
 - **Description:** Replace the hardcoded `dragForce` / `wanderForce` / `pointerForce` / etc. variables in `main.ts` with a single `ForcePipeline` (an ordered array of `Force` instances built from the registry). The `applyForces()` step iterates the pipeline instead of running hardcoded `if (config.forces.drag)` checks. Force add/remove at runtime uses the same serialize-and-reload pattern already used for species (serialize config → mutate → deserialize → rebuild pipeline).
@@ -611,6 +611,9 @@
   - All pre-existing `main.test.ts` tests pass
 - **Test File:** expand `packages/app/src/main.test.ts`
 - **Dependencies:** CRT-35 (ForceRegistry), CRT-36 (dynamic force config format)
+- **Branch:** `feat/crt-37-force-pipeline` pushed
+- **Commit:** 97eada5
+- **Notes:** Replaced all hardcoded force variables (`dragForce`, `wanderForce`, `pointerForce`, `dragEnabled`, `wanderEnabled`, `pointerEnabled`) with a `forcePipeline: PipelineEntry[]` initialized via `createForce()` from the registry. Added 8 pipeline helper functions: `findForceEntry`, `addForce`, `removeForce`, `setForceEnabled`, `setForceParam`, `getForceParam`, `getPipelineForceEntries`, `rebuildPipelineFromConfig`. Rewrote `applyForces()` to iterate pipeline entries checking `enabled` flag. Updated all consumers: `getCurrentConfig()` (serialization), pointer event handlers (via `getPointerForce()`/`isPointerEnabled()`), `onForceToggle`/`onForceChange` (pipeline index lookups), `onLoadBuiltinPreset` (via `rebuildPipelineFromConfig()`), pending configs for add/delete species, `resetAllSliders` forceValues, and `onReset` slider sync. Exposed `window.__critterium` debug API for runtime add/remove/toggle/param-update (satisfies CRT-37 runtime management requirement). 567 unit tests pass, TypeScript compiles cleanly (zero errors), ESLint clean.
 
 ### CRT-38 Force Add/Remove UI
 - **Status:** ready

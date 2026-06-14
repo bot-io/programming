@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 03:42 Sofia**
+> Last updated: **2026-06-14 04:24 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 1%
+- **Usage:** 13%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -14,9 +14,9 @@
 
 ## 🤖 Overnight Worker
 - **Last run:** never
-- **Last project:** critterium
-- **Last item:** CRT-36
-- **Total runs:** 28
+- **Last project:** dual-reader
+- **Last item:** skip
+- **Total runs:** 29
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M4/M6 — CRT-36 done (Dynamic Force Serialization). 567 unit tests pass. Branch pushed.
+- **Status:** ** M4/M6 — CRT-37 done (Wire ForceRegistry into main.ts). 567 unit tests pass. Branch pushed.
 - **Updated:** ** 2026-06-14
-- **Ready:** CRT-37, CRT-38, CRT-39, CRT-40, CRT-41, CRT-42, CRT-43, CRT-44, CRT-45, CRT-46, CRT-47, CRT-48, CRT-49, CRT-50
+- **Ready:** CRT-38, CRT-39, CRT-40, CRT-41, CRT-42, CRT-43, CRT-44, CRT-45, CRT-46, CRT-47, CRT-48, CRT-49, CRT-50
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 40/56 done
+- **Progress:** 41/56 done
 - **Last work:** 2026-06-14 CRT-36: Dynamic Force Serialization
 
 ### ⚪ dual-reader
