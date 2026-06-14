@@ -685,3 +685,36 @@ Spotted an uncommitted modification to `packages/core/src/config-schema.ts` (`id
 
 ### Blocked
 None.
+
+## 2026-06-14 CRT-49: Boids Flocking Force
+- **Branch:** `feat/crt-49-boids-force` (off `feat/crt-38-force-add-remove-ui` tip — contains ForceRegistry from CRT-35→38 chain)
+- **Commits:** `731b8cd` (BoidsForce class + registration), `9238afe` (comprehensive test suite + registry count updates)
+- **What was done:**
+  1. Quota at 1%. No locks active. Dual-reader all done. CRT-49 was highest-priority ready critterium item (P3).
+  2. Implemented `BoidsForce` class in `packages/core/src/index.ts` — classic Reynolds flocking with three sub-behaviors combined into a single Force:
+     - **Separation:** particles within `separationRadius` repel each other with `separationStrength`
+     - **Alignment:** particles within `alignmentRadius` steer toward average heading with `alignmentStrength`
+     - **Cohesion:** particles within `cohesionRadius` steer toward group centroid with `cohesionStrength`
+  3. Each sub-behavior queries neighbors via the existing SpatialHashGrid (O(n)). Velocity buffers pre-allocated for zero hot-loop allocation.
+  4. Registered as type `'boids'` in `force-registry.ts` with full paramSchema (7 params: separationRadius/Strength, alignmentRadius/Strength, cohesionRadius/Strength, crossType). Now 8 built-in force types.
+  5. `crossType` param (default false) allows cross-species flocking when enabled.
+  6. Created `packages/core/src/boids-force.test.ts` — 19 comprehensive tests:
+     - Constructor + default params (2)
+     - Separation: two close particles move apart, magnitude scales with strength, dead particles ignored (3)
+     - Alignment: divergent headings converge, param sensitivity (2)
+     - Cohesion: scattered particles move toward centroid, param sensitivity (2)
+     - Combined behavior: all three sub-behaviors active simultaneously, asymmetric arrangement (1)
+     - Edge cases: zero particles, single particle, no neighbors (3)
+     - crossType=false isolates species, crossType=true allows inter-species (2)
+     - Registry integration: createForce returns BoidsForce, descriptor metadata (2)
+     - Velocity buffer reuse: no re-allocation across steps (1)
+     - Serialization round-trip (1)
+  7. Updated force-registry.test.ts: type count 7→8, added boids createForce + descriptor tests
+  8. Updated main.test.ts: force type count 7→8, added `expect(typeIds).toContain('boids')`
+- **Test fixes during development:**
+  - Combined behavior test initially failed due to symmetric particle arrangement causing force cancellation (separation exactly cancels alignment+cohesion in 2-particle symmetric configs). Fixed with asymmetric positions and velocities.
+  - crossType=true test initially failed for the same symmetric cancellation reason. Fixed by using separation-only params (alignment/cohesion strength = 0) to isolate the separation behavior.
+- **No UI code changes needed:** controls.ts "Add Force" dropdown dynamically reads from `listForceTypes()` via `descriptors` array, so 'boids' auto-populates.
+- **Tests:** 628 unit tests pass (22 test files). 3 e2e tests fail (pre-existing, no Playwright browser in env). Build, typecheck, lint, format all clean.
+- **Verification:** `npm run build` clean, `npx tsc --noEmit` clean, `npm run lint` clean, `prettier --check` clean on modified files.
+- **Status:** Done — branch pushed. PR needs manual creation (token scope).

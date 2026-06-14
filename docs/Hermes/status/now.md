@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 13:36 Sofia**
+> Last updated: **2026-06-14 14:08 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -27,12 +27,12 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M6 — CRT-48 done (Force Isolation Tests). 366 core tests pass. Branch pushed.
+- **Status:** ** M6 — CRT-49 done (Boids Flocking Force). 628 unit tests pass (19 new). Branch pushed.
 - **Updated:** ** 2026-06-14
-- **Ready:** CRT-49, CRT-50
+- **Ready:** CRT-50
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 52/56 done
-- **Last work:** Blocked
+- **Progress:** 53/56 done
+- **Last work:** 2026-06-14 CRT-49: Boids Flocking Force
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user

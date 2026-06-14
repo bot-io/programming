@@ -914,36 +914,30 @@
 - **Notes:** Created `packages/core/src/force-isolation.test.ts` with 25 tests across 8 describe blocks: (1) GravityForce (3) — linear vy growth (accel*dt/step), vx untouched, negative accel = upward. (2) DragForce (3) — exponential decay `(1-coeff*dt)^N`, coeff=0 no-op, large-dt clamp to 0 prevents velocity inversion. (3) FlowFieldForce (4) — uniform angle=0→+x, angle=π/2→+y, custom field matches fn output, turbulence non-zero. (4) VortexForce isolated (4) — CCW tangential direction, inward radial pull, radius cutoff, exact-center skip. (5) VortexForce falloff modes (3) — linear/inverse/constant verified at 2 distances each via integrated |Δv|. (6) InteractionMatrix.forceAtDistance (4) — linear/inverse/constant pure-function magnitudes + boundary (0 at dist≥radius and dist≤0). (7) Zero-particle world (1) — all 5 global forces apply without throwing. (8) Dead-particle handling (3) — PairwiseForce respects `grid.rebuild(world, alive)`: all-alive control (repulsion observed), all-dead (empty grid → zero velocity change), one-dead exerts no repulsion on alive neighbour. **Architecture note:** global forces (gravity/drag/vortex/flow-field/wander) iterate `world.count` by design and don't track per-particle alive state — they are "field" forces. Per-particle alive/dead semantics live in the neighbor-based PairwiseForce, which only "sees" particles present in the spatial hash grid (rebuilt with an optional alive array). The dead-particle tests exercise that path. Used Float32-appropriate tolerance (4 decimals) for the 10-step gravity accumulation test (single-precision rounding ~3.8e-6). Spotted an orphaned uncommitted `config-schema.ts` change (`idleDrainPerSec` clamp 0→-1000) left by a concurrent session — left untouched, not part of CRT-48.
 
 ### CRT-49 Boids Flocking Force
-- **Status:** ready
+- **Status:** done
 - **Priority:** P3
 - **Milestone:** M6
 - **Description:** Implement a new `BoidsForce` class that combines the three classic Reynolds flocking behaviors — separation (short-range repulsion), alignment (match neighbor heading), and cohesion (move toward group center) — into a single configurable force. Uses the existing spatial hash grid for O(n) neighbor queries. Each sub-behavior has independent radius and strength parameters. Registered in the `ForceRegistry` from CRT-35 as type `'boids'`.
-- **Files to create/modify:**
-  - CREATE: `packages/core/src/boids-force.ts` (or add to `index.ts` if convention prefers single-file)
-  - CREATE: `packages/core/src/boids-force.test.ts`
-  - MODIFY: `packages/core/src/force-registry.ts` — register `'boids'` type
-  - MODIFY: `packages/core/src/index.ts` — export `BoidsForce`
-  - MODIFY: `packages/app/src/controls.ts` — include `'boids'` in the Add Force dropdown (if CRT-38 done)
+- **Files modified:**
+  - CREATED: `packages/core/src/boids-force.test.ts` (19 tests)
+  - MODIFIED: `packages/core/src/index.ts` — added BoidsParams interface + BoidsForce class
+  - MODIFIED: `packages/core/src/force-registry.ts` — registered `'boids'` type with 7-param schema
+  - MODIFIED: `packages/core/src/force-registry.test.ts` — updated type count 7→8, added boids createForce + descriptor tests
+  - MODIFIED: `packages/app/src/main.test.ts` — updated force type count 7→8, added boids assertion
 - **Acceptance Criteria:**
-  1. `BoidsForce` class implements the `Force` interface with `id`, `apply()`, and serialization support
-  2. Separation: particles within `separationRadius` repel each other with `separationStrength` — verify two close particles move apart
-  3. Alignment: particles within `alignmentRadius` steer toward average heading with `alignmentStrength` — verify headings converge over steps
-  4. Cohesion: particles within `cohesionRadius` steer toward group center with `cohesionStrength` — verify particles move toward centroid
-  5. Neighbor queries use the spatial hash grid (O(n), not O(n²))
-  6. Params: `separationRadius`, `separationStrength`, `alignmentRadius`, `alignmentStrength`, `cohesionRadius`, `cohesionStrength` — all configurable via constructor and serialized
-  7. Registered in `ForceRegistry` as type `'boids'` with full `FORCE_TYPES` metadata
-  8. Force operates within same species (cross-species flocking optional via param, default off)
-  9. All tests pass; existing tests unaffected
-- **Test Requirements:**
-  - Separation test: two particles within separationRadius move apart over N steps
-  - Alignment test: particles with divergent headings converge toward average heading
-  - Cohesion test: scattered particles move toward their group centroid
-  - Param sensitivity test: increasing separationStrength increases repulsion velocity
-  - Zero-particle and single-particle tests (no crash, no force applied)
-  - Registry test: `registry.create('boids', {...})` returns a `BoidsForce` instance
-  - Minimum 8 new tests
-- **Test File:** `packages/core/src/boids-force.test.ts`
+  1. ✅ `BoidsForce` class implements the `Force` interface with `id`, `apply()`, and serialization support
+  2. ✅ Separation: particles within `separationRadius` repel each other with `separationStrength` — verified two close particles move apart
+  3. ✅ Alignment: particles within `alignmentRadius` steer toward average heading with `alignmentStrength` — verified headings converge over steps
+  4. ✅ Cohesion: particles within `cohesionRadius` steer toward group center with `cohesionStrength` — verified particles move toward centroid
+  5. ✅ Neighbor queries use the spatial hash grid (O(n), not O(n²))
+  6. ✅ Params: `separationRadius`, `separationStrength`, `alignmentRadius`, `alignmentStrength`, `cohesionRadius`, `cohesionStrength`, `crossType` — all configurable via constructor and serialized
+  7. ✅ Registered in `ForceRegistry` as type `'boids'` with full paramSchema metadata (8th built-in force type)
+  8. ✅ Force operates within same species by default (cross-species flocking via `crossType` param)
+  9. ✅ All 628 unit tests pass; existing tests updated for new type count
+- **Test File:** `packages/core/src/boids-force.test.ts` — 19 tests
+- **Branch:** `feat/crt-49-boids-force` pushed
 - **Dependencies:** CRT-35 (register in ForceRegistry); spatial hash grid (CRT-3, already done)
+- **Notes:** BoidsForce uses per-behavior independent radii (separation=25, alignment=60, cohesion=60) and strengths (separation=50, alignment=30, cohesion=20). Velocity buffers pre-allocated for zero hot-loop allocation. Add Force dropdown auto-populates 'boids' via listForceTypes() — no UI code changes needed.
 
 ### CRT-50 Magnetic / Attraction Point Force
 - **Status:** ready
