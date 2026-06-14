@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 06:13 Sofia**
+> Last updated: **2026-06-14 06:19 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -14,9 +14,9 @@
 
 ## 🤖 Overnight Worker
 - **Last run:** never
-- **Last project:** critterium
-- **Last item:** CRT-41
-- **Total runs:** 35
+- **Last project:** dual-reader
+- **Last item:** DR-010
+- **Total runs:** 36
 
 ## 📁 Projects
 
