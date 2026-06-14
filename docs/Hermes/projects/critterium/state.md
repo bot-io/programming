@@ -1,12 +1,12 @@
 # Critterium — State
 
-**Status:** M6 — CRT-44 done (Symbiosis preset). 763 unit tests pass. Branch pushed.
+**Status:** M6 — CRT-45 done (Stress Test Suite). 777 unit tests pass. Branch pushed.
 **Last Updated:** 2026-06-14
-**Version:** v1.4.12
-**Active Items:** CRT-45 → CRT-50 (6 ready items, P2-P3). CRT-15 (blocked — needs Svetlin for on-device perf check), CRT-16 (blocked — after M4). Next up: CRT-45 (P2, Stress Test Suite).
-**Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅ CRT-21 ✅ CRT-22 ✅ CRT-23 ✅ CRT-24 ✅ CRT-25 ✅ CRT-26 ✅ CRT-27 ✅ CRT-28 ✅ CRT-29 ✅ CRT-30 ✅ CRT-31 ✅ CRT-32 ✅ CRT-33 ✅ CRT-34 ✅ CRT-35 ✅ CRT-36 ✅ CRT-37 ✅ CRT-38 ✅ CRT-39 ✅ CRT-40 ✅ CRT-41 ✅ CRT-42 ✅ CRT-43 ✅ CRT-44 ✅
+**Version:** v1.4.13
+**Active Items:** CRT-46 → CRT-50 (5 ready items, P2-P3). CRT-15 (blocked — needs Svetlin for on-device perf check), CRT-16 (blocked — after M4). Next up: CRT-46 (P2, Edge Case Test Suite).
+**Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅ CRT-21 ✅ CRT-22 ✅ CRT-23 ✅ CRT-24 ✅ CRT-25 ✅ CRT-26 ✅ CRT-27 ✅ CRT-28 ✅ CRT-29 ✅ CRT-30 ✅ CRT-31 ✅ CRT-32 ✅ CRT-33 ✅ CRT-34 ✅ CRT-35 ✅ CRT-36 ✅ CRT-37 ✅ CRT-38 ✅ CRT-39 ✅ CRT-40 ✅ CRT-41 ✅ CRT-42 ✅ CRT-43 ✅ CRT-44 ✅ CRT-45 ✅
 **Ecosystem (retrospective):** CRT-E1 ✅ CRT-E2 ✅ CRT-E3 ✅ CRT-E4 ✅ CRT-E5 ✅ CRT-E6 ✅
-**Tests:** 763 unit tests (370 core + 16 render + 377 app) + 12 e2e tests (7 smoke + 4 export-import + 1 settings-stress), all pass
+**Tests:** 777 unit tests (384 core + 16 render + 377 app) + 12 e2e tests (7 smoke + 4 export-import + 1 settings-stress), all pass
 **Build:** `npm run build` passes for all 3 packages
 **Lint:** ESLint v10 configured, `npm run lint` clean — zero warnings
 **Format:** Prettier `endOfLine: lf` + `.gitattributes`, `npm run format:check` clean
@@ -20,5 +20,5 @@
 **Open Questions:** CRT-15 criterion 3 needs Svetlin to install debug APK and verify 60fps on device.
 **Repo:** https://github.com/bot-io/critterium
 **D9 Preset Wishlist:** Simple Particles✅ Predator/Prey✅ Predator/Prey/Vegetation✅ Rock/Paper/Scissors✅ Birds✅ Fishes✅ — ALL COMPLETE. "Predator/Prey/Sickness Center" blocked (infection feature removed).
-**Ready Items Remaining:** 6 (CRT-45 → CRT-50)
-**Backlog Status:** 6 ready items queued (CRT-45 → CRT-50) — stress/edge-case test suites (CRT-45-46, P2), config/force hardening tests (CRT-47-48, P3), and 2 new force types (CRT-49-50, P3). P1 chain (CRT-35→38) fully done. Next up: CRT-45 (P2, Stress Test Suite). CRT-15 and CRT-16 remain blocked on user action (device verification + iOS/store readiness).
+**Ready Items Remaining:** 5 (CRT-46 → CRT-50)
+**Backlog Status:** 5 ready items queued (CRT-46 → CRT-50) — edge-case test suite (CRT-46, P2), config/force hardening tests (CRT-47-48, P3), and 2 new force types (CRT-49-50, P3). P1 chain (CRT-35→38) fully done. Next up: CRT-46 (P2, Edge Case Test Suite). CRT-15 and CRT-16 remain blocked on user action (device verification + iOS/store readiness).

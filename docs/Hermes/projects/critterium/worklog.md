@@ -535,3 +535,38 @@
   - No eating despite ecosystem mode: preset is designed as a "living reef" visual showcase. Energy parameters tuned (low idle drain 0.1-0.5, high maxAge 60-200s, fast Algae repro 3s) so populations sustain for several minutes through reproduction before gradual decline.
   - Stashed orphaned persistence.ts changes from prior interactive session: exportConfig refactored from dynamic import + Cache dir to top-level import + Documents dir + base64. Also capacitor.build.gradle modified. Noted for later triage (potential CRT for Capacitor export path improvement).
 - **Status:** Done - branch pushed. PR needs manual creation (token scope).
+
+
+## CRT-45 — Stress Test Suite (2026-06-14, run #39)
+
+**Status:** done
+**Branch:** feat/crt-45-stress-suite (commit 586d423)
+**Tests:** 14 new stress tests in packages/core/src/stress.test.ts (777 total, all pass)
+
+### What was done
+Created a dedicated stress test suite covering 5 categories per the acceptance criteria:
+
+1. **Max-capacity particle stress (3 tests)** — 800 particles (4 species, populationCap 800) running the full force pipeline (PairwiseForce with a 4-type circular chase matrix + DragForce + WanderForce + GravityForce + FlowFieldForce + VortexForce + AlignmentForce) for 120 steps. No crash, no NaN. A second test instantiates ALL 7 registry force types (getRegisteredTypes filtered to exclude pointer) on 800 particles for 50 steps. A third test uses aggressive reproduction (maxEnergy 1000, reproCost 10, cooldown 1s, immortal) and verifies aliveCount never exceeds the 800 cap.
+
+2. **Rapid species add/remove cycles (3 tests)** — 5 add+reseed cycles (each adds a species and rebuilds the world), 5 remove+reseed cycles (each drops a species), and 5 alternating add/remove cycles. Each cycle steps the sim and verifies: aliveCount matches expected sum, all world.type values are within the current species count, and highWaterMark has no orphaned dead slots.
+
+3. **Rapid force pipeline toggle (3 tests)** — 100 iterations toggling all 6 forces (drag, wander, gravity, flow-field, vortex, alignment) on/off via registry createForce; 100 iterations toggling a single VortexForce; and 100 iterations of rapid add/remove-all verifying simTime advances by exactly 200 steps.
+
+4. **Config serialization round-trip (2 tests)** — 10 species + 7 forces (all registered types including pointer) through serializeConfig then JSON.stringify then JSON.parse then deserializeConfig, verifying force types preserved in order and 10x10 interaction matrix dimensions. A second test verifies the 10x10 matrix structure round-trips correctly.
+
+5. **Memory stability over 10,000 steps (3 tests)** — 10k steps with pairwise + drag + stamina + lifecycle + periodic reproduction, verifying world arrays never exceed populationCap, eco.capacity unchanged, eco arrays stay at cap size, aliveCount le cap, no NaN, and simTime equals 10000 times DT. A stable-population variant (immortal, zero-cost) verifies zero array growth. A wrap-boundary variant verifies all particles stay in-bounds after 10k steps.
+
+### Key findings
+- PairwiseForce is NOT a Force interface implementor — it has apply(world, grid, dt) but no id/params. The stress pipeline applies it separately from the Force-interface forces (matching main.ts architecture). The registry forces (drag, wander, etc.) do implement Force.
+- Memory invariant confirmed: EcosystemWorld.ensureWorldCapacity only grows world arrays up to populationCap (spawn returns -1 if at cap). EcosystemState arrays are allocated to populationCap at construction and never grow. This is the core stability guarantee verified by the 10k-step test.
+- 10k-step performance: ~10s for 300 particles with pairwise + drag + lifecycle + periodic reproduction (within 30s vitest timeout).
+- Initial test failure fixed: the alternating add/remove test assumed species accumulation across cycles, but the REMOVE step resets the list to Base each cycle. Fixed expectations to verify the correct per-cycle counts (150 after add, 100 after remove).
+
+### Quality gates
+- Build: clean (all 3 packages)
+- Lint: zero warnings
+- Format: Prettier clean (fixed one formatting pass on the new file)
+- 777 unit tests pass, 0 failures
+
+### Blocked
+PR creation blocked by GitHub token scope (Resource not accessible by personal access token). Branch pushed; PR needs manual creation.

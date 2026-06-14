@@ -796,7 +796,7 @@
 - **Notes:** Three-species peaceful reef preset. Algae (tiny, maxSpeed 30, fast 3s repro cooldown, self-cohesion +12). Coral (stationary-leaning, maxSpeed 5 with initialSpeed 0 following Grasslands/Coral Reef convention to avoid div-by-zero in movement cost, longest-lived at 200s maxAge, null self-interaction). Cleaner Shrimp (fast, maxSpeed 90, seeks coral +40, self-cohesion +18). Interaction matrix: Algae↔Coral symmetric mutual attraction +30 r90 (the only symmetric pair). All entries positive or null — no negative/repel in matrix (universal short-range repulsion is engine-level). No predation: all canEat empty, all energyGainPerPrey zero. Species given generous energy + low idle drain + long maxAge so the reef stays lively for several minutes without eating (same approach as Tornado Alley). Forces: mild drag (0.7) + gentle wander (20, 1.5). populationCap 400, total initial pop 300. PRESET_NAMES count 13→14. Also fixed pre-existing Prettier formatting issues in config-schema.ts and config-schema.test.ts (left over from CRT-36 branch). Stashed orphaned persistence.ts + capacitor.build.gradle changes from prior interactive session for later triage.
 
 ### CRT-45 Stress Test Suite
-- **Status:** ready
+- **Status:** done
 - **Priority:** P2
 - **Milestone:** M6
 - **Description:** Add a dedicated stress test suite that verifies the simulation remains stable and leak-free under heavy load and rapid mutation. Tests cover max-capacity particle counts with the full force pipeline, rapid species add/remove cycles, rapid force toggling, max-size config serialization, and memory stability over 10,000 simulation steps. These tests protect against performance regressions and allocation leaks.
@@ -818,6 +818,10 @@
   - Use generous timeouts where needed but verify completion
 - **Test File:** `packages/core/src/stress.test.ts`
 - **Dependencies:** CRT-37 (force pipeline) for toggle tests; otherwise uses existing World/force APIs
+- **Branch:** `feat/crt-45-stress-suite` pushed
+- **Commit:** 586d423
+- **Tests:** 777 total (384 core + 16 render + 377 app), 14 new stress tests, all pass
+- **Notes:** Created `packages/core/src/stress.test.ts` with 14 tests across 5 describe blocks: (1) max-capacity particles — 800 particles with full force pipeline (PairwiseForce + DragForce + WanderForce + GravityForce + FlowFieldForce + VortexForce + AlignmentForce) for 120 steps; all 7 registry force types; aggressive reproduction never exceeds cap. (2) rapid species add/remove — 5 add+reseed, 5 remove+reseed, and 5 alternating cycles verifying consistent aliveCount, valid type indices, and no orphaned dead slots. (3) rapid force pipeline toggle — 100 iterations of toggling all 6 forces on/off; single-force toggle 100x; rapid add/remove preserves simTime. (4) config serialization round-trip — 10 species + 7 forces through serializeConfig → JSON.stringify → JSON.parse → deserializeConfig, verifying force types preserved in order and 10×10 matrix dimensions. (5) memory stability — 10,000-step runs verifying world arrays never exceed populationCap, eco arrays stay at cap size, no NaN/Infinity, and wrap boundaries keep all particles in-bounds. PR creation blocked by token scope (same as all prior workers).
 
 ### CRT-46 Edge Case Test Suite
 - **Status:** ready
