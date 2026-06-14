@@ -1,12 +1,12 @@
 # Critterium — State
 
-**Status:** M6 — CRT-39 done (main.ts Integration Tests). 632 unit tests pass. Branch pushed.
+**Status:** M6 — CRT-40 done (lifecycle.ts Deep Tests). 668 unit tests pass. Branch pushed.
 **Last Updated:** 2026-06-14
 **Version:** v1.4.8
-**Active Items:** CRT-40 → CRT-50 (11 ready items, P2-P3). CRT-15 (blocked — needs Svetlin for on-device perf check), CRT-16 (blocked — after M4). Next up: CRT-40 (P2, lifecycle.ts Deep Tests).
-**Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅ CRT-21 ✅ CRT-22 ✅ CRT-23 ✅ CRT-24 ✅ CRT-25 ✅ CRT-26 ✅ CRT-27 ✅ CRT-28 ✅ CRT-29 ✅ CRT-30 ✅ CRT-31 ✅ CRT-32 ✅ CRT-33 ✅ CRT-34 ✅ CRT-35 ✅ CRT-36 ✅ CRT-37 ✅ CRT-38 ✅ CRT-39 ✅
+**Active Items:** CRT-41 → CRT-50 (10 ready items, P2-P3). CRT-15 (blocked — needs Svetlin for on-device perf check), CRT-16 (blocked — after M4). Next up: CRT-41 (P2, Coral Reef preset).
+**Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅ CRT-21 ✅ CRT-22 ✅ CRT-23 ✅ CRT-24 ✅ CRT-25 ✅ CRT-26 ✅ CRT-27 ✅ CRT-28 ✅ CRT-29 ✅ CRT-30 ✅ CRT-31 ✅ CRT-32 ✅ CRT-33 ✅ CRT-34 ✅ CRT-35 ✅ CRT-36 ✅ CRT-37 ✅ CRT-38 ✅ CRT-39 ✅ CRT-40 ✅
 **Ecosystem (retrospective):** CRT-E1 ✅ CRT-E2 ✅ CRT-E3 ✅ CRT-E4 ✅ CRT-E5 ✅ CRT-E6 ✅
-**Tests:** 632 unit tests (338 core + 20 render + 274 app) + 12 e2e tests (7 smoke + 4 export-import + 1 settings-stress), all pass
+**Tests:** 668 unit tests (338 core + 20 render + 274 app) + 12 e2e tests (7 smoke + 4 export-import + 1 settings-stress), all pass
 **Build:** `npm run build` passes for all 3 packages
 **Lint:** ESLint v10 configured, `npm run lint` clean — zero warnings
 **Format:** Prettier `endOfLine: lf` + `.gitattributes`, `npm run format:check` clean
@@ -20,5 +20,5 @@
 **Open Questions:** CRT-15 criterion 3 needs Svetlin to install debug APK and verify 60fps on device.
 **Repo:** https://github.com/bot-io/critterium
 **D9 Preset Wishlist:** Simple Particles✅ Predator/Prey✅ Predator/Prey/Vegetation✅ Rock/Paper/Scissors✅ Birds✅ Fishes✅ — ALL COMPLETE. "Predator/Prey/Sickness Center" blocked (infection feature removed).
-**Ready Items Remaining:** 12 (CRT-39 → CRT-50)
-**Backlog Status:** 12 ready items queued (CRT-39 → CRT-50) — integration/deep tests (CRT-39-40, P2), 4 new presets (CRT-41-44, P2), stress/edge-case test suites (CRT-45-46, P2), config/force hardening tests (CRT-47-48, P3), and 2 new force types (CRT-49-50, P3). P1 chain (CRT-35→38) fully done. Next up: CRT-39 (P2, main.ts integration tests). CRT-15 and CRT-16 remain blocked on user action (device verification + iOS/store readiness).
+**Ready Items Remaining:** 10 (CRT-41 → CRT-50)
+**Backlog Status:** 10 ready items queued (CRT-41 → CRT-50) — 4 new presets (CRT-41-44, P2), stress/edge-case test suites (CRT-45-46, P2), config/force hardening tests (CRT-47-48, P3), and 2 new force types (CRT-49-50, P3). P1 chain (CRT-35→38) fully done. Next up: CRT-41 (P2, Coral Reef preset). CRT-15 and CRT-16 remain blocked on user action (device verification + iOS/store readiness).

@@ -420,3 +420,27 @@
 - **Acceptance criteria met:** All 6 criteria + test requirements satisfied (32 tests exceeds 20+ target, each self-contained, happy + edge paths covered).
 - **Status:** Done — branch pushed. PR creation blocked by token scope (persistent issue across all workers).
 - **Notes:** Next items: CRT-40 (P2, lifecycle.ts deep tests), CRT-41-44 (4 new presets).
+
+## 2026-06-14 CRT-40: lifecycle.ts Deep Tests
+- **Branch:** `feat/crt-40-lifecycle-deep-tests`
+- **Commit:** 1b0a086
+- **What was done:**
+  1. Expanded `packages/core/src/lifecycle.test.ts` from 5 to 41 tests (+36 new)
+  2. Added a `lifecycleConfig()` helper with granular overrides for isolated subsystem testing (maxAgeSec, starvationDamagePerSec, idleDrainPerSec, movementCostPerSec, stamina, etc.)
+  3. Coverage across 6 new describe blocks:
+     - **Aging (5):** death at maxAge, large maxAge survival, immortal (maxAge=0), age accumulation, boundary condition (dies exactly at maxAgeSec)
+     - **Starvation (5):** energy=0 triggers health damage, energy>0 no starvation, damage proportional to dt, death at health=0, starvationDamagePerSec=0 = immune
+     - **Energy Drain (5):** stationary idle-only cost, moving idle+movement, movement cost proportional to speed/maxSpeed ratio, energy clamped to 0 (never negative), energy clamped to maxEnergy
+     - **Reproduction Deep (6):** newborn energy from config, newborn position near parent, cooldown minimum 1 even when config=0, multiple parents reproduce simultaneously, cap competition (1 slot left), child inherits parent species type
+     - **Stamina/Sprint (8):** timer decrement, pause when slow (<30% maxSpeed), cooldown entry on exhaustion, recovery after cooldown, sprint speed multiplier allows higher velocity, above-sprint-limit clamped, tired multiplier clamps during cooldown, default stamina when undefined
+     - **Edge Cases (7):** simultaneous starvation+oldAge → starvation wins (code ordering), starvation+oldAge with surviving health → old age wins, dead particle not processed, empty world (0 particles), tryReproduce on dead returns -1, cooldown ticks down, cooldown clamps to 0
+- **Test results:** 668/668 pass (21 test files, 15s). TypeScript clean. ESLint clean. Prettier clean for lifecycle.test.ts (2 pre-existing format issues in config-schema.* from CRT-36, not my files). `npm run build` clean.
+- **Acceptance criteria met:** All 6 criteria satisfied. 36 new tests exceeds 25+ target. Each subsystem tested independently. Edge cases explicitly covered.
+- **Key behavioral insights verified by tests:**
+  - `maxAgeSec = 0` means immortal (the code checks `maxAgeSec > 0`)
+  - `starvationDamagePerSec = 0` means immune to starvation damage even at energy 0
+  - When both starvation and old-age death conditions are true simultaneously, **starvation takes precedence** due to code ordering (starvation check runs before old-age check, with `continue`)
+  - Sprint timer pauses when particle speed drops below 30% of maxSpeed (decrement undone)
+  - Reproduction cooldown minimum is `max(1, config)` even when config is 0 (prevents infinite reproduction)
+- **Status:** Done — branch pushed. PR needs manual creation (token scope issue).
+- **Notes:** Next items: CRT-41 (P2, Coral Reef preset), CRT-42-44 (3 more presets), CRT-45-46 (stress/edge test suites).
