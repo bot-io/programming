@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 06:58 Sofia**
+> Last updated: **2026-06-14 08:34 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 40%
+- **Usage:** 1%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-42
-- **Total runs:** 37
+- **Last item:** CRT-44
+- **Total runs:** 38
 
 ## 📁 Projects
 
@@ -27,12 +27,12 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M6 — CRT-43 done (Deep Sea Vent preset). 739 unit tests pass. Branch pushed.
+- **Status:** ** M6 — CRT-44 done (Symbiosis preset). 763 unit tests pass. Branch pushed.
 - **Updated:** ** 2026-06-14
-- **Ready:** CRT-44, CRT-45, CRT-46, CRT-47, CRT-48, CRT-49, CRT-50
+- **Ready:** CRT-45, CRT-46, CRT-47, CRT-48, CRT-49, CRT-50
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 47/56 done
-- **Last work:** 2026-06-14 CRT-43: Deep Sea Vent preset
+- **Progress:** 48/56 done
+- **Last work:** 2026-06-14 CRT-44: Symbiosis preset
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user

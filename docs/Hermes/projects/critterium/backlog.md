@@ -764,7 +764,7 @@
 - **Notes:** 4-species hydrothermal vent food chain: Bacteria (producer, 250 count, fast 2s repro) → Tube Worms (sessile filter-feeder, eats bacteria) → Crabs (scuttling scavenger, eats worms, flees octopus) → Octopus (apex predator, solitary, eats crabs). Forces: gravity (accel 30, gentle sinking) + flow-field (uniform, angle -π/2 = pure upward, strength 25) modeling the vent plume's buoyancy-driven upwelling counteracting gravity. The uniform upward current is a reasonable physical approximation — in real hydrothermal vents, heated plume water creates broad upward convection throughout the vent field. Net downward drift of ~5 units/s² (gravity 30 − flow 25) creates slow circulation with wrap boundaries. 4×4 asymmetric interaction matrix. populationCap 600. PRESET_NAMES count updated 12→13.
 
 ### CRT-44 New Preset — Symbiosis
-- **Status:** ready
+- **Status:** done
 - **Priority:** P2
 - **Milestone:** M6
 - **Description:** Add a "Symbiosis" preset demonstrating positive/neutral interactions with no predation. Three species — Algae, Coral, and Cleaner Shrimp — coexist through mutual attraction. Algae and Coral have mutual attraction (both benefit), and Cleaner Shrimp are attracted to Coral (cleaning symbiosis). No species eats another. Population cap: 400.
@@ -790,6 +790,10 @@
   - Follow existing preset test patterns
 - **Test File:** expand `packages/app/src/presets.test.ts`
 - **Dependencies:** None
+- **Branch:** `feat/crt-44-symbiosis` pushed (PR needs manual creation — token scope)
+- **Commit:** cdd4fd4
+- **Tests:** 763 unit tests pass (22 new), build/lint/format/typecheck clean
+- **Notes:** Three-species peaceful reef preset. Algae (tiny, maxSpeed 30, fast 3s repro cooldown, self-cohesion +12). Coral (stationary-leaning, maxSpeed 5 with initialSpeed 0 following Grasslands/Coral Reef convention to avoid div-by-zero in movement cost, longest-lived at 200s maxAge, null self-interaction). Cleaner Shrimp (fast, maxSpeed 90, seeks coral +40, self-cohesion +18). Interaction matrix: Algae↔Coral symmetric mutual attraction +30 r90 (the only symmetric pair). All entries positive or null — no negative/repel in matrix (universal short-range repulsion is engine-level). No predation: all canEat empty, all energyGainPerPrey zero. Species given generous energy + low idle drain + long maxAge so the reef stays lively for several minutes without eating (same approach as Tornado Alley). Forces: mild drag (0.7) + gentle wander (20, 1.5). populationCap 400, total initial pop 300. PRESET_NAMES count 13→14. Also fixed pre-existing Prettier formatting issues in config-schema.ts and config-schema.test.ts (left over from CRT-36 branch). Stashed orphaned persistence.ts + capacitor.build.gradle changes from prior interactive session for later triage.
 
 ### CRT-45 Stress Test Suite
 - **Status:** ready

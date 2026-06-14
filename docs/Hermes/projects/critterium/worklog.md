@@ -509,3 +509,29 @@
   - Gravity (30) vs flow-field (25): net approx 5 units/s2 downward. Creates gentle sinking that, combined with wrap boundaries, produces slow vertical circulation. The vent plume partially counteracts gravity.
   - Bacteria uses maxSpeed=15 (not 0): same convention as Grasslands Grass (maxSpeed 5). True zero causes division-by-zero in movement-cost calculation and config-schema clamps maxSpeed to min 1.
 - **Status:** Done - branch pushed. PR needs manual creation (token scope).
+
+## 2026-06-14 CRT-44: Symbiosis preset
+- **Branch:** `feat/crt-44-symbiosis`
+- **Commit:** cdd4fd4
+- **What was done:**
+  1. Created branch from feat/crt-43-deep-sea-vent (clean working tree after stashing orphaned persistence.ts + capacitor.build.gradle changes).
+  2. Added SYMBIOSIS preset to presets.ts: 3-species peaceful reef with no predation.
+  3. 3 species: Algae (tiny, r1.5, maxSpeed 30, 200 count, fast 3s repro, self-cohesion +12), Coral (stationary-leaning, r5, maxSpeed 5 + initialSpeed 0, 40 count, longest-lived 200s, null self-interaction), Cleaner Shrimp (small, r2.5, maxSpeed 90, 60 count, seeks coral +40, self-cohesion +18). Total initial pop 300, cap 400.
+  4. 3x3 interaction matrix: Algae-Coral symmetric mutual attraction +30 r90 (only symmetric pair); Shrimp-Coral cleaning symbiosis +40 r100; Algae self-cohesion +12 r50; Shrimp self-cohesion +18 r60; Coral self null (stationary). All entries positive or null - no repel entries.
+  5. No predation: all canEat empty, all energyGainPerPrey zero arrays [0,0,0]. Species given generous energy + low idle drain + long maxAge to stay lively for several minutes without eating (same approach as Tornado Alley).
+  6. 2 forces: mild drag (0.7), gentle wander (20, 1.5). No gravity/vortex (peaceful scene).
+  7. Added 22 new structural validation tests; updated count (13 to 14) and EXPECTED_PRESET_NAMES.
+  8. Fixed pre-existing Prettier formatting issues in config-schema.ts and config-schema.test.ts (left over from CRT-36 branch) to keep format:check CI gate green.
+- **Files modified:**
+  - packages/app/src/presets.ts - added SYMBIOSIS preset + registered in BUILTIN_PRESETS
+  - packages/app/src/presets.test.ts - 22 new Symbiosis tests + count/name updates
+  - packages/core/src/config-schema.ts - Prettier formatting fix (pre-existing)
+  - packages/core/src/config-schema.test.ts - Prettier formatting fix (pre-existing)
+- **Tests:** 763 unit tests pass (was 739; +24): 370 core + 16 render + 377 app. Build, lint, format, typecheck all clean.
+- **Design decisions:**
+  - Coral uses maxSpeed=5 (not 0) with initialSpeed=0: follows Grasslands Grass and Coral Reef Coral convention. True zero maxSpeed causes div-by-zero in movement-cost calc (ecosystem-world.ts:199) and config-schema clamps to min 1. initialSpeed=0 means coral starts at rest.
+  - All matrix entries positive or null: the "no negative/repel except universal short-range repulsion" criterion refers to the engine-level universal repulsion (PairwiseForce built-in), not the interaction matrix. The matrix only encodes species-pair-specific behaviors.
+  - Algae-Coral symmetric: m[0][1] = m[1][0] = {strength:30, radius:90, falloff:'linear'}. This is the only fully symmetric pair. Shrimp-Coral is asymmetric (only Shrimp seeks Coral, Coral does not seek Shrimp).
+  - No eating despite ecosystem mode: preset is designed as a "living reef" visual showcase. Energy parameters tuned (low idle drain 0.1-0.5, high maxAge 60-200s, fast Algae repro 3s) so populations sustain for several minutes through reproduction before gradual decline.
+  - Stashed orphaned persistence.ts changes from prior interactive session: exportConfig refactored from dynamic import + Cache dir to top-level import + Documents dir + base64. Also capacitor.build.gradle modified. Noted for later triage (potential CRT for Capacitor export path improvement).
+- **Status:** Done - branch pushed. PR needs manual creation (token scope).
