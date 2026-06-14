@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 18:36 Sofia**
+> Last updated: **2026-06-14 18:52 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 1%
+- **Usage:** 3%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
