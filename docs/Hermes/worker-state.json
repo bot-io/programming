@@ -1,7 +1,7 @@
 {
-  "last_project": "critterium",
-  "last_item": "CRT-49",
-  "last_status": "done — branch feat/crt-49-boids-force pushed (628/628 unit tests pass)",
-  "timestamp": "2026-06-14T14:00:00Z",
-  "run_count": 21
+  "last_project": "dual-reader",
+  "last_item": "none (backlog exhausted)",
+  "last_status": "skipped — dual-reader backlog exhausted (DR-001..010 all done); critterium also has no ready items (CRT-51 review-ready, CRT-15/16 blocked)",
+  "timestamp": "2026-06-14T21:16:00Z",
+  "run_count": 22
 }
