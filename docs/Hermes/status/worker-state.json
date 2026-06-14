@@ -1,8 +1,8 @@
 {
-  "last_project": "dual-reader",
-  "last_item": "DR-010",
+  "last_project": "critterium",
+  "last_item": "CRT-42",
   "last_status": "done",
-  "timestamp": "2026-06-14T05:15:00Z",
-  "run_count": 36,
-  "note": "Dual-reader backlog exhausted (0 ready items). Yielded to critterium (CRT-42 P2 ready). All DR-001..DR-010 done."
+  "timestamp": "2026-06-14T05:35:00Z",
+  "run_count": 37,
+  "note": "CRT-42 Tornado Alley preset done. Branch feat/crt-42-tornado-alley pushed (PR needs manual creation — token scope). 715 unit tests pass. Next: CRT-43."
 }

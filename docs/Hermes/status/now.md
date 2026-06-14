@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 06:19 Sofia**
+> Last updated: **2026-06-14 06:35 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -14,9 +14,9 @@
 
 ## 🤖 Overnight Worker
 - **Last run:** never
-- **Last project:** dual-reader
-- **Last item:** DR-010
-- **Total runs:** 36
+- **Last project:** critterium
+- **Last item:** CRT-42
+- **Total runs:** 37
 
 ## 📁 Projects
 
@@ -27,12 +27,12 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M6 — CRT-41 done (Coral Reef preset). 696 unit tests pass. Branch pushed.
+- **Status:** ** M6 — CRT-42 done (Tornado Alley preset). 715 unit tests pass. Branch pushed.
 - **Updated:** ** 2026-06-14
-- **Ready:** CRT-42, CRT-43, CRT-44, CRT-45, CRT-46, CRT-47, CRT-48, CRT-49, CRT-50
+- **Ready:** CRT-43, CRT-44, CRT-45, CRT-46, CRT-47, CRT-48, CRT-49, CRT-50
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 45/56 done
-- **Last work:** 2026-06-14 CRT-41: Coral Reef preset (5-species reef food chain)
+- **Progress:** 46/56 done
+- **Last work:** 2026-06-14 CRT-42: Tornado Alley preset — chaotic vortex storm
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user

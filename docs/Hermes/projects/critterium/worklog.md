@@ -467,3 +467,23 @@
   - Resolution: followed established Grasslands convention (Grass = maxSpeed 5, "nearly stationary"). Coral uses maxSpeed=5, initialSpeed=0 (starts at rest, negligible drift). Inline comment documents the constraint. If true stationary is needed later, guard the movement-cost division first (CRT-47/48 scope).
 - **Status:** Done — branch pushed. PR needs manual creation (token scope issue).
 - **Notes:** Next items: CRT-42 (Tornado Alley), CRT-43 (Deep Sea Vent), CRT-44 (Symbiosis) — 3 more P2 presets.
+
+## 2026-06-14 CRT-42: Tornado Alley preset — chaotic vortex storm
+- **Branch:** `feat/crt-42-tornado-alley` (off `feat/crt-41-coral-reef-preset`)
+- **Commit:** 180d6b2
+- **What was done:**
+  1. Identified CRT-42 as the highest-priority ready item (P2, lowest ID among ready P2 items). Dual-reader had no ready items (all done), so no cross-project skip.
+  2. Added `TORNADO_ALLEY` preset to `packages/app/src/presets.ts` and registered it in `BUILTIN_PRESETS` (now 12 presets).
+  3. 3 species: Dust Motes (light/fast/small, r1.5 maxSpeed 140, 180 count), Debris (heavy/large, r6 maxSpeed 85, 60 count), Birds (medium/fast, r3 maxSpeed 120, 40 count). Total initial pop 280 ≤ cap 400.
+  4. 4 forces: drag (0.5), wander (strength 60, rate 5 — heavy/chaotic), flow-field (turbulence mode, scale 0.04), vortex (cx/cy = canvas midpoint 400/300, strength 300, radialStrength −80 inward pull, radius 320).
+  5. 3×3 interaction matrix: Debris row entirely negative (collides with all species), Birds self-cohere (+30 mild flocking), Dust Motes weakly cohere (+20 wisps) and flee Debris (−40). No predation (motion-physics showcase, all canEat empty, all energyGainPerPrey zero).
+  6. Added 19 new structural validation tests to `presets.test.ts`; updated count (11→12) and EXPECTED_PRESET_NAMES.
+- **Files modified:**
+  - `packages/app/src/presets.ts` — added TORNADO_ALLEY preset + registered in BUILTIN_PRESETS
+  - `packages/app/src/presets.test.ts` — 19 new Tornado Alley tests + count/name updates
+- **Tests:** 715 unit tests pass (was 696; +19 new): 370 core + 16 render + 329 app. Build, lint, format, typecheck all clean.
+- **Design decisions:**
+  - VortexForce `radialStrength` sign confirmed from source (`index.ts:1137`): `nx = (x−cx)/dist` points outward from center; positive radial pushes outward, negative pulls inward. Used −80 for inward radial pull per spec.
+  - No predation: this is a motion-physics showcase, not an ecosystem food chain. Species given generous energy + low idle drain + long maxAge so the storm scene stays lively for several minutes even without eating (they eventually starve, but slowly).
+  - Vortex radius 320 > half-diagonal of 800×600 (~500) but covers the canvas center region where the storm action concentrates; boundaryMode 'wrap' keeps particles circulating.
+- **Status:** Done — branch pushed. PR needs manual creation (token scope: `Resource not accessible by personal access token (createPullRequest)`).

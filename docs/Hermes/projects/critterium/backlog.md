@@ -712,7 +712,7 @@
 - **Notes:** **Deviation from spec on Coral maxSpeed.** The backlog requested "zero maxSpeed (stationary)" but `ecosystem-world.ts:199` computes movement cost as `speed / species.maxSpeed` — true zero causes division by zero. Additionally `config-schema.ts:526` clamps maxSpeed to minimum 1 and the generic structural test requires maxSpeed > 0. Followed the established Grasslands convention (Grass = maxSpeed 5, "nearly stationary"): Coral uses maxSpeed=5 with initialSpeed=0 (starts at rest). Documented inline in presets.ts. This is a well-justified technical decision, not a guess — if true stationary behavior is desired later, the movement-cost division must be guarded first (CRT-47/48 territory).
 
 ### CRT-42 New Preset — Tornado Alley
-- **Status:** ready
+- **Status:** done
 - **Priority:** P2
 - **Milestone:** M6
 - **Description:** Add a "Tornado Alley" preset with chaotic vortex-driven motion. Three species — Dust Motes, Debris, and Birds — swirl around a central vortex with turbulent flow fields and heavy wander for chaotic, unpredictable motion. The vortex force is centered with high strength (300) and inward radial pull. Population cap: 400.
@@ -720,22 +720,18 @@
   - MODIFY: `packages/app/src/presets.ts` — add `tornadoAlley` preset to `BUILTIN_PRESETS`
   - MODIFY: `packages/app/src/presets.test.ts` — add structural validation tests
 - **Acceptance Criteria:**
-  1. 3 species defined: Dust Motes (light, fast, small), Debris (heavy, medium, large), Birds (medium, fast, flocking)
-  2. Vortex force at center of canvas with strength ~300, inward radial component
-  3. Turbulent flow field force (chaotic directional variation)
-  4. Heavy wander force (high wander rate for chaotic motion)
-  5. `populationCap: 400`
-  6. Interaction matrix is 3×3; Birds mildly flock (+cohesion), Debris repels everything (collision)
-  7. Preset passes all structural validation tests
-  8. Preset auto-appears in dropdown via `BUILTIN_PRESET_NAMES`
-- **Test Requirements:**
-  - Structural validation: species count = 3, matrix is 3×3, diet indices valid, all fields present
-  - Verify vortex params: strength ~300, center at canvas midpoint
-  - Verify populationCap = 400
-  - Verify forces include vortex + flow-field + wander
-  - Follow existing preset test patterns
-- **Test File:** expand `packages/app/src/presets.test.ts`
-- **Dependencies:** None
+  1. 3 species defined: Dust Motes (light, fast, small), Debris (heavy, medium, large), Birds (medium, fast, flocking) ✅
+  2. Vortex force at center of canvas with strength ~300, inward radial component ✅ strength 300, radialStrength −80 (inward)
+  3. Turbulent flow field force (chaotic directional variation) ✅ mode 'turbulence', scale 0.04
+  4. Heavy wander force (high wander rate for chaotic motion) ✅ strength 60, rate 5
+  5. `populationCap: 400` ✅
+  6. Interaction matrix is 3×3; Birds mildly flock (+cohesion), Debris repels everything (collision) ✅
+  7. Preset passes all structural validation tests ✅ 19 new tests
+  8. Preset auto-appears in dropdown via `BUILTIN_PRESET_NAMES` ✅
+- **Branch:** `feat/crt-42-tornado-alley` pushed (PR needs manual creation — token scope)
+- **Commit:** 180d6b2
+- **Tests:** 715 unit tests pass (370 core + 16 render + 329 app), build/lint/format/typecheck clean
+- **Notes:** Motion-physics showcase preset (not an ecosystem food chain) — no predation, all `canEat` empty, all `energyGainPerPrey` zero. Species given generous energy + low idle drain + long maxAge so the storm scene stays lively for several minutes even without eating. VortexForce sign convention confirmed from source: `radialStrength < 0` pulls inward (nx points outward from center, negative reverses it). Debris row is entirely negative (collides with all species); Birds self-cohere (+30); Dust Motes weakly cohere (+20, dust wisps) and flee Debris (−40, pushed by heavy objects).
 
 ### CRT-43 New Preset — Deep Sea Vent
 - **Status:** ready
