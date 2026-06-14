@@ -1,8 +1,8 @@
 {
   "last_project": "critterium",
-  "last_item": "CRT-53",
-  "last_status": "Trialed undocumented 5-lifecycle-bug-fix commit (3fbed47) on integration/crt-35-50. Pushed to remote. 1124 tests pass, build/lint/format/typecheck clean. Backlog still has 0 ready items — only CRT-51 (merge decision) remains actionable.",
-  "timestamp": "2026-06-15T01:50:00Z",
-  "run_count": 58,
-  "note": "Scheduled cron run #58 for critterium. Quota 51% (healthy). No ready items in backlog — found undocumented unpushed commit 3fbed47 (5 lifecycle bug fixes: eating cap, tick order, stale grid, newborn repro, move cost). Verified 1124 tests pass + build clean. Pushed to remote. Documented as CRT-53."
+  "last_item": "CRT-51 (blocked — merge decision)",
+  "last_status": "Housekeeping run #59. Backlog exhausted (0 ready items). Sweep: working tree clean, no unpushed commits, PR #12 CI all 3 jobs SUCCESS on latest commit 3fbed47 (verified via gh api check-runs), MERGEABLE. Sole blocker: Svetlin's CRT-51 merge decision. No new work — confirming PR #12 is verifiably merge-ready at HEAD.",
+  "timestamp": "2026-06-15T02:00:00Z",
+  "run_count": 59,
+  "note": "Scheduled cron run #59 for critterium. Quota 51% (healthy). No ready items in backlog. Housekeeping sweep found nothing actionable: clean tree, all work pushed, CI green on 3fbed47. CRT-51 (PR #12 merge) awaits Svetlin. Dual-reader backlog also exhausted (all items done)."
 }
