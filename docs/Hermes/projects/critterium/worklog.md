@@ -750,3 +750,15 @@ None.
 Built unified integration branch from all 16 feature branches (CRT-35 through CRT-50). Resolved all merge conflicts including semantic presets.ts conflicts. Applied crt-50 balance rules to all 14 presets via automated script. Fixed config-schema test for new forces array format. 1120/1120 unit tests passing.
 
 PR: https://github.com/bot-io/critterium/pull/12
+
+### Run #51 (2026-06-14): Fix PR #12 CI format failure
+
+Both backlogs exhausted (all ready items done; CRT-51 needs-decision, CRT-15/16 blocked on Svetlin). Found actionable work: PR #12 (integration CRT-35→50) CI was FAILING on Prettier format check (3 files: presets.test.ts, config-schema.ts, reproduction.test.ts). Also found an additional format issue in main.ts not caught by the prior push.
+
+- Ran `prettier --write` on 4 files to fix all formatting
+- Verified locally: 1120 tests pass (543 core + 16 render + 561 app), build clean, lint clean, format clean, typecheck clean
+- Pushed integration branch (2 commits: unpushed `cc5a5af` perf optimizations + new `968e1f8` format fix)
+- PR #12 `build-and-test` check now PASSES (was FAILURE)
+- Discovered integration branch includes CRT-32's loadAutosave hardening but NOT CRT-34's dead sickness code removal (pulsePhase still in render/index.ts). CRT-33 e2e fixes status unclear. This means merging PR #12 alone would still miss some CRT-32/33/34 work — merge-strategy decision still needed for CRT-51.
+- Updated CRT-51 and state.md with CI-green status.
+- Vault commit: format-fix + doc updates.

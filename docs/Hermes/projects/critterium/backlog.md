@@ -1001,3 +1001,4 @@
   5. After merge, `main` reaches CRT-50 (or documented final state); full test suite green on main
 - **Decision needed from Svetlin:** merge strategy — (a) rebase all onto `main` and merge one-by-one, (b) create a single integration PR from crt-50 tip, or (c) merge the open PRs #9-#11 first then handle 35-50. See questions.md.
 - **Why needs-decision:** the two-chain structure + the extra crt-50 commit mean a naive `gh pr create` per branch would produce PRs with wrong bases. Needs a human merge-strategy call.
+- **Update (run #51, 2026-06-14):** PR #12 `build-and-test` CI now PASSES (was FAILING on Prettier format check — fixed by running `prettier --write` on 4 files). Integration branch now fully green: 1120 tests pass, build/lint/format/typecheck all clean. However, integration branch is missing CRT-33 (e2e fixes) and CRT-34 (dead sickness code removal) — `pulsePhase` still present in render module. Merge-strategy decision still needed from Svetlin.

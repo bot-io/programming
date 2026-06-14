@@ -1,7 +1,7 @@
 # Critterium — State
 
 **Status:** M6 — CRT-50 done (AttractorForce — point-based attraction/repulsion). 658 unit tests pass (30 new). Branch pushed.
-**Last Updated:** 2026-06-14
+**Last Updated:** 2026-06-14 (run #51)
 **Version:** v1.4.18
 **Active Items:** All backlog items complete. CRT-15 (blocked — needs Svetlin for on-device perf check), CRT-16 (blocked — after M4). Backlog exhausted — ready items remaining: 0.
 **Completed:** CRT-1 ✅ CRT-2 ✅ CRT-3 ✅ CRT-4 ✅ CRT-5 ✅ CRT-6 ✅ CRT-7 ✅ CRT-8 ✅ CRT-9 ✅ CRT-10 ✅ CRT-11 ✅ CRT-12 ✅ CRT-13 ✅ CRT-14 ✅ CRT-17 ✅ CRT-18 ✅ CRT-19 ✅ CRT-20 ✅ CRT-21 ✅ CRT-22 ✅ CRT-23 ✅ CRT-24 ✅ CRT-25 ✅ CRT-26 ✅ CRT-27 ✅ CRT-28 ✅ CRT-29 ✅ CRT-30 ✅ CRT-31 ✅ CRT-32 ✅ CRT-33 ✅ CRT-34 ✅ CRT-35 ✅ CRT-36 ✅ CRT-37 ✅ CRT-38 ✅ CRT-39 ✅ CRT-40 ✅ CRT-41 ✅ CRT-42 ✅ CRT-43 ✅ CRT-44 ✅ CRT-45 ✅ CRT-46 ✅ CRT-47 ✅ CRT-48 ✅ CRT-49 ✅ CRT-50 ✅
@@ -21,4 +21,4 @@
 **Repo:** https://github.com/bot-io/critterium
 **Ready Items Remaining:** 0 — backlog exhausted. All 50 tracked items (CRT-1 through CRT-50) plus 6 retrospective ecosystem items are complete.
 **Backlog Status:** Complete. Only CRT-15 and CRT-16 remain blocked on user action (device verification + iOS/store readiness).
-**Merge Backlog (2026-06-14, run #45):** `main` is stuck at CRT-31. 19 items of completed work (CRT-32→50, 658 tests green) sit on unmerged branches: open PRs #9/#10/#11 (crt-32/33/34) + 16 branches (crt-35→50) with NO PR. `gh` CLI is authenticated (bot-io) — "token scope" notes were stale. Added CRT-51 (needs-decision) for PR creation + merge strategy. Branches form 2 chains (Stack A: 35→45 linear; Stack B: 46→50). See questions.md for the merge-strategy decision.
+**Merge Backlog (2026-06-14, run #51):** `main` is stuck at CRT-31. 19 items of completed work (CRT-32→50, 1120 tests green) sit on unmerged branches. PR #12 (integration CRT-35→50) `build-and-test` CI now PASSES (fixed Prettier format failure on run #51). Open PRs #9/#10/#11 (crt-32/33/34) still pending. Integration branch includes CRT-32 work but NOT CRT-33/34. Merge-strategy decision still needed from Svetlin (see questions.md).
