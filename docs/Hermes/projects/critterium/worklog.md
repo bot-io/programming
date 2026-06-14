@@ -762,3 +762,15 @@ Both backlogs exhausted (all ready items done; CRT-51 needs-decision, CRT-15/16 
 - Discovered integration branch includes CRT-32's loadAutosave hardening but NOT CRT-34's dead sickness code removal (pulsePhase still in render/index.ts). CRT-33 e2e fixes status unclear. This means merging PR #12 alone would still miss some CRT-32/33/34 work — merge-strategy decision still needed for CRT-51.
 - Updated CRT-51 and state.md with CI-green status.
 - Vault commit: format-fix + doc updates.
+
+## 2026-06-14 CRT-51 (run #55): Complete integration branch — add missing CRT-33 + CRT-34
+- **Branch:** integration/crt-35-50 (3 new commits: cc08951, fa813ca, bb3076d)
+- **What was done:**
+  1. Both critterium and dual-reader backlogs exhausted of ready items. CRT-51 (P0, review-ready) had a concrete actionable sub-task not requiring Svetlin's merge decision: integration branch was missing CRT-33 and CRT-34.
+  2. CRT-34 dead code removal: cherry-pick failed due to renderer refactor on integration branch. Manually applied instead — removed pulsePhase field + per-frame update (only remaining dead sickness code; sicknessContainer/sicknessGfx already gone). Cleaned stale header doc references. Added 4 CRT-34 regression tests to render/index.test.ts.
+  3. CRT-33 e2e fixes + CI: cherry-picked cleanly. Added Playwright e2e CI job, fixed export-import tests, fixed settings-stress test, added hasTouch:true to playwright config.
+  4. Formatting: cherry-picked e2e files needed Prettier reformat. Applied prettier --write.
+- **Tests:** 1124 unit tests pass (28 test files, was 1120 — 4 new CRT-34 regression tests). Build, lint, format:check, typecheck all clean.
+- **Commits:** cc08951 (crt-33), fa813ca (crt-34 dead code + tests), bb3076d (prettier format)
+- **Status:** Integration branch now feature-complete: contains ALL work CRT-32 through CRT-50. PR #12 ready for merge decision. Only Svetlin's merge-strategy call remains.
+- **Next step:** Awaiting Svetlin's merge decision for CRT-51. No other ready items in either backlog.

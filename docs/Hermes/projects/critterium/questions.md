@@ -51,3 +51,5 @@ Once you confirm, we can mark CRT-15 as done and move to CRT-16 (iOS + store rea
 
 **My recommendation:** Option 2 (single integration PR) is fastest if you trust the test suite; Option 1 is cleanest for history. Just tell me which and I'll execute it as CRT-51 next run.
 
+**Update (run #55, 2026-06-14):** The integration branch is now FEATURE-COMPLETE — CRT-33 (e2e fixes + Playwright CI) and CRT-34 (dead sickness code removal) have been cherry-picked onto `integration/crt-35-50`. The branch now contains ALL work from CRT-32 through CRT-50 (1124 tests, build/lint/format/typecheck green). PR #12 is ready to merge with a single click — no additional work needed regardless of which option you pick. This simplifies the decision: **Option 2 (merge PR #12) is now the clear fastest path** since the integration branch is complete and CI is green.
+

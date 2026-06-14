@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 20:53 Sofia**
+> Last updated: **2026-06-14 21:12 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 77%
+- **Usage:** 79%
 - **Resets:** 11 Sofia |
 - **Spare capacity:** ?
 
@@ -14,9 +14,9 @@
 
 ## 🤖 Overnight Worker
 - **Last run:** never
-- **Last project:** dual-reader
-- **Last item:** None (backlog exhausted)
-- **Total runs:** 54
+- **Last project:** critterium
+- **Last item:** CRT-51
+- **Total runs:** 55
 
 ## 📁 Projects
 
@@ -31,7 +31,7 @@
 - **Updated:** ** 2026-06-14 (run #51)
 - **Blocked:** CRT-15, CRT-16
 - **Progress:** 54/56 done
-- **Last work:** Run #51 (2026-06-14): Fix PR #12 CI format failure
+- **Last work:** 2026-06-14 CRT-51 (run #55): Complete integration branch — add missing CRT-33 + 
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user
