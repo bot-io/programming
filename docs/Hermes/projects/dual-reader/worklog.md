@@ -322,3 +322,13 @@
 
 **Cleanup:** worker-state.json created (run_count=1), state.md marked idle, questions.md updated.
 
+### 2026-06-14 — dual-reader cron (run 32) — Skipped: backlog exhausted, critterium has priority
+
+**Context:** Scheduled cron run for dual-reader project. Subscription usage at 40% (well below 80% threshold). No locks active.
+
+**Priority Check:** Dual-reader backlog fully exhausted (DR-001..DR-010 all done, 0 ready items). Critterium now has 11 ready items: CRT-40 (lifecycle.ts deep tests, P2), CRT-41–44 (new presets, P2), CRT-45–46 (stress + edge case tests, P2), CRT-47–48 (config validation + force isolation, P3), CRT-49–50 (boids + attractor forces, P3).
+
+**Outcome:** Skipped per STEP 3 — critterium has higher priority (CRT-40 P2 vs no dual-reader ready items). Yielded to critterium worker. No worker.lock created (per AGENTS.md §5: worker.lock belongs to overnight worker only).
+
+**Action needed from user:** Dual-reader backlog remains exhausted since 2026-06-13. Add new backlog items (status "ready") to resume autonomous work on dual-reader. See questions.md for candidate features.
+

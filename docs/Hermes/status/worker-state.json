@@ -1,8 +1,8 @@
 {
-  "last_project": "critterium",
-  "last_item": "CRT-39",
-  "last_status": "done",
-  "timestamp": "2026-06-14T05:30:00Z",
-  "run_count": 31,
-  "note": "CRT-39 main.ts integration tests done — 32 new tests (632 total), all pass. Branch feat/crt-39-main-integration-tests pushed."
+  "last_project": "dual-reader",
+  "last_item": "none",
+  "last_status": "skipped-backlog-exhausted",
+  "timestamp": "2026-06-14T05:45:00Z",
+  "run_count": 32,
+  "note": "Dual-reader backlog exhausted (DR-001..010 all done). Skipped — critterium has 11 ready items (CRT-40 P2 highest). Yielded to critterium worker."
 }
