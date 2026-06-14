@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-14 18:52 Sofia**
+> Last updated: **2026-06-14 19:42 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -14,9 +14,9 @@
 
 ## 🤖 Overnight Worker
 - **Last run:** never
-- **Last project:** dual-reader
-- **Last item:** none — dual-reader backlog exhausted (DR-001..010 done), 0 ready items
-- **Total runs:** 47
+- **Last project:** critterium
+- **Last item:** CRT-51
+- **Total runs:** 48
 
 ## 📁 Projects
 
@@ -30,9 +30,8 @@
 - **Status:** ** M6 — CRT-50 done (AttractorForce — point-based attraction/repulsion). 658 unit tests pass (30 new). Branch pushed.
 - **Updated:** ** 2026-06-14
 - **Blocked:** CRT-15, CRT-16
-- **Needs Decision:** CRT-51
-- **Progress:** 54/57 done
-- **Last work:** Run #45 — 2026-06-14 15:02 Sofia — Backlog exhausted; PR/merge triage discovered
+- **Progress:** 54/56 done
+- **Last work:** CRT-51: Integration branch created, PR #12 opened
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user
@@ -48,7 +47,7 @@
 
 ## 🚨 Needs Your Input
 
-- **critterium** — blocked: CRT-15, CRT-16; needs-decision: CRT-51
+- **critterium** — blocked: CRT-15, CRT-16
   → Open that project's Telegram chat and respond, or tell this chat
 
 ## 🔗 Quick Links

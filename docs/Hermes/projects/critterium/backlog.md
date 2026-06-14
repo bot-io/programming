@@ -981,7 +981,7 @@
 ## Merge / PR Triage
 
 ### CRT-51 Triage + create PRs for CRT-35→50 branches + merge open PRs
-- **Status:** needs-decision
+- **Status:** review-ready (PR #12 created)
 - **Priority:** P0
 - **Milestone:** M6
 - **Description:** `main` is stuck at CRT-31 while 19 items of completed, tested work sit on unmerged feature branches. `gh` CLI **is** authenticated (bot-io) — the "PR creation blocked by token scope" notes on CRT-35→50 are stale (a prior worker already used `gh` to create PR #2). This item creates the missing PRs and establishes a merge plan.
