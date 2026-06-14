@@ -1,8 +1,8 @@
 {
-  "last_project": "critterium",
+  "last_project": "dual-reader",
   "last_item": "None — backlog exhausted",
-  "last_status": "No ready items in critterium backlog (CRT-1→50 all done, CRT-51 review-ready awaiting merge decision, CRT-15/16 blocked on user). Dual-reader also exhausted (DR-001→010 all done). No autonomous work possible without user action.",
-  "timestamp": "2026-06-14T23:23:00Z",
-  "run_count": 59,
-  "note": "Scheduled cron run #59 for critterium. Quota refreshed via zai-quota-check.py (100%→1%, reset passed at 23:11). Both backlogs exhausted (0 ready items each). CRT-51 PR #12 still CI-green and ready for merge — awaiting Svetlin's go-ahead. No implementation performed."
+  "last_status": "No ready items in dual-reader backlog (DR-001→010 all done) or critterium (CRT-1→52 done/blocked; CRT-51 review-ready awaiting merge decision). No autonomous work possible without user action.",
+  "timestamp": "2026-06-14T22:50:00Z",
+  "run_count": 60,
+  "note": "Scheduled cron run #60 for dual-reader. Quota 32% (healthy). Backlog still exhausted — 0 ready items. Questions.md already asks user for next priorities. No implementation performed."
 }
