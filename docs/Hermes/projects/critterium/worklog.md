@@ -861,3 +861,46 @@ Both commits pushed to `origin/integration/crt-35-50` (41be35e..cc4b3cd). PR #12
 
 ### Impact
 PR #12 now includes the reproduction refactor + test stabilization. The integration branch remains fully green with 1124 tests passing. The reproduction behavior change is a notable design shift (probabilistic→deterministic) that Svetlin should review when merging PR #12.
+
+---
+
+## Run #58 — 2026-06-15 (CRT-53: Triage undocumented 5-lifecycle-bug-fix commit)
+**Item:** CRT-53 (new — created during this run)
+**Quota:** 51% (< 80% — proceed)
+**Locks:** None active (worker.lock + critterium.lock both clear)
+
+### Discovery
+Both backlogs exhausted of "ready" items (same as runs #55–#57). During routine housekeeping (checking git status for orphaned/uncommitted changes), discovered an undocumented, unpushed commit on `integration/crt-35-50`:
+- `3fbed47` — "fix: 5 lifecycle bugs - eating cap, tick order, stale grid, newborn repro, move cost"
+- Author: bot-io, Date: 2026-06-15 01:18:46 +0300 (17 min before this cron run)
+- 1 commit ahead of `origin/integration/crt-35-50` (committed but not pushed)
+
+This was NOT uncommitted working-tree changes (as CRT-22/CRT-52 found) — it was a fully committed, well-structured bug fix with matching test updates, just not pushed to the remote.
+
+### Analysis of the 5 Bug Fixes
+All 5 fixes are objectively correct:
+
+1. **eating.ts — predator always eats, energy capped:** Previously `if (energy + gain > maxEnergy) return` — predator refused food when nearly full, starving while surrounded by prey. Fix: always eat (kill prey), cap gain at `maxEnergy - currentEnergy`.
+
+2. **main.ts — tick reordering (eat before lifecycle):** Previously `lifecycle → eating → reproduction`. Energy drained + starvation damage applied before eating could replenish. New: `grid rebuild → eating → lifecycle → reproduction`. Predators eat first, then energy drains.
+
+3. **main.ts — rebuild grid at post-step positions:** Eating used pre-physics grid (stale positions). Predators that moved into prey during physics step missed their catch. Fix: rebuild grid after `world.step()` before eating.
+
+4. **lifecycle.ts — snapshot alive flags before processReproduction:** Newborns reusing free slots below hwm could be processed in same iteration → exponential explosion with `cooldownSec=0`. Fix: copy alive flags to temp `Uint8Array(hwm)` before loop.
+
+5. **ecosystem-world.ts — clamp movement cost speed ratio [0,1]:** Sprint/forces pushing speed beyond maxSpeed inflated energy drain. Fix: `Math.min(1, speed / maxSpeed)`.
+
+### Verification
+1. **Tests:** 1124/1124 unit tests pass (3 e2e files expected-fail — need dev server)
+2. **Build:** `npm run build` passes for all 3 packages
+3. **Typecheck:** `tsc --noEmit` clean for core, app, render
+4. **Lint:** ESLint clean
+5. **Format:** Prettier clean
+
+### Action
+- Pushed `3fbed47` to `origin/integration/crt-35-50` (cc4b3cd..3fbed47)
+- Documented as CRT-53 in backlog (following CRT-22/CRT-52 precedent)
+- Updated state.md and worker-state.json
+
+### Impact
+PR #12 now includes the 5 lifecycle bug fixes. Integration branch remains fully green (1124 tests). The eating behavior change (bug 1: predators always eat) and tick reordering (bug 2: eat before lifecycle) are notable behavioral shifts that Svetlin should review when merging PR #12. These fixes significantly improve ecosystem simulation stability — predators no longer starve next to food, and newborns no longer cause population explosions.

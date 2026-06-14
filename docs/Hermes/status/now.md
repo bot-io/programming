@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-15 01:32 Sofia**
+> Last updated: **2026-06-15 01:48 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -14,9 +14,9 @@
 
 ## 🤖 Overnight Worker
 - **Last run:** never
-- **Last project:** dual-reader
-- **Last item:** None — backlog exhausted
-- **Total runs:** 60
+- **Last project:** critterium
+- **Last item:** CRT-53
+- **Total runs:** 58
 
 ## 📁 Projects
 
@@ -27,10 +27,10 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M6 — CRT-52 done (orphaned reproduction refactor triaged + test stabilization). Integration branch fully green with 1124 tests. PR #12 awaiting Svetlin's merge decision.
-- **Updated:** ** 2026-06-15 (run #57)
+- **Status:** ** M6 — CRT-53 done (undocumented 5-lifecycle-bug-fix commit triaged, verified, pushed). Integration branch fully green with 1124 tests. PR #12 awaiting Svetlin's merge decision.
+- **Updated:** ** 2026-06-15 (run #58)
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 55/57 done
+- **Progress:** 56/58 done
 - **Last work:** Impact
 
 ### ⚪ dual-reader

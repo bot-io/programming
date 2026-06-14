@@ -1005,6 +1005,27 @@
 - **Update (run #55, 2026-06-14):** Integration branch now COMPLETE — CRT-33 (e2e fixes + Playwright CI job) and CRT-34 (dead pulsePhase/sickness code removal) cherry-picked onto `integration/crt-35-50`. 3 new commits pushed. Integration branch now has 1124 tests (4 new CRT-34 regression tests), build/lint/format/typecheck all clean. The integration branch is now feature-complete: contains CRT-32→50. Only the merge-strategy decision from Svetlin remains (see questions.md).
 - **Update (run #56, 2026-06-14):** Fixed e2e CI failure on PR #12. Root cause: Vite dev server crashed during esbuild dependency pre-bundling with 264 errors ("Transforming destructuring to the configured target environment is not supported yet") — Pixi.js v8 + @capacitor/core use destructuring that esbuild can't down-level to the default optimizeDeps target (es2020/chrome87). The crashed dev server caused all 12 e2e tests to fail with ERR_CONNECTION_REFUSED at localhost:3000. Fix: added `optimizeDeps.esbuildOptions.target: 'es2022'` + `esbuild.target: 'es2022'` to `packages/app/vite.config.ts`. All 3 CI jobs now PASS (build-and-test ✓, e2e ✓ 1m22s, android-debug-apk ✓). Commit 41be35e. PR #12 is now fully CI-green and ready for merge — only Svetlin's merge-strategy decision remains.
 
+### CRT-53 Triage + document undocumented 5-lifecycle-bug-fix commit
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Description:** Discovered an undocumented, unpushed commit (`3fbed47`) on the `integration/crt-35-50` branch, authored 2026-06-15 01:18 by bot-io (likely an interactive session just before this cron run). The commit fixes 5 lifecycle bugs with matching test updates. Following the CRT-22/CRT-52 precedent for triaging undocumented work, verified correctness, pushed to remote, and documented.
+- **The 5 bug fixes:**
+  1. **eating.ts — predator always eats, energy capped at maxEnergy:** Previously a predator refused to eat if `energy + gain > maxEnergy` — this caused predators to starve while surrounded by food (e.g., energy 195, gain 30, max 200 → refused to eat → eventually starved). Fix: always eat (kill prey), cap energy gain at `maxEnergy - currentEnergy`. Updated eating.test.ts test to verify new behavior.
+  2. **main.ts — reordered tick: eat BEFORE lifecycle:** Previously `lifecycle → eating → reproduction`. Lifecycle drained energy and applied starvation damage *before* eating could replenish it, killing predators that could have eaten that same frame. New order: `rebuild grid → eating → lifecycle → reproduction`. Updated main-integration.test.ts simStep harness to match.
+  3. **main.ts — rebuild spatial grid after physics step for eating:** The eating system used the spatial hash grid built at the *start* of the step (pre-physics positions). After physics movement, predators may have moved into contact with prey. Fix: rebuild grid at post-step positions before eating detection. Updated main-integration.test.ts.
+  4. **lifecycle.ts — snapshot alive flags before processReproduction:** Without snapshotting, newborns placed in recycled free slots below the high water mark could be processed in the same iteration, causing exponential population explosion when `reproductionCooldownSec=0`. Fix: copy alive flags into a temporary `Uint8Array(hwm)` snapshot before the reproduction loop.
+  5. **ecosystem-world.ts — clamp movement cost speed ratio to [0,1]:** The speed ratio `speed / maxSpeed` could exceed 1 when sprint or forces pushed speed beyond `maxSpeed`, inflating movement energy drain beyond the nominal rate. Fix: `Math.min(1, speed / maxSpeed)`.
+- **Acceptance Criteria:**
+  1. Commit pushed to `origin/integration/crt-35-50` (PR #12) ✅
+  2. All 1124 unit tests pass ✅
+  3. Build, typecheck, lint, format all clean ✅
+  4. Bug fixes documented in backlog + worklog ✅
+  5. No behavioral regressions (tests updated to match corrected behavior) ✅
+- **Branch:** `integration/crt-35-50` (commit `3fbed47`, pushed)
+- **Tests:** 1124 unit tests pass (3 e2e files expected-fail without dev server)
+- **Notes:** Commit was well-structured with descriptive message and matching test updates — high quality work, just undocumented. All 5 fixes are objectively correct: (1) predators shouldn't refuse food when nearly full, (2) eating should happen before energy drain, (3) eating should use current positions not stale ones, (4) newborns shouldn't reproduce in their birth frame, (5) energy cost shouldn't exceed nominal rate. The eating behavior change (bug 1) is a notable behavioral shift — predators are now more aggressive eaters. The tick reordering (bug 2) changes per-frame energy dynamics. Svetlin should review these when merging PR #12.
+
 ### CRT-52 Triage orphaned reproduction refactor + stabilize flaky tests
 - **Status:** done
 - **Priority:** P1
