@@ -1,6 +1,6 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-15 04:14 Sofia**
+> Last updated: **2026-06-15 04:28 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
@@ -14,9 +14,9 @@
 
 ## 🤖 Overnight Worker
 - **Last run:** never
-- **Last project:** dual-reader
+- **Last project:** critterium
 - **Last item:** none — backlog exhausted
-- **Total runs:** 67
+- **Total runs:** 68
 
 ## 📁 Projects
 
