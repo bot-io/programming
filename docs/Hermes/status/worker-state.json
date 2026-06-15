@@ -1,8 +1,8 @@
 {
-  "last_project": "critterium",
+  "last_project": "dual-reader",
   "last_item": "none — backlog exhausted",
-  "last_status": "Verification run #66. Critterium backlog exhausted (0 ready items; CRT-1..50 + CRT-52..53 all done; CRT-51 review-ready awaiting merge; CRT-15/16 blocked on user). Dual-reader also 0 ready. main still at CRT-31; PR #12 (integration CRT-32→50) open/mergeable/CI-green, unmerged. Quota 68% (healthy). Nothing new → SILENT.",
-  "timestamp": "2026-06-15T04:00:00Z",
-  "run_count": 66,
-  "note": "Scheduled critterium cron run #66. Quota 68% (healthy, <80%, no skip file). No locks present. Cross-project check: dual-reader 0 ready, critterium 0 ready. main still at CRT-31 (4745bc5); PR #12 still open/mergeable/unmerged; PRs #9-11 still open. All blockers require Svetlin input (merge decision, device perf, iOS). Worker lock created then cleaned up. Nothing new to report → SILENT."
+  "last_status": "Verification run #67. Dual-reader backlog exhausted (DR-001..010 all done, 0 ready items). Critterium also 0 ready (CRT-1..50 + CRT-52..53 done; CRT-51 review-ready awaiting merge decision; CRT-15/16 blocked on user). Quota 69% (healthy). Nothing new → SILENT.",
+  "timestamp": "2026-06-15T04:12:13Z",
+  "run_count": 67,
+  "note": "Scheduled dual-reader cron run #67. Quota 69% (healthy, <80%, no skip file). No locks present at start. Cross-project check: dual-reader 0 ready, critterium 0 ready. Dual-reader backlog exhausted since 2026-06-13. Worker lock created then cleaned up. Nothing new to report → SILENT."
 }
