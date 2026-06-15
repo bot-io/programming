@@ -1,8 +1,8 @@
 {
   "last_project": "dual-reader",
-  "last_run": "2026-06-15T04:32:00 Sofia",
+  "last_run": "2026-06-15T05:00:00 Sofia",
   "item": null,
-  "run_count": 12,
+  "run_count": 13,
   "outcome": "backlog-exhausted-silent",
-  "note": "Dual-reader backlog exhausted (DR-001..DR-010 all done, 0 ready items). Critterium also has no ready items (CRT-1..53 done, CRT-51 review-ready/needs-decision, CRT-15/16 blocked on user). Quota at 69% — healthy but nothing to do. Responded [SILENT]."
+  "note": "Dual-reader backlog exhausted (DR-001..DR-010 all done, 0 ready items). Critterium also has no ready items (CRT-1..53 done, CRT-51 review-ready/needs-decision, CRT-15/16 blocked on user). Quota at 5% — healthy but nothing to do. Responded [SILENT]."
 }
