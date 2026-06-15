@@ -1,8 +1,8 @@
 {
-  "last_project": "dual-reader",
+  "last_project": "critterium",
   "last_item": "none — backlog exhausted",
-  "last_status": "Dual-reader cron run #71. Backlog exhausted: DR-001..DR-010 all done (0 ready). Critterium also exhausted: CRT-1..53 done, CRT-51 review-ready/needs-decision, CRT-15/16 blocked on user. No ready items in either project. State unchanged since 2026-06-13. Nothing new → SILENT.",
-  "timestamp": "2026-06-15T04:12:00Z",
-  "run_count": 71,
-  "note": "Scheduled dual-reader cron run #71. Quota 16% (fresh window). No locks present at start. Cross-project check: dual-reader 0 ready, critterium 0 ready. Backlog genuinely exhausted since 2026-06-13 — next steps all require Svetlin (add new backlog items, or merge critterium PR #12, device verification, iOS). Nothing new to report → SILENT."
+  "last_status": "Critterium cron run #72. Backlog exhausted: CRT-1..53 done, CRT-51 review-ready/needs-decision, CRT-15/16 blocked on user. No ready items in either project. origin/main still at CRT-31 (PR #12 not merged by Svetlin). Integration branch fully synced (3fbed47). No orphaned changes, no new commits. Nothing new → SILENT.",
+  "timestamp": "2026-06-15T04:30:00Z",
+  "run_count": 72,
+  "note": "Scheduled critterium cron run #72. Quota 18% (fresh window). No locks at start. Cross-project: dual-reader 0 ready, critterium 0 ready. Fetched from remote: origin/main still at CRT-31 (4745bc5), integration branch in sync (3fbed47). Backlog genuinely exhausted since 2026-06-13 — next steps all require Svetlin (merge PR #12, device verification, iOS). Nothing new to report → SILENT."
 }
