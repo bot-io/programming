@@ -1,5 +1,5 @@
 ---
-updated: 2026-06-15T07:29:48 Sofia
+updated: 2026-06-15T09:18:52 Sofia
 source: zai-monitor
 ---
 
@@ -7,7 +7,7 @@ source: zai-monitor
 
 | Field | Value |
 |-------|-------|
-| Window Usage | 18% |
+| Window Usage | 5% |
 | Spare Capacity | true |
-| Next Reset | 2026-06-15 09:11 Sofia |
-| Checked At | 2026-06-15 07:29 Sofia time |
+| Next Reset | 2026-06-15 14:11 Sofia |
+| Checked At | 2026-06-15 09:18 Sofia time |

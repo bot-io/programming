@@ -1041,3 +1041,34 @@
   7. All 1124 unit tests pass; build/lint/format/typecheck clean ✅
 - **Branch:** `integration/crt-35-50` (commits 7e053d0 + cc4b3cd, pushed to PR #12)
 - **Notes:** Followed the CRT-22 precedent for triaging orphaned uncommitted changes. The reproduction refactor has two components: (1) an objectively correct bug fix (energy-deduct-before-spawn), and (2) a design decision (probabilistic→deterministic). The deterministic approach means all eligible particles reproduce in lockstep after cooldown — this could cause population waves in ecosystems but is more predictable for tuning. The stress test memory-stability benchmark now takes ~23s in isolation (was ~15s) because the population stays near cap (500) instead of fluctuating lower. The adaptive-quality test flakiness was a pre-existing issue unrelated to the reproduction change but exposed by running the full suite under parallel load.
+
+### CRT-54 Triage orphaned sim-logger + per-species fair cap work
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Description:** Discovered orphaned uncommitted changes in the working tree on `integration/crt-35-50` from a prior interactive session: (1) a new `sim-logger.ts` module (311 lines) providing crash-safe simulation event logging with population snapshots, extinction detection, localStorage persistence, and Capacitor Share/clipboard export, plus a rewritten crash overlay in main.ts with "Download Log" and "Copy to Clipboard" buttons; (2) a per-species fair population cap in `ecosystem-world.ts` that gives each species `ceil(populationCap / numSpecies)` guaranteed slots, preventing fast-breeding species from monopolizing the global cap. Both features were interdependent — the `recordPopulation()` call in main.ts's sim loop uses `eco.speciesCount()`, a method added by the per-species cap change. The sim-logger was partially wired (recordPopulation + crash handler called, but `initLogger` and `startAutoPersist` never invoked). Completed the wiring, added comprehensive test coverage for both features, and documented.
+- **Acceptance Criteria:**
+  1. Orphaned changes identified, verified, and committed with full test coverage ✅
+  2. sim-logger wiring completed — `initLogger()` called at startup with species names, `startAutoPersist()` timer started ✅
+  3. Unused imports removed (TS strict mode clean) ✅
+  4. 11 new per-species cap tests in ecosystem-world.test.ts ✅
+  5. 30 new sim-logger tests in sim-logger.test.ts ✅
+  6. All tests pass; build + typecheck clean ✅
+- **Test File:** `packages/core/src/ecosystem-world.test.ts` (+11 tests), `packages/app/src/sim-logger.test.ts` (+30 tests)
+- **Branch:** `feat/crt-54-triage-sim-logger-per-species-cap` pushed (commit ec8fdf5). Also on integration branch (d7576b7). Run #73: prior done status was wrong - commit had never been made. Now committed and pushed.
+- **Notes:** The per-species fair cap is a behavioral DESIGN change (not a bug fix) — it fundamentally alters ecosystem dynamics. With global-cap-only behavior, fast-breeding species (e.g., Grass in Grasslands, reproducing every 1.5s) could fill the entire population cap, starving slower species. The fair cap guarantees each species an equal share. This could change the carefully-tuned balance of presets (Grasslands, Birds, Fishes, etc.). **Svetlin should review this when merging.** The sim-logger is a diagnostics/debugging feature — no behavioral impact on the simulation itself. A concurrent sibling subagent was adding the "Export Log" button to controls.ts (the `onExportLog` callback); that UI wiring is separate and not part of this commit.
+
+### CRT-55 Triage orphaned predator satiation + stress test timeout fix
+- **Status:** done
+- **Priority:** P1
+- **Milestone:** M6
+- **Description:** While committing CRT-54's orphaned work (run #73), discovered additional undocumented orphaned changes in the working tree: (1) a predator satiation feature in eating.ts where predators above 75% of max energy stop hunting, giving prey populations room to recover (biologically realistic density-dependent predation); (2) a flaky stress test timeout where the max-capacity particle stress test ran at 4.5-8s, right at the 5s default vitest timeout. Triaged, verified, committed, and pushed following the CRT-22/CRT-52/CRT-53/CRT-54 precedent.
+- **Acceptance Criteria:**
+  1. Predator satiation: predators above 75% max energy skip eating (isSatiated check in processEating) ✅
+  2. Companion test: "satiated predator skips eating" verifies the behavior ✅
+  3. Existing eating test updated (energy 195→140, below 75% threshold of 200 max) ✅
+  4. Stress test timeout: max-capacity describe block gets timeout 30000 (matching memory stability pattern) ✅
+  5. All tests pass ✅
+  6. Build, lint, typecheck, format clean ✅
+- **Branch:** integration/crt-35-50 (commits e52cc25, baa12f4, 95371f7)
+- **Notes:** The predator satiation is a behavioral DESIGN change that improves ecosystem stability — without it, well-fed predators would continue hunting prey to extinction even when not hungry. Combined with the per-species fair cap (CRT-54) and endangered boost (CRT-54), these three features create a self-balancing ecosystem: predators self-regulate via satiation, prey get recovery room via the cap, and endangered species rebound via the boost. Svetlin should review all three behavioral changes when merging PR #12.

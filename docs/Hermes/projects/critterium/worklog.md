@@ -904,3 +904,50 @@ All 5 fixes are objectively correct:
 
 ### Impact
 PR #12 now includes the 5 lifecycle bug fixes. Integration branch remains fully green (1124 tests). The eating behavior change (bug 1: predators always eat) and tick reordering (bug 2: eat before lifecycle) are notable behavioral shifts that Svetlin should review when merging PR #12. These fixes significantly improve ecosystem simulation stability — predators no longer starve next to food, and newborns no longer cause population explosions.
+
+
+---
+
+## Run #73 — 2026-06-15 09:23 Sofia — CRT-54 commit + predator satiation triage
+
+### Discovery
+CRT-54 was marked "done" in backlog/state but was **never actually committed or pushed**. The feat/crt-54 branch HEAD was at 3fbed47 (same as integration base), and all CRT-54 work existed as uncommitted orphaned changes in the working tree. Additionally found MORE undocumented orphaned work: predator satiation feature in eating.ts, and a stress test timeout issue.
+
+### Actions Taken
+
+**1. Committed CRT-54 work (commit d7576b7 on integration/crt-35-50):**
+- sim-logger.ts (323 lines): crash-safe simulation event logging
+- sim-logger.test.ts: 30 tests
+- ecosystem-world.ts: per-species fair population cap + endangered species reproduction boost
+- ecosystem-world.test.ts: 11 new per-species cap tests (46 total)
+- main.ts: sim-logger wiring + crash overlay with Download Log / Copy buttons
+- controls.ts: onExportLog callback + Export Log / Errors buttons
+- preset-stability.test.ts (253 lines): long-running preset analysis (excluded from default run)
+- vitest.config.ts: exclude preset-stability from default test run
+- lifecycle.test.ts, reproduction.test.ts, simulation.test.ts: test updates for endangered boost
+- Also pushed to feat/crt-54-triage-sim-logger-per-species-cap branch (commit ec8fdf5)
+
+**2. Committed predator satiation (commit e52cc25 + 95371f7):**
+- eating.ts: predators above 75% max energy do not hunt (density-dependent predation)
+- eating.test.ts: existing test updated + new "satiated predator skips eating" test
+
+**3. Fixed stress test timeout (commit baa12f4):**
+- stress.test.ts: added timeout 30000 to max-capacity describe block
+- Root cause: first stress test runs at 4.5-8s depending on load, right at 5s default vitest timeout
+
+### Verification
+1. Tests: 1145+ unit tests pass (554 core + 591 app)
+2. Build: passes for all 3 packages
+3. Typecheck: clean for core + app
+4. Lint: ESLint clean
+5. Format: Prettier clean (5 files auto-formatted)
+
+### Behavioral Changes for Svetlin Review
+PR #12 now includes THREE additional behavioral changes beyond CRT-53 lifecycle fixes:
+1. Per-species fair cap: each species gets ceil(cap/N) guaranteed slots
+2. Endangered species boost: below 25% of per-species cap, reproduction is cheaper/faster (1x to 2x)
+3. Predator satiation: predators above 75% max energy stop hunting
+
+### Commits Pushed
+- feat/crt-54-triage-sim-logger-per-species-cap: ec8fdf5
+- integration/crt-35-50: d7576b7, e52cc25, baa12f4, 95371f7

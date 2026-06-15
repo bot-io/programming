@@ -1,8 +1,8 @@
 {
   "last_project": "critterium",
-  "last_item": "none — backlog exhausted",
-  "last_status": "Critterium cron run #72. Backlog exhausted: CRT-1..53 done, CRT-51 review-ready/needs-decision, CRT-15/16 blocked on user. No ready items in either project. origin/main still at CRT-31 (PR #12 not merged by Svetlin). Integration branch fully synced (3fbed47). No orphaned changes, no new commits. Nothing new → SILENT.",
-  "timestamp": "2026-06-15T04:30:00Z",
-  "run_count": 72,
-  "note": "Scheduled critterium cron run #72. Quota 18% (fresh window). No locks at start. Cross-project: dual-reader 0 ready, critterium 0 ready. Fetched from remote: origin/main still at CRT-31 (4745bc5), integration branch in sync (3fbed47). Backlog genuinely exhausted since 2026-06-13 — next steps all require Svetlin (merge PR #12, device verification, iOS). Nothing new to report → SILENT."
+  "last_item": "CRT-54 + CRT-55",
+  "last_status": "Critterium cron run #73. Discovered CRT-54 was marked done but NEVER committed — committed all orphaned work (sim-logger 323 lines + 30 tests, per-species fair cap + 11 tests, endangered species boost, preset-stability test 253 lines, controls UI). Also triaged predator satiation feature (eating.ts) + fixed flaky stress test timeout. 4 commits on integration/crt-35-50 (d7576b7, e52cc25, baa12f4, 95371f7) + 1 on feat/crt-54 (ec8fdf5). All pushed. 1145+ tests pass, build/lint/typecheck/format clean. Three behavioral changes for Svetlin review on PR #12 merge.",
+  "timestamp": "2026-06-15T06:25:00Z",
+  "run_count": 73,
+  "note": "Scheduled critterium cron run #73. Quota 5% (fresh window). Treated stale self-lock (critterium-worker, TBD, 66min old) as abandoned from crashed previous run. Cross-project: dual-reader 0 ready, critterium 0 ready items in backlog — but found uncommitted CRT-54 work + additional orphaned changes. Committed everything following CRT-22/52/53 precedent. Integration branch now at 95371f7."
 }
