@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -13,8 +15,8 @@ android {
         applicationId = "com.dualreader.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 32
-        versionName = "1.0.32"
+        versionCode = 40
+                versionName = "1.0.40"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -77,6 +79,12 @@ android {
             isReturnDefaultValues = true
         }
     }
+}
+
+// Increase test JVM heap — MockK + Robolectric patterns can be memory-hungry
+tasks.withType<Test>().configureEach {
+    maxHeapSize = "2g"
+    jvmArgs("-XX:MaxMetaspaceSize=512m")
 }
 
 dependencies {
@@ -143,6 +151,9 @@ dependencies {
     implementation(libs.mlkit.translate)
     implementation(libs.mlkit.languageid)
     implementation(libs.play.services.base)
+
+    // Google Play Billing
+    implementation(libs.billing)
     coreLibraryDesugaring(libs.desugar)
 
     // Testing

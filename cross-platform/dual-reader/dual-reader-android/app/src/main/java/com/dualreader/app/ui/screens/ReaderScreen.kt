@@ -13,9 +13,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -32,6 +37,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
@@ -41,9 +47,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dualreader.app.domain.entities.Book
 import com.dualreader.app.domain.entities.Bookmark
+import com.dualreader.app.domain.entities.DisplayMode
 import com.dualreader.app.domain.entities.Page
 import com.dualreader.app.domain.entities.ReaderTheme
 import com.dualreader.app.domain.entities.ReadingSettings
+import com.dualreader.app.data.translation.ParagraphAligner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -208,21 +216,25 @@ fun rememberLayoutMode(): ReaderLayoutMode {
 fun ReaderScreen(
     uiState: ReaderUiState,
     onBack: () -> Unit,
-    onNextPage: () -> Unit,
-    onPreviousPage: () -> Unit,
     onTranslateCurrentPage: () -> Unit,
     onTranslateAll: () -> Unit,
+    onTranslateParagraph: (Int) -> Unit = {},
     onAddBookmark: (String) -> Unit,
     onRemoveBookmark: (String) -> Unit,
     onToggleImmersive: () -> Unit,
-    onGoToPage: (Int) -> Unit,
     onSettingsClick: () -> Unit,
     onSearch: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
     searchQuery: String = "",
     searchResults: List<ReaderViewModel.SearchResult> = emptyList(),
-    onRePaginate: (widthPx: Int, heightPx: Int, density: Float) -> Unit = { _, _, _ -> },
     onExportBookmarks: (com.dualreader.app.domain.export.ExportFormat) -> Unit = {},
+    // TTS
+    ttsState: ReaderViewModel.TtsUiState = ReaderViewModel.TtsUiState(),
+    onTtsPlay: () -> Unit = {},
+    onTtsPlayParagraph: (Int) -> Unit = {},
+    onTtsStop: () -> Unit = {},
+    onTtsPause: () -> Unit = {},
+    onTtsSetRate: (Float) -> Unit = {},
 ) {
     when (uiState) {
         is ReaderUiState.Loading -> {
@@ -248,29 +260,31 @@ fun ReaderScreen(
         is ReaderUiState.ReaderReady -> {
             ReaderContent(
                 book = uiState.book,
+                pages = uiState.pages,
                 currentPage = uiState.currentPage,
-                totalPages = uiState.book.totalPages,
                 settings = uiState.settings,
                 bookmarks = uiState.bookmarks,
                 isTranslating = uiState.isTranslating,
                 translationError = uiState.translationError,
-                isRePaginating = uiState.isRePaginating,
                 onBack = onBack,
-                onNextPage = onNextPage,
-                onPreviousPage = onPreviousPage,
                 onTranslateCurrentPage = onTranslateCurrentPage,
                 onTranslateAll = onTranslateAll,
+                onTranslateParagraph = onTranslateParagraph,
                 onAddBookmark = onAddBookmark,
                 onRemoveBookmark = onRemoveBookmark,
                 onToggleImmersive = onToggleImmersive,
-                onGoToPage = onGoToPage,
                 onSettingsClick = onSettingsClick,
                 onSearch = onSearch,
                 onClearSearch = onClearSearch,
                 searchQuery = searchQuery,
                 searchResults = searchResults,
-                onRePaginate = onRePaginate,
                 onExportBookmarks = onExportBookmarks,
+                ttsState = ttsState,
+                onTtsPlay = onTtsPlay,
+                onTtsPlayParagraph = onTtsPlayParagraph,
+                onTtsStop = onTtsStop,
+                onTtsPause = onTtsPause,
+                onTtsSetRate = onTtsSetRate,
             )
         }
     }
@@ -282,37 +296,40 @@ fun ReaderScreen(
 @Composable
 private fun ReaderContent(
     book: Book,
+    pages: List<Page>,
     currentPage: Page,
-    totalPages: Int,
     settings: ReadingSettings,
     bookmarks: List<Bookmark>,
     isTranslating: Boolean,
     translationError: String? = null,
-    isRePaginating: Boolean = false,
     onBack: () -> Unit,
-    onNextPage: () -> Unit,
-    onPreviousPage: () -> Unit,
     onTranslateCurrentPage: () -> Unit,
     onTranslateAll: () -> Unit,
+    onTranslateParagraph: (Int) -> Unit,
     onAddBookmark: (String) -> Unit,
     onRemoveBookmark: (String) -> Unit,
     onToggleImmersive: () -> Unit,
-    onGoToPage: (Int) -> Unit,
     onSettingsClick: () -> Unit,
     onSearch: (String) -> Unit,
     onClearSearch: () -> Unit,
     searchQuery: String,
     searchResults: List<ReaderViewModel.SearchResult>,
-    onRePaginate: (widthPx: Int, heightPx: Int, density: Float) -> Unit = { _, _, _ -> },
     onExportBookmarks: (com.dualreader.app.domain.export.ExportFormat) -> Unit = {},
+    // TTS
+    ttsState: ReaderViewModel.TtsUiState = ReaderViewModel.TtsUiState(),
+    onTtsPlay: () -> Unit = {},
+    onTtsPlayParagraph: (Int) -> Unit = {},
+    onTtsStop: () -> Unit = {},
+    onTtsPause: () -> Unit = {},
+    onTtsSetRate: (Float) -> Unit = {},
 ) {
     val colors = animatedReaderColors(settings.theme)
-    val layoutMode = rememberLayoutMode()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
 
-    // Bars hidden by default — tap center of screen to show.
-    var barsVisible by remember { mutableStateOf(false) }
+    // Bars visible by default; the top-bar fullscreen button toggles them.
+    var barsVisible by remember { mutableStateOf(true) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var showBookmarkList by remember { mutableStateOf(false) }
     var showExportFormatPicker by remember { mutableStateOf(false) }
@@ -343,75 +360,31 @@ private fun ReaderContent(
             .background(colors.background)
             .windowInsetsPadding(WindowInsets.systemBars)
     ) {
-        // ── Content Area (fills entire screen) ─────────────────────
-        // Measure the maximized content area and trigger pagination ONCE.
-        // Bars overlay on top — they never resize the text area.
-        var hasPaginated by remember { mutableStateOf(false) }
-
-        Box(modifier = Modifier.fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    val third = size.width / 3
-                    when {
-                        offset.x < third -> onPreviousPage()
-                        offset.x > size.width - third -> onNextPage()
-                        else -> barsVisible = !barsVisible
-                    }
-                }
-            }
-            .onSizeChanged { size ->
-                if (!hasPaginated && size.width > 0 && size.height > 0) {
-                    hasPaginated = true
-                    // Panel height: full screen for side-by-side, half for vertical split
-                    val panelHeight = if (layoutMode == ReaderLayoutMode.VERTICAL_SPLIT) {
-                        size.height / 2
-                    } else {
-                        size.height
-                    }
-                    val density = context.resources.displayMetrics.density
-                    onRePaginate(size.width, panelHeight, density)
-                }
-            }
+        // ── Paragraph List (scrollable) ────────────────────────────
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = if (barsVisible) 56.dp else 0.dp,
+                bottom = if (ttsState.isSpeaking || ttsState.error != null) 88.dp else 8.dp,
+            ),
         ) {
-            if (layoutMode == ReaderLayoutMode.SIDE_BY_SIDE) {
-                Row(Modifier.fillMaxSize()) {
-                    TextPanel("Original", currentPage.originalText,
-                        settings.fontSize, settings.lineHeight, colors,
-                        searchQuery, Modifier.weight(1f), showLabel = barsVisible,
-                        sentenceCounterEnabled = settings.sentenceCounterEnabled)
-                    Box(Modifier.width(2.dp).fillMaxHeight().background(colors.accent.copy(alpha = 0.5f)))
-                    TranslationPanel(currentPage.effectiveTranslation(settings.targetLanguage), isTranslating, translationError,
-                        settings.fontSize, settings.lineHeight, colors,
-                        onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible,
-                        sentenceCounterEnabled = settings.sentenceCounterEnabled)
-                }
-            } else {
-                Column(Modifier.fillMaxSize()) {
-                    TextPanel("Original", currentPage.originalText,
-                        settings.fontSize, settings.lineHeight, colors,
-                        searchQuery, Modifier.weight(1f), showLabel = barsVisible,
-                        sentenceCounterEnabled = settings.sentenceCounterEnabled)
-                    Box(Modifier.fillMaxWidth().height(2.dp).background(colors.accent.copy(alpha = 0.5f)))
-                    TranslationPanel(currentPage.effectiveTranslation(settings.targetLanguage), isTranslating, translationError,
-                        settings.fontSize, settings.lineHeight, colors,
-                        onTranslateCurrentPage, searchQuery, Modifier.weight(1f), showLabel = barsVisible,
-                        sentenceCounterEnabled = settings.sentenceCounterEnabled)
-                }
-            }
-
-            // Re-pagination loading overlay
-            if (isRePaginating) {
-                Box(
-                    Modifier.fillMaxSize().background(colors.background.copy(alpha = 0.7f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = colors.accent)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Re-paginating…", color = colors.text,
-                            style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+            items(
+                items = pages,
+                key = { page -> page.index },
+            ) { page ->
+                ParagraphCard(
+                    originalText = page.originalText,
+                    translation = page.effectiveTranslation(settings.targetLanguage),
+                    hasTranslation = page.hasTranslation(settings.targetLanguage),
+                    fontSize = settings.fontSize,
+                    lineHeight = settings.lineHeight,
+                    chapterIndex = page.chapterIndex,
+                    isSpeaking = ttsState.isSpeaking && ttsState.currentParagraph == page.index,
+                    colors = colors,
+                    onTranslate = { onTranslateParagraph(page.index) },
+                    onSpeak = { onTtsPlayParagraph(page.index) },
+                )
             }
         }
 
@@ -478,8 +451,18 @@ private fun ReaderContent(
                                     Icon(Icons.Default.BookmarkAdd, "Add bookmark")
                                 }
                             }
-                            IconButton(onClick = onTranslateCurrentPage) {
-                                Icon(Icons.Default.Translate, "Translate page")
+                            IconButton(onClick = onTranslateAll) {
+                                Icon(Icons.Default.Translate, "Translate all")
+                            }
+                            // TTS speaker toggle
+                            IconButton(onClick = {
+                                if (ttsState.isSpeaking) onTtsStop() else onTtsPlay()
+                            }) {
+                                Icon(
+                                    if (ttsState.isSpeaking) Icons.Default.Stop else Icons.Default.VolumeUp,
+                                    if (ttsState.isSpeaking) "Stop reading" else "Read aloud",
+                                    tint = if (ttsState.isSpeaking) colors.accent else MaterialTheme.colorScheme.onSurface,
+                                )
                             }
                             IconButton(onClick = onSettingsClick) {
                                 Icon(Icons.Default.Settings, "Settings")
@@ -524,7 +507,7 @@ private fun ReaderContent(
                             Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    onGoToPage(result.pageIndex)
+                                    scope.launch { listState.animateScrollToItem(result.pageIndex) }
                                     showSearch = false
                                     searchInput = ""
                                     onClearSearch()
@@ -543,26 +526,18 @@ private fun ReaderContent(
             }
         }
 
-        // ── Bottom Bar (overlays on top of content) ────────────────
-        AnimatedVisibility(
-            visible = barsVisible,
-            enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
-            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom),
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) {
-            Surface(
-                color = colors.background.copy(alpha = 0.92f),
-                shadowElevation = 4.dp,
-            ) {
-                BottomReaderBar(
-                    currentPage = book.currentPage,
-                    totalPages = totalPages,
-                    onPrevious = onPreviousPage,
-                    onNext = onNextPage,
-                    onGoToPage = onGoToPage,
-                    colors = colors,
-                )
-            }
+        // ── TTS Control Bar (floating, always visible when speaking) ────
+        if (ttsState.isSpeaking || ttsState.error != null) {
+            TtsControlBar(
+                ttsState = ttsState,
+                colors = colors,
+                onStop = onTtsStop,
+                onPause = onTtsPause,
+                onResume = onTtsPlay,
+                onSetRate = onTtsSetRate,
+                onDismissError = { /* error clears on next action */ },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
 
@@ -571,7 +546,9 @@ private fun ReaderContent(
         BookmarkListSheet(
             bookmarks = bookmarks,
             currentPageIndex = currentPage.index,
-            onNavigateToBookmark = { onGoToPage(it) },
+            onNavigateToBookmark = {
+                scope.launch { listState.animateScrollToItem(it) }
+            },
             onDeleteBookmark = onRemoveBookmark,
             onDismiss = { showBookmarkList = false },
             onExport = if (bookmarks.isNotEmpty()) {
@@ -614,276 +591,93 @@ private fun ReaderContent(
     }
 }
 
-// ─── Text Panel ───────────────────────────────────────────────────────────────
-
-@Composable
-private fun TextPanel(
-    label: String,
-    text: String,
-    fontSize: Float,
-    lineHeight: Float,
-    colors: ReaderColors,
-    searchQuery: String = "",
-    modifier: Modifier = Modifier,
-    showLabel: Boolean = true,
-    sentenceCounterEnabled: Boolean = false,
-) {
-    Column(modifier = modifier) {
-        if (showLabel) {
-            Box(Modifier.fillMaxWidth().background(colors.divider.copy(alpha = 0.3f))
-                .padding(horizontal = 12.dp, vertical = 4.dp)) {
-                Text(label, style = MaterialTheme.typography.labelSmall,
-                    color = colors.textSecondary, fontWeight = FontWeight.Medium)
-            }
-        }
-        if (sentenceCounterEnabled) {
-            SentenceCountedText(
-                text = text,
-                fontSize = fontSize,
-                lineHeight = lineHeight,
-                colors = colors,
-                searchQuery = searchQuery,
-            )
-        } else {
-            Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp)) {
-                val displayText = if (searchQuery.isNotBlank())
-                    highlightText(text, searchQuery, colors.accent.copy(alpha = 0.35f))
-                else AnnotatedString(text)
-                SelectionContainer {
-                    Text(text = displayText, color = colors.text,
-                        fontSize = fontSize.sp, lineHeight = (fontSize * lineHeight).sp,
-                        fontFamily = FontFamily.Serif)
-                }
-            }
-        }
-    }
-}
-
-// ─── Translation Panel ────────────────────────────────────────────────────────
-
-@Composable
-private fun TranslationPanel(
-    translatedText: String?,
-    isTranslating: Boolean,
-    translationError: String? = null,
-    fontSize: Float,
-    lineHeight: Float,
-    colors: ReaderColors,
-    onTranslate: () -> Unit,
-    searchQuery: String = "",
-    modifier: Modifier = Modifier,
-    showLabel: Boolean = true,
-    sentenceCounterEnabled: Boolean = false,
-) {
-    Column(modifier = modifier) {
-        if (showLabel) {
-            Box(Modifier.fillMaxWidth().background(colors.divider.copy(alpha = 0.3f))
-                .padding(horizontal = 12.dp, vertical = 4.dp)) {
-                Text("Translation", style = MaterialTheme.typography.labelSmall,
-                    color = colors.textSecondary, fontWeight = FontWeight.Medium)
-            }
-        }
-        Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-            contentAlignment = Alignment.TopStart) {
-            when {
-                isTranslating -> {
-                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Spacer(Modifier.height(24.dp))
-                        CircularProgressIndicator()
-                        Spacer(Modifier.height(8.dp))
-                        Text("Translating...", color = colors.textSecondary,
-                            style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-                translationError != null -> {
-                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Spacer(Modifier.height(24.dp))
-                        Icon(Icons.Default.ErrorOutline, null, Modifier.size(36.dp),
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f))
-                        Spacer(Modifier.height(8.dp))
-                        SelectionContainer {
-                            Text(translationError, color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        FilledTonalButton(onClick = onTranslate) {
-                            Icon(Icons.Default.Refresh, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Retry")
-                        }
-                    }
-                }
-                translatedText != null -> {
-                    if (sentenceCounterEnabled) {
-                        // Inline sentence counter — no surrounding Box
-                        SentenceCountedTextInner(
-                            text = translatedText,
-                            fontSize = fontSize,
-                            lineHeight = lineHeight,
-                            colors = colors,
-                            searchQuery = searchQuery,
-                        )
-                    } else {
-                        val displayText = if (searchQuery.isNotBlank())
-                            highlightText(translatedText, searchQuery, colors.accent.copy(alpha = 0.35f))
-                        else AnnotatedString(translatedText)
-                        SelectionContainer {
-                            Text(text = displayText, color = colors.text,
-                                fontSize = fontSize.sp, lineHeight = (fontSize * lineHeight).sp,
-                                fontFamily = FontFamily.Serif)
-                        }
-                    }
-                }
-                else -> {
-                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Spacer(Modifier.height(24.dp))
-                        Icon(Icons.Default.Translate, null, Modifier.size(36.dp),
-                            tint = colors.textSecondary.copy(alpha = 0.6f))
-                        Spacer(Modifier.height(8.dp))
-                        Text("No translation yet", color = colors.textSecondary,
-                            style = MaterialTheme.typography.bodyMedium)
-                        Spacer(Modifier.height(12.dp))
-                        FilledTonalButton(onClick = onTranslate) {
-                            Icon(Icons.Default.Translate, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Translate")
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ─── Sentence Counter Text ───────────────────────────────────────────────────
-// Shows small numbered markers on the left at regular sentence intervals.
-// Target: 5-6 cues per page, reset per page.
+// ─── Paragraph Card ──────────────────────────────────────────────────────────
 
 /**
- * Build an AnnotatedString with inline sentence counters.
- * Each sentence is prefixed with a small superscript number: ¹First sentence. ²Second sentence.
- * The numbers are always aligned with their sentence because they're part of the text flow.
+ * A single paragraph in the scrollable reader list.
+ * Shows the original text, an optional translation box with a speak button,
+ * and a "Translate" button when no translation exists yet.
  */
-private fun buildSentenceCountedText(
-    text: String,
-    colors: ReaderColors,
-    searchQuery: String = "",
-): AnnotatedString {
-    val sentences = splitSentences(text)
-    if (sentences.isEmpty()) return AnnotatedString(text)
-
-    return buildAnnotatedString {
-        sentences.forEachIndexed { i, sentence ->
-            val num = i + 1
-            // Superscript-style inline marker
-            withStyle(SpanStyle(
-                fontSize = 9.sp,
-                color = colors.textSecondary.copy(alpha = 0.6f),
-                fontWeight = FontWeight.Medium,
-                baselineShift = BaselineShift.Superscript,
-            )) {
-                append("$num")
-            }
-            // Thin space between number and sentence
-            append("\u2009")
-            // Apply search highlighting if needed
-            if (searchQuery.isNotBlank() && sentence.contains(searchQuery, ignoreCase = true)) {
-                val highlighted = highlightText(sentence, searchQuery, colors.accent.copy(alpha = 0.35f))
-                append(highlighted)
-            } else {
-                append(sentence)
-            }
-            // Space between sentences (preserving original spacing)
-            if (i < sentences.lastIndex) append(" ")
-        }
-    }
-}
-
-/** Sentence-counted text with its own scroll container (for TextPanel) */
 @Composable
-private fun SentenceCountedText(
-    text: String,
+private fun ParagraphCard(
+    originalText: String,
+    translation: String?,
+    hasTranslation: Boolean,
     fontSize: Float,
     lineHeight: Float,
+    chapterIndex: Int,
+    isSpeaking: Boolean,
     colors: ReaderColors,
-    searchQuery: String = "",
+    onTranslate: () -> Unit,
+    onSpeak: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val annotatedText = remember(text, searchQuery) { buildSentenceCountedText(text, colors, searchQuery) }
-    Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-        .padding(horizontal = 8.dp, vertical = 12.dp)) {
+    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        // Original text
         SelectionContainer {
             Text(
-                text = annotatedText,
-                color = colors.text,
+                text = originalText,
                 fontSize = fontSize.sp,
                 lineHeight = (fontSize * lineHeight).sp,
+                color = colors.text,
                 fontFamily = FontFamily.Serif,
             )
         }
-    }
-}
 
-/** Sentence-counted text without outer scroll (for TranslationPanel, already inside a scroll) */
-@Composable
-private fun SentenceCountedTextInner(
-    text: String,
-    fontSize: Float,
-    lineHeight: Float,
-    colors: ReaderColors,
-    searchQuery: String = "",
-) {
-    val annotatedText = remember(text, searchQuery) { buildSentenceCountedText(text, colors, searchQuery) }
-    SelectionContainer {
-        Text(
-            text = annotatedText,
-            color = colors.text,
-            fontSize = fontSize.sp,
-            lineHeight = (fontSize * lineHeight).sp,
-            fontFamily = FontFamily.Serif,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
+        Spacer(Modifier.height(8.dp))
 
-// ─── Bottom Bar ───────────────────────────────────────────────────────────────
-
-@Composable
-private fun BottomReaderBar(
-    currentPage: Int,
-    totalPages: Int,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    onGoToPage: (Int) -> Unit,
-    colors: ReaderColors,
-) {
-    Surface(
-        tonalElevation = 3.dp
-    ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-                IconButton(onClick = onPrevious, enabled = currentPage > 0) {
-                    Icon(Icons.Default.NavigateBefore, "Previous page")
-                }
-                Slider(
-                    value = if (totalPages > 1) currentPage.toFloat() / (totalPages - 1) else 0f,
-                    onValueChange = { fraction ->
-                        val page = (fraction * (totalPages - 1)).toInt().coerceIn(0, totalPages - 1)
-                        onGoToPage(page)
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-                Text("${currentPage + 1}/$totalPages", style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(horizontal = 8.dp))
-                IconButton(onClick = onNext, enabled = currentPage < totalPages - 1) {
-                    Icon(Icons.Default.NavigateNext, "Next page")
+        // Translation box (if translation exists)
+        if (translation != null) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = colors.divider.copy(alpha = 0.3f),
+                border = BorderStroke(1.dp, colors.divider),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Translated",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colors.textSecondary,
+                            fontStyle = FontStyle.Italic,
+                        )
+                        Spacer(Modifier.weight(1f))
+                        IconButton(
+                            onClick = onSpeak,
+                            modifier = Modifier.size(36.dp),
+                        ) {
+                            Icon(
+                                imageVector = if (isSpeaking) Icons.Default.Stop else Icons.Default.VolumeUp,
+                                contentDescription = "Speak translation",
+                                tint = colors.accent,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    SelectionContainer {
+                        Text(
+                            text = translation,
+                            fontSize = (fontSize * 0.92f).sp,
+                            lineHeight = (fontSize * 0.92f * lineHeight).sp,
+                            color = colors.textSecondary,
+                            fontStyle = FontStyle.Italic,
+                        )
+                    }
                 }
             }
+        }
+
+        // Translate button (if no translation yet)
+        if (translation == null && !hasTranslation) {
+            TextButton(onClick = onTranslate) {
+                Icon(Icons.Default.Translate, contentDescription = null, Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Translate")
+            }
+        }
+
+        HorizontalDivider(color = colors.divider.copy(alpha = 0.2f))
     }
 }
 
@@ -1028,4 +822,97 @@ fun ExportFormatDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         },
     )
+}
+
+// ─── TTS Control Bar ──────────────────────────────────────────────────────────
+
+/**
+ * Floating control bar shown when TTS is active or has an error.
+ * Shows play/pause, stop, speech rate slider, and current paragraph indicator.
+ */
+@Composable
+private fun TtsControlBar(
+    ttsState: ReaderViewModel.TtsUiState,
+    colors: ReaderColors,
+    onStop: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onSetRate: (Float) -> Unit,
+    onDismissError: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Error state — show a small error banner
+    if (ttsState.error != null && !ttsState.isSpeaking) {
+        Surface(
+            color = MaterialTheme.colorScheme.errorContainer,
+            shadowElevation = 6.dp,
+            modifier = modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Default.ErrorOutline, null, Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.width(8.dp))
+                Text(ttsState.error, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismissError, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.Close, "Dismiss", Modifier.size(16.dp))
+                }
+            }
+        }
+        return
+    }
+
+    // Active playback bar
+    Surface(
+        color = colors.background.copy(alpha = 0.95f),
+        shadowElevation = 6.dp,
+        modifier = modifier
+            .padding(16.dp)
+            .fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            // Play/Pause
+            IconButton(onClick = if (ttsState.isSpeaking) onPause else onResume) {
+                Icon(
+                    if (ttsState.isSpeaking) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    if (ttsState.isSpeaking) "Pause" else "Resume",
+                    tint = colors.accent,
+                )
+            }
+
+            // Paragraph indicator
+            Text(
+                text = if (ttsState.currentParagraph >= 0) "¶ ${ttsState.currentParagraph + 1}" else "—",
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.textSecondary,
+                modifier = Modifier.width(40.dp),
+            )
+
+            // Speed slider (compact)
+            Text("Aa", style = MaterialTheme.typography.labelSmall, color = colors.textSecondary)
+            Slider(
+                value = ttsState.speechRate,
+                onValueChange = onSetRate,
+                valueRange = 0.5f..2.0f,
+                modifier = Modifier.weight(1f),
+            )
+            Text("${ttsState.speechRate}x", style = MaterialTheme.typography.labelSmall,
+                color = colors.textSecondary, modifier = Modifier.width(32.dp))
+
+            // Stop
+            IconButton(onClick = onStop) {
+                Icon(Icons.Default.Stop, "Stop", tint = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
 }

@@ -53,11 +53,36 @@ private fun copyEpubToInternalStorage(context: Context, uri: Uri): String? {
 }
 
 @Composable
-fun DualReaderNavHost() {
+fun DualReaderNavHost(
+    startOnboarding: Boolean = false,
+    onOnboardingComplete: () -> Unit = {},
+) {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    NavHost(navController = navController, startDestination = "library") {
+    NavHost(
+        navController = navController,
+        startDestination = if (startOnboarding) "onboarding" else "library",
+    ) {
+        // ── Onboarding ────────────────────────────────────────────────
+        composable("onboarding") {
+            OnboardingScreen(
+                onComplete = {
+                    onOnboardingComplete()
+                    navController.navigate("library") {
+                        popUpTo("onboarding") { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        // ── Paywall ───────────────────────────────────────────────────
+        composable("paywall") {
+            PaywallScreen(
+                onDismiss = { navController.popBackStack() },
+            )
+        }
+
         // ── Library ──────────────────────────────────────────────────
         composable("library") {
             val viewModel: LibraryViewModel = hiltViewModel()
@@ -111,6 +136,7 @@ fun DualReaderNavHost() {
                     onBookClick = { bookId -> navController.navigate("reader/$bookId") },
                     onImportClick = { epubPickerLauncher.launch(arrayOf("application/epub+zip")) },
                     onSettingsClick = { navController.navigate("settings") },
+                    onUpgradeClick = { navController.navigate("paywall") },
                     onRetryPagination = { book -> viewModel.retryPagination(book, 1080, 1000) },
                     onDeleteBook = { viewModel.deleteBook(it) },
                     onExportBookmarks = { bookId ->
@@ -155,6 +181,7 @@ fun DualReaderNavHost() {
             val uiState by viewModel.uiState.collectAsState()
             val searchQuery by viewModel.searchQuery.collectAsState()
             val searchResults by viewModel.searchResults.collectAsState()
+            val ttsState by viewModel.ttsState.collectAsState()
 
             // SAF launcher for exporting bookmarks
             var pendingExportContent by remember { mutableStateOf<String?>(null) }
@@ -177,26 +204,29 @@ fun DualReaderNavHost() {
             ReaderScreen(
                 uiState = uiState,
                 onBack = { navController.popBackStack() },
-                onNextPage = { viewModel.nextPage() },
-                onPreviousPage = { viewModel.previousPage() },
                 onTranslateCurrentPage = { viewModel.translateCurrentPage() },
                 onTranslateAll = { viewModel.translateAllPages() },
+                onTranslateParagraph = { viewModel.translateParagraph(it) },
                 onAddBookmark = { viewModel.addBookmark(it) },
                 onRemoveBookmark = { viewModel.removeBookmark(it) },
                 onToggleImmersive = { viewModel.toggleImmersiveMode() },
-                onGoToPage = { viewModel.goToPage(it) },
                 onSettingsClick = { navController.navigate("settings") },
                 onSearch = { viewModel.search(it) },
                 onClearSearch = { viewModel.clearSearch() },
                 searchQuery = searchQuery,
                 searchResults = searchResults,
-                onRePaginate = { w, h, d -> viewModel.rePaginate(w, h, d) },
                 onExportBookmarks = { format ->
                     val content = viewModel.formatBookmarks(format)
                     val fileName = viewModel.exportFileName(format)
                     pendingExportContent = content
                     safLauncher.launch(fileName)
                 },
+                ttsState = ttsState,
+                onTtsPlay = { viewModel.speakCurrentPage() },
+                onTtsPlayParagraph = { idx -> viewModel.speakParagraph(idx) },
+                onTtsStop = { viewModel.stopTts() },
+                onTtsPause = { viewModel.pauseTts() },
+                onTtsSetRate = { rate -> viewModel.setTtsSpeechRate(rate) },
             )
         }
 
@@ -211,11 +241,26 @@ fun DualReaderNavHost() {
                 settings = settings,
                 cachedTranslationCount = cachedCount,
                 translationInfo = translationInfo,
-                quotaStatus = viewModel.quotaStatus,
                 onSettingsChanged = { viewModel.updateSettings(it) },
                 onClearTranslations = { viewModel.clearAllTranslations() },
                 onViewTranslationInfo = { viewModel.loadTranslationInfo() },
-                onRefreshQuota = { viewModel.refreshQuota() },
+                onUpgradeClick = { navController.navigate("paywall") },
+                onModelManagementClick = { navController.navigate("models") },
+                onTermsClick = { navController.navigate("terms") },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable("models") {
+            ModelManagementScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable("terms") {
+            LegalScreen(
+                title = "Terms of Service",
+                assetPath = "legal/terms-of-service.md",
                 onBack = { navController.popBackStack() },
             )
         }

@@ -18,6 +18,7 @@ data class ReadingSettings(
     val isImmersiveMode: Boolean = false,
     val screenWakeTimeoutMinutes: Int = 30,
     val sentenceCounterEnabled: Boolean = false,
+    val displayMode: DisplayMode = DisplayMode.SPLIT,
 )
 
 enum class ReaderTheme {
@@ -44,4 +45,15 @@ enum class TranslationProvider(
     LLM_FREE("GLM-4.7-Flash (Free AI)", true, "$0.00"),
     LLM_CHEAP("GLM-4.7-FlashX (Fast AI)", true, "~$0.07"),
     DEVICE("On-device (ML Kit)", false, "$0.00"),
+}
+
+/**
+ * How bilingual text is displayed in the reader.
+ *
+ * - SPLIT: Original and translation in separate panels (side-by-side or top/bottom)
+ * - INTERLEAVED: Each original paragraph followed by its translation, alternating
+ */
+enum class DisplayMode {
+    SPLIT,
+    INTERLEAVED,
 }

@@ -44,6 +44,9 @@ moshi = "1.15.2"                       # Latest stable
 mlkit-translate = "17.0.3"
 mlkit-languageid = "17.0.5"
 
+# Billing
+billing = "8.0.0"                      # Google Play Billing
+
 # Testing
 mockk = "1.14.11"                      # Latest stable
 turbine = "1.2.1"                      # Latest stable
@@ -113,6 +116,9 @@ mlkit-languageid = { group = "com.google.mlkit", name = "language-id", version.r
 
 # GMS for ML Kit (required)
 play-services-base = { group = "com.google.android.gms", name = "play-services-base", version = "18.7.0" }
+
+# Google Play Billing
+billing = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 
 # Desugaring (required for play-services)
 desugar = { group = "com.android.tools", name = "desugar_jdk_libs", version = "2.1.5" }

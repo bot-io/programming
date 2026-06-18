@@ -32,6 +32,7 @@ class ReaderViewModelTest {
     private lateinit var translatePageUseCase: TranslatePageUseCase
     private lateinit var paginateBookUseCase: PaginateBookUseCase
     private lateinit var translationCacheRepository: TranslationCacheRepository
+    private lateinit var ttsService: com.dualreader.app.domain.services.TtsService
 
     private val testBook = Book(
         id = "book1", title = "Test Book", author = "Author",
@@ -59,6 +60,7 @@ class ReaderViewModelTest {
         translatePageUseCase = mockk()
         paginateBookUseCase = mockk(relaxed = true)
         translationCacheRepository = mockk(relaxed = true)
+        ttsService = mockk(relaxed = true)
 
         coEvery { bookRepository.getBookById("book1") } returns testBook
         coEvery { bookRepository.getPagesForBook("book1") } returns testPages
@@ -77,6 +79,7 @@ class ReaderViewModelTest {
             translatePageUseCase = translatePageUseCase,
             paginateBookUseCase = paginateBookUseCase,
             translationCacheRepository = translationCacheRepository,
+            ttsService = ttsService,
         )
     }
 

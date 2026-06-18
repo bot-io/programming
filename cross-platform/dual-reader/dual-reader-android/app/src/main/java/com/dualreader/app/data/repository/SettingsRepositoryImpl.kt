@@ -2,6 +2,7 @@ package com.dualreader.app.data.repository
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
+import com.dualreader.app.domain.entities.DisplayMode
 import com.dualreader.app.domain.entities.ReaderTheme
 import com.dualreader.app.domain.entities.ReadingSettings
 import com.dualreader.app.domain.entities.TranslationProvider
@@ -31,6 +32,8 @@ class SettingsRepositoryImpl @Inject constructor(
         val IMMERSIVE_MODE = booleanPreferencesKey("immersive_mode")
         val SCREEN_WAKE_TIMEOUT = intPreferencesKey("screen_wake_timeout")
         val SENTENCE_COUNTER = booleanPreferencesKey("sentence_counter")
+        val DISPLAY_MODE = stringPreferencesKey("display_mode")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
     override val settings: Flow<ReadingSettings> = dataStore.data
@@ -56,6 +59,7 @@ class SettingsRepositoryImpl @Inject constructor(
                 isImmersiveMode = prefs[Keys.IMMERSIVE_MODE] ?: false,
                 screenWakeTimeoutMinutes = prefs[Keys.SCREEN_WAKE_TIMEOUT] ?: 30,
                 sentenceCounterEnabled = prefs[Keys.SENTENCE_COUNTER] ?: false,
+                displayMode = try { DisplayMode.valueOf(prefs[Keys.DISPLAY_MODE] ?: "SPLIT") } catch (_: Exception) { DisplayMode.SPLIT },
             )
         }
 
@@ -80,6 +84,7 @@ class SettingsRepositoryImpl @Inject constructor(
                 isImmersiveMode = prefs[Keys.IMMERSIVE_MODE] ?: false,
                 screenWakeTimeoutMinutes = prefs[Keys.SCREEN_WAKE_TIMEOUT] ?: 30,
                 sentenceCounterEnabled = prefs[Keys.SENTENCE_COUNTER] ?: false,
+                displayMode = try { DisplayMode.valueOf(prefs[Keys.DISPLAY_MODE] ?: "SPLIT") } catch (_: Exception) { DisplayMode.SPLIT },
             )
             val updated = transform(current)
             prefs[Keys.FONT_SIZE] = updated.fontSize
@@ -93,9 +98,26 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[Keys.IMMERSIVE_MODE] = updated.isImmersiveMode
             prefs[Keys.SCREEN_WAKE_TIMEOUT] = updated.screenWakeTimeoutMinutes
             prefs[Keys.SENTENCE_COUNTER] = updated.sentenceCounterEnabled
+            prefs[Keys.DISPLAY_MODE] = updated.displayMode.name
         }
     }
 
     override suspend fun getSettings(): ReadingSettings =
         settings.first()
+
+    // ── Onboarding ──────────────────────────────────────────────────
+    override val isOnboardingCompleted: Flow<Boolean> = dataStore.data
+        .map { it[Keys.ONBOARDING_COMPLETED] ?: false }
+
+    override suspend fun setOnboardingCompleted() {
+        dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = true }
+    }
+
+    // ── Target Language ─────────────────────────────────────────────
+    override val targetLanguage: Flow<String> = dataStore.data
+        .map { it[Keys.TARGET_LANGUAGE] ?: "es" }
+
+    override suspend fun setTargetLanguage(lang: String) {
+        dataStore.edit { it[Keys.TARGET_LANGUAGE] = lang }
+    }
 }

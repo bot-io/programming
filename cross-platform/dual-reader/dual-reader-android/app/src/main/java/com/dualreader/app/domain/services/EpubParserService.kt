@@ -32,10 +32,26 @@ interface EpubParserService {
     suspend fun extractCoverImage(filePath: String): ByteArray?
 
     /**
-     * Extract full text of the book for pagination.
+     * Extract full text of the book as a single string (legacy, for compatibility).
      */
     suspend fun extractFullText(filePath: String): String
+
+    /**
+     * Extract the book's content as individual paragraphs, preserving chapter boundaries.
+     *
+     * Each paragraph is a self-contained block of text (typically a <p> tag from the EPUB).
+     * This replaces the old extractFullText + paginate pipeline.
+     */
+    suspend fun extractParagraphs(filePath: String): List<ExtractedParagraph>
 }
+
+/**
+ * A single paragraph extracted from an EPUB, with its chapter context.
+ */
+data class ExtractedParagraph(
+    val text: String,
+    val chapterIndex: Int,
+)
 
 data class ParsedEpub(
     val title: String,

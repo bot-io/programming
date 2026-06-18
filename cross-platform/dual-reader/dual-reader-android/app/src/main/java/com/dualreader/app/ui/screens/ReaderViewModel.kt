@@ -63,6 +63,7 @@ class ReaderViewModel @Inject constructor(
     private val translatePageUseCase: TranslatePageUseCase,
     private val paginateBookUseCase: PaginateBookUseCase,
     private val translationCacheRepository: TranslationCacheRepository,
+    private val ttsService: com.dualreader.app.domain.services.TtsService,
 ) : ViewModel() {
 
     companion object {
@@ -116,9 +117,29 @@ class ReaderViewModel @Inject constructor(
                 val pages = bookRepository.getPagesForBook(bookId)
                 _pages.value = pages
 
+                // Auto-paginate if the book has no pages yet (e.g. pre-installed books from older versions)
+                val effectivePages = if (pages.isEmpty()) {
+                    AppLogger.d("[Reader] Book has no pages, auto-paginating: $bookId")
+                    val paginateResult = paginateBookUseCase(
+                        book = book,
+                        screenWidth = 1080,
+                        screenHeight = 1800,
+                    )
+                    if (paginateResult.isSuccess) {
+                        val newPages = bookRepository.getPagesForBook(bookId)
+                        _pages.value = newPages
+                        newPages
+                    } else {
+                        AppLogger.e("[Reader] Auto-pagination failed: ${paginateResult.exceptionOrNull()?.message}")
+                        emptyList()
+                    }
+                } else {
+                    pages
+                }
+
                 // Extract book context from metadata + first pages for translation quality
-                _bookContext = if (pages.isNotEmpty()) {
-                    BookContextExtractor.extract(book, pages)
+                _bookContext = if (effectivePages.isNotEmpty()) {
+                    BookContextExtractor.extract(book, effectivePages)
                 } else {
                     null
                 }
@@ -126,9 +147,9 @@ class ReaderViewModel @Inject constructor(
                 val settings = settingsRepository.getSettings()
                 _settings.value = settings
 
-                val currentPage = pages.getOrNull(book.currentPage)
+                val currentPage = effectivePages.getOrNull(book.currentPage)
                     ?: bookRepository.getPage(bookId, book.currentPage)
-                    ?: pages.firstOrNull()
+                    ?: effectivePages.firstOrNull()
 
                 if (currentPage == null) {
                     _uiState.value = ReaderUiState.Error("No pages found for book: $bookId")
@@ -368,6 +389,55 @@ class ReaderViewModel @Inject constructor(
         translationJob = null
         _isTranslating.value = false
         _translationError.value = null
+    }
+
+    /**
+     * Translate a single paragraph by index.
+     * Respects model limits — the translation use case batches internally.
+     */
+    fun translateParagraph(index: Int) {
+        cancelTranslation()
+
+        translationJob = viewModelScope.launch(ioDispatcher) {
+            val state = _uiState.value as? ReaderUiState.ReaderReady ?: return@launch
+            val targetLang = state.settings.targetLanguage
+            val page = state.pages.getOrNull(index) ?: return@launch
+
+            if (page.hasTranslation(targetLang)) return@launch
+
+            _isTranslating.value = true
+            _translationError.value = null
+
+            try {
+                val result = translatePageUseCase.translateBatchWithContext(
+                    pages = listOf(PageToTranslate(index = page.index, text = page.originalText)),
+                    targetLanguage = targetLang,
+                    sourceLanguage = _book?.language,
+                    onPageTranslated = { pageIndex, translation ->
+                        applyTranslation(pageIndex, targetLang, translation)
+                    },
+                    bookContext = _bookContext,
+                )
+
+                result.fold(
+                    onSuccess = { batchResult ->
+                        batchResult.translations.forEach { (pageIndex, translation) ->
+                            applyTranslation(pageIndex, targetLang, translation, batchResult.model)
+                        }
+                        _isTranslating.value = false
+                    },
+                    onFailure = { error ->
+                        AppLogger.e("translateParagraph failed: ${error.message}", error)
+                        _isTranslating.value = false
+                        _translationError.value = error.message ?: "Translation failed"
+                    }
+                )
+            } catch (e: Exception) {
+                AppLogger.e("translateParagraph exception: ${e.message}", e)
+                _isTranslating.value = false
+                _translationError.value = e.message ?: "Translation failed"
+            }
+        }
     }
 
     fun translateAllPages() {
@@ -615,6 +685,154 @@ class ReaderViewModel @Inject constructor(
     fun clearSearch() {
         _searchQuery.value = ""
         _searchResults.value = emptyList()
+    }
+
+    // ── Text-to-Speech ──────────────────────────────────────────────────────
+
+    /** TTS UI state exposed to Compose. */
+    data class TtsUiState(
+        val isSpeaking: Boolean = false,
+        val currentParagraph: Int = -1,
+        val error: String? = null,
+        val isLanguageAvailable: Boolean = true,
+        val speechRate: Float = 1.0f,
+    )
+
+    private val _ttsState = MutableStateFlow(TtsUiState())
+    val ttsState: StateFlow<TtsUiState> = _ttsState.asStateFlow()
+
+    /** Cached paragraphs for the current page's translated text. */
+    private var ttsParagraphs: List<String> = emptyList()
+
+    /**
+     * Speak translated paragraphs from the current page.
+     * Splits the translated text by double newline to get paragraphs.
+     */
+    fun speakCurrentPage(paragraphIndex: Int = 0) {
+        val state = _uiState.value as? ReaderUiState.ReaderReady ?: return
+        val targetLang = state.settings.targetLanguage
+        val translation = state.currentPage.translations[targetLang]
+        if (translation.isNullOrBlank()) {
+            _ttsState.value = _ttsState.value.copy(error = "No translation available. Translate the page first.")
+            return
+        }
+
+        // Check language availability
+        if (!ttsService.isLanguageAvailable(targetLang)) {
+            _ttsState.value = _ttsState.value.copy(
+                error = "No TTS voice for this language. Install a TTS engine from Settings.",
+                isLanguageAvailable = false,
+            )
+            return
+        }
+
+        // Split by paragraph boundaries (double newline, matching ParagraphAligner)
+        ttsParagraphs = translation.split("\n\n").filter { it.isNotBlank() }
+        if (ttsParagraphs.isEmpty()) {
+            _ttsState.value = _ttsState.value.copy(error = "No paragraphs to read.")
+            return
+        }
+
+        val startIndex = paragraphIndex.coerceIn(0, ttsParagraphs.lastIndex)
+
+        _ttsState.value = _ttsState.value.copy(
+            isSpeaking = true,
+            currentParagraph = startIndex,
+            error = null,
+            isLanguageAvailable = true,
+            speechRate = ttsService.getSpeechRate(),
+        )
+
+        ttsService.speak(
+            paragraphs = ttsParagraphs,
+            langCode = targetLang,
+            startIndex = startIndex,
+            onParagraphStarted = { idx ->
+                _ttsState.value = _ttsState.value.copy(currentParagraph = idx, isSpeaking = true)
+            },
+            onCompleted = {
+                _ttsState.value = _ttsState.value.copy(isSpeaking = false, currentParagraph = -1)
+            },
+            onError = { msg ->
+                AppLogger.e("TTS error: $msg")
+                _ttsState.value = _ttsState.value.copy(isSpeaking = false, currentParagraph = -1, error = msg)
+            },
+        )
+    }
+
+    /** Speak a single paragraph by index — reads that paragraph's translation directly. */
+    fun speakParagraph(index: Int) {
+        val state = _uiState.value as? ReaderUiState.ReaderReady ?: return
+        val targetLang = state.settings.targetLanguage
+        val page = state.pages.getOrNull(index) ?: return
+        val translation = page.translations[targetLang]
+
+        if (translation.isNullOrBlank()) {
+            _ttsState.value = _ttsState.value.copy(error = "No translation available. Translate this paragraph first.")
+            return
+        }
+
+        if (!ttsService.isLanguageAvailable(targetLang)) {
+            _ttsState.value = _ttsState.value.copy(
+                error = "No TTS voice for this language. Install a TTS engine from Settings.",
+                isLanguageAvailable = false,
+            )
+            return
+        }
+
+        _ttsState.value = _ttsState.value.copy(
+            isSpeaking = true,
+            currentParagraph = index,
+            error = null,
+            isLanguageAvailable = true,
+            speechRate = ttsService.getSpeechRate(),
+        )
+
+        ttsService.speak(
+            paragraphs = listOf(translation),
+            langCode = targetLang,
+            startIndex = 0,
+            onParagraphStarted = {
+                _ttsState.value = _ttsState.value.copy(currentParagraph = index, isSpeaking = true)
+            },
+            onCompleted = {
+                _ttsState.value = _ttsState.value.copy(isSpeaking = false, currentParagraph = -1)
+            },
+            onError = { msg ->
+                AppLogger.e("TTS error: $msg")
+                _ttsState.value = _ttsState.value.copy(isSpeaking = false, currentParagraph = -1, error = msg)
+            },
+        )
+    }
+
+    /** Stop TTS playback. */
+    fun stopTts() {
+        ttsService.stop()
+        _ttsState.value = _ttsState.value.copy(isSpeaking = false, currentParagraph = -1)
+    }
+
+    /** Pause TTS playback. */
+    fun pauseTts() {
+        ttsService.pause()
+        _ttsState.value = _ttsState.value.copy(isSpeaking = false)
+    }
+
+    /** Set TTS speech rate (0.5 to 2.0). */
+    fun setTtsSpeechRate(rate: Float) {
+        ttsService.setSpeechRate(rate)
+        _ttsState.value = _ttsState.value.copy(speechRate = rate)
+    }
+
+    /** Check if TTS is available for the current target language. */
+    fun checkTtsAvailability() {
+        val state = _uiState.value as? ReaderUiState.ReaderReady ?: return
+        val available = ttsService.isLanguageAvailable(state.settings.targetLanguage)
+        _ttsState.value = _ttsState.value.copy(isLanguageAvailable = available)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        ttsService.stop()
     }
 }
 

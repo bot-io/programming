@@ -89,6 +89,7 @@ fun LibraryScreen(
     onBookClick: (bookId: String) -> Unit,
     onImportClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onUpgradeClick: () -> Unit = {},
     onRetryPagination: (book: Book) -> Unit,
     onDeleteBook: (bookId: String) -> Unit,
     onExportBookmarks: ((bookId: String) -> Unit)? = null,
@@ -167,14 +168,23 @@ fun LibraryScreen(
         },
         floatingActionButton = {
             if (uiState !is LibraryUiState.Loading) {
+                var showAddBookSheet by remember { mutableStateOf(false) }
+
                 FloatingActionButton(
-                    onClick = onImportClick,
+                    onClick = { showAddBookSheet = true },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "Import EPUB",
+                        contentDescription = "Add Book",
+                    )
+                }
+
+                if (showAddBookSheet) {
+                    AddBookBottomSheet(
+                        onDismiss = { showAddBookSheet = false },
+                        onImportFromFile = { onImportClick() },
                     )
                 }
             }

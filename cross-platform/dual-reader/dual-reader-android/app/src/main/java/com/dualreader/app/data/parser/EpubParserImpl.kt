@@ -2,6 +2,7 @@ package com.dualreader.app.data.parser
 
 import com.dualreader.app.domain.entities.BookChapter
 import com.dualreader.app.domain.services.EpubParserService
+import com.dualreader.app.domain.services.ExtractedParagraph
 import com.dualreader.app.domain.services.ParsedEpub
 import io.documentnode.epub4j.domain.Book as EpubBook
 import io.documentnode.epub4j.epub.EpubReader
@@ -57,13 +58,40 @@ class EpubParserImpl @Inject constructor() : EpubParserService {
 
     override suspend fun extractFullText(filePath: String): String =
         withContext(Dispatchers.IO) {
+            extractParagraphs(filePath).joinToString("\n\n") { it.text }
+        }
+
+    override suspend fun extractParagraphs(filePath: String): List<ExtractedParagraph> =
+        withContext(Dispatchers.IO) {
             val epubBook = readEpub(filePath)
-            epubBook.contents.mapIndexedNotNull { index, resource ->
+            val paragraphs = mutableListOf<ExtractedParagraph>()
+
+            epubBook.contents.forEachIndexed { spineIndex, resource ->
                 try {
-                    val html = resource.data?.let { String(it, Charsets.UTF_8) } ?: return@mapIndexedNotNull null
-                    Jsoup.parse(html).text()
-                } catch (_: Exception) { null }
-            }.joinToString("\n\n")
+                    val html = resource.data?.let { String(it, Charsets.UTF_8) } ?: return@forEachIndexed
+                    val doc = Jsoup.parse(html)
+
+                    // Select paragraph-like block elements
+                    val elements = doc.select("p, h1, h2, h3, h4, h5, h6, li, blockquote")
+
+                    if (elements.isNotEmpty()) {
+                        for (el in elements) {
+                            val text = el.text().trim()
+                            if (text.isNotEmpty() && text.length > 2) {
+                                paragraphs.add(ExtractedParagraph(text, spineIndex))
+                            }
+                        }
+                    } else {
+                        // Fallback: no block tags found, treat whole section as one paragraph
+                        val text = doc.text().trim()
+                        if (text.isNotEmpty()) {
+                            paragraphs.add(ExtractedParagraph(text, spineIndex))
+                        }
+                    }
+                } catch (_: Exception) { }
+            }
+
+            paragraphs
         }
 
     private fun readEpub(filePath: String): EpubBook {

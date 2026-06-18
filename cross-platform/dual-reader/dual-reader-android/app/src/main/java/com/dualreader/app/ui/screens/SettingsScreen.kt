@@ -15,11 +15,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dualreader.app.domain.entities.DisplayMode
 import com.dualreader.app.domain.entities.ReaderTheme
 import com.dualreader.app.domain.entities.ReadingSettings
-import com.dualreader.app.domain.entities.TranslationProvider
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -29,11 +28,12 @@ fun SettingsScreen(
     settings: ReadingSettings,
     cachedTranslationCount: Int,
     translationInfo: List<PageTranslationInfo>,
-    quotaStatus: StateFlow<QuotaStatus>,
     onSettingsChanged: (ReadingSettings) -> Unit,
     onClearTranslations: () -> Unit,
     onViewTranslationInfo: () -> Unit,
-    onRefreshQuota: () -> Unit,
+    onUpgradeClick: () -> Unit,
+    onModelManagementClick: () -> Unit,
+    onTermsClick: () -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -155,43 +155,7 @@ fun SettingsScreen(
                 }
             }
 
-            // ── Translation Provider ─────────────────────────────────
-            SettingsSection("Translation Provider") {
-                Column {
-                    TranslationProvider.entries.forEach { provider ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSettingsChanged(settings.copy(translationProvider = provider))
-                                }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = settings.translationProvider == provider,
-                                onClick = {
-                                    onSettingsChanged(settings.copy(translationProvider = provider))
-                                },
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    provider.displayName,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                )
-                                Text(
-                                    "${provider.costPerBook}/book • ${if (provider.requiresNetwork) "Online" else "Offline"}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── Target Language ──────────────────────────────────────
+            // ── Target Language ──
             SettingsSection("Target Language") {
                 val languages = listOf(
                     "bg" to "Bulgarian",
@@ -282,6 +246,41 @@ fun SettingsScreen(
                 }
             }
 
+            // ── Display Mode ───────────────────────────────────
+            SettingsSection("Bilingual Display") {
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        FilterChip(
+                            selected = settings.displayMode == DisplayMode.SPLIT,
+                            onClick = {
+                                onSettingsChanged(settings.copy(displayMode = DisplayMode.SPLIT))
+                            },
+                            label = { Text("Split") },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        FilterChip(
+                            selected = settings.displayMode == DisplayMode.INTERLEAVED,
+                            onClick = {
+                                onSettingsChanged(settings.copy(displayMode = DisplayMode.INTERLEAVED))
+                            },
+                            label = { Text("Interleaved") },
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (settings.displayMode == DisplayMode.INTERLEAVED)
+                            "Each paragraph is followed by its translation — best for language learning"
+                        else
+                            "Original and translation in separate panels",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
             // ── Translation Cache ──────────────────────────────
             SettingsSection("Translation Cache") {
                 var showClearDialog by remember { mutableStateOf(false) }
@@ -351,93 +350,48 @@ fun SettingsScreen(
                 }
             }
 
-            // ── Daily Translation Quota ────────────────────────────
-            SettingsSection("Daily Translation Quota") {
-                val quota by quotaStatus.collectAsState()
-                Column(Modifier.fillMaxWidth()) {
-                    if (quota.isLoading) {
+            // ── On-Device Models ─────────────────────────────────
+            SettingsSection("Offline Translation") {
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        .clickable { onModelManagementClick() },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("On-Device Language Models", style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            "Loading quota…",
-                            style = MaterialTheme.typography.bodyMedium,
+                            "Download language models for offline translation (~30MB each)",
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                    } else if (quota.error != null) {
-                        Column {
-                            Text(
-                                "Could not load quota",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                            Text(
-                                quota.error ?: "Unknown error",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedButton(onClick = { onRefreshQuota() }) {
-                                Text("Retry")
-                            }
-                        }
-                    } else {
-                        // Progress bar showing quota usage
-                        val progress = if (quota.dailyLimit > 0) {
-                            quota.pagesUsed.toFloat() / quota.dailyLimit.toFloat()
-                        } else 0f
+                    }
+                    Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
 
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                "${quota.remaining} pages remaining",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = when {
-                                    quota.remaining == 0 -> MaterialTheme.colorScheme.error
-                                    quota.remaining <= 10 -> MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                                    else -> MaterialTheme.colorScheme.onSurface
-                                },
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                "${quota.pagesUsed} / ${quota.dailyLimit}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-
-                        Spacer(Modifier.height(4.dp))
-
-                        LinearProgressIndicator(
-                            progress = { progress.coerceIn(0f, 1f) },
-                            modifier = Modifier.fillMaxWidth(),
-                            color = when {
-                                quota.remaining == 0 -> MaterialTheme.colorScheme.error
-                                quota.remaining <= 10 -> MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
-                                else -> MaterialTheme.colorScheme.primary
-                            },
-                        )
-
-                        Spacer(Modifier.height(4.dp))
-
-                        if (quota.remaining == 0) {
-                            Text(
-                                "Daily free quota reached. Translations will resume tomorrow at midnight UTC.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        } else if (quota.remaining <= 10) {
-                            Text(
-                                "Approaching daily limit. Consider translating fewer pages.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        } else {
-                            Text(
-                                "Free tier: ${quota.dailyLimit} translated pages per day.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+            // ── Upgrade ──────────────────────────────────────────────
+            SettingsSection("Plan") {
+                Column(
+                    Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        "Free Tier",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        "10 pages/day AI translation • 1 book",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = onUpgradeClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    ) {
+                        Text("Upgrade to Pro or Premium")
                     }
                 }
             }
@@ -482,6 +436,12 @@ fun SettingsScreen(
                                 android.content.Intent(context, com.dualreader.app.ui.PrivacyPolicyActivity::class.java)
                             )
                         }
+                    )
+                    Text(
+                        text = "Terms of Service",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable { onTermsClick() }
                     )
 
                     if (showDebugPanel) {
