@@ -75,6 +75,33 @@ class FallbackTranslationServiceTest {
         coVerify { cloudService.translate("text", "bg", "en", null) }
     }
 
+    // ── skipCache propagation (DR-047 regression) ──────────────────────────────
+
+    @Test
+    fun `skipCache true is forwarded to cloud - enables re-translate cache bypass`() = runTest {
+        // Re-translate path: skipCache=true must reach the Worker so D1 is bypassed.
+        coEvery {
+            cloudService.translate(any(), any(), any(), any(), any(), eq(true))
+        } returns "retranslated"
+
+        val result = fallbackService.translate("text", "bg", "en", null, null, skipCache = true)
+
+        assertEquals("retranslated", result)
+        coVerify { cloudService.translate("text", "bg", "en", null, null, true) }
+    }
+
+    @Test
+    fun `skipCache false by default - cloud called without cache bypass`() = runTest {
+        coEvery {
+            cloudService.translate(any(), any(), any(), any(), any(), eq(false))
+        } returns "normal"
+
+        val result = fallbackService.translate("text", "bg", "en")
+
+        assertEquals("normal", result)
+        coVerify { cloudService.translate("text", "bg", "en", null, null, false) }
+    }
+
     // ── Cloud fails → ML Kit fallback ─────────────────────────────────────────
 
     @Test

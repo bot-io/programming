@@ -94,7 +94,7 @@ class FallbackTranslationServiceTranslatePagesTest {
     // ── Cloud batch partial success → ML Kit fills gaps ───────────────────
 
     @Test
-    fun `translatePages - cloud returns partial results, ML Kit fills gaps`() = runTest {
+    fun `translatePages - cloud returns partial results, gaps remain unfilled`() = runTest {
         val pages = listOf(
             IndexedValue(0, "Page 0"),
             IndexedValue(1, "Page 1"),
@@ -106,18 +106,18 @@ class FallbackTranslationServiceTranslatePagesTest {
             cloudService.translatePages(any(), "bg", "en", any())
         } returns BatchTranslationResult(mapOf(0 to "Стр. 0", 2 to "Стр. 2"), "gemini-2.5-flash")
 
-        // ML Kit fills page 1
-        coEvery { mlKitService.translate("Page 1", "bg", "en") } returns "Стр. 1 ML"
-
         val result = fallbackService.translatePages(pages, "bg", "en", null)
 
+        // Fail-fast design: partial cloud results are returned as-is (no ML Kit gap fill)
         assertEquals("Стр. 0", result.translations[0])
-        assertEquals("Стр. 1 ML", result.translations[1])
         assertEquals("Стр. 2", result.translations[2])
+        assertNull(result.translations[1])
+        // ML Kit should NOT be called when cloud batch succeeds
+        coVerify(exactly = 0) { mlKitService.translate(any(), any(), any()) }
     }
 
     @Test
-    fun `translatePages - cloud returns only one of three pages, ML Kit fills two`() = runTest {
+    fun `translatePages - cloud returns only one of three pages, gaps remain`() = runTest {
         val pages = listOf(
             IndexedValue(0, "A"),
             IndexedValue(1, "B"),
@@ -128,20 +128,19 @@ class FallbackTranslationServiceTranslatePagesTest {
             cloudService.translatePages(any(), "bg", "en", any())
         } returns BatchTranslationResult(mapOf(1 to "Б"), "glm-4.7-flash")
 
-        coEvery { mlKitService.translate("A", "bg", "en") } returns "А (ML)"
-        coEvery { mlKitService.translate("C", "bg", "en") } returns "Ц (ML)"
-
         val result = fallbackService.translatePages(pages, "bg", "en", null)
 
-        assertEquals("А (ML)", result.translations[0])
+        // Fail-fast: only the returned page is present
         assertEquals("Б", result.translations[1])
-        assertEquals("Ц (ML)", result.translations[2])
+        assertNull(result.translations[0])
+        assertNull(result.translations[2])
+        coVerify(exactly = 0) { mlKitService.translate(any(), any(), any()) }
     }
 
     // ── Cloud batch throws → individual fallback through full chain ────────
 
     @Test
-    fun `translatePages - cloud batch throws, falls back to individual`() = runTest {
+    fun `translatePages - cloud batch throws, falls back to ML Kit for all pages`() = runTest {
         val pages = listOf(
             IndexedValue(0, "Page 0"),
             IndexedValue(1, "Page 1"),
@@ -152,9 +151,9 @@ class FallbackTranslationServiceTranslatePagesTest {
             cloudService.translatePages(any(), "bg", "en", any())
         } throws TranslationException("batch failed")
 
-        // Individual cloud calls succeed
-        coEvery { cloudService.translate("Page 0", "bg", "en", any()) } returns "Стр. 0"
-        coEvery { cloudService.translate("Page 1", "bg", "en", any()) } returns "Стр. 1"
+        // Fail-fast design: batch failure → ML Kit for ALL pages (no individual cloud calls)
+        coEvery { mlKitService.translate("Page 0", "bg", "en") } returns "Стр. 0"
+        coEvery { mlKitService.translate("Page 1", "bg", "en") } returns "Стр. 1"
 
         val result = fallbackService.translatePages(pages, "bg", "en", null)
 
