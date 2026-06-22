@@ -6,6 +6,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.junit4.MockKRule
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
@@ -249,6 +250,68 @@ class FallbackTranslationServiceTest {
 
         val result = fallbackService.translateBatch(listOf("hello", "fail"), "bg")
         assertEquals(listOf("здравей", "неуспех"), result)
+    }
+
+    // ── Cancellation handling (DR-050 regression) ──────────────────────────────
+    //
+    // CancellationException thrown by a suspend call must propagate — NOT be
+    // swallowed by the generic `catch (e: Exception)` fallback handlers. If it
+    // were swallowed, a cancelled translation would fall through to ML Kit and
+    // surface a spurious "Both cloud and offline failed" error instead of
+    // stopping cleanly (same bug class as DR-049).
+
+    @Test
+    fun `cancellation from cloud translate propagates - ML Kit not consulted`() = runTest {
+        coEvery {
+            cloudService.translate(any(), any(), any(), any(), any(), any())
+        } throws CancellationException("job cancelled")
+        coEvery { mlKitService.translate(any(), any(), any()) } returns "ml-result"
+
+        var caught: Throwable? = null
+        try {
+            fallbackService.translate("hello", "bg")
+        } catch (e: Throwable) {
+            caught = e
+        }
+
+        assertTrue("Expected CancellationException to propagate, got: $caught", caught is CancellationException)
+        // Cancellation must not fall through to the ML Kit tier
+        coVerify(exactly = 0) { mlKitService.translate(any(), any(), any()) }
+    }
+
+    @Test
+    fun `cancellation from cloud batch propagates - ML Kit loop skipped`() = runTest {
+        coEvery {
+            cloudService.translatePages(any(), any(), any(), any(), any(), any())
+        } throws CancellationException("batch cancelled")
+        coEvery { mlKitService.translate(any(), any(), any()) } returns "ml-result"
+
+        var caught: Throwable? = null
+        try {
+            fallbackService.translatePages(listOf(IndexedValue(0, "hello")), "bg")
+        } catch (e: Throwable) {
+            caught = e
+        }
+
+        assertTrue("Expected CancellationException to propagate, got: $caught", caught is CancellationException)
+        // Cancellation must not fall through into the per-page ML Kit loop
+        coVerify(exactly = 0) { mlKitService.translate(any(), any(), any()) }
+    }
+
+    @Test
+    fun `cancellation from detectLanguage propagates - ML Kit not consulted`() = runTest {
+        coEvery { cloudService.detectLanguage(any()) } throws CancellationException("cancelled")
+        coEvery { mlKitService.detectLanguage(any()) } returns "en"
+
+        var caught: Throwable? = null
+        try {
+            fallbackService.detectLanguage("hello")
+        } catch (e: Throwable) {
+            caught = e
+        }
+
+        assertTrue("Expected CancellationException to propagate, got: $caught", caught is CancellationException)
+        coVerify(exactly = 0) { mlKitService.detectLanguage(any()) }
     }
 
     // ── Metadata ───────────────────────────────────────────────────────────────

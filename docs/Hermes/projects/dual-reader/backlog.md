@@ -572,3 +572,16 @@
   4. Regression tests: exactly-once persist, cancel-during-translate, translate-A-then-B-cancels-A
   5. All existing tests pass; no regressions
 - **Notes:** Fixed 2026-06-22 (v1.0.71). Code review (DR-017) found three bugs in `ReaderViewModel.translateParagraphInternal()`: (1) `translationJob` was never assigned the launched coroutine, so `cancelTranslation()` was a no-op during per-paragraph translation and two rapid `translateParagraph()` calls on different indices ran concurrently, racing on `_pages.value` read-modify-write in `applyTranslationsBatch` (lost updates). (2) Both the `onPageTranslated` callback AND the `result.fold(onSuccess)` called `applyTranslation` for the same page → double `updatePageTranslation` DB writes per paragraph. (3) `catch (e: Exception)` caught `CancellationException` without rethrowing, setting a spurious translation error when the user cancelled. Fix: store the job, make the callback a no-op (consistent with `translateCurrentPage`), add explicit `catch (e: CancellationException) { throw e }`. 3 new regression tests in ReaderViewModelTranslationTest. Suite: 987 tests, 0 failures.
+
+### DR-050: Rethrow CancellationException in FallbackTranslationService Fallback Handlers [auto]
+- **Status:** done
+- **Priority:** P1
+- **Category:** [CODE/BUG]
+- **Acceptance Criteria:**
+  1. `translateSingle()` rethrows `CancellationException` from both the cloud tier and the ML Kit tier instead of swallowing it via `catch (e: Exception)`
+  2. `translatePages()` rethrows `CancellationException` from both the cloud batch call and the per-page ML Kit loop
+  3. `detectLanguage()` rethrows `CancellationException` from the cloud call instead of falling through to ML Kit
+  4. A cancelled batch translation stops cleanly instead of surfacing a spurious "Both cloud and offline translation failed" error
+  5. Regression tests verify CancellationException propagates and the ML Kit tier is NOT consulted
+  6. All existing tests pass; no regressions
+- **Notes:** Found 2026-06-22 via code review (DR-017). Same bug class as DR-049 but in `FallbackTranslationService`: every `try { suspendCall() } catch (e: Exception)` block caught `CancellationException` (a subtype of `Exception`) and swallowed it, falling through to the next tier. Net effect on `translatePages()`: when the translation job was cancelled (user navigated away / re-translated / app backgrounded), the cloud batch's `CancellationException` was caught, the code entered the ML Kit fallback loop, and — because the job was already cancelled — every ML Kit call also threw `CancellationException` (caught and swallowed), leaving `mlKitResults` empty → a misleading `TranslationException("Both cloud and offline translation failed")` was thrown instead of the cancellation simply stopping. Fix: added `catch (e: kotlinx.coroutines.CancellationException) { throw e }` before each generic `catch (e: Exception)` in `translateSingle`, `translatePages`, and `detectLanguage` (5 sites total). 3 regression tests in FallbackTranslationServiceTest (translate / translatePages / detectLanguage each assert CancellationException propagates and ML Kit is verified uncalled via `coVerify(exactly = 0)`). Suite: 990 tests, 0 failures. Built v1.0.72.

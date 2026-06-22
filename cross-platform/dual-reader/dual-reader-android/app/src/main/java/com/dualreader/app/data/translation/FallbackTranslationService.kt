@@ -5,6 +5,7 @@ import com.dualreader.app.domain.services.BatchTranslationResult
 import com.dualreader.app.domain.services.TranslationService
 import com.dualreader.app.domain.usecases.SerializedBookContext
 import com.dualreader.app.util.AppLogger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import javax.inject.Inject
 import javax.inject.Named
@@ -78,6 +79,8 @@ class FallbackTranslationService @Inject constructor(
             val result = cloudService.translate(text, targetLanguage, sourceLanguage, context, bookContext, skipCache)
             AppLogger.d("Cloud translation succeeded (${result.length} chars)")
             return result
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             cloudError = e.message ?: "Unknown error"
             AppLogger.w("Cloud translation failed: $cloudError, falling back to ML Kit")
@@ -88,6 +91,8 @@ class FallbackTranslationService @Inject constructor(
             val result = mlKitService.translate(text, targetLanguage, sourceLanguage)
             AppLogger.d("ML Kit fallback succeeded (${result.length} chars)")
             return result
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             AppLogger.e("ML Kit also failed: ${e.message}")
             throw TranslationException(
@@ -122,6 +127,8 @@ class FallbackTranslationService @Inject constructor(
         // Try cloud batch first
         try {
             return cloudService.translatePages(pages, targetLanguage, sourceLanguage, context, bookContext, skipCache)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             AppLogger.w("Cloud batch failed: ${e.message}, falling back to ML Kit (offline)")
         }
@@ -131,6 +138,8 @@ class FallbackTranslationService @Inject constructor(
         for (page in pages) {
             try {
                 mlKitResults[page.index] = mlKitService.translate(page.value, targetLanguage, sourceLanguage)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("ML Kit failed for page ${page.index}: ${e.message}")
             }
@@ -147,7 +156,11 @@ class FallbackTranslationService @Inject constructor(
     // ── detectLanguage ─────────────────────────────────────────────────────────
 
     override suspend fun detectLanguage(text: String): String {
-        try { return cloudService.detectLanguage(text) } catch (_: Exception) {}
+        try {
+            return cloudService.detectLanguage(text)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {}
         return mlKitService.detectLanguage(text)
     }
 
