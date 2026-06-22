@@ -5,6 +5,7 @@ import com.dualreader.app.domain.entities.Page
 import com.dualreader.app.domain.entities.PaginationStatus
 import com.dualreader.app.domain.repositories.BookRepository
 import com.dualreader.app.domain.services.EpubParserService
+import com.dualreader.app.util.AppLogger
 import javax.inject.Inject
 
 /**
@@ -52,6 +53,9 @@ class PaginateBookUseCase @Inject constructor(
                 val existingByContent = existingPages
                     .filter { it.translations.isNotEmpty() }
                     .associateBy { it.originalText }
+                val existingByIndex = existingPages.associateBy { it.index }
+
+                AppLogger.i("PaginateBookUseCase: ${extractedParagraphs.size} paragraphs extracted, ${existingPages.size} existing pages, ${existingByContent.size} with translations")
 
                 // Create one Page per paragraph, carrying over translations by content match
                 val pageEntities = extractedParagraphs.mapIndexed { index, para ->
@@ -67,7 +71,32 @@ class PaginateBookUseCase @Inject constructor(
                         )
                     }
                 }
-                bookRepository.savePages(pageEntities)
+
+                // If pages already exist, only update the ones that changed.
+                // This avoids REPLACE strategy deleting + re-inserting rows,
+                // which could lose translations due to race conditions.
+                if (existingPages.isNotEmpty()) {
+                    // Delete pages that no longer exist (e.g., different paragraph count)
+                    val newIndexSet = pageEntities.map { it.index }.toSet()
+                    val staleIndices = existingPages.map { it.index } - newIndexSet
+                    if (staleIndices.isNotEmpty()) {
+                        bookRepository.deletePagesForBook(book.id)
+                        bookRepository.savePages(pageEntities)
+                        AppLogger.i("PaginateBookUseCase: paragraph count changed, full re-save")
+                    } else {
+                        // Update each page individually, preserving translations
+                        for (page in pageEntities) {
+                            val old = existingByIndex[page.index]
+                            if (old == null || old.originalText != page.originalText) {
+                                // New or changed page — save it (preserves translations from content match)
+                                bookRepository.savePages(listOf(page))
+                            }
+                            // If old page exists with same text, no need to save — translations are already there
+                        }
+                    }
+                } else {
+                    bookRepository.savePages(pageEntities)
+                }
 
                 // Mark as completed
                 bookRepository.updateBook(

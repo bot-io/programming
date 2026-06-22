@@ -29,6 +29,7 @@ data class ProxyTranslateRequest(
     @Json(name = "target_lang") val targetLang: String,
     @Json(name = "installation_id") val installationId: String? = null,
     @Json(name = "book_context") val bookContext: ProxyBookContext? = null,
+    @Json(name = "skip_cache") val skipCache: Boolean = false,
 )
 
 /** Book context sent to the Worker for improved translation quality. */
@@ -65,6 +66,7 @@ data class ProxyBatchTranslateRequest(
     @Json(name = "target_lang") val targetLang: String,
     @Json(name = "installation_id") val installationId: String? = null,
     @Json(name = "book_context") val bookContext: ProxyBookContext? = null,
+    @Json(name = "skip_cache") val skipCache: Boolean = false,
 )
 
 @JsonClass(generateAdapter = true)

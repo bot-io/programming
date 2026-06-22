@@ -5,37 +5,29 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Tests for EntitlementTier — entitlement tier properties and parsing.
- *
- * Verifies:
- * - Each tier has correct translation limits and library caps
- * - isPaid flag distinguishes free from paid tiers
- * - fromName parsing handles valid names, null, and invalid strings
- */
 class EntitlementTierTest {
 
-    // --- Daily translation limits ---
+    // ── dailyTranslationLimit ──────────────────────────────────────
 
     @Test
-    fun `FREE has 10 page daily limit`() {
+    fun `FREE has 10 daily translations`() {
         assertEquals(10, EntitlementTier.FREE.dailyTranslationLimit)
     }
 
     @Test
-    fun `PRO has 50 page daily limit`() {
+    fun `PRO has 50 daily translations`() {
         assertEquals(50, EntitlementTier.PRO.dailyTranslationLimit)
     }
 
     @Test
-    fun `PREMIUM has unlimited daily translation`() {
+    fun `PREMIUM has unlimited daily translations`() {
         assertEquals(Int.MAX_VALUE, EntitlementTier.PREMIUM.dailyTranslationLimit)
     }
 
-    // --- Library book caps ---
+    // ── maxLibraryBooks ────────────────────────────────────────────
 
     @Test
-    fun `FREE can have only 1 book in library`() {
+    fun `FREE can have 1 library book`() {
         assertEquals(1, EntitlementTier.FREE.maxLibraryBooks)
     }
 
@@ -49,7 +41,7 @@ class EntitlementTierTest {
         assertEquals(Int.MAX_VALUE, EntitlementTier.PREMIUM.maxLibraryBooks)
     }
 
-    // --- isPaid flag ---
+    // ── isPaid ─────────────────────────────────────────────────────
 
     @Test
     fun `FREE is not paid`() {
@@ -66,41 +58,57 @@ class EntitlementTierTest {
         assertTrue(EntitlementTier.PREMIUM.isPaid)
     }
 
-    // --- fromName parsing ---
+    // ── fromName ───────────────────────────────────────────────────
 
     @Test
-    fun `fromName parses FREE`() {
+    fun `fromName FREE returns FREE`() {
         assertEquals(EntitlementTier.FREE, EntitlementTier.fromName("FREE"))
     }
 
     @Test
-    fun `fromName parses PRO`() {
+    fun `fromName PRO returns PRO`() {
         assertEquals(EntitlementTier.PRO, EntitlementTier.fromName("PRO"))
     }
 
     @Test
-    fun `fromName parses PREMIUM`() {
+    fun `fromName PREMIUM returns PREMIUM`() {
         assertEquals(EntitlementTier.PREMIUM, EntitlementTier.fromName("PREMIUM"))
     }
 
     @Test
-    fun `fromName returns FREE for null`() {
+    fun `fromName null returns FREE`() {
         assertEquals(EntitlementTier.FREE, EntitlementTier.fromName(null))
     }
 
     @Test
-    fun `fromName returns FREE for unknown string`() {
-        assertEquals(EntitlementTier.FREE, EntitlementTier.fromName("UNKNOWN"))
+    fun `fromName unknown returns FREE`() {
+        assertEquals(EntitlementTier.FREE, EntitlementTier.fromName("WHATEVER"))
     }
 
     @Test
-    fun `fromName returns FREE for lowercase`() {
-        // Case-sensitive — lowercase should fall back to FREE
+    fun `fromName lowercase returns FREE (case-sensitive)`() {
         assertEquals(EntitlementTier.FREE, EntitlementTier.fromName("free"))
     }
 
     @Test
-    fun `fromName returns FREE for empty string`() {
+    fun `fromName empty string returns FREE`() {
         assertEquals(EntitlementTier.FREE, EntitlementTier.fromName(""))
+    }
+
+    // ── Progression ────────────────────────────────────────────────
+
+    @Test
+    fun `FREE limit less than PRO limit`() {
+        assertTrue(EntitlementTier.FREE.dailyTranslationLimit < EntitlementTier.PRO.dailyTranslationLimit)
+    }
+
+    @Test
+    fun `PRO limit less than PREMIUM limit`() {
+        assertTrue(EntitlementTier.PRO.dailyTranslationLimit < EntitlementTier.PREMIUM.dailyTranslationLimit)
+    }
+
+    @Test
+    fun `enum has exactly 3 tiers`() {
+        assertEquals(3, EntitlementTier.entries.size)
     }
 }

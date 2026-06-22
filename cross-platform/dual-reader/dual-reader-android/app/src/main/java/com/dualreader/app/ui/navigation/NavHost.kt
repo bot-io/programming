@@ -9,11 +9,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -21,6 +24,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -97,10 +101,9 @@ fun DualReaderNavHost(
                     text
                 } else null
             }
+            var crashReportVisible by remember { mutableStateOf(crashReport != null) }
 
-            if (crashReport != null) {
-                CrashReportView(report = crashReport)
-            } else {
+            // Show crash report as dismissible dialog, not blocking the library
                 val epubPickerLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.OpenDocument()
                 ) { uri: Uri? ->
@@ -168,6 +171,24 @@ fun DualReaderNavHost(
                         viewModel.removeBookFromCollection(collectionId, bookId)
                     },
                 )
+
+            // Crash report dialog (non-blocking, dismissible)
+            if (crashReportVisible && crashReport != null) {
+                AlertDialog(
+                    onDismissRequest = { crashReportVisible = false },
+                    title = { Text("⚠️ Crash Report") },
+                    text = {
+                        Text(
+                            text = crashReport.take(500),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { crashReportVisible = false }) {
+                            Text("Dismiss")
+                        }
+                    },
+                )
             }
         }
 
@@ -182,6 +203,18 @@ fun DualReaderNavHost(
             val searchQuery by viewModel.searchQuery.collectAsState()
             val searchResults by viewModel.searchResults.collectAsState()
             val ttsState by viewModel.ttsState.collectAsState()
+
+            // Reload pages from DB when returning to reader (e.g., after clearing translations in Settings)
+            val lifecycleOwner = LocalLifecycleOwner.current
+            DisposableEffect(lifecycleOwner) {
+                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                        viewModel.reloadPages()
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
 
             // SAF launcher for exporting bookmarks
             var pendingExportContent by remember { mutableStateOf<String?>(null) }
@@ -205,8 +238,6 @@ fun DualReaderNavHost(
                 uiState = uiState,
                 onBack = { navController.popBackStack() },
                 onTranslateCurrentPage = { viewModel.translateCurrentPage() },
-                onTranslateAll = { viewModel.translateAllPages() },
-                onTranslateParagraph = { viewModel.translateParagraph(it) },
                 onAddBookmark = { viewModel.addBookmark(it) },
                 onRemoveBookmark = { viewModel.removeBookmark(it) },
                 onToggleImmersive = { viewModel.toggleImmersiveMode() },
@@ -227,6 +258,16 @@ fun DualReaderNavHost(
                 onTtsStop = { viewModel.stopTts() },
                 onTtsPause = { viewModel.pauseTts() },
                 onTtsSetRate = { rate -> viewModel.setTtsSpeechRate(rate) },
+                onUpdateCurrentPage = { idx -> viewModel.updateCurrentPage(idx) },
+                wordTranslation = viewModel.wordTranslation.collectAsState().value,
+                onTranslateWord = { word, isOrig -> viewModel.translateWord(word, isOrig) },
+                onDismissWordTranslation = { viewModel.dismissWordTranslation() },
+                onTranslateParagraph = { idx -> viewModel.translateParagraph(idx) },
+                onReTranslateParagraph = { idx -> viewModel.reTranslateParagraph(idx) },
+                paragraphsTranslating = viewModel.paragraphsTranslating.collectAsState().value,
+                translationEvents = viewModel.translationEvents,
+                onRetryTranslation = { viewModel.translateCurrentPage() },
+                onDownloadModel = { viewModel.downloadModelForCurrentLang() },
             )
         }
 

@@ -29,6 +29,7 @@ class MlKitTranslationServiceImpl @Inject constructor() : TranslationService {
         sourceLanguage: String?,
         context: String?,
         bookContext: SerializedBookContext?,
+        skipCache: Boolean,
     ): String = withContext(Dispatchers.IO) {
         try {
             val src = sourceLanguage ?: detectLanguage(text)

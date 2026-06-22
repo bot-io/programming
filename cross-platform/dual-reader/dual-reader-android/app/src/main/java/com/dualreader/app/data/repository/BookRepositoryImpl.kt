@@ -98,4 +98,13 @@ class BookRepositoryImpl @Inject constructor(
 
     override suspend fun getPageCount(bookId: String): Int =
         pageDao.getPageCount(bookId)
+
+    override suspend fun clearAllTranslations() =
+        pageDao.clearAllTranslations()
+
+    override suspend fun updatePageTranslation(bookId: String, pageIndex: Int, translationsJson: String?, modelsJson: String?) =
+        pageDao.updatePageTranslations(bookId, pageIndex, translationsJson, modelsJson)
+
+    override suspend fun getTranslatedPageCount(): Int =
+        pageDao.getTranslatedPageCount()
 }

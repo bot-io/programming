@@ -45,6 +45,7 @@ data class PageEntity(
     val originalText: String,
     val translationsJson: String? = null,
     val translationModelsJson: String? = null,
+    val translationTimestampsJson: String? = null,
     val startCharOffset: Int = 0,
     val endCharOffset: Int = 0,
 )

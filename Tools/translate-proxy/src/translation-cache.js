@@ -50,6 +50,20 @@ export async function getCachedTranslation(db, sourceText, targetLang) {
 }
 
 /**
+ * Delete a cached translation (used when hallucination guard rejects it).
+ */
+export async function deleteCachedTranslation(db, sourceText, targetLang) {
+  if (!db) return;
+  const cacheKey = await computeCacheKey(sourceText, targetLang);
+  try {
+    await db.prepare('DELETE FROM translation_cache WHERE cache_key = ?')
+      .bind(cacheKey).run();
+  } catch (err) {
+    console.error(`[cache] Delete error: ${err.message}`);
+  }
+}
+
+/**
  * Look up cached translations for a batch of pages.
  * Returns a Map<pageIndex, {translated_text, model}> for pages that are cached.
  * Expired entries are cleaned up on read.
@@ -213,7 +227,10 @@ export async function getCacheStats(db) {
  * Uses Web Crypto API (available in CF Workers).
  */
 async function computeCacheKey(sourceText, targetLang) {
-  const combined = `${targetLang}:${sourceText}`;
+  // Normalize whitespace to prevent duplicate cache entries for
+  // the same text with different trailing/leading whitespace.
+  const normalized = sourceText.trim().replace(/\s+/g, ' ');
+  const combined = `${targetLang}:${normalized}`;
   return computeHash(combined);
 }
 

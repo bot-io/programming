@@ -48,6 +48,16 @@ fun SettingsScreen(
             )
         }
     ) { padding ->
+        // Local state for sliders — updates UI instantly, writes to DB only on drag end
+        var localFontSize by remember { mutableStateOf(settings.fontSize) }
+        var localLineHeight by remember { mutableStateOf(settings.lineHeight) }
+        var localMargins by remember { mutableStateOf(settings.margins.toFloat()) }
+
+        // Sync local state when external settings change (e.g., from another screen)
+        LaunchedEffect(settings.fontSize) { localFontSize = settings.fontSize }
+        LaunchedEffect(settings.lineHeight) { localLineHeight = settings.lineHeight }
+        LaunchedEffect(settings.margins) { localMargins = settings.margins.toFloat() }
+
         Column(
             Modifier
                 .padding(padding)
@@ -60,8 +70,9 @@ fun SettingsScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("A", fontSize = 12.sp, fontFamily = FontFamily.Serif)
                     Slider(
-                        value = settings.fontSize,
-                        onValueChange = { onSettingsChanged(settings.copy(fontSize = it)) },
+                        value = localFontSize,
+                        onValueChange = { localFontSize = it },
+                        onValueChangeFinished = { onSettingsChanged(settings.copy(fontSize = localFontSize)) },
                         valueRange = 12f..32f,
                         steps = 9,
                         modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
@@ -69,7 +80,7 @@ fun SettingsScreen(
                     Text("A", fontSize = 24.sp, fontFamily = FontFamily.Serif)
                 }
                 Text(
-                    "${settings.fontSize.toInt()} sp",
+                    "${localFontSize.toInt()} sp",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -80,8 +91,9 @@ fun SettingsScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Compact")
                     Slider(
-                        value = settings.lineHeight,
-                        onValueChange = { onSettingsChanged(settings.copy(lineHeight = it)) },
+                        value = localLineHeight,
+                        onValueChange = { localLineHeight = it },
+                        onValueChangeFinished = { onSettingsChanged(settings.copy(lineHeight = localLineHeight)) },
                         valueRange = 1.0f..2.5f,
                         steps = 5,
                         modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
@@ -89,7 +101,7 @@ fun SettingsScreen(
                     Text("Relaxed")
                 }
                 Text(
-                    String.format("%.1fx", settings.lineHeight),
+                    String.format("%.1fx", localLineHeight),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -100,15 +112,16 @@ fun SettingsScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Narrow")
                     Slider(
-                        value = settings.margins.toFloat(),
-                        onValueChange = { onSettingsChanged(settings.copy(margins = it.toInt())) },
+                        value = localMargins,
+                        onValueChange = { localMargins = it },
+                        onValueChangeFinished = { onSettingsChanged(settings.copy(margins = localMargins.toInt())) },
                         valueRange = 0f..48f,
                         modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                     )
                     Text("Wide")
                 }
                 Text(
-                    "${settings.margins} dp",
+                    "${localMargins.toInt()} dp",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

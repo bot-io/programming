@@ -1,15 +1,7 @@
 # Critterium — Questions
 
 ## CRT-15: On-device performance verification needed
-**Asked:** 2026-06-12
-**Item:** CRT-15 criterion 3
-**Question:** Please install the debug APK from the CI artifact (or from `critterium-1.0.2.apk` in the repo root) on your Android device and report:
-1. Does the app launch and display the particle simulation?
-2. What FPS does the HUD show with the default 200 particles?
-3. Does the app pause when you switch to another app and resume correctly when you return?
-4. Any visual glitches or crashes?
-
-Once you confirm, we can mark CRT-15 as done and move to CRT-16 (iOS + store readiness).
+**✅ RESOLVED (2026-06-17):** User confirmed app runs at 60fps with 200 particles on-device. Pause/resume works correctly.
 
 ## FYI (no action needed): Vault remote was corrupted — fixed 2026-06-13
 **Noted:** 2026-06-13
@@ -54,4 +46,18 @@ Once you confirm, we can mark CRT-15 as done and move to CRT-16 (iOS + store rea
 **Update (run #55, 2026-06-14):** The integration branch is now FEATURE-COMPLETE — CRT-33 (e2e fixes + Playwright CI) and CRT-34 (dead sickness code removal) have been cherry-picked onto `integration/crt-35-50`. The branch now contains ALL work from CRT-32 through CRT-50 (1124 tests, build/lint/format/typecheck green). PR #12 is ready to merge with a single click — no additional work needed regardless of which option you pick. This simplifies the decision: **Option 2 (merge PR #12) is now the clear fastest path** since the integration branch is complete and CI is green.
 
 **Update (run #56, 2026-06-14):** Fixed the e2e CI job that was FAILING (all 12 Playwright tests got ERR_CONNECTION_REFUSED because Vite dev server crashed during esbuild pre-bundling — Pixi.js v8 destructuring couldn't be down-leveled to es2020 target). PR #12 now has **all 3 CI jobs green**: build-and-test ✓, e2e ✓, android-debug-apk ✓. **PR #12 is ready to merge right now — just click the merge button.**
+
+**✅ RESOLVED (2026-06-17):** PR #12 squash-merged into main (commit `452ac87`). Also fixed: hardcoded JDK path in `gradle.properties` broke CI APK job — moved to `~/.gradle/gradle.properties` locally, CI uses `setup-java` action.
+
+## CRT-56: Reproduction fairness refactor — preset stability regression (10/14 partial extinctions)
+**Asked:** 2026-06-15
+**Item:** CRT-56 (design decision needed)
+**Context:** Run #74 triaged an orphaned reproduction fairness refactor. `processReproduction()` was rewritten from per-index loop (biased toward lower-indexed species) to round-robin queue across species — fairer, but the endangered species boost (CRT-54) was removed at the same time. Result: 10/14 presets now have partial extinctions (species dying out). No total extinctions. The tests pass (partial extinctions are warnings, not failures).
+
+**Preset stability after CRT-56:**
+- ✅ Stable (4/14): Tiny Pond, Zen Garden, Rock Paper Scissors, Grasslands
+- ⚠️ Partial extinction (10/14): Classic (Prey), Plankton Bloom (Small Fish, Big Fish), Swarm Intelligence (Locusts), Predator Arena (Wolves, Deer), Birds (Starlings), Fishes (Tetras), Coral Reef (Moray Eel), Tornado Alley (Dust Motes), Deep Sea Vent (Bacteria, Tube Worms, Crabs), Symbiosis (Algae)
+- 💀 Total extinction (0/14)
+
+**✅ RESOLVED (2026-06-17):** User chose **Option 1 — keep round-robin only, no artificial stability**. User explicitly rejected endangered boost and per-species caps. Partial extinctions are accepted as natural ecosystem dynamics. Rules must be constant and well-defined — no adaptive mechanisms.
 

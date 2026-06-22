@@ -37,9 +37,6 @@ interface BookDao {
 
     @Query("DELETE FROM books WHERE id = :id")
     suspend fun deleteById(id: String)
-
-    @Query("SELECT COUNT(*) FROM pages WHERE bookId = :bookId")
-    suspend fun getPageCount(bookId: String): Int
 }
 
 @Dao
@@ -55,6 +52,15 @@ interface PageDao {
 
     @Query("DELETE FROM pages WHERE bookId = :bookId")
     suspend fun deletePagesForBook(bookId: String)
+
+    @Query("UPDATE pages SET translationsJson = :translationsJson, translationModelsJson = :modelsJson WHERE bookId = :bookId AND pageIndex = :pageIndex")
+    suspend fun updatePageTranslations(bookId: String, pageIndex: Int, translationsJson: String?, modelsJson: String?)
+
+    @Query("UPDATE pages SET translationsJson = NULL, translationModelsJson = NULL WHERE translationsJson IS NOT NULL")
+    suspend fun clearAllTranslations()
+
+    @Query("SELECT COUNT(*) FROM pages WHERE translationsJson IS NOT NULL")
+    suspend fun getTranslatedPageCount(): Int
 
     @Query("SELECT COUNT(*) FROM pages WHERE bookId = :bookId")
     suspend fun getPageCount(bookId: String): Int

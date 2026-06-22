@@ -87,6 +87,8 @@ class ReaderViewModelAutoPaginateTest {
             paginateBookUseCase = paginateBookUseCase,
             translationCacheRepository = translationCacheRepository,
             ttsService = ttsService,
+            translationService = mockk(relaxed = true),
+            mlKitModelManager = mockk(relaxed = true),
         )
     }
 
@@ -149,8 +151,8 @@ class ReaderViewModelAutoPaginateTest {
         // When
         createViewModel("book-haspages")
 
-        // Then: paginateBookUseCase should NOT be called
-        coVerify(exactly = 0) { paginateBookUseCase(any(), any(), any()) }
+        // Then: loadBook calls paginateBookUseCase once for re-extraction, not for auto-pagination
+        coVerify(exactly = 1) { paginateBookUseCase(any(), any(), any()) }
     }
 
     @After

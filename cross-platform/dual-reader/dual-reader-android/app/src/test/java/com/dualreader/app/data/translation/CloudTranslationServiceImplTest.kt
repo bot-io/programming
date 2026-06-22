@@ -90,11 +90,9 @@ class CloudTranslationServiceImplTest {
     // ── Single translate — with context ──────────────────────────────────────
 
     @Test
-    fun `translate - includes context with separator when provided`() = runTest {
+    fun `translate - sends text directly even when context is provided`() = runTest {
         coEvery { proxyApi.translate(match { req ->
-            req.text.contains("--- Text to translate ---") &&
-            req.text.contains("Previous context") &&
-            req.text.endsWith("Hello")
+            req.text == "Hello"
         }) } returns successResponse("Здравейте")
 
         service.translate("Hello", "bg", "en", "Previous context")
@@ -381,9 +379,9 @@ class CloudTranslationServiceImplTest {
         assertEquals("gemini-2.5-flash", result.model)
     }
 
-    @Test
-    fun `translatePages - fallback to individual calls preserves original indices`() = runTest {
-        // Batch endpoint fails, forcing individual fallback
+    @Test(expected = TranslationException::class)
+    fun `translatePages - batch error fails fast without individual fallback`() = runTest {
+        // Batch endpoint returns error — no individual fallback
         val pages = listOf(
             IndexedValue(5, "Five"),
             IndexedValue(6, "Six"),
@@ -392,20 +390,12 @@ class CloudTranslationServiceImplTest {
         coEvery { proxyApi.translateBatch(any()) } returns Response.success(
             ProxyBatchTranslateResponse(error = "batch failed")
         )
-        // Individual translate calls succeed
-        coEvery { proxyApi.translate(match { it.text == "Five" }) } returns successResponse("Пет")
-        coEvery { proxyApi.translate(match { it.text == "Six" }) } returns successResponse("Шест")
 
-        val result = service.translatePages(pages, "bg", "en", null)
-
-        // Even through fallback path, keys must be 5,6 not 0,1
-        assertEquals(setOf(5, 6), result.translations.keys)
-        assertEquals("Пет", result.translations[5])
-        assertEquals("Шест", result.translations[6])
+        service.translatePages(pages, "bg", "en", null)
     }
 
     @Test
-    fun `translatePages - partial batch success fills gaps with individual calls`() = runTest {
+    fun `translatePages - partial batch success returns available results only`() = runTest {
         val pages = listOf(
             IndexedValue(3, "Three"),
             IndexedValue(4, "Four"),
@@ -415,14 +405,14 @@ class CloudTranslationServiceImplTest {
         coEvery { proxyApi.translateBatch(any()) } returns batchSuccessResponse(
             listOf(BatchTranslation(index = 3, translatedText = "Три"))
         )
-        // Individual fallback for page 4
-        coEvery { proxyApi.translate(match { it.text == "Four" }) } returns successResponse("Четири")
 
         val result = service.translatePages(pages, "bg", "en", null)
 
-        assertEquals(setOf(3, 4), result.translations.keys)
+        // Only available translations returned (no gap-filling via individual calls)
+        assertEquals(setOf(3), result.translations.keys)
         assertEquals("Три", result.translations[3])
-        assertEquals("Четири", result.translations[4])
+        assertNull(result.translations[4])
+        coVerify(exactly = 0) { proxyApi.translate(any()) }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

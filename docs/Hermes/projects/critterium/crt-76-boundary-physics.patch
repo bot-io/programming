@@ -1,0 +1,172 @@
+diff --git a/packages/core/src/index.test.ts b/packages/core/src/index.test.ts
+index 14e0339..6694e51 100644
+--- a/packages/core/src/index.test.ts
++++ b/packages/core/src/index.test.ts
+@@ -199,8 +199,11 @@ describe('World.applyBoundaries (bounce)', () => {
+     world.vx[0] = -50;
+     world.applyBoundaries();
+     expect(world.x[0]).toBe(10);
+-    // Hard bounce: vx = 50, soft repulsion: x=10, margin=30, t=(1-10/30)²*10 = 4.444
+-    expect(world.vx[0]).toBeCloseTo(50 + (1 - 10 / 30) ** 2 * World.BOUNCE_REPULSION, 3);
++    // Hard bounce: vx = -(-50)*damping = 25; soft: dist=10, margin=60, t=(1-10/60)²
++    expect(world.vx[0]).toBeCloseTo(
++      50 * World.BOUNCE_DAMPING + (1 - 10 / World.BOUNCE_MARGIN) ** 2 * World.BOUNCE_REPULSION,
++      3,
++    );
+   });
+ 
+   it('bounces particles off right wall + soft repulsion', () => {
+@@ -209,8 +212,11 @@ describe('World.applyBoundaries (bounce)', () => {
+     world.vx[0] = 50;
+     world.applyBoundaries();
+     expect(world.x[0]).toBeCloseTo(790, 3);
+-    // Hard bounce: vx = -50, distToRight=10, soft: -(1-10/30)²*10 = -4.444
+-    expect(world.vx[0]).toBeCloseTo(-50 - (1 - 10 / 30) ** 2 * World.BOUNCE_REPULSION, 3);
++    // Hard bounce: vx = -(50)*damping = -25; soft: dist=10, margin=60
++    expect(world.vx[0]).toBeCloseTo(
++      -50 * World.BOUNCE_DAMPING - (1 - 10 / World.BOUNCE_MARGIN) ** 2 * World.BOUNCE_REPULSION,
++      3,
++    );
+   });
+ 
+   it('bounces particles off top wall + soft repulsion', () => {
+@@ -219,8 +225,11 @@ describe('World.applyBoundaries (bounce)', () => {
+     world.vy[0] = -30;
+     world.applyBoundaries();
+     expect(world.y[0]).toBe(5);
+-    // Hard bounce: vy = 30, distToTop=5, soft: (1-5/30)²*10 = 6.944
+-    expect(world.vy[0]).toBeCloseTo(30 + (1 - 5 / 30) ** 2 * World.BOUNCE_REPULSION, 3);
++    // Hard bounce: vy = -(-30)*damping = 15; soft: dist=5, margin=60, t=(1-5/60)²
++    expect(world.vy[0]).toBeCloseTo(
++      30 * World.BOUNCE_DAMPING + (1 - 5 / World.BOUNCE_MARGIN) ** 2 * World.BOUNCE_REPULSION,
++      3,
++    );
+   });
+ 
+   it('bounces particles off bottom wall + soft repulsion', () => {
+@@ -229,8 +238,11 @@ describe('World.applyBoundaries (bounce)', () => {
+     world.vy[0] = 30;
+     world.applyBoundaries();
+     expect(world.y[0]).toBeCloseTo(590, 3);
+-    // Hard bounce: vy = -30, distToBottom=10, soft: -(1-10/30)²*10 = -4.444
+-    expect(world.vy[0]).toBeCloseTo(-30 - (1 - 10 / 30) ** 2 * World.BOUNCE_REPULSION, 3);
++    // Hard bounce: vy = -(30)*damping = -15; soft: dist=10, margin=60
++    expect(world.vy[0]).toBeCloseTo(
++      -30 * World.BOUNCE_DAMPING - (1 - 10 / World.BOUNCE_MARGIN) ** 2 * World.BOUNCE_REPULSION,
++      3,
++    );
+   });
+ });
+ 
+@@ -1797,8 +1809,11 @@ describe('BoundaryForce', () => {
+     boundary.apply(world, grid, 1 / 60);
+ 
+     expect(world.x[0]).toBe(10);
+-    // Soft boundary repulsion adds impulse: (1 - 10/30)² * BOUNCE_REPULSION
+-    expect(world.vx[0]).toBeCloseTo(50 + (1 - 10 / 30) ** 2 * World.BOUNCE_REPULSION, 3);
++    // Hard bounce: vx = -(-50)*damping = 25; soft repulsion: (1 - 10/margin)² * BOUNCE_REPULSION
++    expect(world.vx[0]).toBeCloseTo(
++      50 * World.BOUNCE_DAMPING + (1 - 10 / World.BOUNCE_MARGIN) ** 2 * World.BOUNCE_REPULSION,
++      3,
++    );
+   });
+ 
+   it('applies wrap boundaries via force pipeline', () => {
+diff --git a/packages/core/src/index.ts b/packages/core/src/index.ts
+index 14dd775..59f6ece 100644
+--- a/packages/core/src/index.ts
++++ b/packages/core/src/index.ts
+@@ -193,38 +193,46 @@ export class World {
+    * counteracting the asymmetric inter-particle repulsion that causes
+    * edge clustering.
+    */
+-  static readonly BOUNCE_MARGIN = 30;
++  static readonly BOUNCE_MARGIN = 60;
+ 
+   /**
+    * Soft boundary repulsion impulse strength (velocity units per step).
+    * Applied with quadratic falloff: strongest at the wall, zero at the margin.
+    */
+-  static readonly BOUNCE_REPULSION = 10;
++  static readonly BOUNCE_REPULSION = 80;
++
++  /**
++   * Velocity retention factor on hard wall bounce (0..1). Reflects velocity and
++   * scales by this factor, modelling energy loss on collision. 1.0 = perfectly
++   * elastic (no loss); 0.5 = half speed retained per bounce.
++   */
++  static readonly BOUNCE_DAMPING = 0.5;
+ 
+   /** Apply boundary conditions (bounce or wrap). */
+   applyBoundaries(): void {
+     const margin = World.BOUNCE_MARGIN;
+     const strength = World.BOUNCE_REPULSION;
++    const damping = World.BOUNCE_DAMPING;
+     const n = this.effectiveCount || this.count;
+ 
+     for (let i = 0; i < n; i++) {
+       if (this.boundaryMode === 'bounce') {
+-        // Hard bounce: reflect position and velocity at boundaries
++        // Hard bounce: reflect position and velocity at boundaries (with damping)
+         if (this.x[i] < 0) {
+           this.x[i] = -this.x[i];
+-          this.vx[i] = -this.vx[i];
++          this.vx[i] = -this.vx[i] * damping;
+         }
+         if (this.x[i] > this.width) {
+           this.x[i] = 2 * this.width - this.x[i];
+-          this.vx[i] = -this.vx[i];
++          this.vx[i] = -this.vx[i] * damping;
+         }
+         if (this.y[i] < 0) {
+           this.y[i] = -this.y[i];
+-          this.vy[i] = -this.vy[i];
++          this.vy[i] = -this.vy[i] * damping;
+         }
+         if (this.y[i] > this.height) {
+           this.y[i] = 2 * this.height - this.y[i];
+-          this.vy[i] = -this.vy[i];
++          this.vy[i] = -this.vy[i] * damping;
+         }
+ 
+         // Soft boundary repulsion: gentle inward push near walls to prevent
+diff --git a/packages/core/src/simulation.test.ts b/packages/core/src/simulation.test.ts
+index 869845e..df5e444 100644
+--- a/packages/core/src/simulation.test.ts
++++ b/packages/core/src/simulation.test.ts
+@@ -578,12 +578,13 @@ describe('sim: boundaries', () => {
+     w.vx[0] = -50;
+     w.vy[0] = 0;
+     w.applyBoundaries();
+-    // Hard bounce reflects position to 5 and velocity to 50,
++    // Hard bounce reflects position to 5 and velocity to 50*damping,
+     // then soft boundary repulsion adds inward impulse (particle is within BOUNCE_MARGIN)
+-    const margin = 30;
+-    const strength = 10;
++    const margin = World.BOUNCE_MARGIN;
++    const strength = World.BOUNCE_REPULSION;
++    const damping = World.BOUNCE_DAMPING;
+     const t = 1 - 5 / margin;
+-    const expectedVx = 50 + t * t * strength;
++    const expectedVx = 50 * damping + t * t * strength;
+     expect(w.x[0]).toBe(5);
+     expect(w.vx[0]).toBeCloseTo(expectedVx, 5);
+   });
+@@ -601,12 +602,13 @@ describe('sim: boundaries', () => {
+     w.vx[0] = 50;
+     w.vy[0] = 0;
+     w.applyBoundaries();
+-    // Hard bounce reflects position to 390 and velocity to -50,
++    // Hard bounce reflects position to 390 and velocity to -50*damping,
+     // then soft boundary repulsion adds inward impulse (particle is within BOUNCE_MARGIN)
+-    const margin = 30;
+-    const strength = 10;
++    const margin = World.BOUNCE_MARGIN;
++    const strength = World.BOUNCE_REPULSION;
++    const damping = World.BOUNCE_DAMPING;
+     const t = 1 - 10 / margin;
+-    const expectedVx = -50 - t * t * strength;
++    const expectedVx = -50 * damping - t * t * strength;
+     expect(w.x[0]).toBe(390);
+     expect(w.vx[0]).toBeCloseTo(expectedVx, 5);
+   });

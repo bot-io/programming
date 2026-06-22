@@ -18,6 +18,7 @@ import {
   getCachedTranslations,
   storeCachedTranslation,
   storeCachedTranslations,
+  deleteCachedTranslation,
   getCacheStats,
 } from './translation-cache.js';
 import {
@@ -26,30 +27,40 @@ import {
   getDeviceQuotaStatus,
   cleanupOldQuotaRows,
 } from './quota.js';
+import {
+  incrementKeyUsage,
+  getKeyUsageToday,
+  cleanupOldKeyUsage,
+  getGlmUsageToday,
+  GLM_KEY_INDEX,
+} from './key-usage.js';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const CONFIG = {
   // Rate limiting (per IP)
   maxTextLength: 10000,         // chars per single-page request
-  maxBatchChars: 10000,         // total chars per batch request (sum of all pages)
-  maxBatchPages: 3,             // max pages per batch call (reduced for timeout safety)
+  maxBatchChars: 30000,         // total chars per batch request (Gemini handles 1M+ context)
+  maxBatchPages: 15,            // max pages per batch call (1 API call regardless of page count)
   dailyLimitPerIp: 500,        // requests per IP per day
-  cooldownMs: 3000,            // min 3s between requests from same IP
+  cooldownMs: 1500,            // min 1.5s between requests from same IP (batching reduces request count)
 
   // Provider timeouts (CF Workers subrequest I/O wait, not CPU)
-  geminiTimeoutMs: 25000,        // Gemini 3.5 Flash with thinking needs 15-25s for quality
-  gemini25TimeoutMs: 10000,      // Gemini 2.5 Flash is faster (no thinking mode) — 10s generous
-  glmTimeoutMs: 20000,           // GLM-4.7-Flash with reasoning needs 12-15s
+  gemini25TimeoutMs: 15000,       // Gemini 2.5 Flash — PRIMARY (fast, reliable)
+  gemini20TimeoutMs: 12000,       // Gemini 2.0 Flash — fallback (cheaper, faster)
+  geminiTimeoutMs: 8000,          // Gemini 3.5 Flash — last resort (often rate-limited/timing out)
+  glmTimeoutMs: 15000,            // GLM-4.7-Flash — China-based, higher latency
 
   // Provider endpoints
-  geminiApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',
   gemini25ApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+  gemini20ApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+  geminiApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',
   glmApiUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
 
   // Models
-  geminiModel: 'gemini-3.5-flash',
   gemini25Model: 'gemini-2.5-flash',
+  gemini20Model: 'gemini-2.0-flash',
+  geminiModel: 'gemini-3.5-flash',
   glmModel: 'glm-4.7-flash',
 
   // CORS
@@ -68,7 +79,7 @@ const CONFIG = {
  *   2. GEMINI_KEY_1, GEMINI_KEY_2, ..., GEMINI_KEY_N      (fallback)
  *   3. GEMINI_API_KEY                                       (legacy single key)
  *
- * Returns { keys: string[], pickKey: (clientIp: string) => string|null }
+ * Returns { keys: string[], pickKey: (clientIp: string) => { key: string, index: number } | null }
  */
 function resolveGeminiKeys(env) {
   const keys = [];
@@ -100,17 +111,15 @@ function resolveGeminiKeys(env) {
 
   /**
    * Pick a key deterministically based on client IP + current date.
-   * This ensures:
-   *   - Same user gets the same key all day (even distribution)
-   *   - Different users spread across keys (load balancing)
-   *   - Keys rotate daily (avoid hitting 250 RPD on one key)
+   * Returns { key, index } or null if no keys.
    */
   function pickKey(clientIp) {
     if (keys.length === 0) return null;
-    if (keys.length === 1) return keys[0];
+    if (keys.length === 1) return { key: keys[0], index: 0 };
     const daySeed = new Date().toISOString().slice(0, 10); // "2026-06-10"
     const hash = simpleHash(`${clientIp}:${daySeed}`);
-    return keys[Math.abs(hash) % keys.length];
+    const index = Math.abs(hash) % keys.length;
+    return { key: keys[index], index };
   }
 
   return { keys, pickKey };
@@ -129,7 +138,7 @@ function simpleHash(str) {
 // ─── Main Handler ────────────────────────────────────────────────────────────
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return corsResponse(new Response(null, { status: 204 }));
@@ -179,6 +188,139 @@ export default {
       }));
     }
 
+    // GET /key-health — probe each Gemini key + show tracked usage
+    if (request.method === 'GET' && url.pathname === '/key-health') {
+      const { keys } = resolveGeminiKeys(env);
+      const usage = await getKeyUsageToday(env.TRANSLATION_CACHE, keys.length);
+
+      // Probe each key with a lightweight listModels call
+      const probes = await Promise.allSettled(
+        keys.map(async (key, i) => {
+          const start = Date.now();
+          try {
+            const resp = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models?key=${key}&pageSize=1`,
+              { signal: AbortSignal.timeout(8000) }
+            );
+            const latencyMs = Date.now() - start;
+            const remaining = usage[i] || { callCount: 0, remaining: 250, dailyLimit: 250 };
+            if (resp.ok) {
+              return {
+                keyIndex: i,
+                status: 'ok',
+                httpCode: resp.status,
+                latencyMs,
+                trackedUsage: remaining.callCount,
+                trackedRemaining: remaining.remaining,
+                dailyLimit: remaining.dailyLimit,
+              };
+            } else if (resp.status === 429) {
+              return {
+                keyIndex: i,
+                status: 'rate_limited',
+                httpCode: 429,
+                latencyMs,
+                trackedUsage: remaining.callCount,
+                trackedRemaining: 0,
+                dailyLimit: remaining.dailyLimit,
+              };
+            } else {
+              return {
+                keyIndex: i,
+                status: 'error',
+                httpCode: resp.status,
+                latencyMs,
+                trackedUsage: remaining.callCount,
+                trackedRemaining: remaining.remaining,
+                dailyLimit: remaining.dailyLimit,
+              };
+            }
+          } catch (err) {
+            return {
+              keyIndex: i,
+              status: 'error',
+              httpCode: 0,
+              latencyMs: Date.now() - start,
+              error: err.message || 'Unknown error',
+              trackedUsage: usage[i]?.callCount || 0,
+              trackedRemaining: usage[i]?.remaining || 0,
+              dailyLimit: usage[i]?.dailyLimit || 250,
+            };
+          }
+        })
+      );
+
+      const keyResults = probes.map(p => p.value || p.reason);
+      const healthyKeys = keyResults.filter(k => k.status === 'ok').length;
+      const totalRemaining = keyResults.reduce((sum, k) => sum + (k.trackedRemaining || 0), 0);
+      const totalLimit = keyResults.reduce((sum, k) => sum + (k.dailyLimit || 0), 0);
+      const totalUsed = keyResults.reduce((sum, k) => sum + (k.trackedUsage || 0), 0);
+
+      // Periodic cleanup (1% chance)
+      if (Math.random() < 0.01) {
+        cleanupOldKeyUsage(env.TRANSLATION_CACHE);
+      }
+
+      // ── Probe GLM key ──────────────────────────────────────────────────
+      let glmResult = null;
+      const glmUsage = await getGlmUsageToday(env.TRANSLATION_CACHE);
+      if (env.GLM_API_KEY) {
+        const glmStart = Date.now();
+        try {
+          const glmResp = await fetch(CONFIG.glmApiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${env.GLM_API_KEY}`,
+            },
+            body: JSON.stringify({
+              model: CONFIG.glmModel,
+              messages: [{ role: 'user', content: 'ok' }],
+              max_tokens: 1,
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
+          const glmLatencyMs = Date.now() - glmStart;
+          glmResult = {
+            provider: 'glm',
+            model: CONFIG.glmModel,
+            status: glmResp.ok ? 'ok' : glmResp.status === 429 ? 'rate_limited' : 'error',
+            httpCode: glmResp.status,
+            latencyMs: glmLatencyMs,
+            trackedUsage: glmUsage.callCount,
+          };
+        } catch (err) {
+          glmResult = {
+            provider: 'glm',
+            model: CONFIG.glmModel,
+            status: 'error',
+            httpCode: 0,
+            latencyMs: Date.now() - glmStart,
+            error: err.message || 'Unknown error',
+            trackedUsage: glmUsage.callCount,
+          };
+        }
+      }
+
+      return corsResponse(jsonResponse(200, {
+        timestamp: new Date().toISOString(),
+        totalKeys: keys.length,
+        healthyKeys,
+        totalUsed,
+        totalLimit,
+        totalRemaining,
+        keys: keyResults,
+        glm: glmResult,
+      }));
+    }
+
+    // GET /dashboard — HTML dashboard for monitoring
+    if (request.method === 'GET' && url.pathname === '/dashboard') {
+      return new Response(DASHBOARD_HTML, {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+
     // POST /translate — single page translation
     if (request.method !== 'POST' || !url.pathname.startsWith('/translate')) {
       return corsResponse(jsonResponse(404, { error: 'Not found. Use POST /translate or POST /translate/batch' }));
@@ -197,7 +339,7 @@ export default {
         return corsResponse(jsonResponse(400, { error: 'Invalid JSON body' }));
       }
 
-      const { text, source_lang, target_lang, installation_id } = body;
+      const { text, source_lang, target_lang, installation_id, skip_cache } = body;
 
       // 2a. Device quota check (before any processing)
       const quotaResult = await checkDeviceQuota(
@@ -224,9 +366,17 @@ export default {
       }
 
       const systemPrompt = buildTranslationPrompt(source_lang || 'auto', target_lang);
+      const tgtName = langName(target_lang);
 
-      // 2b. Check D1 translation cache (cross-user sharing)
-      const cached = await getCachedTranslation(env.TRANSLATION_CACHE, text, target_lang);
+      // Wrap user text with explicit translation instruction to prevent
+      // the model from generating/continuing text instead of translating.
+      const instructionalText = `Translate the following text to ${tgtName}. Output ONLY the translation, nothing else.\n\n${text}`;
+
+      // 2b. Check D1 translation cache (cross-user sharing) — unless skip_cache
+      let cached = null;
+      if (!skip_cache) {
+        cached = await getCachedTranslation(env.TRANSLATION_CACHE, text, target_lang);
+      }
       if (cached) {
         console.log(`[cache] HIT for single page (${target_lang}, ${cached.model})`);
         // Count cached hits toward quota too
@@ -248,42 +398,50 @@ export default {
 
       // 3. Resolve Gemini key from pool, then try providers
       const { pickKey } = resolveGeminiKeys(env);
-      const geminiKey = pickKey(clientIp);
+      const picked = pickKey(clientIp);
+      const geminiKey = picked?.key;
+      const geminiKeyIndex = picked?.index ?? -1;
       let translatedText = null;
       let usedModel = null;
       let geminiError = null;
 
-      // ── Attempt 1: Gemini 3.5 Flash (free, best quality) ──────────────
+      // ── Attempt 1: Gemini 2.5 Flash (fast, reliable) ───────────────
       if (geminiKey) {
-        // Try Gemini 3.5 Flash with one retry on 503 (high demand is temporary)
-        for (let attempt = 0; attempt < 2 && !translatedText; attempt++) {
-          try {
-            const geminiResult = await callGemini(geminiKey, systemPrompt, text, CONFIG.geminiApiUrl);
-            if (geminiResult) {
-              translatedText = geminiResult;
-              usedModel = CONFIG.geminiModel;
-            }
-          } catch (err) {
-            geminiError = err.message || 'Unknown Gemini error';
-            const is503 = geminiError.includes('503') || geminiError.includes('UNAVAILABLE');
-            if (is503 && attempt === 0) {
-              console.warn(`Gemini 3.5 unavailable (503), retrying in 1s...`);
-              await new Promise(r => setTimeout(r, 1000));
-              continue;
-            }
-            // If 3.5 failed after retry (or non-503 error), try 2.5 Flash
-            if (!translatedText) {
-              try {
-                console.warn(`Gemini 3.5 failed (${geminiError}), trying Gemini 2.5 Flash...`);
-                const gemini25Result = await callGemini(geminiKey, systemPrompt, text, CONFIG.gemini25ApiUrl);
-                if (gemini25Result) {
-                  translatedText = gemini25Result;
-                  usedModel = CONFIG.gemini25Model;
-                }
-              } catch (err25) {
-                geminiError += ` | 2.5: ${err25.message}`;
-                console.warn(`Gemini 2.5 also failed: ${err25.message}`);
+        try {
+          const geminiResult = await callGemini(geminiKey, systemPrompt, instructionalText, CONFIG.gemini25ApiUrl);
+          if (geminiResult) {
+            translatedText = geminiResult;
+            usedModel = CONFIG.gemini25Model;
+          }
+        } catch (err) {
+          geminiError = err.message || 'Unknown Gemini error';
+
+          // Fallback to Gemini 2.0 Flash (cheaper, faster)
+          if (!translatedText) {
+            try {
+              console.warn(`Gemini 2.5 failed (${geminiError}), trying Gemini 2.0 Flash...`);
+              const gemini20Result = await callGemini(geminiKey, systemPrompt, instructionalText, CONFIG.gemini20ApiUrl);
+              if (gemini20Result) {
+                translatedText = gemini20Result;
+                usedModel = CONFIG.gemini20Model;
               }
+            } catch (err20) {
+              geminiError += ` | 2.0: ${err20.message}`;
+              console.warn(`Gemini 2.0 also failed: ${err20.message}`);
+            }
+          }
+
+          // Last resort: Gemini 3.5 Flash
+          if (!translatedText) {
+            try {
+              console.warn(`Trying Gemini 3.5 Flash as last resort...`);
+              const gemini35Result = await callGemini(geminiKey, systemPrompt, instructionalText, CONFIG.geminiApiUrl);
+              if (gemini35Result) {
+                translatedText = gemini35Result;
+                usedModel = CONFIG.geminiModel;
+              }
+            } catch (err35) {
+              geminiError += ` | 3.5: ${err35.message}`;
             }
           }
         }
@@ -302,7 +460,7 @@ export default {
         }
 
         try {
-          const glmResult = await callGlm(glmKey, systemPrompt, text);
+          const glmResult = await callGlm(glmKey, systemPrompt, instructionalText);
           if (glmResult) {
             translatedText = glmResult;
             usedModel = CONFIG.glmModel;
@@ -321,8 +479,34 @@ export default {
         return corsResponse(jsonResponse(502, { error: 'Empty translation response from all providers' }));
       }
 
+      // 3a. Hallucination guard — reject absurdly inflated translations.
+      // A valid translation should be roughly the same length as the original.
+      // If output word count > 3x input word count AND input is short (< 20 words),
+      // the model almost certainly hallucinated creative text instead of translating.
+      {
+        const inputWords = text.trim().split(/\s+/).length;
+        const outputWords = translatedText.trim().split(/\s+/).length;
+        if (inputWords < 20 && outputWords > inputWords * 3) {
+          console.warn(`[hallucination-guard] REJECTED: input=${inputWords}w output=${outputWords}w. Input: "${text.slice(0, 60)}" Output: "${translatedText.slice(0, 60)}"`);
+          // Delete any cached version of this bad translation
+          try { await deleteCachedTranslation(env.TRANSLATION_CACHE, text, target_lang); } catch {}
+          return corsResponse(jsonResponse(422, {
+            error: 'Translation quality check failed: the model generated text instead of translating. Please try re-translate.',
+            detail: `Input was ${inputWords} words but output was ${outputWords} words.`,
+          }));
+        }
+      }
+
       // 4. Store in D1 cache for cross-user sharing
       await storeCachedTranslation(env.TRANSLATION_CACHE, text, target_lang, translatedText, usedModel);
+
+      // 4a. Track API key usage
+      if (geminiKeyIndex >= 0 && usedModel && usedModel.startsWith('gemini')) {
+        incrementKeyUsage(env.TRANSLATION_CACHE, geminiKeyIndex, 1);
+      }
+      if (usedModel && usedModel.startsWith('glm')) {
+        incrementKeyUsage(env.TRANSLATION_CACHE, GLM_KEY_INDEX, 1);
+      }
 
       // 5. Increment device quota
       await incrementDeviceQuota(env.TRANSLATION_CACHE, installation_id, 1);
@@ -354,9 +538,21 @@ export default {
 // ─── Batch Translation Handler ───────────────────────────────────────────────
 
 async function handleBatchTranslate(request, clientIp, env) {
-  // Rate limit
-  const rateLimitResult = await checkRateLimit(request, clientIp, env);
-  if (rateLimitResult) return rateLimitResult;
+  // Batch = 1 API call regardless of page count. Skip per-IP cooldown
+  // (rate limiting is for individual-spam protection, not batch efficiency).
+  // Still check daily limit:
+  const cacheKey = getCacheKey(clientIp);
+  const cache = caches.default;
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    const data = await cached.json();
+    if (data.count >= CONFIG.dailyLimitPerIp) {
+      return jsonResponse(429, {
+        error: 'Daily translation limit reached. Try again tomorrow.',
+        retry_after_hours: 24,
+      });
+    }
+  }
 
   let body;
   try {
@@ -365,7 +561,7 @@ async function handleBatchTranslate(request, clientIp, env) {
     return jsonResponse(400, { error: 'Invalid JSON body' });
   }
 
-  const { pages, source_lang, target_lang, installation_id } = body;
+  const { pages, source_lang, target_lang, installation_id, skip_cache } = body;
   if (!Array.isArray(pages) || pages.length === 0) {
     return jsonResponse(400, { error: 'Missing "pages" array' });
   }
@@ -404,8 +600,11 @@ async function handleBatchTranslate(request, clientIp, env) {
 
   const systemPrompt = buildBatchTranslationPrompt(source_lang || 'auto', target_lang, pages.length);
 
-  // Check D1 cache for all pages (cross-user sharing)
-  const cachedPages = await getCachedTranslations(env.TRANSLATION_CACHE, pages, target_lang || source_lang);
+  // Check D1 cache for all pages (cross-user sharing) — unless skip_cache
+  let cachedPages = new Map();
+  if (!skip_cache) {
+    cachedPages = await getCachedTranslations(env.TRANSLATION_CACHE, pages, target_lang || source_lang);
+  }
 
   // If all pages are cached, return immediately
   if (cachedPages.size === pages.length) {
@@ -440,10 +639,14 @@ async function handleBatchTranslate(request, clientIp, env) {
   console.log(`[cache] BATCH PARTIAL — ${cachedPages.size}/${pages.length} cached, translating ${uncachedPages.length}`);
 
   const userText = formatBatchPages(uncachedPages);
+  const tgtName = langName(target_lang);
+  const instructionalText = `Translate the following ${uncachedPages.length} pages to ${tgtName}. Maintain the [Page N] markers in your output. Output ONLY the translations, nothing else.\n\n${userText}`;
 
   // Resolve Gemini key from pool
   const { pickKey } = resolveGeminiKeys(env);
-  const geminiKey = pickKey(clientIp);
+  const picked = pickKey(clientIp);
+  const geminiKey = picked?.key;
+  const geminiKeyIndex = picked?.index ?? -1;
 
   // Try providers with same fallback chain as single translate
   let translatedText = null;
@@ -451,25 +654,37 @@ async function handleBatchTranslate(request, clientIp, env) {
   let geminiError = null;
 
   if (geminiKey) {
-    // Try Gemini 3.5 Flash (with thinking) — one attempt only
-    console.log(`[batch] Trying Gemini 3.5 Flash (${CONFIG.geminiTimeoutMs}ms timeout)...`);
+    // PRIMARY: Gemini 2.5 Flash — fast, reliable, good quality
+    console.log(`[batch] Trying Gemini 2.5 Flash (${CONFIG.gemini25TimeoutMs}ms timeout)...`);
     try {
-      const result = await callGemini(geminiKey, systemPrompt, userText, CONFIG.geminiApiUrl);
-      if (result) { translatedText = result; usedModel = CONFIG.geminiModel; }
+      const result = await callGemini(geminiKey, systemPrompt, instructionalText, CONFIG.gemini25ApiUrl);
+      if (result) { translatedText = result; usedModel = CONFIG.gemini25Model; }
     } catch (err) {
       geminiError = err.message || 'Unknown error';
-      console.log(`[batch] Gemini 3.5 failed: ${geminiError}`);
+      console.log(`[batch] Gemini 2.5 failed: ${geminiError}`);
     }
 
-    // Fallback to Gemini 2.5 Flash (no thinking, faster)
+    // FALLBACK 1: Gemini 2.0 Flash — cheaper, faster
     if (!translatedText) {
-      console.log(`[batch] Trying Gemini 2.5 Flash (${CONFIG.gemini25TimeoutMs}ms timeout)...`);
+      console.log(`[batch] Trying Gemini 2.0 Flash (${CONFIG.gemini20TimeoutMs}ms timeout)...`);
       try {
-        const r2 = await callGemini(geminiKey, systemPrompt, userText, CONFIG.gemini25ApiUrl);
-        if (r2) { translatedText = r2; usedModel = CONFIG.gemini25Model; }
-      } catch (err25) {
-        geminiError += ` | 2.5: ${err25.message}`;
-        console.log(`[batch] Gemini 2.5 failed: ${err25.message}`);
+        const r2 = await callGemini(geminiKey, systemPrompt, instructionalText, CONFIG.gemini20ApiUrl);
+        if (r2) { translatedText = r2; usedModel = CONFIG.gemini20Model; }
+      } catch (err20) {
+        geminiError += ` | 2.0: ${err20.message}`;
+        console.log(`[batch] Gemini 2.0 failed: ${err20.message}`);
+      }
+    }
+
+    // FALLBACK 2: Gemini 3.5 Flash — last resort (often rate-limited)
+    if (!translatedText) {
+      console.log(`[batch] Trying Gemini 3.5 Flash (${CONFIG.geminiTimeoutMs}ms timeout)...`);
+      try {
+        const r3 = await callGemini(geminiKey, systemPrompt, instructionalText, CONFIG.geminiApiUrl);
+        if (r3) { translatedText = r3; usedModel = CONFIG.geminiModel; }
+      } catch (err35) {
+        geminiError += ` | 3.5: ${err35.message}`;
+        console.log(`[batch] Gemini 3.5 failed: ${err35.message}`);
       }
     }
   }
@@ -481,7 +696,7 @@ async function handleBatchTranslate(request, clientIp, env) {
     }
     console.log(`[batch] Trying GLM (${CONFIG.glmTimeoutMs}ms timeout)...`);
     try {
-      const glmResult = await callGlm(glmKey, systemPrompt, userText);
+      const glmResult = await callGlm(glmKey, systemPrompt, instructionalText);
       if (glmResult) { translatedText = glmResult; usedModel = CONFIG.glmModel; }
     } catch (err) {
       return jsonResponse(502, { error: `${geminiError ? 'Gemini: ' + geminiError + '. ' : ''}GLM: ${err.message}` });
@@ -507,6 +722,14 @@ async function handleBatchTranslate(request, clientIp, env) {
       };
     }).filter(e => e.sourceText);
     await storeCachedTranslations(env.TRANSLATION_CACHE, cacheEntries);
+  }
+
+  // Track API key usage (1 API call per batch)
+  if (geminiKeyIndex >= 0 && usedModel && usedModel.startsWith('gemini')) {
+    incrementKeyUsage(env.TRANSLATION_CACHE, geminiKeyIndex, 1);
+  }
+  if (usedModel && usedModel.startsWith('glm')) {
+    incrementKeyUsage(env.TRANSLATION_CACHE, GLM_KEY_INDEX, 1);
   }
 
   // Merge cached + newly translated results
@@ -613,11 +836,9 @@ async function callGemini(apiKey, systemPrompt, userText, apiUrl, timeoutMs) {
         parts: [{ text: userText }]
       }],
       generationConfig: {
-        temperature: 1.0,
+        temperature: 0.2,
         maxOutputTokens: 16384,
-        thinkingConfig: {
-          thinkingBudget: 2048,
-        },
+        // No thinking mode — translation is straightforward, saves 3-5s latency
       },
     }),
     signal: AbortSignal.timeout(timeout),
@@ -716,6 +937,20 @@ async function callGlm(apiKey, systemPrompt, userText) {
   }
 
   return text;
+}
+
+// ─── Language name helper ────────────────────────────────────────────────────
+
+function langName(code) {
+  const names = {
+    en: 'English', es: 'Spanish', fr: 'French', de: 'German',
+    it: 'Italian', pt: 'Portuguese', ru: 'Russian', zh: 'Chinese',
+    ja: 'Japanese', ko: 'Korean', ar: 'Arabic', bg: 'Bulgarian',
+    nl: 'Dutch', sv: 'Swedish', pl: 'Polish', tr: 'Turkish',
+    cs: 'Czech', ro: 'Romanian', el: 'Greek', da: 'Danish',
+    fi: 'Finnish', no: 'Norwegian', hu: 'Hungarian', uk: 'Ukrainian',
+  };
+  return names[code] || code;
 }
 
 // ─── Translation Prompt ──────────────────────────────────────────────────────
@@ -867,3 +1102,168 @@ function corsResponse(response) {
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
   return response;
 }
+
+// ─── Dashboard HTML ──────────────────────────────────────────────────────────
+
+const DASHBOARD_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gemini Key Monitor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f1117; color: #e0e0e0; min-height: 100vh; padding: 20px;
+  }
+  .container { max-width: 800px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin-bottom: 4px; }
+  .subtitle { color: #888; font-size: 0.85rem; margin-bottom: 20px; }
+  .summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px; margin-bottom: 24px;
+  }
+  .stat-card {
+    background: #1a1d27; border-radius: 10px; padding: 16px; text-align: center;
+    border: 1px solid #2a2d3a;
+  }
+  .stat-value { font-size: 1.8rem; font-weight: 700; margin-bottom: 2px; }
+  .stat-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .green { color: #4ade80; }
+  .yellow { color: #fbbf24; }
+  .red { color: #f87171; }
+  .blue { color: #60a5fa; }
+  .key-list { display: flex; flex-direction: column; gap: 10px; }
+  .key-card {
+    background: #1a1d27; border-radius: 10px; padding: 16px;
+    border: 1px solid #2a2d3a; display: flex; align-items: center; gap: 16px;
+  }
+  .key-icon {
+    width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+  }
+  .key-icon.ok { background: #4ade80; box-shadow: 0 0 8px #4ade8066; }
+  .key-icon.rate_limited { background: #f87171; box-shadow: 0 0 8px #f8717166; }
+  .key-icon.error { background: #fbbf24; box-shadow: 0 0 8px #fbbf2466; }
+  .key-info { flex: 1; }
+  .key-name { font-weight: 600; margin-bottom: 4px; }
+  .key-details { font-size: 0.8rem; color: #888; display: flex; gap: 12px; flex-wrap: wrap; }
+  .key-bar {
+    flex: 0 0 120px; height: 8px; background: #2a2d3a; border-radius: 4px; overflow: hidden;
+  }
+  .key-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+  .key-bar-fill.green { background: #4ade80; }
+  .key-bar-fill.yellow { background: #fbbf24; }
+  .key-bar-fill.red { background: #f87171; }
+  .refresh-info { text-align: center; margin-top: 16px; font-size: 0.75rem; color: #666; }
+  .glm-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem;
+    background: #60a5fa22; color: #60a5fa; margin-left: 8px;
+  }
+  .error-msg { color: #f87171; font-size: 0.75rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔑 Gemini Key Monitor</h1>
+  <p class="subtitle" id="last-update">Loading...</p>
+
+  <div class="summary" id="summary"></div>
+  <div class="key-list" id="key-list"></div>
+
+  <p class="refresh-info">Auto-refreshes every 60s · <a href="/key-health" style="color:#60a5fa">JSON API</a></p>
+</div>
+
+<script>
+const STATUS_LABELS = { ok: 'Healthy', rate_limited: 'Rate Limited', error: 'Error' };
+
+async function fetchData() {
+  try {
+    const resp = await fetch('/key-health');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    render(data);
+  } catch (err) {
+    document.getElementById('last-update').textContent = 'Error: ' + err.message;
+  }
+}
+
+function render(data) {
+  const time = new Date(data.timestamp).toLocaleString();
+  const pct = data.totalLimit > 0 ? (data.totalUsed / data.totalLimit * 100) : 0;
+  const healthColor = data.healthyKeys === data.totalKeys ? 'green' : data.healthyKeys === 0 ? 'red' : 'yellow';
+  const remainingColor = pct < 50 ? 'green' : pct < 80 ? 'yellow' : 'red';
+
+  const glmBadge = data.glm
+    ? (data.glm.status === 'ok'
+      ? '<span class="glm-badge">GLM ' + data.glm.model + ' ✓</span>'
+      : '<span class="glm-badge" style="background:#f8717122;color:#f87171">GLM ' + data.glm.status + '</span>')
+    : '<span class="glm-badge" style="background:#f8717122;color:#f87171">No GLM</span>';
+
+  document.getElementById('last-update').innerHTML =
+    'Last checked: ' + time + glmBadge;
+
+  document.getElementById('summary').innerHTML = \`
+    <div class="stat-card">
+      <div class="stat-value \${healthColor}">\${data.healthyKeys}/\${data.totalKeys}</div>
+      <div class="stat-label">Gemini Keys</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value blue">\${data.totalUsed}</div>
+      <div class="stat-label">Used Today</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value \${remainingColor}">\${data.totalRemaining}</div>
+      <div class="stat-label">Remaining</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:#888">\${data.totalLimit}</div>
+      <div class="stat-label">Daily Limit</div>
+    </div>
+  \`;
+
+  const geminiCards = data.keys.map(k => {
+    const barPct = k.dailyLimit > 0 ? (k.trackedUsage / k.dailyLimit * 100) : 0;
+    const barColor = barPct < 50 ? 'green' : barPct < 80 ? 'yellow' : 'red';
+    const remainPct = k.dailyLimit > 0 ? Math.round(k.trackedRemaining / k.dailyLimit * 100) : 0;
+    return \`
+      <div class="key-card">
+        <div class="key-icon \${k.status}"></div>
+        <div class="key-info">
+          <div class="key-name">Gemini Key #\${k.keyIndex + 1} — \${STATUS_LABELS[k.status] || k.status}</div>
+          <div class="key-details">
+            <span>\${k.trackedUsage}/\${k.dailyLimit} used</span>
+            <span>\${k.trackedRemaining} remaining</span>
+            <span>\${k.latencyMs}ms</span>
+            <span>HTTP \${k.httpCode}</span>
+            \${k.error ? '<span class="error-msg">' + k.error + '</span>' : ''}
+          </div>
+        </div>
+        <div class="key-bar"><div class="key-bar-fill \${barColor}" style="width:\${100 - remainPct}%"></div></div>
+      </div>
+    \`;
+  }).join('');
+
+  const glmCard = data.glm ? \`
+    <div class="key-card">
+      <div class="key-icon \${data.glm.status}"></div>
+      <div class="key-info">
+        <div class="key-name">GLM (\${data.glm.model}) — \${STATUS_LABELS[data.glm.status] || data.glm.status}</div>
+        <div class="key-details">
+          <span>\${data.glm.trackedUsage} calls today</span>
+          <span>\${data.glm.latencyMs}ms</span>
+          <span>HTTP \${data.glm.httpCode}</span>
+          \${data.glm.error ? '<span class="error-msg">' + data.glm.error + '</span>' : ''}
+        </div>
+      </div>
+    </div>
+  \` : '';
+
+  document.getElementById('key-list').innerHTML = geminiCards + glmCard;
+}
+
+fetchData();
+setInterval(fetchData, 60000);
+</script>
+</body>
+</html>`;

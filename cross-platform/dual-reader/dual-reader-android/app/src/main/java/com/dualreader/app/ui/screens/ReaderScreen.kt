@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -53,6 +52,9 @@ import com.dualreader.app.domain.entities.ReaderTheme
 import com.dualreader.app.domain.entities.ReadingSettings
 import com.dualreader.app.data.translation.ParagraphAligner
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 // ─── Theme colors ────────────────────────────────────────────────────────────
@@ -81,7 +83,15 @@ fun animatedReaderColors(theme: ReaderTheme): ReaderColors {
     )
 }
 
-@Composable
+/**
+ * Pure (non-@Composable) mapping from [ReaderTheme] to [ReaderColors].
+ *
+ * Deliberately kept free of Compose-runtime dependencies (no `remember`, `Local*`,
+ * or `animateXAsState`) so it can be exercised by plain JVM unit tests — see
+ * `ReaderColorsTest`, which asserts against the *actual* values returned here
+ * rather than a hand-maintained mirror copy. The [@Composable][animatedReaderColors]
+ * wrapper layers the 400 ms cross-fade animation on top of these base colors.
+ */
 fun readerColors(theme: ReaderTheme): ReaderColors = when (theme) {
     ReaderTheme.DARK -> ReaderColors(
         background = Color(0xFF1A1A2E), text = Color(0xFFE0E0E0),
@@ -195,30 +205,14 @@ internal fun splitSentences(text: String): List<String> {
     return if (result.isEmpty() && text.isNotBlank()) listOf(text.trim()) else result
 }
 
-// ─── Layout Mode ─────────────────────────────────────────────────────────────
-// Side-by-side on wide screens (≥600dp), top/bottom split on phones
-
-enum class ReaderLayoutMode { VERTICAL_SPLIT, SIDE_BY_SIDE }
-
-@Composable
-fun rememberLayoutMode(): ReaderLayoutMode {
-    val config = LocalConfiguration.current
-    return remember(config.screenWidthDp, config.screenHeightDp) {
-        if (config.screenWidthDp >= 600) ReaderLayoutMode.SIDE_BY_SIDE
-        else ReaderLayoutMode.VERTICAL_SPLIT
-    }
-}
-
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, kotlinx.coroutines.FlowPreview::class)
 @Composable
 fun ReaderScreen(
     uiState: ReaderUiState,
     onBack: () -> Unit,
     onTranslateCurrentPage: () -> Unit,
-    onTranslateAll: () -> Unit,
-    onTranslateParagraph: (Int) -> Unit = {},
     onAddBookmark: (String) -> Unit,
     onRemoveBookmark: (String) -> Unit,
     onToggleImmersive: () -> Unit,
@@ -235,6 +229,19 @@ fun ReaderScreen(
     onTtsStop: () -> Unit = {},
     onTtsPause: () -> Unit = {},
     onTtsSetRate: (Float) -> Unit = {},
+    onUpdateCurrentPage: (Int) -> Unit = {},
+    // Word translation
+    wordTranslation: ReaderViewModel.WordTranslationState? = null,
+    onTranslateWord: (String, Boolean) -> Unit = { _, _ -> },
+    onDismissWordTranslation: () -> Unit = {},
+    // Per-paragraph translation
+    onTranslateParagraph: (Int) -> Unit = {},
+    onReTranslateParagraph: (Int) -> Unit = {},
+    paragraphsTranslating: Set<Int> = emptySet(),
+    // Translation events (snackbar)
+    translationEvents: kotlinx.coroutines.flow.Flow<ReaderViewModel.TranslationEvent>? = null,
+    onRetryTranslation: () -> Unit = {},
+    onDownloadModel: () -> Unit = {},
 ) {
     when (uiState) {
         is ReaderUiState.Loading -> {
@@ -268,8 +275,6 @@ fun ReaderScreen(
                 translationError = uiState.translationError,
                 onBack = onBack,
                 onTranslateCurrentPage = onTranslateCurrentPage,
-                onTranslateAll = onTranslateAll,
-                onTranslateParagraph = onTranslateParagraph,
                 onAddBookmark = onAddBookmark,
                 onRemoveBookmark = onRemoveBookmark,
                 onToggleImmersive = onToggleImmersive,
@@ -285,6 +290,16 @@ fun ReaderScreen(
                 onTtsStop = onTtsStop,
                 onTtsPause = onTtsPause,
                 onTtsSetRate = onTtsSetRate,
+                onUpdateCurrentPage = onUpdateCurrentPage,
+                wordTranslation = wordTranslation,
+                onTranslateWord = onTranslateWord,
+                onDismissWordTranslation = onDismissWordTranslation,
+                onTranslateParagraph = onTranslateParagraph,
+                onReTranslateParagraph = onReTranslateParagraph,
+                paragraphsTranslating = paragraphsTranslating,
+                translationEvents = translationEvents,
+                onRetryTranslation = onRetryTranslation,
+                onDownloadModel = onDownloadModel,
             )
         }
     }
@@ -304,8 +319,6 @@ private fun ReaderContent(
     translationError: String? = null,
     onBack: () -> Unit,
     onTranslateCurrentPage: () -> Unit,
-    onTranslateAll: () -> Unit,
-    onTranslateParagraph: (Int) -> Unit,
     onAddBookmark: (String) -> Unit,
     onRemoveBookmark: (String) -> Unit,
     onToggleImmersive: () -> Unit,
@@ -322,14 +335,94 @@ private fun ReaderContent(
     onTtsStop: () -> Unit = {},
     onTtsPause: () -> Unit = {},
     onTtsSetRate: (Float) -> Unit = {},
+    onUpdateCurrentPage: (Int) -> Unit = {},
+    // Word translation
+    wordTranslation: ReaderViewModel.WordTranslationState? = null,
+    onTranslateWord: (String, Boolean) -> Unit = { _, _ -> },
+    onDismissWordTranslation: () -> Unit = {},
+    // Per-paragraph translation
+    onTranslateParagraph: (Int) -> Unit = {},
+    onReTranslateParagraph: (Int) -> Unit = {},
+    paragraphsTranslating: Set<Int> = emptySet(),
+    // Translation events (snackbar)
+    translationEvents: kotlinx.coroutines.flow.Flow<ReaderViewModel.TranslationEvent>? = null,
+    onRetryTranslation: () -> Unit = {},
+    onDownloadModel: () -> Unit = {},
 ) {
     val colors = animatedReaderColors(settings.theme)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Collect translation events for snackbar display
+    LaunchedEffect(Unit) {
+        translationEvents?.collect { event ->
+            when (event) {
+                is ReaderViewModel.TranslationEvent.Error -> {
+                    val actionLabel = when {
+                        event.canDownloadModel -> "Download offline"
+                        event.canRetry -> "Retry"
+                        else -> null
+                    }
+                    val result = snackbarHostState.showSnackbar(
+                        message = event.message,
+                        actionLabel = actionLabel,
+                        duration = SnackbarDuration.Long,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        if (event.canDownloadModel) onDownloadModel()
+                        else if (event.canRetry) onRetryTranslation()
+                    }
+                }
+                is ReaderViewModel.TranslationEvent.OfflineFallback -> {
+                    snackbarHostState.showSnackbar(
+                        message = "Cloud unavailable - translated ${event.pagesTranslated} paragraphs offline",
+                        duration = SnackbarDuration.Short,
+                    )
+                }
+                is ReaderViewModel.TranslationEvent.Success -> {
+                    if (event.pagesTranslated > 0) {
+                        snackbarHostState.showSnackbar(
+                            message = "Translated ${event.pagesTranslated} paragraphs",
+                            duration = SnackbarDuration.Short,
+                        )
+                    }
+                }
+            }
+        }
+    }
     val listState = rememberLazyListState()
 
-    // Bars visible by default; the top-bar fullscreen button toggles them.
-    var barsVisible by remember { mutableStateOf(true) }
+    // BUG FIX (DR-054): Restore reading position when book opens.
+    // The LazyColumn always starts at position 0. We need to scroll to the
+    // last-saved currentPage so the user resumes where they left off.
+    var hasRestoredPosition by remember { mutableStateOf(false) }
+    LaunchedEffect(book.id, pages.size) {
+        if (!hasRestoredPosition && pages.isNotEmpty()) {
+            val targetIndex = book.currentPage.coerceIn(0, pages.lastIndex)
+            if (targetIndex > 0) {
+                listState.scrollToItem(targetIndex)
+            }
+            hasRestoredPosition = true
+        }
+    }
+
+    // BUG FIX (DR-054): Track scroll position and save to DB.
+    // Without this, the reader never persists the paragraph the user scrolled
+    // to, so reopening the book always starts at the beginning.
+    LaunchedEffect(listState, hasRestoredPosition) {
+        if (!hasRestoredPosition) return@LaunchedEffect
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .distinctUntilChanged()
+            .drop(1) // Skip the initial emit (position we just restored to)
+            .debounce(500) // Throttle DB writes — don't save on every pixel
+            .collect { index ->
+                onUpdateCurrentPage(index)
+            }
+    }
+
+    // Bars visible when immersive mode is off; derived from persisted settings (DR-027).
+    val barsVisible = !settings.isImmersiveMode
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var showBookmarkList by remember { mutableStateOf(false) }
     var showExportFormatPicker by remember { mutableStateOf(false) }
@@ -376,14 +469,19 @@ private fun ReaderContent(
                 ParagraphCard(
                     originalText = page.originalText,
                     translation = page.effectiveTranslation(settings.targetLanguage),
-                    hasTranslation = page.hasTranslation(settings.targetLanguage),
                     fontSize = settings.fontSize,
                     lineHeight = settings.lineHeight,
                     chapterIndex = page.chapterIndex,
                     isSpeaking = ttsState.isSpeaking && ttsState.currentParagraph == page.index,
+                    isTranslating = page.index in paragraphsTranslating,
+                    hasTranslation = page.hasTranslation(settings.targetLanguage),
                     colors = colors,
-                    onTranslate = { onTranslateParagraph(page.index) },
                     onSpeak = { onTtsPlayParagraph(page.index) },
+                    onTranslateWord = onTranslateWord,
+                    onTranslate = { onTranslateParagraph(page.index) },
+                    onReTranslate = { onReTranslateParagraph(page.index) },
+                    translationModel = page.translationModel(settings.targetLanguage),
+                    translationTimestamp = page.translationTimestamps[settings.targetLanguage],
                 )
             }
         }
@@ -418,8 +516,15 @@ private fun ReaderContent(
                                 }
                             )
                         } else {
-                            Text(book.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = if (pages.isNotEmpty()) {
+                                    val translatedCount = pages.count { it.hasTranslation(settings.targetLanguage) }
+                                    if (translatedCount > 0) "${book.title}  ·  $translatedCount/${pages.size}" else book.title
+                                } else book.title,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.titleMedium,
+                            )
                         }
                     },
                     navigationIcon = {
@@ -428,7 +533,7 @@ private fun ReaderContent(
                                 showSearch = false
                                 searchInput = ""
                                 onClearSearch()
-                            }) { Icon(Icons.Default.ArrowBack, "Back") }
+                            }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                         } else {
                             IconButton(onClick = onBack) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -440,19 +545,21 @@ private fun ReaderContent(
                             IconButton(onClick = { showSearch = true }) {
                                 Icon(Icons.Default.Search, "Search")
                             }
+                            // Always show add bookmark button
+                            IconButton(onClick = { showBookmarkDialog = true }) {
+                                Icon(Icons.Default.BookmarkAdd, "Add bookmark")
+                            }
+                            // Show bookmarks list button alongside when bookmarks exist
                             if (bookmarks.isNotEmpty()) {
                                 BadgedBox(badge = { Badge { Text("${bookmarks.size}") } }) {
                                     IconButton(onClick = { showBookmarkList = true }) {
                                         Icon(Icons.Default.BookmarkBorder, "Bookmarks")
                                     }
                                 }
-                            } else {
-                                IconButton(onClick = { showBookmarkDialog = true }) {
-                                    Icon(Icons.Default.BookmarkAdd, "Add bookmark")
-                                }
                             }
-                            IconButton(onClick = onTranslateAll) {
-                                Icon(Icons.Default.Translate, "Translate all")
+                            // Translate current page button
+                            IconButton(onClick = onTranslateCurrentPage) {
+                                Icon(Icons.Default.Translate, "Translate")
                             }
                             // TTS speaker toggle
                             IconButton(onClick = {
@@ -467,7 +574,7 @@ private fun ReaderContent(
                             IconButton(onClick = onSettingsClick) {
                                 Icon(Icons.Default.Settings, "Settings")
                             }
-                            IconButton(onClick = { barsVisible = !barsVisible }) {
+                            IconButton(onClick = onToggleImmersive) {
                                 Icon(
                                     if (barsVisible) Icons.Default.Fullscreen else Icons.Default.FullscreenExit,
                                     if (barsVisible) "Fullscreen" else "Exit fullscreen",
@@ -476,6 +583,19 @@ private fun ReaderContent(
                         }
                     },
                 )
+                // DR-032: Reading progress bar — thin bar at top showing scroll position
+                if (pages.isNotEmpty()) {
+                    val firstVisible = listState.firstVisibleItemIndex
+                    val progress = (firstVisible + 1f) / pages.size
+                    LinearProgressIndicator(
+                        progress = { progress.coerceIn(0f, 1f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(2.dp),
+                        color = colors.accent,
+                        trackColor = colors.accent.copy(alpha = 0.2f),
+                    )
+                }
             }
         }
 
@@ -539,6 +659,34 @@ private fun ReaderContent(
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
+
+        // ── Translation Progress / Error Banner ────────────────────
+        if (isTranslating) {
+            Surface(
+                color = colors.background.copy(alpha = 0.92f),
+                shadowElevation = 4.dp,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = if (barsVisible) 56.dp else 0.dp)
+                    .fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Translating…", style = MaterialTheme.typography.labelMedium,
+                        color = colors.textSecondary)
+                }
+            }
+        }
+
+        // ── Snackbar Host ──────────────────────────────────────────
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 
     // Bookmark list bottom sheet
@@ -602,17 +750,55 @@ private fun ReaderContent(
 private fun ParagraphCard(
     originalText: String,
     translation: String?,
-    hasTranslation: Boolean,
     fontSize: Float,
     lineHeight: Float,
     chapterIndex: Int,
     isSpeaking: Boolean,
+    isTranslating: Boolean,
+    hasTranslation: Boolean,
     colors: ReaderColors,
-    onTranslate: () -> Unit,
     onSpeak: () -> Unit,
+    onTranslateWord: (String, Boolean) -> Unit,
+    onTranslate: () -> Unit,
+    onReTranslate: () -> Unit,
+    translationModel: String? = null,
+    translationTimestamp: Long? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        var showTranslationInfo by remember { mutableStateOf(false) }
+
+        if (showTranslationInfo) {
+            val dateFormat = remember {
+                java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+            }
+            AlertDialog(
+                onDismissRequest = { showTranslationInfo = false },
+                title = { Text("Translation Info") },
+                text = {
+                    Column {
+                        Text(
+                            text = "Model: ${translationModel ?: "Unknown"}",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "Translated: ${
+                                translationTimestamp?.let { dateFormat.format(java.util.Date(it)) }
+                                    ?: "Unknown"
+                            }",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showTranslationInfo = false }) {
+                        Text("Close")
+                    }
+                },
+            )
+        }
+
         // Original text
         SelectionContainer {
             Text(
@@ -641,8 +827,23 @@ private fun ParagraphCard(
                             style = MaterialTheme.typography.labelSmall,
                             color = colors.textSecondary,
                             fontStyle = FontStyle.Italic,
+                            modifier = Modifier.pointerInput(Unit) {
+                                detectTapGestures(onLongPress = { showTranslationInfo = true })
+                            },
                         )
                         Spacer(Modifier.weight(1f))
+                        // Re-translate button
+                        TextButton(
+                            onClick = onReTranslate,
+                            enabled = !isTranslating,
+                            contentPadding = PaddingValues(horizontal = 8.dp),
+                        ) {
+                            if (isTranslating) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text("Re-translate", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
                         IconButton(
                             onClick = onSpeak,
                             modifier = Modifier.size(36.dp),
@@ -668,12 +869,21 @@ private fun ParagraphCard(
             }
         }
 
-        // Translate button (if no translation yet)
+        // Translate button (if no translation yet) or loading indicator
         if (translation == null && !hasTranslation) {
-            TextButton(onClick = onTranslate) {
-                Icon(Icons.Default.Translate, contentDescription = null, Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Translate")
+            if (isTranslating) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp),
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Translating…", style = MaterialTheme.typography.labelSmall, color = colors.textSecondary)
+                }
+            } else {
+                TextButton(onClick = onTranslate) {
+                    Text("Translate")
+                }
             }
         }
 

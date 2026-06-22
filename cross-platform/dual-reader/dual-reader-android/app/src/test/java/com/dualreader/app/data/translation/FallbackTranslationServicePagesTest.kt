@@ -1,6 +1,5 @@
 package com.dualreader.app.data.translation
 
-import android.net.ConnectivityManager
 import com.dualreader.app.domain.services.BatchTranslationResult
 import com.dualreader.app.domain.services.TranslationException
 import com.dualreader.app.domain.services.TranslationService
@@ -36,9 +35,6 @@ class FallbackTranslationServiceTranslatePagesTest {
     @RelaxedMockK
     lateinit var mlKitService: TranslationService
 
-    @RelaxedMockK
-    lateinit var connectivityManager: ConnectivityManager
-
     private lateinit var fallbackService: FallbackTranslationService
 
     @Before
@@ -46,7 +42,6 @@ class FallbackTranslationServiceTranslatePagesTest {
         fallbackService = FallbackTranslationService(
             cloudService = cloudService,
             mlKitService = mlKitService,
-            connectivityManager = connectivityManager,
         )
     }
 

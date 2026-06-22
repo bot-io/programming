@@ -1,11 +1,11 @@
 # 📊 Now — Live Dashboard
 
-> Last updated: **2026-06-15 14:54 Sofia**
+> Last updated: **2026-06-15 16:10 Sofia**
 >
 > _This file is auto-generated. Do not edit manually._
 
 ## 🔋 Usage
-- **Usage:** 1%
+- **Usage:** 4%
 - **Resets:** 12 Sofia |
 - **Spare capacity:** ?
 
@@ -15,8 +15,8 @@
 ## 🤖 Overnight Worker
 - **Last run:** never
 - **Last project:** critterium
-- **Last item:** CRT-54 + CRT-55
-- **Total runs:** 73
+- **Last item:** CRT-56
+- **Total runs:** 74
 
 ## 📁 Projects
 
@@ -27,11 +27,11 @@
 - **Last work:** 2026-06-10 — Initial project setup
 
 ### ⚪ critterium
-- **Status:** ** M6 — CRT-55 done (predator satiation + stress test fix triaged and committed). CRT-54 orphaned work finally committed (was marked done but never committed). Integration branch now at 95371f7 with 1145+ tests. PR #12 awaiting Svetlin's merge decision.
-- **Updated:** ** 2026-06-15 (run #73)
+- **Status:** ** M6 — CRT-56 done (reproduction fairness refactor triaged and committed). Backlog exhausted — no ready items remain. CRT-56 adds a fourth behavioral change to PR #12's integration branch (reproduction fairness). Preset stability regression flagged for Svetlin (10/14 partial extinctions after removing endangered boost). Integration branch at 95371f7 + feat/crt-56-reproduction-fairness at 3b59937.
+- **Updated:** ** 2026-06-15 (run #74)
 - **Blocked:** CRT-15, CRT-16
-- **Progress:** 58/60 done
-- **Last work:** Commits Pushed
+- **Progress:** 59/61 done
+- **Last work:** Verification
 
 ### ⚪ dual-reader
 - **Status:** ** Backlog Exhausted — awaiting new items from user

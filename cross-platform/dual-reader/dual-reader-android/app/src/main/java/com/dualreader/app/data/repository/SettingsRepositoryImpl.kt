@@ -38,54 +38,11 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val settings: Flow<ReadingSettings> = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-        .map { prefs ->
-            ReadingSettings(
-                fontSize = prefs[Keys.FONT_SIZE] ?: 16f,
-                fontFamily = prefs[Keys.FONT_FAMILY] ?: "Default",
-                lineHeight = prefs[Keys.LINE_HEIGHT] ?: 1.5f,
-                margins = prefs[Keys.MARGINS] ?: 16,
-                theme = try { ReaderTheme.valueOf(prefs[Keys.THEME] ?: "DARK") } catch (_: Exception) { ReaderTheme.DARK },
-                targetLanguage = prefs[Keys.TARGET_LANGUAGE] ?: "es",
-                translationProvider = try {
-                    val name = prefs[Keys.TRANSLATION_PROVIDER] ?: "GEMINI_FLASH"
-                    // Map removed enum values to closest equivalent
-                    when (name) {
-                        "LLM_QUALITY" -> TranslationProvider.GEMINI_FLASH
-                        "LLM_FREE" -> TranslationProvider.LLM_FREE
-                        else -> TranslationProvider.valueOf(name)
-                    }
-                } catch (_: Exception) { TranslationProvider.GEMINI_FLASH },
-                brightness = prefs[Keys.BRIGHTNESS] ?: -1f,
-                isImmersiveMode = prefs[Keys.IMMERSIVE_MODE] ?: false,
-                screenWakeTimeoutMinutes = prefs[Keys.SCREEN_WAKE_TIMEOUT] ?: 30,
-                sentenceCounterEnabled = prefs[Keys.SENTENCE_COUNTER] ?: false,
-                displayMode = try { DisplayMode.valueOf(prefs[Keys.DISPLAY_MODE] ?: "SPLIT") } catch (_: Exception) { DisplayMode.SPLIT },
-            )
-        }
+        .map { prefs -> prefs.toReadingSettings() }
 
     override suspend fun updateSettings(transform: (ReadingSettings) -> ReadingSettings) {
         dataStore.edit { prefs ->
-            val current = ReadingSettings(
-                fontSize = prefs[Keys.FONT_SIZE] ?: 16f,
-                fontFamily = prefs[Keys.FONT_FAMILY] ?: "Default",
-                lineHeight = prefs[Keys.LINE_HEIGHT] ?: 1.5f,
-                margins = prefs[Keys.MARGINS] ?: 16,
-                theme = try { ReaderTheme.valueOf(prefs[Keys.THEME] ?: "DARK") } catch (_: Exception) { ReaderTheme.DARK },
-                targetLanguage = prefs[Keys.TARGET_LANGUAGE] ?: "es",
-                translationProvider = try {
-                    val name = prefs[Keys.TRANSLATION_PROVIDER] ?: "GEMINI_FLASH"
-                    when (name) {
-                        "LLM_QUALITY" -> TranslationProvider.GEMINI_FLASH
-                        "LLM_FREE" -> TranslationProvider.LLM_FREE
-                        else -> TranslationProvider.valueOf(name)
-                    }
-                } catch (_: Exception) { TranslationProvider.GEMINI_FLASH },
-                brightness = prefs[Keys.BRIGHTNESS] ?: -1f,
-                isImmersiveMode = prefs[Keys.IMMERSIVE_MODE] ?: false,
-                screenWakeTimeoutMinutes = prefs[Keys.SCREEN_WAKE_TIMEOUT] ?: 30,
-                sentenceCounterEnabled = prefs[Keys.SENTENCE_COUNTER] ?: false,
-                displayMode = try { DisplayMode.valueOf(prefs[Keys.DISPLAY_MODE] ?: "SPLIT") } catch (_: Exception) { DisplayMode.SPLIT },
-            )
+            val current = prefs.toReadingSettings()
             val updated = transform(current)
             prefs[Keys.FONT_SIZE] = updated.fontSize
             prefs[Keys.FONT_FAMILY] = updated.fontFamily
@@ -120,4 +77,28 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setTargetLanguage(lang: String) {
         dataStore.edit { it[Keys.TARGET_LANGUAGE] = lang }
     }
+
+    /** Single source of truth for Preferences → ReadingSettings mapping. */
+    private fun Preferences.toReadingSettings(): ReadingSettings = ReadingSettings(
+        fontSize = this[Keys.FONT_SIZE] ?: 16f,
+        fontFamily = this[Keys.FONT_FAMILY] ?: "Default",
+        lineHeight = this[Keys.LINE_HEIGHT] ?: 1.5f,
+        margins = this[Keys.MARGINS] ?: 16,
+        theme = try { ReaderTheme.valueOf(this[Keys.THEME] ?: "DARK") } catch (_: Exception) { ReaderTheme.DARK },
+        targetLanguage = this[Keys.TARGET_LANGUAGE] ?: "es",
+        translationProvider = try {
+            val name = this[Keys.TRANSLATION_PROVIDER] ?: "GEMINI_FLASH"
+            // Map removed enum values to closest equivalent
+            when (name) {
+                "LLM_QUALITY" -> TranslationProvider.GEMINI_FLASH
+                "LLM_FREE" -> TranslationProvider.LLM_FREE
+                else -> TranslationProvider.valueOf(name)
+            }
+        } catch (_: Exception) { TranslationProvider.GEMINI_FLASH },
+        brightness = this[Keys.BRIGHTNESS] ?: -1f,
+        isImmersiveMode = this[Keys.IMMERSIVE_MODE] ?: false,
+        screenWakeTimeoutMinutes = this[Keys.SCREEN_WAKE_TIMEOUT] ?: 30,
+        sentenceCounterEnabled = this[Keys.SENTENCE_COUNTER] ?: false,
+        displayMode = try { DisplayMode.valueOf(this[Keys.DISPLAY_MODE] ?: "SPLIT") } catch (_: Exception) { DisplayMode.SPLIT },
+    )
 }

@@ -1,15 +1,11 @@
 package com.dualreader.app.data.translation
 
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.util.Log
 import com.dualreader.app.domain.services.TranslationException
 import com.dualreader.app.domain.services.BatchTranslationResult
 import com.dualreader.app.domain.services.TranslationService
 import com.dualreader.app.domain.usecases.SerializedBookContext
-import kotlinx.coroutines.Dispatchers
+import com.dualreader.app.util.AppLogger
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
@@ -28,13 +24,11 @@ import kotlin.collections.IndexedValue
 class FallbackTranslationService @Inject constructor(
     @Named("cloud") private val cloudService: TranslationService,
     @Named("mlkit") private val mlKitService: TranslationService,
-    private val connectivityManager: ConnectivityManager,
 ) : TranslationService {
 
     override val providerName: String = "Fallback (Cloud → ML Kit)"
 
     companion object {
-        private const val TAG = "FallbackTranslation"
         /** Max chars per chunk sent to the API. Keeps requests small to avoid timeouts. */
         private const val MAX_CHUNK_SIZE = 1500
     }
@@ -82,20 +76,20 @@ class FallbackTranslationService @Inject constructor(
         // Tier 1: Try cloud (always attempt — don't gate on ConnectivityManager)
         try {
             val result = cloudService.translate(text, targetLanguage, sourceLanguage, context, bookContext, skipCache)
-            Log.d(TAG, "Cloud translation succeeded (${result.length} chars)")
+            AppLogger.d("Cloud translation succeeded (${result.length} chars)")
             return result
         } catch (e: Exception) {
             cloudError = e.message ?: "Unknown error"
-            Log.w(TAG, "Cloud translation failed: $cloudError, falling back to ML Kit")
+            AppLogger.w("Cloud translation failed: $cloudError, falling back to ML Kit")
         }
 
         // Tier 2: ML Kit on-device fallback
         try {
             val result = mlKitService.translate(text, targetLanguage, sourceLanguage)
-            Log.d(TAG, "ML Kit fallback succeeded (${result.length} chars)")
+            AppLogger.d("ML Kit fallback succeeded (${result.length} chars)")
             return result
         } catch (e: Exception) {
-            Log.e(TAG, "ML Kit also failed: ${e.message}")
+            AppLogger.e("ML Kit also failed: ${e.message}")
             throw TranslationException(
                 "Translation failed.\n" +
                 "Cloud: $cloudError\n" +
@@ -129,24 +123,23 @@ class FallbackTranslationService @Inject constructor(
         try {
             return cloudService.translatePages(pages, targetLanguage, sourceLanguage, context, bookContext, skipCache)
         } catch (e: Exception) {
-            Log.w(TAG, "Cloud batch failed: ${e.message}, falling back to ML Kit (offline)")
+            AppLogger.w("Cloud batch failed: ${e.message}, falling back to ML Kit (offline)")
         }
 
         // Cloud batch failed — go DIRECTLY to ML Kit, skip individual cloud calls
-        // (the old super.translatePages() did per-page cloud→ML Kit, causing 15× API calls)
         val mlKitResults = mutableMapOf<Int, String>()
         for (page in pages) {
             try {
                 mlKitResults[page.index] = mlKitService.translate(page.value, targetLanguage, sourceLanguage)
             } catch (e: Exception) {
-                Log.e(TAG, "ML Kit failed for page ${page.index}: ${e.message}")
+                AppLogger.e("ML Kit failed for page ${page.index}: ${e.message}")
             }
         }
         if (mlKitResults.isEmpty()) {
             throw TranslationException("Both cloud and offline translation failed. Try again later.")
         }
         if (mlKitResults.size < pages.size) {
-            Log.w(TAG, "ML Kit partial: ${mlKitResults.size}/${pages.size} pages translated")
+            AppLogger.w("ML Kit partial: ${mlKitResults.size}/${pages.size} pages translated")
         }
         return BatchTranslationResult(mlKitResults.toMap(), mlKitService.providerName)
     }

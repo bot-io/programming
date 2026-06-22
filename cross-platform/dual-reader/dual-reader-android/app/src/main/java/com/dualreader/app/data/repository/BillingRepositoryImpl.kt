@@ -2,6 +2,7 @@ package com.dualreader.app.data.repository
 
 import android.app.Activity
 import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
@@ -19,6 +20,7 @@ import com.dualreader.app.domain.model.ProductIds
 import com.dualreader.app.domain.model.ProductInfo
 import com.dualreader.app.domain.model.PurchaseResult
 import com.dualreader.app.domain.repository.BillingRepository
+import com.dualreader.app.util.AppLogger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,8 +59,11 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
     }
 
     override suspend fun initialize() {
+        val activity = activityRef
+            ?: throw IllegalStateException("Activity not set. Call setActivity() before initialize().")
+
         if (billingClient == null) {
-            billingClient = BillingClient.newBuilder(activityRef!!.applicationContext)
+            billingClient = BillingClient.newBuilder(activity.applicationContext)
                 .setListener(this)
                 .enablePendingPurchases(
                     PendingPurchasesParams.newBuilder()
@@ -197,6 +202,11 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
     }
 
     override suspend fun launchPurchaseFlow(productId: String): PurchaseResult {
+        // Guard against concurrent purchase attempts — the previous deferred must complete first.
+        purchaseDeferred?.let { existing ->
+            existing.await() // Wait for any in-flight purchase to resolve
+        }
+
         val client = billingClient
         val activity = activityRef
         if (client == null || activity == null) {
@@ -302,6 +312,12 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
         for (purchase in purchases) {
             if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) continue
             activeProductIds.addAll(purchase.products)
+
+            // Acknowledge purchases that haven't been acknowledged yet.
+            // Google Play requires acknowledgement within 3 days or the purchase is refunded.
+            if (!purchase.isAcknowledged) {
+                acknowledgePurchase(purchase)
+            }
         }
         val newTier = when {
             ProductIds.PREMIUM_MONTHLY in activeProductIds ||
@@ -311,6 +327,20 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
         }
         if (newTier != _entitlement.value) {
             _entitlement.value = newTier
+        }
+    }
+
+    private fun acknowledgePurchase(purchase: Purchase) {
+        val client = billingClient ?: return
+        val params = AcknowledgePurchaseParams.newBuilder()
+            .setPurchaseToken(purchase.purchaseToken)
+            .build()
+        client.acknowledgePurchase(params) { billingResult ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                AppLogger.i("Purchase acknowledged: ${purchase.products}")
+            } else {
+                AppLogger.e("Failed to acknowledge purchase: ${billingResult.debugMessage}")
+            }
         }
     }
 

@@ -95,7 +95,11 @@ class PreInstalledBooksInitializer(
             }
         }
 
-        markInitialized()
-        AppLogger.i("[PreInstalledBooks] Import complete: $successCount/${PRE_INSTALLED_BOOKS.size} succeeded")
+        if (successCount > 0) {
+            markInitialized()
+            AppLogger.i("[PreInstalledBooks] Import complete: $successCount/${PRE_INSTALLED_BOOKS.size} succeeded")
+        } else {
+            AppLogger.w("[PreInstalledBooks] Import complete but 0 books succeeded; not marking as initialized (will retry on next launch)")
+        }
     }
 }

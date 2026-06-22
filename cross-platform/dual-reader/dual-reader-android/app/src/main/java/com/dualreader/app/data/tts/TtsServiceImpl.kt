@@ -188,6 +188,9 @@ class TtsServiceImpl @Inject constructor(
     }
 
     override fun pause() {
+        // Clear callbacks BEFORE calling stop() so the UtteranceProgressListener's
+        // onError (fired by stop) doesn't propagate to the caller as a false error.
+        clearCallbacks()
         tts?.stop()
         _isSpeaking.set(false)
         // Don't reset currentParagraphIndex — allows resume from same position

@@ -15,8 +15,8 @@ android {
         applicationId = "com.dualreader.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 40
-                versionName = "1.0.40"
+        versionCode = 71
+        versionName = "1.0.71"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -81,10 +81,15 @@ android {
     }
 }
 
-// Increase test JVM heap — MockK + Robolectric patterns can be memory-hungry
+// Room schema export (companion to exportSchema = true in AppDatabase)
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+// Increase test JVM heap for large test suite (35+ classes, 450+ tests)
 tasks.withType<Test>().configureEach {
-    maxHeapSize = "2g"
-    jvmArgs("-XX:MaxMetaspaceSize=512m")
+    maxHeapSize = "4g"
+    jvmArgs("-XX:MaxMetaspaceSize=1g")
 }
 
 dependencies {
@@ -163,6 +168,8 @@ dependencies {
     testImplementation(libs.truth)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.robolectric)
+    // Required for org.json.JSONObject in JVM unit tests (Android SDK provides stubs only)
+    testImplementation("org.json:json:20240303")
 
     // Android instrumentation tests
     androidTestImplementation(libs.junit)

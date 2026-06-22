@@ -1,6 +1,6 @@
 package com.dualreader.app.domain.usecases
 
-import android.net.ConnectivityManager
+
 import com.dualreader.app.data.translation.FallbackTranslationService
 import com.dualreader.app.domain.repositories.TranslationCacheRepository
 import com.dualreader.app.domain.services.BatchTranslationResult
@@ -50,9 +50,6 @@ class TranslationPipelineIntegrationTest {
     lateinit var mlKitService: TranslationService
 
     @RelaxedMockK
-    lateinit var connectivityManager: ConnectivityManager
-
-    @RelaxedMockK
     lateinit var cacheRepository: TranslationCacheRepository
 
     private lateinit var fallbackService: FallbackTranslationService
@@ -63,7 +60,6 @@ class TranslationPipelineIntegrationTest {
         fallbackService = FallbackTranslationService(
             cloudService = cloudService,
             mlKitService = mlKitService,
-            connectivityManager = connectivityManager,
         )
         useCase = TranslatePageUseCase(fallbackService, cacheRepository)
         // Relaxed mock returns "" (not null) for String? — force explicit cache misses.

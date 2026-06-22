@@ -1,11 +1,11 @@
 package com.dualreader.app.domain.usecases
 
 import com.dualreader.app.domain.entities.Book
-import com.dualreader.app.domain.entities.BookChapter
+import com.dualreader.app.domain.entities.Page
 import com.dualreader.app.domain.entities.PaginationStatus
 import com.dualreader.app.domain.repositories.BookRepository
 import com.dualreader.app.domain.services.EpubParserService
-import com.dualreader.app.domain.services.PaginationService
+import com.dualreader.app.domain.services.ExtractedParagraph
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -17,212 +17,153 @@ import org.junit.Test
 
 class PaginateBookUseCaseTest {
 
-    private lateinit var bookRepository: BookRepository
+    private lateinit var bookRepo: BookRepository
     private lateinit var epubParser: EpubParserService
-    private lateinit var paginationService: PaginationService
     private lateinit var useCase: PaginateBookUseCase
-
-    private val testBook = Book(
-        id = "book-1",
-        title = "Test Book",
-        author = "Author",
-        filePath = "/test.epub",
-        chapters = listOf(BookChapter(index = 0, title = "Ch 1")),
-    )
 
     @Before
     fun setUp() {
-        bookRepository = mockk(relaxed = true)
-        epubParser = mockk()
-        paginationService = mockk()
-        useCase = PaginateBookUseCase(bookRepository, epubParser, paginationService)
+        bookRepo = mockk(relaxed = true)
+        epubParser = mockk(relaxed = true)
+        useCase = PaginateBookUseCase(bookRepo, epubParser)
+    }
+
+    private fun makeBook(id: String = "b1") = Book(
+        id = id,
+        title = "Test",
+        author = "Author",
+        filePath = "/path/book.epub",
+        language = "en",
+    )
+
+    private val sampleParagraphs = listOf(
+        ExtractedParagraph("First paragraph", 0),
+        ExtractedParagraph("Second paragraph", 0),
+        ExtractedParagraph("Third paragraph", 1),
+    )
+
+    // ── Success path ──────────────────────────────────────────────
+
+    @Test
+    fun `invoke returns success for valid book`() = runTest {
+        coEvery { epubParser.extractParagraphs(any()) } returns sampleParagraphs
+        coEvery { bookRepo.getPagesForBook(any()) } returns emptyList()
+
+        val result = useCase(makeBook())
+
+        assertTrue(result.isSuccess)
     }
 
     @Test
-    fun `invoke - sets status to IN_PROGRESS at start`() = runTest {
-        // Given
-        coEvery { epubParser.extractFullText(any()) } returns "Hello world"
-        coEvery { paginationService.paginate(any(), any(), any(), any()) } returns listOf("Hello world")
+    fun `invoke marks book as IN_PROGRESS then COMPLETED`() = runTest {
+        coEvery { epubParser.extractParagraphs(any()) } returns sampleParagraphs
+        coEvery { bookRepo.getPagesForBook(any()) } returns emptyList()
 
-        // When
-        useCase(testBook, screenWidth = 1080, screenHeight = 1920)
+        useCase(makeBook())
 
-        // Then
         coVerify {
-            bookRepository.updateBook(match { it.paginationStatus == PaginationStatus.IN_PROGRESS })
+            bookRepo.updateBook(match { it.paginationStatus == PaginationStatus.IN_PROGRESS })
+        }
+        coVerify {
+            bookRepo.updateBook(match { it.paginationStatus == PaginationStatus.COMPLETED })
         }
     }
 
     @Test
-    fun `invoke - successful pagination marks COMPLETED`() = runTest {
-        // Given
-        val pages = listOf("Page 1 text", "Page 2 text", "Page 3 text")
-        coEvery { epubParser.extractFullText(any()) } returns "Full text"
-        coEvery { paginationService.paginate(any(), any(), any(), any()) } returns pages
+    fun `invoke saves pages for new book`() = runTest {
+        coEvery { epubParser.extractParagraphs(any()) } returns sampleParagraphs
+        coEvery { bookRepo.getPagesForBook(any()) } returns emptyList()
 
-        // When
-        val result = useCase(testBook, screenWidth = 1080, screenHeight = 1920)
+        useCase(makeBook())
 
-        // Then
-        assertTrue(result.isSuccess)
+        coVerify { bookRepo.savePages(any()) }
+    }
+
+    @Test
+    fun `invoke sets totalPages to paragraph count`() = runTest {
+        coEvery { epubParser.extractParagraphs(any()) } returns sampleParagraphs
+        coEvery { bookRepo.getPagesForBook(any()) } returns emptyList()
+
+        useCase(makeBook())
+
         coVerify {
-            bookRepository.updateBook(match {
-                it.paginationStatus == PaginationStatus.COMPLETED &&
-                it.totalPages == 3 &&
-                it.paginationProgress == 1f
+            bookRepo.updateBook(match { it.totalPages == 3 })
+        }
+    }
+
+    // ── Empty paragraphs ──────────────────────────────────────────
+
+    @Test
+    fun `invoke fails when no paragraphs found`() = runTest {
+        coEvery { epubParser.extractParagraphs(any()) } returns emptyList()
+
+        val result = useCase(makeBook())
+
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `invoke marks book as FAILED when no paragraphs`() = runTest {
+        coEvery { epubParser.extractParagraphs(any()) } returns emptyList()
+
+        useCase(makeBook())
+
+        coVerify {
+            bookRepo.updateBook(match { it.paginationStatus == PaginationStatus.FAILED })
+        }
+    }
+
+    // ── Existing pages preservation ───────────────────────────────
+
+    @Test
+    fun `invoke preserves translations from existing pages by content match`() = runTest {
+        val existingPage = Page(
+            index = 99,
+            bookId = "b1",
+            chapterIndex = 0,
+            originalText = "First paragraph",
+            translations = mapOf("es" to "Primera párrafo"),
+        )
+        coEvery { epubParser.extractParagraphs(any()) } returns sampleParagraphs
+        coEvery { bookRepo.getPagesForBook(any()) } returns listOf(existingPage)
+
+        useCase(makeBook())
+
+        // Should carry over the translation
+        coVerify {
+            bookRepo.savePages(match { pages ->
+                pages.any { it.translations.containsKey("es") }
             })
         }
     }
 
     @Test
-    fun `invoke - saves paginated pages to repository`() = runTest {
-        // Given
-        val pages = listOf("Page 1", "Page 2")
-        coEvery { epubParser.extractFullText(any()) } returns "Text"
-        coEvery { paginationService.paginate(any(), any(), any(), any()) } returns pages
+    fun `invoke marks FAILED on exception during extraction`() = runTest {
+        coEvery { epubParser.extractParagraphs(any()) } throws RuntimeException("Parse error")
 
-        // When
-        useCase(testBook, screenWidth = 1080, screenHeight = 1920)
+        val result = useCase(makeBook())
 
-        // Then
-        coVerify { bookRepository.savePages(match { it.size == 2 }) }
-    }
-
-    @Test
-    fun `invoke - pagination failure marks book as FAILED`() = runTest {
-        // Given
-        coEvery { epubParser.extractFullText(any()) } throws RuntimeException("Parse error")
-
-        // When
-        val result = useCase(testBook, screenWidth = 1080, screenHeight = 1920)
-
-        // Then
         assertTrue(result.isFailure)
         coVerify {
-            bookRepository.updateBook(match { it.paginationStatus == PaginationStatus.FAILED })
+            bookRepo.updateBook(match { it.paginationStatus == PaginationStatus.FAILED })
         }
     }
 
-    @Test
-    fun `invoke - passes correct pagination parameters`() = runTest {
-        // Given
-        coEvery { epubParser.extractFullText(any()) } returns "Text"
-        coEvery {
-            paginationService.paginate(
-                text = "Text",
-                availableWidth = 1080,
-                availableHeight = 1920,
-                fontSize = 18f,
-                lineHeight = 1.8f,
-                margins = 24,
-            )
-        } returns listOf("Page 1")
-
-        // When
-        useCase(testBook, screenWidth = 1080, screenHeight = 1920, fontSize = 18f, lineHeight = 1.8f, margins = 24)
-
-        // Then
-        coVerify {
-            paginationService.paginate(
-                text = "Text",
-                availableWidth = 1080,
-                availableHeight = 1920,
-                fontSize = 18f,
-                lineHeight = 1.8f,
-                margins = 24,
-            )
-        }
-    }
+    // ── Paragraph count change ────────────────────────────────────
 
     @Test
-    fun `re-pagination preserves translations by content matching`() = runTest {
-        // Given: existing pages with translations
+    fun `invoke does full re-save when paragraph count changes`() = runTest {
         val existingPages = listOf(
-            com.dualreader.app.domain.entities.Page(
-                index = 0, bookId = "book-1", chapterIndex = 0, originalText = "Hello world",
-                translations = mapOf("es" to "Hola mundo"),
-            ),
-            com.dualreader.app.domain.entities.Page(
-                index = 1, bookId = "book-1", chapterIndex = 0, originalText = "Goodbye world",
-                translations = mapOf("es" to "Adiós mundo"),
-            ),
+            Page(0, "b1", 0, "Old text 1"),
+            Page(1, "b1", 0, "Old text 2"),
+            Page(2, "b1", 0, "Old text 3"),
+            Page(3, "b1", 0, "Old text 4"), // This index no longer exists
         )
-        coEvery { bookRepository.getPagesForBook("book-1") } returns existingPages
-        coEvery { epubParser.extractFullText(any()) } returns "Full text"
-        // Re-pagination with different screen size — same content, different order
-        coEvery { paginationService.paginate(any(), any(), any(), any()) } returns
-            listOf("Goodbye world", "Hello world")
+        coEvery { epubParser.extractParagraphs(any()) } returns sampleParagraphs
+        coEvery { bookRepo.getPagesForBook(any()) } returns existingPages
 
-        // When
-        useCase(testBook, screenWidth = 800, screenHeight = 1200)
+        useCase(makeBook())
 
-        // Then: translations are preserved, indices updated
-        coVerify {
-            bookRepository.savePages(match { saved ->
-                saved.size == 2 &&
-                saved[0].originalText == "Goodbye world" &&
-                saved[0].index == 0 &&
-                saved[0].translations["es"] == "Adiós mundo" &&
-                saved[1].originalText == "Hello world" &&
-                saved[1].index == 1 &&
-                saved[1].translations["es"] == "Hola mundo"
-            })
-        }
-    }
-
-    @Test
-    fun `re-pagination preserves translations even when content moves to different index`() = runTest {
-        // Given: page 5 has a translation
-        val existingPages = listOf(
-            com.dualreader.app.domain.entities.Page(
-                index = 5, bookId = "book-1", chapterIndex = 0, originalText = "Chapter two begins here",
-                translations = mapOf("es" to "El capítulo dos comienza aquí", "fr" to "Le chapitre deux commence ici"),
-            ),
-        )
-        coEvery { bookRepository.getPagesForBook("book-1") } returns existingPages
-        coEvery { epubParser.extractFullText(any()) } returns "Full text"
-        // After re-paginating with fullscreen, the same content now lands at index 2
-        coEvery { paginationService.paginate(any(), any(), any(), any()) } returns
-            listOf("Some text", "More text", "Chapter two begins here")
-
-        // When
-        useCase(testBook, screenWidth = 1256, screenHeight = 1268)
-
-        // Then: translation carried over with BOTH languages, new index
-        coVerify {
-            bookRepository.savePages(match { saved ->
-                val page2 = saved[2]
-                page2.index == 2 &&
-                page2.originalText == "Chapter two begins here" &&
-                page2.translations["es"] == "El capítulo dos comienza aquí" &&
-                page2.translations["fr"] == "Le chapitre deux commence ici"
-            })
-        }
-    }
-
-    @Test
-    fun `re-pagination creates fresh pages for content without translations`() = runTest {
-        // Given: existing pages have no translations
-        val existingPages = listOf(
-            com.dualreader.app.domain.entities.Page(
-                index = 0, bookId = "book-1", chapterIndex = 0, originalText = "Hello world",
-                translations = emptyMap(),
-            ),
-        )
-        coEvery { bookRepository.getPagesForBook("book-1") } returns existingPages
-        coEvery { epubParser.extractFullText(any()) } returns "Full text"
-        coEvery { paginationService.paginate(any(), any(), any(), any()) } returns
-            listOf("Hello world", "New page")
-
-        // When
-        useCase(testBook, screenWidth = 800, screenHeight = 1200)
-
-        // Then: no translations carried over, new pages created normally
-        coVerify {
-            bookRepository.savePages(match { saved ->
-                saved.size == 2 &&
-                saved.all { it.translations.isEmpty() }
-            })
-        }
+        coVerify { bookRepo.deletePagesForBook(any()) }
     }
 }

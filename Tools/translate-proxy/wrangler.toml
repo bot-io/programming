@@ -7,7 +7,7 @@ compatibility_date = "2024-12-01"
 [[d1_databases]]
 binding = "TRANSLATION_CACHE"
 database_name = "dual-reader-cache"
-database_id = "PLACEHOLDER_RUN_wrangler_d1_create"
+database_id = "dcc8dfce-2390-4ed0-b1a0-ba826321927d"
 
 # Rate limiting via Cloudflare (free tier: 100K req/day)
 # Uncomment after first deploy to add rate limiting rules:

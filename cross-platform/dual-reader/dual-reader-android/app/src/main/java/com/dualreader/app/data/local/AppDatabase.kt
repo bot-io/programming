@@ -1,5 +1,6 @@
 package com.dualreader.app.data.local
 
+import android.content.ContentValues
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
@@ -18,6 +19,7 @@ import com.dualreader.app.data.local.entity.CollectionBookEntity
 import com.dualreader.app.data.local.entity.CollectionEntity
 import com.dualreader.app.data.local.entity.PageEntity
 import com.dualreader.app.data.local.entity.TranslationCacheEntity
+import org.json.JSONObject
 
 @Database(
     entities = [
@@ -29,8 +31,8 @@ import com.dualreader.app.data.local.entity.TranslationCacheEntity
         CollectionEntity::class,
         CollectionBookEntity::class,
     ],
-    version = 6,
-    exportSchema = false,
+    version = 7,
+    exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -74,22 +76,52 @@ abstract class AppDatabase : RoomDatabase() {
                 // Create the unique index
                 db.execSQL("CREATE UNIQUE INDEX index_pages_new_bookId_pageIndex ON pages_new(bookId, pageIndex)")
 
-                // Copy data — construct JSON from translatedText + translatedLang
-                // If both exist: {"lang":"text"}. Otherwise: NULL.
-                db.execSQL("""
-                    INSERT INTO pages_new (id, bookId, pageIndex, chapterIndex, originalText, translationsJson, startCharOffset, endCharOffset)
-                    SELECT
-                        id, bookId, pageIndex, chapterIndex, originalText,
-                        CASE
-                            WHEN translatedText IS NOT NULL AND translatedLang IS NOT NULL
-                                THEN '{' || '"' || translatedLang || '"' || ':' || '"' || REPLACE(REPLACE(translatedText, '\', '\\'), '"', '\"') || '"' || '}'
-                            WHEN translatedText IS NOT NULL
-                                THEN '{"unknown":"' || REPLACE(REPLACE(translatedText, '\', '\\'), '"', '\"') || '"}'
-                            ELSE NULL
-                        END,
-                        startCharOffset, endCharOffset
+                // Copy data — build translationsJson via org.json.JSONObject so values are
+                // escaped correctly. The previous string-concatenation approach broke on
+                // embedded quotes, backslashes, and newlines, producing invalid JSON.
+                // Both translatedText + translatedLang -> {"lang":"text"}.
+                // Only translatedText -> {"unknown":"text"}. Otherwise -> NULL.
+                db.query(
+                    """
+                    SELECT id, bookId, pageIndex, chapterIndex, originalText,
+                           translatedText, translatedLang, startCharOffset, endCharOffset
                     FROM pages
-                """.trimIndent())
+                    """.trimIndent(),
+                    emptyArray(),
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val translatedText = cursor.getColumnIndex("translatedText")
+                            .takeIf { it >= 0 && !cursor.isNull(it) }
+                            ?.let { cursor.getString(it) }
+                        val translatedLang = cursor.getColumnIndex("translatedLang")
+                            .takeIf { it >= 0 && !cursor.isNull(it) }
+                            ?.let { cursor.getString(it) }
+
+                        val translationsJson: String? = when {
+                            translatedText != null && translatedLang != null ->
+                                JSONObject().put(translatedLang, translatedText).toString()
+                            translatedText != null ->
+                                JSONObject().put("unknown", translatedText).toString()
+                            else -> null
+                        }
+
+                        val values = ContentValues().apply {
+                            put("id", cursor.getLong(cursor.getColumnIndexOrThrow("id")))
+                            put("bookId", cursor.getString(cursor.getColumnIndexOrThrow("bookId")))
+                            put("pageIndex", cursor.getInt(cursor.getColumnIndexOrThrow("pageIndex")))
+                            put("chapterIndex", cursor.getInt(cursor.getColumnIndexOrThrow("chapterIndex")))
+                            put("originalText", cursor.getString(cursor.getColumnIndexOrThrow("originalText")))
+                            put("translationsJson", translationsJson)
+                            put("startCharOffset", cursor.getInt(cursor.getColumnIndexOrThrow("startCharOffset")))
+                            put("endCharOffset", cursor.getInt(cursor.getColumnIndexOrThrow("endCharOffset")))
+                        }
+                        db.insert(
+                            "pages_new",
+                            android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE,
+                            values,
+                        )
+                    }
+                }
 
                 // Swap tables
                 db.execSQL("DROP TABLE pages")
@@ -101,6 +133,13 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE pages ADD COLUMN translationModelsJson TEXT DEFAULT NULL")
+            }
+        }
+
+        /** Migration v6→v7: add translationTimestampsJson column to pages. */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE pages ADD COLUMN translationTimestampsJson TEXT DEFAULT NULL")
             }
         }
 

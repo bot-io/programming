@@ -14,6 +14,7 @@ import com.dualreader.app.domain.usecases.TranslatePageUseCase
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.*
 import org.junit.After
@@ -33,6 +34,7 @@ class ReaderViewModelTest {
     private lateinit var paginateBookUseCase: PaginateBookUseCase
     private lateinit var translationCacheRepository: TranslationCacheRepository
     private lateinit var ttsService: com.dualreader.app.domain.services.TtsService
+    private lateinit var translationService: com.dualreader.app.domain.services.TranslationService
 
     private val testBook = Book(
         id = "book1", title = "Test Book", author = "Author",
@@ -80,6 +82,8 @@ class ReaderViewModelTest {
             paginateBookUseCase = paginateBookUseCase,
             translationCacheRepository = translationCacheRepository,
             ttsService = ttsService,
+            translationService = mockk(relaxed = true),
+            mlKitModelManager = mockk(relaxed = true),
         )
     }
 
@@ -318,8 +322,8 @@ class ReaderViewModelTest {
         vm.translateAllPages()
         advanceUntilIdle()
 
-        // Should have saved pages at least once per translated page
-        coVerify(atLeast = 2) { bookRepository.savePages(any()) }
+        // Should have saved pages via updatePageTranslation at least once per translated page
+        coVerify(atLeast = 2) { bookRepository.updatePageTranslation(any(), any(), any(), any()) }
     }
 
     @Test
@@ -333,7 +337,7 @@ class ReaderViewModelTest {
         vm.translateCurrentPage()
         advanceUntilIdle()
 
-        coVerify { bookRepository.savePages(any()) }
+        coVerify { bookRepository.updatePageTranslation(any(), any(), any(), any()) }
     }
 
     // ── Bookmarks ────────────────────────────────────────────────────────
@@ -432,15 +436,68 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun `toggleImmersiveMode - does not crash`() = runTest(testDispatcher) {
+    fun `toggleImmersiveMode - persists to settings repository`() = runTest(testDispatcher) {
         val vm = createViewModel()
         advanceUntilIdle()
 
         vm.toggleImmersiveMode()
         advanceUntilIdle()
 
-        val state = vm.uiState.value
-        assert(state is ReaderUiState.ReaderReady) { "Expected ReaderReady, got $state" }
+        // DR-027: toggleImmersiveMode must persist via settingsRepository.updateSettings,
+        // not just update in-memory state.
+        coVerify {
+            settingsRepository.updateSettings(match { transform ->
+                val updated = transform(testSettings)
+                updated.isImmersiveMode == !testSettings.isImmersiveMode
+            })
+        }
+    }
+
+    @Test
+    fun `toggleImmersiveMode - propagates through settings flow to uiState`() = runTest(testDispatcher) {
+        // Use a MutableStateFlow so the settings flow re-emits after updateSettings writes.
+        val settingsFlow = MutableStateFlow(testSettings)
+        every { settingsRepository.settings } returns settingsFlow
+        // Simulate the repo writing to the flow when updateSettings is called.
+        coEvery { settingsRepository.updateSettings(any()) } coAnswers {
+            val transform = firstArg<(ReadingSettings) -> ReadingSettings>()
+            settingsFlow.value = transform(settingsFlow.value)
+        }
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Initially immersive mode is off
+        assertFalse((vm.uiState.value as ReaderUiState.ReaderReady).settings.isImmersiveMode)
+
+        vm.toggleImmersiveMode()
+        advanceUntilIdle()
+
+        // After toggle, immersive mode should be on, propagated through the settings flow
+        assertTrue((vm.uiState.value as ReaderUiState.ReaderReady).settings.isImmersiveMode)
+    }
+
+    @Test
+    fun `toggleImmersiveMode - can toggle back and forth`() = runTest(testDispatcher) {
+        val settingsFlow = MutableStateFlow(testSettings)
+        every { settingsRepository.settings } returns settingsFlow
+        coEvery { settingsRepository.updateSettings(any()) } coAnswers {
+            val transform = firstArg<(ReadingSettings) -> ReadingSettings>()
+            settingsFlow.value = transform(settingsFlow.value)
+        }
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Toggle on
+        vm.toggleImmersiveMode()
+        advanceUntilIdle()
+        assertTrue((vm.uiState.value as ReaderUiState.ReaderReady).settings.isImmersiveMode)
+
+        // Toggle back off
+        vm.toggleImmersiveMode()
+        advanceUntilIdle()
+        assertFalse((vm.uiState.value as ReaderUiState.ReaderReady).settings.isImmersiveMode)
     }
 
     // ── Per-language translation cache ──────────────────────────────────
@@ -581,6 +638,14 @@ class ReaderViewModelTest {
             if (pageCallCount <= 1) testPages else newPages
         }
 
+        // paginateBookUseCase: fail on loadBook's auto-re-extract, succeed on rePaginate
+        var paginateCallCount = 0
+        coEvery { paginateBookUseCase(any(), any(), any()) } coAnswers {
+            paginateCallCount++
+            if (paginateCallCount == 1) Result.failure(RuntimeException("skip re-extract"))
+            else Result.success(Unit)
+        }
+
         val vm = createViewModel()
         advanceUntilIdle()
 
@@ -630,7 +695,7 @@ class ReaderViewModelTest {
     fun `rePaginate - resets isRePaginating to false on error`() = runTest(testDispatcher) {
         coEvery {
             paginateBookUseCase(any(), any(), any())
-        } throws RuntimeException("Pagination failed")
+        } returns Result.failure(RuntimeException("Pagination failed"))
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -662,7 +727,7 @@ class ReaderViewModelTest {
     fun `rePaginate - keeps existing pages when use case throws`() = runTest(testDispatcher) {
         coEvery {
             paginateBookUseCase(any(), any(), any())
-        } throws RuntimeException("Disk error")
+        } returns Result.failure(RuntimeException("Disk error"))
 
         val vm = createViewModel()
         advanceUntilIdle()

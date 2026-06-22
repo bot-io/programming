@@ -4,6 +4,7 @@ import androidx.room.TypeConverter
 import com.dualreader.app.domain.entities.BookChapter
 import com.dualreader.app.domain.entities.BookFormat
 import com.dualreader.app.domain.entities.PaginationStatus
+import com.dualreader.app.util.AppLogger
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDateTime
@@ -80,13 +81,42 @@ class Converters {
                 map[key] = obj.getString(key)
             }
             map
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            AppLogger.e("Failed to parse translations JSON: ${e.message}")
             emptyMap()
         }
     }
 
     @TypeConverter
     fun toTranslationsJson(map: Map<String, String>): String? {
+        if (map.isEmpty()) return null
+        val obj = JSONObject()
+        map.forEach { (k, v) -> obj.put(k, v) }
+        return obj.toString()
+    }
+
+    // ── Translation timestamps map (lang → epoch millis) ───────────────
+
+    @TypeConverter
+    fun fromTranslationTimestampsJson(value: String?): Map<String, Long> {
+        if (value.isNullOrBlank() || value == "{}") return emptyMap()
+        return try {
+            val obj = JSONObject(value)
+            val map = mutableMapOf<String, Long>()
+            val keys = obj.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                map[key] = obj.getLong(key)
+            }
+            map
+        } catch (e: Exception) {
+            AppLogger.e("Failed to parse translation timestamps JSON: ${e.message}")
+            emptyMap()
+        }
+    }
+
+    @TypeConverter
+    fun toTranslationTimestampsJson(map: Map<String, Long>): String? {
         if (map.isEmpty()) return null
         val obj = JSONObject()
         map.forEach { (k, v) -> obj.put(k, v) }

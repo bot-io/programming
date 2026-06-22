@@ -376,3 +376,40 @@
 
 **Action needed from user:** Dual-reader backlog has been exhausted since 2026-06-13. Add new backlog items (status ready) to resume autonomous work. See questions.md for candidate features. Or confirm project is v1 feature-complete.
 
+### 2026-06-15 — dual-reader cron (run 14) — Yielded to critterium (new P0 CRT-57)
+
+**Context:** Scheduled cron run for dual-reader. No interactive.lock present (clear). No worker.lock present (no contention).
+
+**Priority Check:** Dual-reader backlog still exhausted (DR-001..DR-010 all done, 0 ready items). HOWEVER, critterium now has a NEW ready P0 added by an interactive session earlier today (after the 05:00 silent run):
+- **CRT-57** — Remove hard per-species cap (wrong for trophic pyramids) — **P0, ready**. The per-species cap from CRT-54 caps every species equally (biologically nonsensical for trophic pyramids); the round-robin queue from CRT-56 already prevents slot monopolization. Acceptance: remove `_perSpeciesCap`/`perSpeciesCap()`/`isSpeciesAtCap()`/`endangeredBoost()` + tests, keep suite green.
+- CRT-58 — Tune 10 unstable presets (partial extinctions) — P1, ready
+- CRT-59 — Optimize processReproduction (zero hot-loop allocations) — P2, ready
+
+**Outcome:** ⏸ Yielded to critterium per protocol STEP 3 (P0 in critterium backlog). No dual-reader item worked. No worker.lock created (nothing to lock on dual-reader side).
+
+**Note:** This is the first time since 2026-06-13 that critterium has autonomously-workable (ready) items. The critterium worker should pick up CRT-57 next.
+
+**Action needed from user:** Dual-reader backlog remains exhausted since 2026-06-13. Add new backlog items (status ready) to resume autonomous dual-reader work (see questions.md: cloud sync, in-app dictionary, TTS, localization, annotation styles, DR-007 manual items), or confirm v1 feature-complete.
+
+### 2026-06-15 — dual-reader cron (run 15) — Yielded to critterium (CRT-57 P0 still ready)
+
+**Context:** Scheduled cron run for dual-reader. Lock check: no `interactive.lock` present (clear), no `worker.lock` (no contention).
+
+**Priority Check:** Dual-reader backlog still exhausted (DR-001..DR-010 all done, 0 ready items). Critterium CRT-57 (remove hard per-species cap) is STILL **Status: ready, Priority: P0** — it has not been completed since the prior run (the critterium worker has apparently not yet picked it up). CRT-58 (P1, tune unstable presets) and CRT-59 (P2, optimize processReproduction) also remain ready.
+
+**Outcome:** ⏸ Yielded to critterium per protocol STEP 3 (ready P0 in critterium backlog). No dual-reader item worked. No worker.lock created (nothing to lock on the dual-reader side).
+
+**Action needed from user:** Dual-reader backlog remains exhausted since 2026-06-13. Add new backlog items (status ready) to resume autonomous dual-reader work, or confirm v1 feature-complete.
+
+### 2026-06-16 — dual-reader cron (run) — No-op: backlog exhausted, critterium P0 cleared
+
+**Context:** Scheduled cron run for dual-reader. Lock check: no `interactive.lock` (clear), no `worker.lock` (no contention).
+
+**Cross-project priority update:** The critterium P0 that was forcing dual-reader to yield since 2026-06-15 has **cleared** — CRT-57 (remove hard per-species cap) is now **done**, and CRT-58 (P1) + CRT-59 (P2) are also done. Remaining critterium items all require human action: CRT-51 (P0, needs-decision merge strategy), CRT-60 (P1, review-ready two-zone refactor), CRT-15/16 (blocked on device/store). **No ready P0 in critterium → dual-reader no longer yields.**
+
+**Priority Check (dual-reader):** Backlog still fully exhausted — DR-001..DR-010 all done, 0 ready items. Quota gate moot (no work).
+
+**Outcome:** ⏭ No work implemented — no ready items exist in either project that a dual-reader worker may autonomously claim. No worker.lock created (nothing to lock on). No locks left behind.
+
+**Action needed from user:** Dual-reader backlog has been exhausted since 2026-06-13 (3 days). To resume autonomous work, add new backlog items with `Status: ready`. Candidate features (per questions.md): cloud reading-progress sync (deferred DR-005 crit. 4), in-app dictionary lookup, text-to-speech, additional localization, annotation styles, or close-out of DR-007 manual items (IARC rating, Play Store screenshots, production keystore, privacy policy URL hosting, feature graphic). Or confirm the project is v1 feature-complete and the worker should go SILENT.
+

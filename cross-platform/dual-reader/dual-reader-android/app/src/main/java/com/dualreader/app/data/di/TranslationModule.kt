@@ -4,12 +4,10 @@ import android.content.Context
 import android.net.ConnectivityManager
 import com.dualreader.app.data.translation.CloudTranslationServiceImpl
 import com.dualreader.app.data.translation.FallbackTranslationService
-import com.dualreader.app.data.translation.GlmTranslationServiceImpl
 import com.dualreader.app.data.translation.InstallationIdProvider
 import com.dualreader.app.data.translation.MlKitTranslationServiceImpl
 import com.dualreader.app.data.translation.ProxyTranslationApi
 import com.dualreader.app.data.translation.QuotaApi
-import com.dualreader.app.data.translation.TranslationApi
 import com.dualreader.app.domain.services.TranslationService
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -33,7 +31,6 @@ abstract class TranslationModule {
     companion object {
 
         private const val PROXY_BASE_URL = "https://dual-reader-translate.dualreader.workers.dev/"
-        private const val GLM_DIRECT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4/"
 
         @Provides
         @Singleton
@@ -46,9 +43,10 @@ abstract class TranslationModule {
         @Singleton
         fun provideOkHttpClient(): OkHttpClient =
             OkHttpClient.Builder()
-                .connectTimeout(20, TimeUnit.SECONDS)
-                .readTimeout(120, TimeUnit.SECONDS)
-                .writeTimeout(20, TimeUnit.SECONDS)
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)  // Worker batch can take ~7s/page × 15 pages = ~105s
+                .writeTimeout(15, TimeUnit.SECONDS)
+                .retryOnConnectionFailure(true)
                 .build()
 
         @Provides
@@ -76,19 +74,6 @@ abstract class TranslationModule {
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .build()
                 .create(QuotaApi::class.java)
-
-        @Provides
-        @Singleton
-        fun provideTranslationApi(
-            okHttpClient: OkHttpClient,
-            moshi: Moshi
-        ): TranslationApi =
-            Retrofit.Builder()
-                .baseUrl(GLM_DIRECT_BASE_URL)
-                .client(okHttpClient)
-                .addConverterFactory(MoshiConverterFactory.create(moshi))
-                .build()
-                .create(TranslationApi::class.java)
 
         @Provides
         @Singleton

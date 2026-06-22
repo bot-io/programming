@@ -19,7 +19,7 @@ import retrofit2.Response
  * - isAvailable (connected, disconnected)
  * - extractRetryAfterMs (various response formats)
  * - 429 retry logic with retry_after_ms
- * - translatePages: full individual fallback when batch throws exception
+ * - translatePages: fail-fast on batch errors (no individual fallback)
  */
 class CloudTranslationServiceImplAdditionalTest {
 
@@ -180,10 +180,10 @@ class CloudTranslationServiceImplAdditionalTest {
         assertEquals("Здравейте", result)
     }
 
-    // ── translatePages: full individual fallback ─────────────────────────
+    // ── translatePages: fail-fast on batch errors ───────────────────────
 
-    @Test
-    fun `translatePages - falls back to individual calls when batch endpoint throws`() = runTest {
+    @Test(expected = java.net.SocketTimeoutException::class)
+    fun `translatePages - batch exception propagates without fallback`() = runTest {
         val pages = listOf(
             IndexedValue(0, "Page zero"),
             IndexedValue(1, "Page one"),
@@ -192,37 +192,21 @@ class CloudTranslationServiceImplAdditionalTest {
         // Batch endpoint throws
         coEvery { proxyApi.translateBatch(any()) } throws java.net.SocketTimeoutException("batch timeout")
 
-        // Individual calls succeed
-        coEvery { proxyApi.translate(match { it.text == "Page zero" }) } returns successResponse("Страница нула")
-        coEvery { proxyApi.translate(match { it.text == "Page one" }) } returns successResponse("Страница едно")
-
-        val result = service.translatePages(pages, "bg", "en", null)
-
-        assertEquals("Страница нула", result.translations[0])
-        assertEquals("Страница едно", result.translations[1])
+        service.translatePages(pages, "bg", "en", null)
     }
 
-    @Test
-    fun `translatePages - individual fallback continues even if one page fails`() = runTest {
+    @Test(expected = RuntimeException::class)
+    fun `translatePages - batch exception fails fast for all pages`() = runTest {
         val pages = listOf(
             IndexedValue(0, "Page zero"),
             IndexedValue(1, "Page one"),
             IndexedValue(2, "Page two"),
         )
 
-        // Batch throws
+        // Batch throws — no individual fallback
         coEvery { proxyApi.translateBatch(any()) } throws RuntimeException("batch error")
 
-        // Page 0 and 2 succeed, page 1 fails
-        coEvery { proxyApi.translate(match { it.text == "Page zero" }) } returns successResponse("Стр. 0")
-        coEvery { proxyApi.translate(match { it.text == "Page one" }) } throws TranslationException("fail")
-        coEvery { proxyApi.translate(match { it.text == "Page two" }) } returns successResponse("Стр. 2")
-
-        val result = service.translatePages(pages, "bg", "en", null)
-
-        assertEquals("Стр. 0", result.translations[0])
-        assertNull("Failed page should not be in results", result.translations[1])
-        assertEquals("Стр. 2", result.translations[2])
+        service.translatePages(pages, "bg", "en", null)
     }
 
     // ── translateBatch: sequential with delay ────────────────────────────

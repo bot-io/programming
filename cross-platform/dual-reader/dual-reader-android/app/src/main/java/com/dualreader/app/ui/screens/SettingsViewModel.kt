@@ -54,7 +54,9 @@ class SettingsViewModel @Inject constructor(
     fun clearAllTranslations() {
         viewModelScope.launch {
             cacheRepository.clearAll()
+            bookRepository.clearAllTranslations()
             refreshCacheCount()
+            _translationInfo.value = emptyList()
         }
     }
 
@@ -86,7 +88,8 @@ class SettingsViewModel @Inject constructor(
 
     private fun refreshCacheCount() {
         viewModelScope.launch {
-            _cachedCount.value = cacheRepository.count()
+            // Count translated pages from the pages table (what users see in the reader)
+            _cachedCount.value = bookRepository.getTranslatedPageCount()
         }
     }
 }

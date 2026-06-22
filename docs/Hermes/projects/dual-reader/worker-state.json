@@ -1,8 +1,8 @@
 {
   "last_project": "dual-reader",
-  "last_run": "2026-06-15T05:00:00 Sofia",
+  "last_run": "2026-06-16T05:46Z Sofia",
   "item": null,
-  "run_count": 13,
-  "outcome": "backlog-exhausted-silent",
-  "note": "Dual-reader backlog exhausted (DR-001..DR-010 all done, 0 ready items). Critterium also has no ready items (CRT-1..53 done, CRT-51 review-ready/needs-decision, CRT-15/16 blocked on user). Quota at 5% — healthy but nothing to do. Responded [SILENT]."
+  "run_count": 17,
+  "outcome": "no-op-backlog-exhausted",
+  "note": "Dual-reader backlog still exhausted (DR-001..DR-010 all done, 0 ready items, unchanged since 2026-06-13). Critterium: CRT-57/58/59/61 done; CRT-51 (P0) review-ready/blocked on Svetlin merge decision; CRT-60 (P1) review-ready; CRT-15/16 blocked on device/store. No autonomously-workable ready item in either project. No work to do, no ready P0 to yield to. No worker.lock created (no dual-reader item to work)."
 }

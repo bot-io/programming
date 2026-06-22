@@ -19,6 +19,8 @@ data class Page(
     val translations: Map<String, String> = emptyMap(),
     /** Which model produced the translation for each language, e.g. {"bg": "gemini-2.5-flash"} */
     val translationModels: Map<String, String> = emptyMap(),
+    /** When the translation was produced for each language (epoch millis) */
+    val translationTimestamps: Map<String, Long> = emptyMap(),
     val startCharOffset: Int = 0,
     val endCharOffset: Int = 0,
 ) {
@@ -32,9 +34,10 @@ data class Page(
      * Optionally records which [model] produced the translation.
      * Other language translations are preserved.
      */
-    fun withTranslation(lang: String, text: String, model: String? = null): Page {
+    fun withTranslation(lang: String, text: String, model: String? = null, timestamp: Long? = null): Page {
         val newModels = if (model != null) translationModels + (lang to model) else translationModels
-        return copy(translations = translations + (lang to text), translationModels = newModels)
+        val newTimestamps = if (timestamp != null) translationTimestamps + (lang to timestamp) else translationTimestamps
+        return copy(translations = translations + (lang to text), translationModels = newModels, translationTimestamps = newTimestamps)
     }
 
     /** Which model was used for the translation in [lang], or null. */

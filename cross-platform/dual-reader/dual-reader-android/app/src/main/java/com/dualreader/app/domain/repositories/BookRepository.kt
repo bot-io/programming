@@ -27,4 +27,7 @@ interface BookRepository {
     suspend fun savePages(pages: List<Page>)
     suspend fun deletePagesForBook(bookId: String)
     suspend fun getPageCount(bookId: String): Int
+    suspend fun clearAllTranslations()
+    suspend fun updatePageTranslation(bookId: String, pageIndex: Int, translationsJson: String?, modelsJson: String?)
+    suspend fun getTranslatedPageCount(): Int
 }

@@ -32,8 +32,8 @@ class CloudTranslationServiceImpl @Inject constructor(
 
     companion object {
         private const val TAG = "CloudTranslation"
-        /** Minimum delay between batch requests to respect worker rate limits. */
-        private const val BATCH_DELAY_MS = 3500L   // Must be >= worker cooldown (3s)
+        /** Delay between sequential individual translate calls (legacy batch). */
+        private const val BATCH_DELAY_MS = 200L   // Worker batch endpoint handles rate limiting
     }
 
     // ── translate ──────────────────────────────────────────────────────────────
@@ -44,18 +44,18 @@ class CloudTranslationServiceImpl @Inject constructor(
         sourceLanguage: String?,
         context: String?,
         bookContext: SerializedBookContext?,
+        skipCache: Boolean,
     ): String = withContext(Dispatchers.IO) {
         val installationId = installationIdProvider.getInstallationId()
-        // Context is already formatted by TranslatePageUseCase with clear instructions.
-        // Just pass it through to the proxy — the worker adds it before the text.
         val request = ProxyTranslateRequest(
-            text = if (context != null) "$context\n\n--- Text to translate ---\n$text" else text,
+            text = text,
             sourceLang = sourceLanguage,
             targetLang = targetLanguage,
             installationId = installationId,
             bookContext = bookContext?.let {
                 ProxyBookContext(title = it.title, author = it.author, openingText = it.openingText)
             },
+            skipCache = skipCache,
         )
 
         callProxy(request)
@@ -96,73 +96,60 @@ class CloudTranslationServiceImpl @Inject constructor(
         sourceLanguage: String?,
         context: String?,
         bookContext: SerializedBookContext?,
+        skipCache: Boolean,
     ): BatchTranslationResult = withContext(Dispatchers.IO) {
         if (pages.isEmpty()) return@withContext BatchTranslationResult(emptyMap())
         val installationId = installationIdProvider.getInstallationId()
 
-        // Try the batch endpoint first
-        try {
-            AppLogger.i("translatePages: sending ${pages.size} pages to batch endpoint")
-            val batchPages = pages.map { (index, text) ->
-                BatchPage(index = index, text = text)
-            }
-            val request = ProxyBatchTranslateRequest(
-                pages = batchPages,
-                sourceLang = sourceLanguage,
-                targetLang = targetLanguage,
-                installationId = installationId,
-                bookContext = bookContext?.let {
-                    ProxyBookContext(title = it.title, author = it.author, openingText = it.openingText)
-                },
-            )
+        AppLogger.i("translatePages: sending ${pages.size} pages to batch endpoint")
+        val batchPages = pages.map { (index, text) ->
+            BatchPage(index = index, text = text)
+        }
+        val request = ProxyBatchTranslateRequest(
+            pages = batchPages,
+            sourceLang = sourceLanguage,
+            targetLang = targetLanguage,
+            installationId = installationId,
+            bookContext = bookContext?.let {
+                ProxyBookContext(title = it.title, author = it.author, openingText = it.openingText)
+            },
+            skipCache = skipCache,
+        )
 
-            val response = proxyApi.translateBatch(request)
-            val batchModel: String? = response.body()?.model?.takeIf { it.isNotBlank() }
-            AppLogger.i("translatePages: response code=${response.code()} model=${batchModel ?: "n/a"}")
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body?.error == null && body?.translations?.isNotEmpty() == true) {
-                    val modelUsed = batchModel ?: "unknown"
-                    val results = mutableMapOf<Int, String>()
-                    for (t in body.translations) {
-                        if (t.translatedText.isNotBlank()) {
-                            results[t.index] = t.translatedText.trim()
-                        }
-                    }
-                    // Verify we got translations for all pages
-                    if (results.size == pages.size) {
-                        return@withContext BatchTranslationResult(results, modelUsed)
-                    }
-                    // Partial success — fill gaps with individual calls
-                    AppLogger.w("Batch returned ${results.size}/${pages.size} pages, filling gaps individually")
-                    for (page in pages) {
-                        if (page.index !in results) {
-                            try {
-                                val singleResult = translate(page.value, targetLanguage, sourceLanguage, context)
-                                results[page.index] = singleResult
-                            } catch (e: Exception) {
-                                AppLogger.e("Individual fallback failed for page ${page.index}: ${e.message}")
-                            }
-                        }
-                    }
-                    if (results.size == pages.size) return@withContext BatchTranslationResult(results, modelUsed)
-                }
-            }
-        } catch (e: Exception) {
-            AppLogger.w("Batch translation failed, falling back to individual: ${e.message}")
+        val response = proxyApi.translateBatch(request)
+        val batchModel: String? = response.body()?.model?.takeIf { it.isNotBlank() }
+        AppLogger.i("translatePages: response code=${response.code()} model=${batchModel ?: "n/a"}")
+
+        if (!response.isSuccessful) {
+            val errorBody = response.errorBody()?.string()?.take(300) ?: "no body"
+            throw TranslationException("Batch endpoint error ${response.code()}: $errorBody")
         }
 
-        // Fallback: individual calls
+        val body = response.body()
+            ?: throw TranslationException("Batch endpoint returned empty response")
+
+        if (body.error != null) {
+            throw TranslationException("Batch translation error: ${body.error}")
+        }
+
+        if (body.translations.isEmpty()) {
+            throw TranslationException("Batch endpoint returned no translations")
+        }
+
+        val modelUsed = batchModel ?: "unknown"
         val results = mutableMapOf<Int, String>()
-        for ((i, page) in pages.withIndex()) {
-            if (i > 0) delay(BATCH_DELAY_MS)
-            try {
-                results[page.index] = translate(page.value, targetLanguage, sourceLanguage, context)
-            } catch (e: Exception) {
-                AppLogger.e("Individual translation failed for page ${page.index}: ${e.message}")
+        for (t in body.translations) {
+            if (t.translatedText.isNotBlank()) {
+                results[t.index] = t.translatedText.trim()
             }
         }
-        BatchTranslationResult(results, providerName)
+
+        if (results.isEmpty()) {
+            throw TranslationException("Batch endpoint returned no valid translations")
+        }
+
+        AppLogger.i("translatePages: got ${results.size}/${pages.size} translations")
+        BatchTranslationResult(results, modelUsed)
     }
 
     // ── detectLanguage ─────────────────────────────────────────────────────────

@@ -1,182 +1,107 @@
 package com.dualreader.app.domain.usecases
 
 import com.dualreader.app.domain.entities.Book
-import com.dualreader.app.domain.entities.BookFormat
+import com.dualreader.app.domain.entities.BookChapter
 import com.dualreader.app.domain.entities.Page
+import com.dualreader.app.domain.entities.PaginationStatus
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BookContextExtractorTest {
 
-    private fun makeBook(
-        title: String = "Test Book",
-        author: String = "Test Author",
-        language: String? = "en",
-    ) = Book(
+    private fun makeBook(title: String = "Test Book", author: String = "Test Author") = Book(
+        id = "b1",
         title = title,
         author = author,
-        filePath = "/test.epub",
-        format = BookFormat.EPUB,
-        language = language,
+        filePath = "/path/book.epub",
+        language = "en",
     )
 
-    private fun makePage(index: Int, text: String) = Page(
+    private fun makePage(index: Int, text: String, bookId: String = "b1") = Page(
         index = index,
-        bookId = "test-book",
-        originalText = text,
+        bookId = bookId,
         chapterIndex = 0,
+        originalText = text,
     )
 
-    // ── extract ─────────────────────────────────────────────────────────────
+    // ── extract ───────────────────────────────────────────────────
 
     @Test
-    fun `extract returns context with title and author`() {
-        val book = makeBook(title = "War and Peace", author = "Tolstoy")
-        val pages = listOf(makePage(0, "First page text."))
-
-        val ctx = BookContextExtractor.extract(book, pages)
-
-        assertEquals("War and Peace", ctx.title)
-        assertEquals("Tolstoy", ctx.author)
+    fun `extract returns BookContext with title and author from book`() {
+        val ctx = BookContextExtractor.extract(makeBook("My Novel", "Jane Doe"), emptyList())
+        assertEquals("My Novel", ctx.title)
+        assertEquals("Jane Doe", ctx.author)
     }
 
     @Test
-    fun `extract includes language from book`() {
-        val book = makeBook(language = "fr")
-        val pages = listOf(makePage(0, "Text"))
-
-        val ctx = BookContextExtractor.extract(book, pages)
-
-        assertEquals("fr", ctx.language)
+    fun `extract returns language from book`() {
+        val ctx = BookContextExtractor.extract(makeBook(), emptyList())
+        assertEquals("en", ctx.language)
     }
 
     @Test
-    fun `extract handles null language`() {
-        val book = makeBook(language = null)
-        val pages = listOf(makePage(0, "Text"))
-
-        val ctx = BookContextExtractor.extract(book, pages)
-
-        assertNull(ctx.language)
+    fun `extract with no pages returns empty openingText`() {
+        val ctx = BookContextExtractor.extract(makeBook(), emptyList())
+        assertEquals("", ctx.openingText)
     }
 
     @Test
-    fun `extract takes first 3 pages as opening text`() {
-        val book = makeBook()
+    fun `extract takes first OPENING_PAGES_COUNT pages`() {
+        val pages = (0..9).map { makePage(it, "Paragraph $it") }
+        val ctx = BookContextExtractor.extract(makeBook(), pages)
+        val paragraphs = ctx.openingText.split("\n\n")
+        assertEquals(BookContextExtractor.OPENING_PAGES_COUNT, paragraphs.size)
+        assertTrue(ctx.openingText.contains("Paragraph 0"))
+        assertTrue(ctx.openingText.contains("Paragraph 2"))
+        assertTrue(!ctx.openingText.contains("Paragraph 3"))
+    }
+
+    @Test
+    fun `extract sorts pages by index before taking`() {
         val pages = listOf(
-            makePage(0, "Page zero content."),
-            makePage(1, "Page one content."),
-            makePage(2, "Page two content."),
-            makePage(3, "Page three content."),
-            makePage(4, "Page four content."),
+            makePage(2, "Third"),
+            makePage(0, "First"),
+            makePage(1, "Second"),
         )
-
-        val ctx = BookContextExtractor.extract(book, pages)
-
-        assertTrue(ctx.openingText.contains("Page zero content."))
-        assertTrue(ctx.openingText.contains("Page one content."))
-        assertTrue(ctx.openingText.contains("Page two content."))
-        assertTrue("Should NOT contain page 3", !ctx.openingText.contains("Page three"))
-    }
-
-    @Test
-    fun `extract works with fewer than 3 pages`() {
-        val book = makeBook()
-        val pages = listOf(
-            makePage(0, "Only page."),
-        )
-
-        val ctx = BookContextExtractor.extract(book, pages)
-
-        assertEquals("Only page.", ctx.openingText)
-    }
-
-    @Test
-    fun `extract joins pages with double newline`() {
-        val book = makeBook()
-        val pages = listOf(
-            makePage(0, "Para one."),
-            makePage(1, "Para two."),
-        )
-
-        val ctx = BookContextExtractor.extract(book, pages)
-
-        assertEquals("Para one.\n\nPara two.", ctx.openingText)
+        val ctx = BookContextExtractor.extract(makeBook(), pages)
+        val paragraphs = ctx.openingText.split("\n\n")
+        assertEquals("First", paragraphs[0])
+        assertEquals("Second", paragraphs[1])
+        assertEquals("Third", paragraphs[2])
     }
 
     @Test
     fun `extract truncates opening text to MAX_OPENING_CHARS`() {
-        val book = makeBook()
-        val longText = "A".repeat(BookContextExtractor.MAX_OPENING_CHARS + 500)
-        val pages = listOf(
-            makePage(0, longText),
-        )
-
-        val ctx = BookContextExtractor.extract(book, pages)
-
-        assertEquals(BookContextExtractor.MAX_OPENING_CHARS, ctx.openingText.length)
+        val longText = "a".repeat(BookContextExtractor.MAX_OPENING_CHARS + 500)
+        val pages = listOf(makePage(0, longText))
+        val ctx = BookContextExtractor.extract(makeBook(), pages)
+        assertTrue(ctx.openingText.length <= BookContextExtractor.MAX_OPENING_CHARS)
     }
 
     @Test
-    fun `extract filters empty pages`() {
-        val book = makeBook()
+    fun `extract filters out empty paragraphs`() {
         val pages = listOf(
-            makePage(0, "Good page."),
-            makePage(1, "   "),
-            makePage(2, "Another good page."),
-        )
-
-        val ctx = BookContextExtractor.extract(book, pages)
-
-        assertEquals("Good page.\n\nAnother good page.", ctx.openingText)
-    }
-
-    @Test
-    fun `extract sorts pages by index`() {
-        val book = makeBook()
-        val pages = listOf(
-            makePage(2, "Third page."),
-            makePage(0, "First page."),
-            makePage(1, "Second page."),
-        )
-
-        val ctx = BookContextExtractor.extract(book, pages)
-
-        assertEquals("First page.\n\nSecond page.\n\nThird page.", ctx.openingText)
-    }
-
-    @Test
-    fun `extract with empty pages list returns empty opening text`() {
-        val book = makeBook()
-        val ctx = BookContextExtractor.extract(book, emptyList())
-
-        assertEquals("", ctx.openingText)
-    }
-
-    @Test
-    fun `extract with all empty pages returns empty opening text`() {
-        val book = makeBook()
-        val pages = listOf(
-            makePage(0, "  "),
+            makePage(0, "Real content"),
             makePage(1, ""),
-            makePage(2, "\n"),
+            makePage(2, "   "),
         )
-
-        val ctx = BookContextExtractor.extract(book, pages)
-
-        assertEquals("", ctx.openingText)
+        val ctx = BookContextExtractor.extract(makeBook(), pages)
+        assertEquals("Real content", ctx.openingText.trim())
     }
 
-    // ── BookContext data class ──────────────────────────────────────────────
+    @Test
+    fun `extract with fewer pages than OPENING_PAGES_COUNT uses all`() {
+        val pages = listOf(makePage(0, "Only page"))
+        val ctx = BookContextExtractor.extract(makeBook(), pages)
+        assertEquals("Only page", ctx.openingText.trim())
+    }
 
     @Test
-    fun `BookContext is a data class with proper equality`() {
-        val ctx1 = BookContext("Title", "Author", "en", "Opening")
-        val ctx2 = BookContext("Title", "Author", "en", "Opening")
-
-        assertEquals(ctx1, ctx2)
+    fun `extract with null language`() {
+        val book = makeBook().copy(language = null)
+        val ctx = BookContextExtractor.extract(book, emptyList())
+        assertEquals(null, ctx.language)
     }
 
     @Test

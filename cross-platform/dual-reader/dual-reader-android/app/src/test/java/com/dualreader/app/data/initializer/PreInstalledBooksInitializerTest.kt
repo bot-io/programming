@@ -11,6 +11,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -30,7 +31,7 @@ class PreInstalledBooksInitializerTest {
     private lateinit var paginateBookUseCase: PaginateBookUseCase
     private lateinit var initializer: PreInstalledBooksInitializer
 
-    private val fakeFilesDir: File = kotlin.io.path.createTempDirectory(prefix = "dualreader_test").toFile()
+    private val fakeFilesDir: File = File(System.getProperty("user.home"), ".dr-test-init-${System.nanoTime()}").apply { mkdirs() }
 
     private val testBook = Book(
         id = "book-test",
@@ -48,6 +49,9 @@ class PreInstalledBooksInitializerTest {
 
         // Context returns fake filesDir
         every { context.filesDir } returns fakeFilesDir
+
+        // Mock assets to return real ByteArrayInputStream (prevents OOM from relaxed mock)
+        every { context.assets.open(any()) } returns java.io.ByteArrayInputStream("fake epub content".toByteArray())
 
         // Pre-create fake epub files in books/ dir so asset copying is skipped
         val booksDir = File(fakeFilesDir, "books").apply { mkdirs() }
@@ -71,7 +75,7 @@ class PreInstalledBooksInitializerTest {
         coEvery { paginateBookUseCase(any(), any(), any()) } returns Result.success(Unit)
 
         // When: ensure flag file is removed
-        File(fakeFilesDir, ".pre_installed_books_v2").delete()
+        File(fakeFilesDir, ".pre_installed_books_v3").delete()
 
         initializer.importPreInstalledBooks()
 
@@ -88,7 +92,7 @@ class PreInstalledBooksInitializerTest {
     @Test
     fun `import without pagination flag triggers full import-paginate cycle`() = runTest {
         // Remove the flag file to force re-import
-        File(fakeFilesDir, ".pre_installed_books_v2").delete()
+        File(fakeFilesDir, ".pre_installed_books_v3").delete()
 
         coEvery { importBookUseCase(any()) } returns Result.success(testBook)
         coEvery { paginateBookUseCase(any(), any(), any()) } returns Result.success(Unit)
@@ -96,13 +100,13 @@ class PreInstalledBooksInitializerTest {
         initializer.importPreInstalledBooks()
 
         // Flag file should be created
-        assertTrue("Flag file should be created after import", File(fakeFilesDir, ".pre_installed_books_v2").exists())
+        assertTrue("Flag file should be created after import", File(fakeFilesDir, ".pre_installed_books_v3").exists())
     }
 
     @Test
     fun `import skipped when flag file already exists`() = runTest {
         // Given: flag file exists (already imported)
-        File(fakeFilesDir, ".pre_installed_books_v2").createNewFile()
+        File(fakeFilesDir, ".pre_installed_books_v3").createNewFile()
 
         // When
         initializer.importPreInstalledBooks()
@@ -113,23 +117,23 @@ class PreInstalledBooksInitializerTest {
     }
 
     @Test
-    fun `import failure for one book does not stop others`() = runTest {
-        File(fakeFilesDir, ".pre_installed_books_v2").delete()
+    fun `import failure for all books does not create flag file`() = runTest {
+        File(fakeFilesDir, ".pre_installed_books_v3").delete()
 
-        // Book fails to import
+        // All books fail to import
         coEvery { importBookUseCase(any()) } returns Result.failure(RuntimeException("Import error"))
         coEvery { paginateBookUseCase(any(), any(), any()) } returns Result.success(Unit)
 
         // Should not throw
         initializer.importPreInstalledBooks()
 
-        // Flag should still be created
-        assertTrue(File(fakeFilesDir, ".pre_installed_books_v2").exists())
+        // Flag should NOT be created when no book succeeded (allows retry on next launch)
+        assertFalse(File(fakeFilesDir, ".pre_installed_books_v3").exists())
     }
 
     @Test
     fun `pagination failure does not prevent flag file creation`() = runTest {
-        File(fakeFilesDir, ".pre_installed_books_v2").delete()
+        File(fakeFilesDir, ".pre_installed_books_v3").delete()
 
         coEvery { importBookUseCase(any()) } returns Result.success(testBook)
         coEvery { paginateBookUseCase(any(), any(), any()) } returns Result.failure(RuntimeException("Pagination error"))
@@ -137,12 +141,12 @@ class PreInstalledBooksInitializerTest {
         initializer.importPreInstalledBooks()
 
         // Flag should be created even if pagination failed — book is still imported
-        assertTrue(File(fakeFilesDir, ".pre_installed_books_v2").exists())
+        assertTrue(File(fakeFilesDir, ".pre_installed_books_v3").exists())
     }
 
     @Test
     fun `import creates books directory if it does not exist`() = runTest {
-        File(fakeFilesDir, ".pre_installed_books_v2").delete()
+        File(fakeFilesDir, ".pre_installed_books_v3").delete()
         // Remove books dir to test creation
         File(fakeFilesDir, "books").deleteRecursively()
 

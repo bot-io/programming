@@ -120,22 +120,24 @@ class TranslatePageUseCaseAdditionalTest {
 
     @Test
     fun `batch collection stops at char limit`() = runTest {
-        // MAX_BATCH_CHARS = 10000, BATCH_SIZE = 5
-        // Create 3 pages each ~4000 chars → only 2 should fit in one batch
+        // MAX_BATCH_CHARS = 30000, BATCH_SIZE = 15
+        // Create 3 pages each 12000 chars → only 2 fit in one batch (24000 < 30000)
         val pages = listOf(
-            PageToTranslate(index = 0, text = "a".repeat(4500)),
-            PageToTranslate(index = 1, text = "b".repeat(4500)),
-            PageToTranslate(index = 2, text = "c".repeat(4500)),
+            PageToTranslate(index = 0, text = "a".repeat(12000)),
+            PageToTranslate(index = 1, text = "b".repeat(12000)),
+            PageToTranslate(index = 2, text = "c".repeat(12000)),
         )
 
         coEvery { cacheRepository.get(any(), any(), any()) } returns null
 
-        // Batch call for first 2 pages (total ~9000 chars, under 10000)
+        // Batch call for first 2 pages (total 24000 chars, under 30000)
         coEvery {
             translationService.translatePages(any(), any(), any(), any())
         } returns BatchTranslationResult(mapOf(0 to "T0", 1 to "T1"), "test")
-        // Individual call for page 2 (single page batch)
-        coEvery { translationService.translate(any(), any(), any(), any()) } returns "T2"
+        // translate (DR-013 marker batch + single page):
+        // First call (marker batch) throws → falls back to translatePages
+        // Second call (single page) returns "T2"
+        coEvery { translationService.translate(any(), any(), any(), any()) } throws RuntimeException("marker failed") andThen "T2"
         coEvery { cacheRepository.put(any(), any(), any(), any()) } just Runs
 
         val result = useCase.translateBatchWithContext(pages, "bg", "en")
@@ -173,10 +175,10 @@ class TranslatePageUseCaseAdditionalTest {
         assertEquals("T2", result.getOrThrow().translations[2])
     }
 
-    // ─── Batch failure → individual fallback ──────────────────────────────
+    // ─── Batch failure → fail fast (no individual fallback) ────────────────
 
     @Test
-    fun `batch call fails, falls back to individual calls`() = runTest {
+    fun `batch call fails fast without individual fallback`() = runTest {
         val pages = listOf(
             PageToTranslate(index = 0, text = "P0"),
             PageToTranslate(index = 1, text = "P1"),
@@ -184,25 +186,22 @@ class TranslatePageUseCaseAdditionalTest {
 
         coEvery { cacheRepository.get(any(), any(), any()) } returns null
 
+        // Marker-based translate call also fails (not stubbed → MockKException → caught)
         // Batch endpoint fails
         coEvery {
-            translationService.translatePages(any(), any(), any(), any())
+            translationService.translatePages(any(), any(), any(), any(), any(), any())
         } throws TranslationException("batch endpoint down")
-
-        // Individual calls succeed
-        coEvery { translationService.translate("P0", "bg", "en", any()) } returns "T0"
-        coEvery { translationService.translate("P1", "bg", "en", any()) } returns "T1"
-        coEvery { cacheRepository.put(any(), any(), any(), any()) } just Runs
 
         val result = useCase.translateBatchWithContext(pages, "bg", "en")
 
-        assertTrue(result.isSuccess)
-        assertEquals("T0", result.getOrThrow().translations[0])
-        assertEquals("T1", result.getOrThrow().translations[1])
+        // Both marker and batch endpoint fail → failure propagates immediately
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is TranslationException)
+        assertEquals("batch endpoint down", result.exceptionOrNull()?.message)
     }
 
     @Test
-    fun `batch fails, individual fallback also fails for one page - partial results`() = runTest {
+    fun `batch failure propagates without partial results`() = runTest {
         val pages = listOf(
             PageToTranslate(index = 0, text = "P0"),
             PageToTranslate(index = 1, text = "P1"),
@@ -210,22 +209,16 @@ class TranslatePageUseCaseAdditionalTest {
 
         coEvery { cacheRepository.get(any(), any(), any()) } returns null
 
-        // Batch endpoint fails
+        // Batch endpoint fails (marker-based translate also fails via MockKException → caught)
         coEvery {
-            translationService.translatePages(any(), any(), any(), any())
+            translationService.translatePages(any(), any(), any(), any(), any(), any())
         } throws TranslationException("batch down")
-
-        // P0 succeeds individually, P1 also fails individually
-        coEvery { translationService.translate("P0", "bg", "en", any()) } returns "T0"
-        coEvery { translationService.translate("P1", "bg", "en", any()) } throws TranslationException("individual fail")
-        coEvery { cacheRepository.put(any(), any(), any(), any()) } just Runs
 
         val result = useCase.translateBatchWithContext(pages, "bg", "en")
 
-        assertTrue(result.isSuccess)
-        assertEquals("T0", result.getOrThrow().translations[0])
-        // P1 failed individually and was skipped
-        assertNull(result.getOrThrow().translations[1])
+        // No partial results — failure propagates immediately
+        assertTrue(result.isFailure)
+        assertEquals("batch down", result.exceptionOrNull()?.message)
     }
 
     // ─── Service failure mid-batch ────────────────────────────────────────
