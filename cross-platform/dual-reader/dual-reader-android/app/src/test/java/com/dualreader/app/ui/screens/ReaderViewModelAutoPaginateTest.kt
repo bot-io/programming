@@ -88,6 +88,7 @@ class ReaderViewModelAutoPaginateTest {
             translationCacheRepository = translationCacheRepository,
             ttsService = ttsService,
             translationService = mockk(relaxed = true),
+            fallbackTranslationService = mockk(relaxed = true),
             mlKitModelManager = mockk(relaxed = true),
         )
     }

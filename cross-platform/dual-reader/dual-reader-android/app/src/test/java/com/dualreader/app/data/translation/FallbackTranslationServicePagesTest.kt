@@ -55,6 +55,10 @@ class FallbackTranslationServiceTranslatePagesTest {
         )
 
         coEvery {
+            mlKitService.translate(any(), any(), any(), any())
+        } throws TranslationException("ML Kit unavailable")
+
+        coEvery {
             cloudService.translatePages(any(), "bg", "en", any())
         } returns BatchTranslationResult(mapOf(0 to "Стр. 0", 1 to "Стр. 1"), "gemini-2.5-flash")
 
@@ -64,8 +68,8 @@ class FallbackTranslationServiceTranslatePagesTest {
         assertEquals("Стр. 1", result.translations[1])
         assertEquals("gemini-2.5-flash", result.model)
 
-        // ML Kit should NOT be called
-        coVerify(exactly = 0) { mlKitService.translate(any(), any(), any(), any()) }
+        coVerify { mlKitService.translate(any(), any(), any()) }
+        coVerify { cloudService.translatePages(any(), "bg", "en", any()) }
     }
 
     @Test
@@ -74,6 +78,10 @@ class FallbackTranslationServiceTranslatePagesTest {
             IndexedValue(5, "Five"),
             IndexedValue(10, "Ten"),
         )
+
+        coEvery {
+            mlKitService.translate(any(), any(), any(), any())
+        } throws TranslationException("ML Kit unavailable")
 
         coEvery {
             cloudService.translatePages(any(), "bg", "en", any())
@@ -96,6 +104,10 @@ class FallbackTranslationServiceTranslatePagesTest {
             IndexedValue(2, "Page 2"),
         )
 
+        coEvery {
+            mlKitService.translate(any(), any(), any(), any())
+        } throws TranslationException("ML Kit unavailable")
+
         // Cloud returns only page 0 and 2, missing page 1
         coEvery {
             cloudService.translatePages(any(), "bg", "en", any())
@@ -107,8 +119,6 @@ class FallbackTranslationServiceTranslatePagesTest {
         assertEquals("Стр. 0", result.translations[0])
         assertEquals("Стр. 2", result.translations[2])
         assertNull(result.translations[1])
-        // ML Kit should NOT be called when cloud batch succeeds
-        coVerify(exactly = 0) { mlKitService.translate(any(), any(), any()) }
     }
 
     @Test
@@ -120,6 +130,10 @@ class FallbackTranslationServiceTranslatePagesTest {
         )
 
         coEvery {
+            mlKitService.translate(any(), any(), any(), any())
+        } throws TranslationException("ML Kit unavailable")
+
+        coEvery {
             cloudService.translatePages(any(), "bg", "en", any())
         } returns BatchTranslationResult(mapOf(1 to "Б"), "glm-4.7-flash")
 
@@ -129,7 +143,6 @@ class FallbackTranslationServiceTranslatePagesTest {
         assertEquals("Б", result.translations[1])
         assertNull(result.translations[0])
         assertNull(result.translations[2])
-        coVerify(exactly = 0) { mlKitService.translate(any(), any(), any()) }
     }
 
     // ── Cloud batch throws → individual fallback through full chain ────────
@@ -190,6 +203,10 @@ class FallbackTranslationServiceTranslatePagesTest {
         val pages = listOf(IndexedValue(0, "Hello"))
 
         coEvery {
+            mlKitService.translate(any(), any(), any(), any())
+        } throws TranslationException("ML Kit unavailable")
+
+        coEvery {
             cloudService.translatePages(any(), "bg", "en", any())
         } returns BatchTranslationResult(mapOf(0 to "Здравей"), "gemini-2.5-flash")
 
@@ -203,6 +220,10 @@ class FallbackTranslationServiceTranslatePagesTest {
     @Test
     fun `translatePages - passes context to cloud batch`() = runTest {
         val pages = listOf(IndexedValue(0, "Hello"))
+
+        coEvery {
+            mlKitService.translate(any(), any(), any(), any())
+        } throws TranslationException("ML Kit unavailable")
 
         coEvery {
             cloudService.translatePages(any(), "bg", "en", match { it != null && it.contains("context") })

@@ -55,13 +55,23 @@ class BookRepositoryImpl @Inject constructor(
         if (pageTexts.isNotEmpty()) {
             try {
                 translationCacheRepository.deleteForTexts(pageTexts)
-            } catch (_: Exception) { }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Propagate cancellation - don't swallow it (DR-110)
+            } catch (e: Exception) {
+                com.dualreader.app.util.AppLogger.e("deleteBook: Failed to clear translation cache for book $id: ${e.message}", e)
+            }
         }
 
         // Delete cover file
         withContext(Dispatchers.IO) {
-            val coversDir = File(context.filesDir, "covers")
-            coversDir.listFiles()?.filter { it.name.startsWith(id) }?.forEach { it.delete() }
+            try {
+                val coversDir = File(context.filesDir, "covers")
+                coversDir.listFiles()?.filter { it.name.startsWith(id) }?.forEach { it.delete() }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Propagate cancellation - don't swallow it (DR-110)
+            } catch (e: Exception) {
+                com.dualreader.app.util.AppLogger.e("deleteBook: Failed to delete cover file for book $id: ${e.message}", e)
+            }
         }
     }
 
@@ -70,15 +80,31 @@ class BookRepositoryImpl @Inject constructor(
             try {
                 val coversDir = File(context.filesDir, "covers").also { it.mkdirs() }
                 // Detect format from magic bytes; fall back to .jpg
+                // PNG magic: 89 50 4E 47 0D 0A 1A 0A
+                // JPEG magic: FF D8 FF
                 val extension = when {
-                    bytes.size >= 8 && String(bytes, 0, 8).contains("PNG") -> "png"
-                    bytes.size >= 3 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() -> "jpg"
+                    bytes.size >= 8 &&
+                        bytes[0] == 0x89.toByte() &&
+                        bytes[1] == 0x50.toByte() &&
+                        bytes[2] == 0x4E.toByte() &&
+                        bytes[3] == 0x47.toByte() &&
+                        bytes[4] == 0x0D.toByte() &&
+                        bytes[5] == 0x0A.toByte() &&
+                        bytes[6] == 0x1A.toByte() &&
+                        bytes[7] == 0x0A.toByte() -> "png"
+                    bytes.size >= 3 &&
+                        bytes[0] == 0xFF.toByte() &&
+                        bytes[1] == 0xD8.toByte() &&
+                        bytes[2] == 0xFF.toByte() -> "jpg"
                     else -> "jpg"
                 }
                 val file = File(coversDir, "$bookId.$extension")
                 file.writeBytes(bytes)
                 file.absolutePath
-            } catch (_: Exception) {
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Propagate cancellation - don't swallow it (DR-131)
+            } catch (e: Exception) {
+                com.dualreader.app.util.AppLogger.e("saveCoverImage: Failed to save cover for book $bookId: ${e.message}", e)
                 null
             }
         }

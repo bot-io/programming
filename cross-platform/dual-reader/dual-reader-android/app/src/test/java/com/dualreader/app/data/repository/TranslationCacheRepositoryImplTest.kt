@@ -45,12 +45,9 @@ class TranslationCacheRepositoryImplTest {
         assertEquals(64, hash.length)
     }
 
-    @Test
-    fun `sha256 for empty string is not empty`() {
-        val hash = TranslationCacheRepositoryImpl.sha256("")
-        assertEquals(64, hash.length)
-        // Known SHA-256 of empty string
-        assertEquals("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", hash)
+    @Test(expected = IllegalArgumentException::class)
+    fun `sha256 for empty string throws IllegalArgumentException`() {
+        TranslationCacheRepositoryImpl.sha256("")
     }
 
     @Test
@@ -60,7 +57,37 @@ class TranslationCacheRepositoryImplTest {
         assertNotNull(hash)
     }
 
+    @Test(expected = IllegalArgumentException::class)
+    fun `sha256 for whitespace-only string throws IllegalArgumentException`() {
+        TranslationCacheRepositoryImpl.sha256("   ")
+    }
+
     // ── get ───────────────────────────────────────────────────────
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `get throws IllegalArgumentException for empty text`() = runTest {
+        repo.get("", "en", "es")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `get throws IllegalArgumentException for whitespace-only text`() = runTest {
+        repo.get("   ", "en", "es")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `get throws IllegalArgumentException for empty targetLang`() = runTest {
+        repo.get("hello", "en", "")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `get throws IllegalArgumentException for empty sourceLang`() = runTest {
+        repo.get("hello", "", "es")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `get throws IllegalArgumentException for whitespace-only sourceLang`() = runTest {
+        repo.get("hello", "   ", "es")
+    }
 
     @Test
     fun `get returns translatedText when entry exists`() = runTest {
@@ -98,6 +125,31 @@ class TranslationCacheRepositoryImplTest {
     }
 
     // ── put ───────────────────────────────────────────────────────
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `put throws IllegalArgumentException for empty text`() = runTest {
+        repo.put("", "en", "es", "hola", "model")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `put throws IllegalArgumentException for whitespace-only text`() = runTest {
+        repo.put("   ", "en", "es", "hola", "model")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `put throws IllegalArgumentException for empty targetLang`() = runTest {
+        repo.put("hello", "en", "", "hola", "model")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `put throws IllegalArgumentException for empty sourceLang`() = runTest {
+        repo.put("hello", "", "es", "hola", "model")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `put throws IllegalArgumentException for whitespace-only sourceLang`() = runTest {
+        repo.put("hello", "   ", "es", "hola", "model")
+    }
 
     @Test
     fun `put inserts new entry when not exists`() = runTest {
@@ -198,6 +250,16 @@ class TranslationCacheRepositoryImplTest {
     }
 
     // ── deleteForTexts ────────────────────────────────────────────
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `deleteForTexts throws IllegalArgumentException for empty text in list`() = runTest {
+        repo.deleteForTexts(listOf("hello", "", "world"))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `deleteForTexts throws IllegalArgumentException for whitespace-only text in list`() = runTest {
+        repo.deleteForTexts(listOf("hello", "   ", "world"))
+    }
 
     @Test
     fun `deleteForTexts deletes each text by hash`() = runTest {

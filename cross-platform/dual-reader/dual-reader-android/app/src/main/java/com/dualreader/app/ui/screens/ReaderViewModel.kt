@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
@@ -49,7 +50,6 @@ sealed class ReaderUiState {
         val bookmarks: List<Bookmark>,
         val isTranslating: Boolean = false,
         val translationError: String? = null,
-        val isRePaginating: Boolean = false,
     ) : ReaderUiState()
 
     data class Error(val message: String) : ReaderUiState()
@@ -66,6 +66,7 @@ class ReaderViewModel @Inject constructor(
     private val translationCacheRepository: TranslationCacheRepository,
     private val ttsService: com.dualreader.app.domain.services.TtsService,
     private val translationService: com.dualreader.app.domain.services.TranslationService,
+    private val fallbackTranslationService: com.dualreader.app.data.translation.FallbackTranslationService,
     private val mlKitModelManager: com.dualreader.app.data.translation.MlKitModelManager,
 ) : ViewModel() {
 
@@ -74,6 +75,12 @@ class ReaderViewModel @Inject constructor(
 
         /** How many pages to translate around the current page when user taps "Translate". */
         const val TRANSLATE_WINDOW_SIZE = 15
+
+        /** Maximum number of position snap marks to retain. */
+        const val MAX_POSITION_HISTORY = 5
+
+        /** Minimum distance between snap points, as fraction of total pages. */
+        const val MIN_SNAP_FRACTION = 0.02f
 
         @VisibleForTesting
         internal var testIoDispatcher: CoroutineDispatcher? = null
@@ -90,7 +97,12 @@ class ReaderViewModel @Inject constructor(
     private val _pages = MutableStateFlow<List<Page>>(emptyList())
     private val _bookmarks = MutableStateFlow<List<Bookmark>>(emptyList())
     private val _settings = MutableStateFlow<ReadingSettings?>(null)
-    private var _book: Book? = null
+    private val _book = MutableStateFlow<Book?>(null)
+
+    // DR-063: Reading position history for slider snap-to-navigation.
+    // Tracks pages the user spent time at, enabling quick jumps between reading spots.
+    private val _positionHistory = MutableStateFlow<List<Int>>(emptyList())
+    val positionHistory: StateFlow<List<Int>> = _positionHistory.asStateFlow()
 
     private val _isTranslating = MutableStateFlow(false)
     private val _translationError = MutableStateFlow<String?>(null)
@@ -99,13 +111,14 @@ class ReaderViewModel @Inject constructor(
     private var translationJob: Job? = null
     private var loadJob: Job? = null
     private var loadOuterJob: Job? = null
-    private val _isRePaginating = MutableStateFlow(false)
+    private var ttsRetryJob: Job? = null // DR-092: Track TTS retry coroutine
 
     // ── Translation events (one-time UI events for Snackbar) ──────────────
     sealed class TranslationEvent {
         data class Error(val message: String, val canRetry: Boolean, val canDownloadModel: Boolean) : TranslationEvent()
         data class OfflineFallback(val pagesTranslated: Int) : TranslationEvent()
         data class Success(val pagesTranslated: Int) : TranslationEvent()
+        data class PersistenceError(val failedPages: Int) : TranslationEvent() // DR-106: Notify user when persistence fails
     }
     private val _translationEvents = kotlinx.coroutines.channels.Channel<TranslationEvent>(
         capacity = kotlinx.coroutines.channels.Channel.BUFFERED
@@ -133,8 +146,8 @@ class ReaderViewModel @Inject constructor(
         wordJob?.cancel()
 
         val state = _uiState.value as? ReaderUiState.ReaderReady ?: return
-        val sourceLang = if (isFromOriginal) _book?.language else state.settings.targetLanguage
-        val targetLang = if (isFromOriginal) state.settings.targetLanguage else _book?.language ?: "en"
+        val sourceLang = if (isFromOriginal) _book.value?.language else state.settings.targetLanguage
+        val targetLang = if (isFromOriginal) state.settings.targetLanguage else _book.value?.language ?: "en"
 
         _wordTranslation.value = WordTranslationState(
             word = word,
@@ -152,6 +165,8 @@ class ReaderViewModel @Inject constructor(
                     translation = result.trim(),
                     isLoading = false,
                 )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Rapid word lookups cancel prior job — don't show spurious error (DR-051)
             } catch (e: Exception) {
                 _wordTranslation.value = _wordTranslation.value?.copy(
                     isLoading = false,
@@ -170,6 +185,21 @@ class ReaderViewModel @Inject constructor(
 
     init {
         currentBookId?.let { loadBook(it) }
+
+        // Register cloud upgrade callback: when background cloud translation
+        // completes, find the matching page by original text and replace the
+        // ML Kit translation with the higher-quality cloud version.
+        fallbackTranslationService.cloudUpgradeCallback = { originalText, cloudTranslation, targetLang ->
+            val pages = _pages.value
+            val pageToUpdate = pages.find { page ->
+                page.originalText.trim() == originalText.trim() ||
+                page.originalText.contains(originalText.take(100))
+            }
+            if (pageToUpdate != null) {
+                AppLogger.i("Cloud upgrade: replacing ML Kit translation for page ${pageToUpdate.index}")
+                applyTranslation(pageToUpdate.index, targetLang, cloudTranslation, "cloud-upgrade")
+            }
+        }
     }
 
     /**
@@ -179,9 +209,15 @@ class ReaderViewModel @Inject constructor(
     fun reloadPages() {
         val bookId = currentBookId ?: return
         viewModelScope.launch(ioDispatcher) {
-            val pages = bookRepository.getPagesForBook(bookId)
-            AppLogger.i("reloadPages: loaded ${pages.size} pages, ${pages.count { it.translations.isNotEmpty() }} with translations")
-            _pages.value = pages
+            try {
+                val pages = bookRepository.getPagesForBook(bookId)
+                AppLogger.i("reloadPages: loaded ${pages.size} pages, ${pages.count { it.translations.isNotEmpty() }} with translations")
+                _pages.value = pages
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-138)
+            } catch (e: Exception) {
+                AppLogger.e("reloadPages: Failed to reload pages for book $bookId: ${e.message}", e)
+            }
         }
     }
 
@@ -198,7 +234,7 @@ class ReaderViewModel @Inject constructor(
                     _uiState.value = ReaderUiState.Error("Book not found: $bookId")
                     return@launch
                 }
-                _book = book
+                _book.value = book
 
                 val pages = bookRepository.getPagesForBook(bookId)
                 val transCount = pages.count { it.translations.isNotEmpty() }
@@ -267,160 +303,53 @@ class ReaderViewModel @Inject constructor(
                 }
 
                 loadJob = launch {
+                    // DR-060: Include _book in the combine so scroll position changes
+                    // propagate to uiState immediately. Previously _book was a plain var
+                    // read inside collect — updates to currentPage were invisible to the
+                    // UI and to translateCurrentPage(), causing stale translation starts.
                     combine(
                         settingsRepository.settings,
                         bookmarkRepository.getBookmarksForBook(bookId),
                         _pages,
-                        combine(_isTranslating, _translationError, _isRePaginating) { t, e, r ->
-                            UiExtras(t, e, r)
+                        combine(_isTranslating, _translationError) { t, e ->
+                            UiExtras(t, e)
                         },
-                    ) { settingsFlow, bookmarksFlow, pagesFlow, extras ->
-                        Quadruple(settingsFlow, bookmarksFlow, pagesFlow, extras)
-                    }.collect { (settingsVal, bookmarksVal, pagesVal, extras) ->
-                        _settings.value = settingsVal
-                        _bookmarks.value = bookmarksVal
-
-                        val currentBookRef = _book
-                        if (currentBookRef != null) {
-                            val currentPg = pagesVal.getOrNull(currentBookRef.currentPage)
-                                ?: pagesVal.firstOrNull()
-
-                            if (currentPg != null) {
-                                // Debug: log translation state for current page
-                                val transLang = settingsVal.targetLanguage
-                                val hasTrans = currentPg.translations.containsKey(transLang)
-                                val transCount = pagesVal.count { it.translations.containsKey(transLang) }
-                                if (hasTrans || transCount > 0) {
-                                    AppLogger.i("UI update: page ${currentPg.index} hasTrans=$hasTrans lang=$transLang totalTransPages=$transCount")
-                                }
-
-                                _uiState.value = ReaderUiState.ReaderReady(
-                                    book = currentBookRef,
-                                    pages = pagesVal,
-                                    currentPage = currentPg,
-                                    settings = settingsVal,
-                                    bookmarks = bookmarksVal,
+                        _book,
+                    ) { settingsFlow, bookmarksFlow, pagesFlow, extras, bookFlow ->
+                    // Only emit when we have a book loaded and pages parsed
+                    if (bookFlow == null) {
+                        null
+                    } else {
+                        val cp = pagesFlow.getOrNull(bookFlow.currentPage)
+                            ?: pagesFlow.firstOrNull()
+                        if (cp == null) {
+                            AppLogger.e("loadBook: No page data found for bookId=${bookFlow.id}, currentPage=${bookFlow.currentPage}, pagesFlow.size=${pagesFlow.size}")
+                            null
+                        } else {
+                                ReaderUiState.ReaderReady(
+                                    book = bookFlow,
+                                    pages = pagesFlow,
+                                    currentPage = cp,
+                                    settings = settingsFlow,
+                                    bookmarks = bookmarksFlow,
                                     isTranslating = extras.isTranslating,
                                     translationError = extras.translationError,
-                                    isRePaginating = extras.isRePaginating,
                                 )
                             }
                         }
+                    }.filterNotNull().collect { readyState ->
+                        _settings.value = readyState.settings
+                        _bookmarks.value = readyState.bookmarks
+                        _uiState.value = readyState
                     }
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Book switch / VM clear — don't emit phantom Error state (DR-051)
             } catch (e: Exception) {
                 AppLogger.e("loadBook failed: ${e.message}", e)
                 _uiState.value = ReaderUiState.Error(e.message ?: "Failed to load book")
             }
         }
-    }
-
-    /**
-     * Re-paginate the book with actual measured dimensions from the reader layout.
-     * Called once when the content area is first measured with real pixel sizes.
-     */
-    fun rePaginate(panelWidthPx: Int, panelHeightPx: Int, displayDensity: Float) {
-        val book = _book ?: return
-        AppLogger.i("rePaginate: ${panelWidthPx}x${panelHeightPx}px density=$displayDensity book=${book.id}")
-        viewModelScope.launch(ioDispatcher) {
-            _isRePaginating.value = true
-            try {
-                // Capture old pages BEFORE re-pagination for substring fallback matching
-                val oldPages = _pages.value
-                val oldTranslated = oldPages.filter { it.translations.isNotEmpty() }
-                
-                // Set the actual device density so StaticLayout matches Compose rendering
-                com.dualreader.app.data.pagination.PaginationServiceImpl.displayDensity = displayDensity
-                paginateBookUseCase(
-                    book = book,
-                    screenWidth = panelWidthPx,
-                    screenHeight = panelHeightPx,
-                )
-                val newPages = bookRepository.getPagesForBook(book.id)
-                // Restore cached translations onto the new pages
-                val targetLang = settingsRepository.getSettings().targetLanguage
-                val restoredPages = try {
-                    newPages.map { page ->
-                        // 1. Exact cache match (fast path)
-                        val cached = translationCacheRepository.get(
-                            text = page.originalText,
-                            sourceLang = book.language,
-                            targetLang = targetLang,
-                        )
-                        if (cached != null) {
-                            page.withTranslation(targetLang, cached)
-                        } else {
-                            // 2. Substring fallback: check if any old translated page contains this page's text
-                            val oldMatch = oldTranslated.firstOrNull { old ->
-                                old.originalText.contains(page.originalText)
-                            }
-                            if (oldMatch != null) {
-                                val trans = oldMatch.translations[targetLang]
-                                if (trans != null) {
-                                    AppLogger.i("rePaginate: substring restore page ${page.index} from old page ${oldMatch.index}")
-                                    page.withTranslation(targetLang, trans)
-                                } else page
-                            } else page
-                        }
-                    }
-                } catch (e: Exception) {
-                    AppLogger.e("Cache restore failed: ${e.message}", e)
-                    newPages
-                }
-                _pages.value = restoredPages
-                // Re-extract book context with the new pages
-                _bookContext = BookContextExtractor.extract(book, restoredPages)
-                val updatedBook = bookRepository.getBookById(book.id) ?: book
-                _book = updatedBook
-                val transCount = restoredPages.count { it.translations.containsKey(targetLang) }
-                AppLogger.i("rePaginate done: ${newPages.size} pages, totalPg=${updatedBook.totalPages}, transPages=$transCount")
-            } catch (e: Exception) {
-                AppLogger.e("rePaginate failed: ${e.message}", e)
-                // Keep existing pages
-            } finally {
-                _isRePaginating.value = false
-            }
-        }
-    }
-
-    fun goToPage(index: Int) {
-        val book = _book ?: return
-        val pages = _pages.value
-        val settings = _settings.value ?: return
-        val bookmarks = _bookmarks.value
-        if (index < 0 || index >= pages.size) return
-
-        val currentPage = pages[index]
-        val updatedBook = book.copy(
-            currentPage = index,
-            lastReadAt = LocalDateTime.now(),
-        )
-        _book = updatedBook
-
-        _uiState.value = ReaderUiState.ReaderReady(
-            book = updatedBook,
-            pages = pages,
-            currentPage = currentPage,
-            settings = settings,
-            bookmarks = bookmarks,
-            isTranslating = _isTranslating.value,
-            translationError = _translationError.value,
-            isRePaginating = _isRePaginating.value,
-        )
-
-        viewModelScope.launch(ioDispatcher) {
-            try { bookRepository.updateBook(updatedBook) } catch (_: Exception) { }
-        }
-    }
-
-    fun nextPage() {
-        val state = _uiState.value as? ReaderUiState.ReaderReady ?: return
-        goToPage(state.currentPage.index + 1)
-    }
-
-    fun previousPage() {
-        val state = _uiState.value as? ReaderUiState.ReaderReady ?: return
-        goToPage(state.currentPage.index - 1)
     }
 
     /**
@@ -464,22 +393,44 @@ class ReaderViewModel @Inject constructor(
                     PageToTranslate(index = page.index, text = page.originalText)
                 }
 
-                val result = withTimeoutOrNull(45_000L) {
+                // DR-061: Collect partial results via onPageTranslated callback.
+                // If the overall timeout fires, we still apply whatever was
+                // translated before the deadline instead of losing everything.
+                // DR-140: Use AtomicReference for thread-safe model tracking (partialModel)
+                val partialResults = mutableMapOf<Int, String>()
+                val partialModel = java.util.concurrent.atomic.AtomicReference<String?>(null)
+
+                val result = withTimeoutOrNull(120_000L) {
                     translatePageUseCase.translateBatchWithContext(
                         pages = pageTranslations,
                         targetLanguage = targetLang,
-                        sourceLanguage = _book?.language,
-                        onPageTranslated = { _, _ -> },
+                        sourceLanguage = _book.value?.language,
+                        onPageTranslated = { index, translation ->
+                            partialResults[index] = translation
+                        },
                         bookContext = _bookContext,
                     )
-                } ?: run {
-                    AppLogger.e("Translation timed out for ${pagesToTranslate.size} pages")
+                }
+
+                // If timeout: apply whatever partial results we collected
+                if (result == null && partialResults.isNotEmpty()) {
+                    AppLogger.w("translateCurrentPage timed out but got ${partialResults.size}/${pagesToTranslate.size} partial results — applying")
+                    applyTranslationsBatch(partialResults, targetLang, partialModel.get() ?: "unknown")
+                    _isTranslating.value = false
+                    _translationError.value = null
+                    _translationEvents.trySend(TranslationEvent.Success(partialResults.size))
+                    return@launch
+                }
+
+                val finalResult = result ?: run {
+                    AppLogger.e("Translation timed out for ${pagesToTranslate.size} pages, no partial results")
                     Result.failure(Exception("Translation timed out"))
                 }
 
-                result.fold(
+                finalResult.fold(
                     onSuccess = { batchResult ->
                         AppLogger.i("Translation success: ${batchResult.translations.size} pages, model=${batchResult.model}")
+                        partialModel.set(batchResult.model)
                         applyTranslationsBatch(batchResult.translations, targetLang, batchResult.model)
                         _isTranslating.value = false
                         _translationError.value = null
@@ -510,6 +461,8 @@ class ReaderViewModel @Inject constructor(
                         handleTranslationFailure(error, targetLang)
                     }
                 )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // User cancelled translation — don't show spurious error (DR-051)
             } catch (e: Exception) {
                 AppLogger.e("translateCurrentPage exception: ${e.message}", e)
                 _isTranslating.value = false
@@ -522,17 +475,34 @@ class ReaderViewModel @Inject constructor(
         pageTranslations: List<PageToTranslate>,
         targetLang: String,
     ) {
-        val result = withTimeoutOrNull(45_000L) {
+        // DR-061: Same partial-results pattern as translateCurrentPage
+        val partialResults = mutableMapOf<Int, String>()
+
+        val result = withTimeoutOrNull(120_000L) {
             translatePageUseCase.translateBatchWithContext(
                 pages = pageTranslations,
                 targetLanguage = targetLang,
-                sourceLanguage = _book?.language,
-                onPageTranslated = { _, _ -> },
+                sourceLanguage = _book.value?.language,
+                onPageTranslated = { index, translation ->
+                    partialResults[index] = translation
+                },
                 bookContext = _bookContext,
             )
-        } ?: Result.failure(Exception("Translation timed out"))
+        }
 
-        result.fold(
+        // Apply partial results even on timeout
+        if (result == null && partialResults.isNotEmpty()) {
+            AppLogger.w("retryBatchTranslation timed out but got ${partialResults.size} partial results — applying")
+            applyTranslationsBatch(partialResults, targetLang, "unknown")
+            _isTranslating.value = false
+            _translationError.value = null
+            _translationEvents.trySend(TranslationEvent.Success(partialResults.size))
+            return
+        }
+
+        val finalResult = result ?: Result.failure(Exception("Translation timed out"))
+
+        finalResult.fold(
             onSuccess = { batchResult ->
                 applyTranslationsBatch(batchResult.translations, targetLang, batchResult.model)
                 _isTranslating.value = false
@@ -558,6 +528,8 @@ class ReaderViewModel @Inject constructor(
         // Check if ML Kit model is available for offline fallback
         val modelAvailable = try {
             mlKitModelManager.getAvailableModels().any { it.code == targetLang && it.isDownloaded }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Propagate cancellation — don't set spurious error (DR-053)
         } catch (e: Exception) {
             false
         }
@@ -579,7 +551,14 @@ class ReaderViewModel @Inject constructor(
             if (success) {
                 _translationEvents.trySend(TranslationEvent.Success(0))
                 // Auto-retry translation after model download
-                translateCurrentPage()
+                try {
+                    translateCurrentPage()
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e // User cancelled — don't treat as error (DR-149)
+                } catch (e: Exception) {
+                    AppLogger.e("downloadModelForCurrentLang: Translation failed after model download: ${e.message}", e)
+                    handleTranslationFailure(e, targetLang)
+                }
             } else {
                 _translationEvents.trySend(TranslationEvent.Error(
                     message = "Failed to download offline model for $targetLang",
@@ -622,17 +601,16 @@ class ReaderViewModel @Inject constructor(
 
             if (!forceRetranslate && page.hasTranslation(targetLang)) return@launch
 
-            _paragraphsTranslating.value = _paragraphsTranslating.value + index
+            _paragraphsTranslating.update { it + index } // DR-104: Atomic update (non-atomic .value = loses concurrent updates)
             _translationError.value = null
 
             try {
                 val result = translatePageUseCase.translateBatchWithContext(
                     pages = listOf(PageToTranslate(index = page.index, text = page.originalText)),
                     targetLanguage = targetLang,
-                    sourceLanguage = _book?.language,
-                    onPageTranslated = { _, _ -> }, // Apply once in fold below (avoid double DB write)
-                    forceRetranslate = forceRetranslate,
+                    sourceLanguage = _book.value?.language,
                     bookContext = _bookContext,
+                    forceRetranslate = forceRetranslate,
                 )
 
                 result.fold(
@@ -652,7 +630,7 @@ class ReaderViewModel @Inject constructor(
                 AppLogger.e("translateParagraph exception: ${e.message}", e)
                 _translationError.value = e.message ?: "Translation failed"
             } finally {
-                _paragraphsTranslating.value = _paragraphsTranslating.value - index
+                _paragraphsTranslating.update { it - index } // DR-103: Atomic update (non-atomic .value = loses concurrent updates)
             }
         }
     }
@@ -677,15 +655,21 @@ class ReaderViewModel @Inject constructor(
                 val result = translatePageUseCase.translateBatchWithContext(
                     pages = pagesToTranslate,
                     targetLanguage = targetLang,
-                    sourceLanguage = _book?.language,
-                    onPageTranslated = { _, _ -> }, // No-op: batch-apply in onSuccess
+                    sourceLanguage = _book.value?.language,
+                    onPageTranslated = { index, translation ->
+                        // Apply each page as it's translated for live UI updates
+                        applyTranslation(index, targetLang, translation)
+                    },
                     bookContext = _bookContext,
                 )
 
                 result.fold(
                     onSuccess = { batchResult ->
+                        // Also apply via batch in case callback wasn't invoked
+                        // (idempotent — applyTranslationsBatch overwrites same values)
                         applyTranslationsBatch(batchResult.translations, targetLang, batchResult.model)
                         _isTranslating.value = false
+                        _translationError.value = null
                     },
                     onFailure = { error ->
                         AppLogger.e("translateAllPages failed: ${error.message}", error)
@@ -693,6 +677,8 @@ class ReaderViewModel @Inject constructor(
                         _translationError.value = error.message ?: "Batch translation failed"
                     }
                 )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // User cancelled batch translation — don't set spurious error (DR-051)
             } catch (e: Exception) {
                 AppLogger.e("translateAllPages exception: ${e.message}", e)
                 _isTranslating.value = false
@@ -739,19 +725,51 @@ class ReaderViewModel @Inject constructor(
         _pages.value = updatedPages
 
         // Persist all updated pages in a single background coroutine
-        val bookId = _book?.id
+        // NonCancellable was removed in DR-063 — cancellation is unlikely in result.fold context,
+        // and avoiding unnecessary background work on navigation is worth the small risk.
+        val bookId = _book.value?.id
         if (bookId != null) {
             val converters = com.dualreader.app.data.local.Converters()
-            viewModelScope.launch(ioDispatcher + kotlinx.coroutines.NonCancellable) {
+            viewModelScope.launch(ioDispatcher) {
+                // DR-106: Retry failed persistence operations with exponential backoff
+                val failedPages = mutableMapOf<Int, Page>()
                 for (page in updatedPagesList) {
-                    runCatching {
-                        bookRepository.updatePageTranslation(
-                            bookId = bookId,
-                            pageIndex = page.index,
-                            translationsJson = converters.toTranslationsJson(page.translations),
-                            modelsJson = converters.toTranslationsJson(page.translationModels),
-                        )
-                    }.onFailure { AppLogger.e("applyTranslationsBatch: persist failed for page ${page.index}: ${it.message}") }
+                    var persisted = false
+                    var lastError: Throwable? = null
+                    
+                    // Retry with exponential backoff: 1s, 2s, 4s
+                    for (attempt in 1..3) {
+                        try {
+                            bookRepository.updatePageTranslation(
+                                bookId = bookId,
+                                pageIndex = page.index,
+                                translationsJson = converters.toTranslationsJson(page.translations),
+                                modelsJson = converters.toTranslationsJson(page.translationModels),
+                            )
+                            persisted = true
+                            break
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e // Preserve coroutine cancellation semantics (DR-132)
+                        } catch (e: Exception) {
+                            lastError = e
+                            AppLogger.w("applyTranslationsBatch: persist attempt $attempt/3 failed for page ${page.index}: ${e.message}")
+                            if (attempt < 3) {
+                                val delayMs = 1000L * (1 shl (attempt - 1)) // 1s, 2s, 4s
+                                kotlinx.coroutines.delay(delayMs)
+                            }
+                        }
+                    }
+                    
+                    if (!persisted) {
+                        AppLogger.e("applyTranslationsBatch: persist failed permanently for page ${page.index} after 3 attempts", lastError)
+                        failedPages[page.index] = page
+                    }
+                }
+                
+                // Notify user if any pages failed to persist
+                if (failedPages.isNotEmpty()) {
+                    AppLogger.e("applyTranslationsBatch: ${failedPages.size} pages failed to persist after retries")
+                    _translationEvents.trySend(TranslationEvent.PersistenceError(failedPages.size))
                 }
             }
         }
@@ -763,7 +781,7 @@ class ReaderViewModel @Inject constructor(
      */
     private fun persistPages() {
         val pagesToSave = _pages.value
-        val bookId = _book?.id ?: return
+        val bookId = _book.value?.id ?: return
         val converters = com.dualreader.app.data.local.Converters()
         viewModelScope.launch(ioDispatcher) {
             var saved = 0
@@ -786,9 +804,13 @@ class ReaderViewModel @Inject constructor(
     }
 
     /**
-     * Collect up to [TRANSLATE_WINDOW_SIZE] untranslated paragraphs starting
-     * from the current scroll position. Scans forward first, then backward
-     * if nothing is found ahead.
+     * Collect up to [TRANSLATE_WINDOW_SIZE] untranslated paragraphs around the
+     * current scroll position.
+     *
+     * DR-062: Interleaves forward and backward scanning so pages NEAR the
+     * current position are prioritized regardless of direction. Previously,
+     * forward scanning filled the entire window first — so backward pages
+     * were never reached when there were 15+ untranslated pages ahead.
      */
     private fun collectTranslateWindow(
         allPages: List<Page>,
@@ -797,21 +819,36 @@ class ReaderViewModel @Inject constructor(
     ): List<Page> {
         val window = mutableListOf<Page>()
 
-        // Scan forward from current position
-        for (i in centerIndex until allPages.size) {
-            if (window.size >= TRANSLATE_WINDOW_SIZE) break
-            val page = allPages[i]
-            if (!page.hasTranslation(targetLang)) {
-                window.add(page)
-            }
+        // Start with current page itself
+        val centerPage = allPages.getOrNull(centerIndex)
+        if (centerPage != null && !centerPage.hasTranslation(targetLang)) {
+            window.add(centerPage)
         }
 
-        // Scan backward from current position to fill remaining window
-        for (i in centerIndex - 1 downTo 0) {
-            if (window.size >= TRANSLATE_WINDOW_SIZE) break
-            val page = allPages[i]
-            if (!page.hasTranslation(targetLang)) {
-                window.add(page)
+        // Alternate: 1 forward, 1 backward, expanding outward
+        var forwardOffset = 1
+        var backwardOffset = 1
+
+        while (window.size < TRANSLATE_WINDOW_SIZE &&
+            (centerIndex + forwardOffset < allPages.size || centerIndex - backwardOffset >= 0)
+        ) {
+            // Try forward
+            if (centerIndex + forwardOffset < allPages.size) {
+                val page = allPages[centerIndex + forwardOffset]
+                if (!page.hasTranslation(targetLang)) {
+                    window.add(page)
+                    if (window.size >= TRANSLATE_WINDOW_SIZE) break
+                }
+                forwardOffset++
+            }
+            // Try backward
+            if (centerIndex - backwardOffset >= 0) {
+                val page = allPages[centerIndex - backwardOffset]
+                if (!page.hasTranslation(targetLang)) {
+                    window.add(page)
+                    if (window.size >= TRANSLATE_WINDOW_SIZE) break
+                }
+                backwardOffset++
             }
         }
 
@@ -821,13 +858,72 @@ class ReaderViewModel @Inject constructor(
     fun updateCurrentPage(index: Int) {
         val pages = _pages.value
         val page = pages.getOrNull(index) ?: return
-        val book = _book?.copy(currentPage = page.index, lastReadAt = java.time.LocalDateTime.now()) ?: return
-        _book = book
+        if (_book.value == null) return
+        _book.update { current ->
+            current?.copy(currentPage = page.index, lastReadAt = java.time.LocalDateTime.now())
+        }
+        // Track this position for slider snap-to navigation
+        trackReadingPosition(index, pages.size)
         // Persist currentPage to repo (fire-and-forget)
         viewModelScope.launch(ioDispatcher) {
             try {
+                val book = _book.value ?: return@launch
                 bookRepository.updateBook(book)
-            } catch (_: Exception) { }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-138)
+            } catch (e: Exception) {
+                AppLogger.e("updateCurrentPage: Failed to persist current page (page ${page.index}): ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * DR-063: Jump to a specific page via the navigation slider.
+     * Unlike updateCurrentPage, this does NOT track the old position again
+     * (the jump itself is the navigation action, not a reading position).
+     */
+    fun jumpToPosition(index: Int) {
+        val pages = _pages.value
+        if (index !in pages.indices) return
+        if (_book.value == null) return
+        _book.update { current ->
+            current?.copy(currentPage = index, lastReadAt = java.time.LocalDateTime.now())
+        }
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val book = _book.value ?: return@launch
+                bookRepository.updateBook(book)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-138)
+            } catch (e: Exception) {
+                AppLogger.e("jumpToPosition: Failed to persist: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * DR-063: Track a reading position for slider snap marks.
+     * DR-091: Use atomic update to prevent race condition in rapid scrolling scenarios.
+     * Deduplicates nearby positions (within MIN_SNAP_DISTANCE % of book).
+     * Keeps at most MAX_POSITION_HISTORY entries, evicting oldest by time (FIFO).
+     */
+    fun trackReadingPosition(pageIndex: Int, totalPages: Int) {
+        if (totalPages <= 0) return
+        _positionHistory.update { current ->
+            val mutable = current.toMutableList()
+            // Remove marks too close to the new position (within 2% of book or at least 1 page)
+            val minDistance = (totalPages * MIN_SNAP_FRACTION).toInt().coerceAtLeast(1)
+            mutable.removeAll { kotlin.math.abs(it - pageIndex) <= minDistance }
+
+            // Add new position (at end = newest)
+            mutable.add(pageIndex)
+
+            // Evict oldest if over limit (FIFO — first in is at index 0)
+            while (mutable.size > MAX_POSITION_HISTORY) {
+                mutable.removeAt(0)
+            }
+
+            mutable
         }
     }
 
@@ -848,7 +944,11 @@ class ReaderViewModel @Inject constructor(
 
             try {
                 bookmarkRepository.addBookmark(bookmark)
-            } catch (_: Exception) { }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-138)
+            } catch (e: Exception) {
+                AppLogger.e("addBookmark: Failed to add bookmark for book $bookId (page ${state.currentPage.index}): ${e.message}", e)
+            }
         }
     }
 
@@ -856,7 +956,11 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             try {
                 bookmarkRepository.deleteBookmark(id)
-            } catch (_: Exception) { }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-138)
+            } catch (e: Exception) {
+                AppLogger.e("removeBookmark: Failed to delete bookmark $id: ${e.message}", e)
+            }
         }
     }
 
@@ -866,7 +970,7 @@ class ReaderViewModel @Inject constructor(
      * Convert current bookmarks to exportable format with book metadata.
      */
     fun getExportableBookmarks(): List<ExportableBookmark> {
-        val book = _book ?: return emptyList()
+        val book = _book.value ?: return emptyList()
         val bookmarks = _bookmarks.value
         return bookmarks.map { bm ->
             ExportableBookmark(
@@ -898,7 +1002,7 @@ class ReaderViewModel @Inject constructor(
      * Returns a suggested filename for export.
      */
     fun exportFileName(format: ExportFormat): String {
-        val book = _book ?: return "annotations"
+        val book = _book.value ?: return "annotations"
         val safeTitle = book.title.replace(Regex("[^a-zA-Z0-9 _-]"), "").take(50).trim()
         val ext = exporter.fileExtension(format)
         return "${safeTitle}_annotations.$ext"
@@ -907,16 +1011,31 @@ class ReaderViewModel @Inject constructor(
     fun updateSettings(transform: (ReadingSettings) -> ReadingSettings) {
         viewModelScope.launch(ioDispatcher) {
             val currentSettings = _settings.value ?: return@launch
-            _settings.value = transform(currentSettings)
+            try {
+                // DR-146: Persist to DataStore so the settings flow re-emits and updates uiState reactively.
+                // Simply setting _settings.value is NOT enough — uiState is built from
+                // settingsRepository.settings flow, not _settings directly.
+                // DR-146: Update repository first, then local state. If cancelled between these,
+                // the flow will still emit the correct value and fix _settings. This prevents
+                // race conditions where _settings diverges from persisted data.
+                settingsRepository.updateSettings { transform(it) }
+                _settings.value = transform(currentSettings)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Propagate cancellation — don't swallow (DR-146)
+            }
         }
     }
 
     fun toggleImmersiveMode() {
         viewModelScope.launch(ioDispatcher) {
             _settings.value ?: return@launch
-            // Persist to DataStore so the preference survives app restart (DR-027).
-            // The settings flow re-emits and updates _settings + uiState reactively.
-            settingsRepository.updateSettings { it.copy(isImmersiveMode = !it.isImmersiveMode) }
+            try {
+                // DR-146: Persist to DataStore so the preference survives app restart (DR-027).
+                // The settings flow re-emits and updates _settings + uiState reactively.
+                settingsRepository.updateSettings { it.copy(isImmersiveMode = !it.isImmersiveMode) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Propagate cancellation — don't swallow (DR-146)
+            }
         }
     }
 
@@ -997,6 +1116,45 @@ class ReaderViewModel @Inject constructor(
             return
         }
 
+        // Check TTS engine status
+        if (!ttsService.isReady) {
+            if (ttsService.isInitFailed) {
+                // TTS init failed - try reinitialize
+                val reinitTriggered = ttsService.reinitialize()
+                if (reinitTriggered) {
+                    _ttsState.value = _ttsState.value.copy(
+                        error = "TTS engine failed to initialize. Retrying..."
+                    )
+                    // DR-092: Track retry coroutine to prevent post-clear execution
+                    // DR-130: Wrap retry in try-catch to log errors and show error to user
+                    ttsRetryJob?.cancel()
+                    ttsRetryJob = viewModelScope.launch {
+                        try {
+                            kotlinx.coroutines.delay(500)
+                            speakCurrentPage(paragraphIndex)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e // Propagate cancellation
+                        } catch (e: Exception) {
+                            AppLogger.e("TTS retry failed for speakCurrentPage: ${e.message}")
+                            _ttsState.value = _ttsState.value.copy(
+                                error = "TTS retry failed. Please try again.",
+                                isSpeaking = false
+                            )
+                        }
+                    }
+                } else {
+                    _ttsState.value = _ttsState.value.copy(
+                        error = "TTS engine not ready. Initialization is in progress."
+                    )
+                }
+            } else {
+                _ttsState.value = _ttsState.value.copy(
+                    error = "TTS engine not ready. Wait a moment and try again."
+                )
+            }
+            return
+        }
+
         // Check language availability
         if (!ttsService.isLanguageAvailable(targetLang)) {
             _ttsState.value = _ttsState.value.copy(
@@ -1049,6 +1207,45 @@ class ReaderViewModel @Inject constructor(
 
         if (translation.isNullOrBlank()) {
             _ttsState.value = _ttsState.value.copy(error = "No translation available. Translate this paragraph first.")
+            return
+        }
+
+        // Check TTS engine status
+        if (!ttsService.isReady) {
+            if (ttsService.isInitFailed) {
+                // TTS init failed - try reinitialize
+                val reinitTriggered = ttsService.reinitialize()
+                if (reinitTriggered) {
+                    _ttsState.value = _ttsState.value.copy(
+                        error = "TTS engine failed to initialize. Retrying..."
+                    )
+                    // DR-092: Track retry coroutine to prevent post-clear execution
+                    // DR-130: Wrap retry in try-catch to log errors and show error to user
+                    ttsRetryJob?.cancel()
+                    ttsRetryJob = viewModelScope.launch {
+                        try {
+                            kotlinx.coroutines.delay(500)
+                            speakParagraph(index)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e // Propagate cancellation
+                        } catch (e: Exception) {
+                            AppLogger.e("TTS retry failed for speakParagraph: ${e.message}")
+                            _ttsState.value = _ttsState.value.copy(
+                                error = "TTS retry failed. Please try again.",
+                                isSpeaking = false
+                            )
+                        }
+                    }
+                } else {
+                    _ttsState.value = _ttsState.value.copy(
+                        error = "TTS engine not ready. Initialization is in progress."
+                    )
+                }
+            } else {
+                _ttsState.value = _ttsState.value.copy(
+                    error = "TTS engine not ready. Wait a moment and try again."
+                )
+            }
             return
         }
 
@@ -1112,8 +1309,27 @@ class ReaderViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        ttsService.stop()
-        ttsService.release()
+        // DR-092: Cancel TTS retry coroutine to prevent post-clear execution
+        ttsRetryJob?.cancel()
+        // DR-098: Close Channel to prevent resource leaks
+        _translationEvents.close()
+        // DR-141: Clear cloud upgrade callback to prevent memory leaks and post-clear updates
+        fallbackTranslationService.cloudUpgradeCallback = null
+        try {
+            ttsService.stop()
+        } catch (e: Exception) {
+            AppLogger.w("Failed to stop TTS service: ${e.message}")
+        }
+        try {
+            ttsService.release()
+        } catch (e: Exception) {
+            AppLogger.w("Failed to release TTS service: ${e.message}")
+        }
+    }
+
+    @VisibleForTesting
+    internal fun callOnClearedForTesting() {
+        onCleared()
     }
 }
 
@@ -1126,5 +1342,4 @@ private data class Quadruple<A, B, C, D>(
 private data class UiExtras(
     val isTranslating: Boolean,
     val translationError: String?,
-    val isRePaginating: Boolean,
 )

@@ -60,6 +60,7 @@ class LibraryViewModelTest {
         every { libraryRepo.getAllTags() } returns flowOf(emptyList())
         every { libraryRepo.getAllCollections() } returns flowOf(emptyList())
         coEvery { libraryRepo.getTagsForBook(any()) } returns emptyList()
+        coEvery { libraryRepo.getAllBookTags() } returns emptyMap()
 
         vm = LibraryViewModel(savedStateHandle, bookRepo, bookmarkRepo, libraryRepo, importUseCase, paginateUseCase)
     }
@@ -186,9 +187,11 @@ class LibraryViewModelTest {
     fun `tag filter shows only books with the selected tag`() = runTest {
         val books = listOf(makeBook("b1"), makeBook("b2"), makeBook("b3"))
         every { libraryRepo.getAllBooksSorted(any()) } returns flowOf(books)
-        coEvery { libraryRepo.getTagsForBook("b1") } returns listOf("sci-fi")
-        coEvery { libraryRepo.getTagsForBook("b2") } returns listOf("fantasy")
-        coEvery { libraryRepo.getTagsForBook("b3") } returns listOf("sci-fi", "fantasy")
+        coEvery { libraryRepo.getAllBookTags() } returns mapOf(
+            "b1" to listOf("sci-fi"),
+            "b2" to listOf("fantasy"),
+            "b3" to listOf("sci-fi", "fantasy"),
+        )
 
         vm = LibraryViewModel(savedStateHandle, bookRepo, bookmarkRepo, libraryRepo, importUseCase, paginateUseCase)
         val job = launch { vm.uiState.collect {} }
@@ -212,8 +215,10 @@ class LibraryViewModelTest {
     fun `clearing the tag filter restores all books`() = runTest {
         val books = listOf(makeBook("b1"), makeBook("b2"))
         every { libraryRepo.getAllBooksSorted(any()) } returns flowOf(books)
-        coEvery { libraryRepo.getTagsForBook("b1") } returns listOf("sci-fi")
-        coEvery { libraryRepo.getTagsForBook("b2") } returns listOf("fantasy")
+        coEvery { libraryRepo.getAllBookTags() } returns mapOf(
+            "b1" to listOf("sci-fi"),
+            "b2" to listOf("fantasy"),
+        )
 
         vm = LibraryViewModel(savedStateHandle, bookRepo, bookmarkRepo, libraryRepo, importUseCase, paginateUseCase)
         val job = launch { vm.uiState.collect {} }
@@ -257,8 +262,10 @@ class LibraryViewModelTest {
     fun `bookTags map is populated for all books`() = runTest {
         val books = listOf(makeBook("b1"), makeBook("b2"))
         every { libraryRepo.getAllBooksSorted(any()) } returns flowOf(books)
-        coEvery { libraryRepo.getTagsForBook("b1") } returns listOf("sci-fi", "fav")
-        coEvery { libraryRepo.getTagsForBook("b2") } returns listOf("fantasy")
+        coEvery { libraryRepo.getAllBookTags() } returns mapOf(
+            "b1" to listOf("sci-fi", "fav"),
+            "b2" to listOf("fantasy"),
+        )
 
         vm = LibraryViewModel(savedStateHandle, bookRepo, bookmarkRepo, libraryRepo, importUseCase, paginateUseCase)
         val job = launch { vm.uiState.collect {} }
@@ -307,6 +314,33 @@ class LibraryViewModelTest {
         coVerify { libraryRepo.removeBookFromCollection(1L, "b1") }
     }
 
+    // ── CancellationException Handling (DR-135) ───────────────────
+
+    @Test
+    fun `addBookToCollection calls repository and handles CancellationException`() = runTest {
+        coEvery { libraryRepo.addBookToCollection(any(), any()) } throws kotlinx.coroutines.CancellationException()
+        vm.addBookToCollection(1L, "b1")
+        advanceUntilIdle()
+        // Verify repository was called despite cancellation (exception handled properly)
+        coVerify { libraryRepo.addBookToCollection(1L, "b1") }
+    }
+
+    @Test
+    fun `addBookToCollection handles non-cancellation exceptions gracefully`() = runTest {
+        coEvery { libraryRepo.addBookToCollection(any(), any()) } throws RuntimeException("DB error")
+        val errorMessages = mutableListOf<String>()
+        val job = launch {
+            vm.errorEvents.collect { errorMsg ->
+                errorMessages.add(errorMsg)
+            }
+        }
+        vm.addBookToCollection(1L, "b1")
+        advanceUntilIdle()
+        assertEquals(1, errorMessages.size)
+        assertTrue(errorMessages[0].contains("Failed to add book to collection"))
+        job.cancel()
+    }
+
     // ── Import Book ────────────────────────────────────────────────
 
     @Test
@@ -330,6 +364,26 @@ class LibraryViewModelTest {
 
         coVerify { importUseCase("/bad.epub") }
         coVerify(exactly = 0) { paginateUseCase(any(), any(), any()) }
+    }
+
+    @Test
+    fun `importBook emits error event on failure`() = runTest {
+        val exception = RuntimeException("Invalid EPUB format")
+        coEvery { importUseCase(any()) } returns Result.failure(exception)
+
+        val errorMessages = mutableListOf<String>()
+        val job = launch {
+            vm.errorEvents.collect { errorMsg ->
+                errorMessages.add(errorMsg)
+            }
+        }
+
+        vm.importBook("/bad.epub")
+        advanceUntilIdle()
+
+        assertEquals(1, errorMessages.size)
+        assertEquals("Import failed: Invalid EPUB format", errorMessages[0])
+        job.cancel()
     }
 
     // ── Delete Book ────────────────────────────────────────────────

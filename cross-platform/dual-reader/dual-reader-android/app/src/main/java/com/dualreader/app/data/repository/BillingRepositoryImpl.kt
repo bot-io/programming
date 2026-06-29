@@ -41,9 +41,16 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    @Volatile
     private var billingClient: BillingClient? = null
+    @Volatile
     private var activityRef: Activity? = null
+    @Volatile
     private var purchaseDeferred: CompletableDeferred<PurchaseResult>? = null
+    
+    // DR-102: Guard against multiple concurrent initialization attempts
+    @Volatile
+    private var isInitializing = false
 
     private val _entitlement = MutableStateFlow(EntitlementTier.FREE)
     override val entitlement: StateFlow<EntitlementTier> = _entitlement.asStateFlow()
@@ -59,8 +66,18 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
     }
 
     override suspend fun initialize() {
+        // DR-102: Guard against multiple concurrent initialization attempts
+        if (isInitializing) {
+            AppLogger.d("BillingRepository: Already initializing, skipping duplicate call")
+            return
+        }
+        isInitializing = true
+        
         val activity = activityRef
-            ?: throw IllegalStateException("Activity not set. Call setActivity() before initialize().")
+            ?: run {
+                isInitializing = false
+                throw IllegalStateException("Activity not set. Call setActivity() before initialize().")
+            }
 
         if (billingClient == null) {
             billingClient = BillingClient.newBuilder(activity.applicationContext)
@@ -75,12 +92,15 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
 
         if (billingClient?.connectionState == BillingClient.ConnectionState.CONNECTED) {
             _isConnected.value = true
+            isInitializing = false
             return
         }
 
         val connectResult = CompletableDeferred<Boolean>()
         billingClient?.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(billingResult: BillingResult) {
+                // DR-102: Reset flag when setup completes (success or failure)
+                isInitializing = false
                 if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                     _isConnected.value = true
                     scope.launch {
@@ -97,7 +117,10 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
 
             override fun onBillingServiceDisconnected() {
                 _isConnected.value = false
-                scope.launch { initialize() }
+                // DR-102: Don't spawn duplicate reconnection coroutines
+                if (!isInitializing) {
+                    scope.launch { initialize() }
+                }
             }
         })
         connectResult.await()
@@ -273,14 +296,17 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
             .setProductDetailsParamsList(listOf(productDetailsParams))
             .build()
 
-        purchaseDeferred = CompletableDeferred()
+        val deferred = CompletableDeferred<PurchaseResult>()
+        purchaseDeferred = deferred
         val billingResult = client.launchBillingFlow(activity, flowParams)
         if (billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
             purchaseDeferred = null
             return PurchaseResult.Error("Failed to start purchase: ${billingResult.debugMessage}")
         }
 
-        return purchaseDeferred!!.await()
+        // DR-104: Use local variable to avoid race condition where onPurchasesUpdated
+        // sets purchaseDeferred to null before we call .await()
+        return deferred.await()
     }
 
     override suspend fun refreshPurchases() {

@@ -3,8 +3,8 @@ package com.dualreader.app.util
 import android.content.Context
 import android.util.Log
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
@@ -18,16 +18,34 @@ object AppLogger {
     private const val TAG = "DualReader"
 
     private var logFile: File? = null
-    private val dateFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
+    
+    // DR-116: Track consecutive write failures to detect persistent logging issues
+    @Volatile
+    private var consecutiveWriteFailures = 0
 
+    /**
+     * Immutable, thread-safe formatter (DR-054). The previous [java.text.SimpleDateFormat]
+     * was a single shared mutable instance mutated by every concurrent `format()` call,
+     * which could corrupt its internal state and throw `NumberFormatException` or emit
+     * garbled timestamps under concurrent logging.
+     */
+    private val timeFormatter: DateTimeFormatter =
+        DateTimeFormatter.ofPattern("HH:mm:ss.SSS", Locale.US)
+
+    @Synchronized
     fun init(context: Context) {
         logFile = File(context.filesDir, LOG_FILE)
         // Truncate if too large
         logFile?.let { file ->
             if (file.exists() && file.length() > MAX_LOG_SIZE) {
-                val lines = file.readLines()
-                if (lines.size > 500) {
-                    file.writeText(lines.takeLast(500).joinToString("\n") + "\n")
+                try {
+                    val lines = file.readLines()
+                    if (lines.size > 500) {
+                        file.writeText(lines.takeLast(500).joinToString("\n") + "\n")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to truncate log file during init: ${e.message}")
+                    // Continue without truncating - logger will still work
                 }
             }
         }
@@ -53,18 +71,25 @@ object AppLogger {
         writeLog("D", message)
     }
 
+    @Synchronized
     private fun writeLog(level: String, message: String) {
         val file = logFile ?: return
         try {
-            val timestamp = dateFormat.format(Date())
+            val timestamp = timeFormatter.format(LocalTime.now())
             val line = "$timestamp $level/$TAG: $message\n"
             file.appendText(line)
-        } catch (_: Exception) {
-            // Don't crash if logging fails
+            // DR-116: Reset failure counter on successful write
+            consecutiveWriteFailures = 0
+        } catch (e: Exception) {
+            // DR-116: Track consecutive write failures
+            consecutiveWriteFailures++
+            // Log to Android Log as fallback if file write fails
+            Log.w(TAG, "Failed to write to log file (failure #$consecutiveWriteFailures): ${e.message}")
         }
     }
 
     /** Read the last N lines of the log file for the debug panel. */
+    @Synchronized
     fun getRecentLogs(maxLines: Int = 200): String {
         val file = logFile ?: return "(logger not initialized)"
         return try {
@@ -76,7 +101,21 @@ object AppLogger {
     }
 
     /** Clear the log file. */
+    @Synchronized
     fun clear() {
-        logFile?.writeText("")
+        val file = logFile ?: return
+        try {
+            file.writeText("")
+            // DR-125: Reset failure counter on successful clear
+            consecutiveWriteFailures = 0
+        } catch (e: Exception) {
+            // DR-125: Track clear failures and increment counter
+            consecutiveWriteFailures++
+            Log.w(TAG, "Failed to clear log file (failure #$consecutiveWriteFailures): ${e.message}")
+        }
     }
+
+    /** Get the number of consecutive write failures. DR-116 */
+    @Synchronized
+    fun getConsecutiveWriteFailures(): Int = consecutiveWriteFailures
 }

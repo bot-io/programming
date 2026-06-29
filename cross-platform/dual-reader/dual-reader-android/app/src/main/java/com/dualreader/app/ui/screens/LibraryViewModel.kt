@@ -14,15 +14,20 @@ import com.dualreader.app.domain.repositories.BookmarkRepository
 import com.dualreader.app.domain.repositories.LibraryRepository
 import com.dualreader.app.domain.usecases.ImportBookUseCase
 import com.dualreader.app.domain.usecases.PaginateBookUseCase
+import com.dualreader.app.util.AppLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -53,65 +58,47 @@ class LibraryViewModel @Inject constructor(
     private val paginateBookUseCase: PaginateBookUseCase
 ) : ViewModel() {
 
+    // Error events for user-facing notifications
+    private val _errorEvents = Channel<String>()
+    val errorEvents = _errorEvents.receiveAsFlow()
+
     private val sortState = MutableStateFlow(LibrarySortState())
 
     val uiState: StateFlow<LibraryUiState> = sortState
         .flatMapLatest { state ->
-            libraryRepository.getAllBooksSorted(state.sortOrder)
-                .combine(libraryRepository.getAllTags()) { books, allTags ->
-                    // Filter by tag if one is selected
-                    val filteredBooks = if (state.selectedTag != null) {
-                        val tagBookIds = allTags.let { _ ->
-                            // Use a suspend call but we're in combine, need to be smarter
-                            // Actually, let's just filter based on bookTags
-                            books // Will be filtered below
-                        }
-                        // We'll handle tag filtering in the map below
-                        books
-                    } else {
-                        books
-                    }
-                    Pair(filteredBooks, allTags)
-                }
-        }
-        .map { (books, _) ->
-            if (books.isEmpty()) {
-                LibraryUiState.Empty
-            } else {
-                // Load tags for each book and filter if needed
-                val currentTag = sortState.value.selectedTag
-                val tagMap = mutableMapOf<String, List<String>>()
-                for (book in books) {
-                    tagMap[book.id] = libraryRepository.getTagsForBook(book.id)
-                }
-
+            combine(
+                libraryRepository.getAllBooksSorted(state.sortOrder),
+                flow { emit(libraryRepository.getAllBookTags()) }
+            ) { books, bookTagsMap ->
+                // Filter by selected tag using pre-loaded tag map
+                val currentTag = state.selectedTag
                 val filteredBooks = if (currentTag != null) {
                     books.filter { book ->
-                        tagMap[book.id]?.contains(currentTag) == true
+                        bookTagsMap[book.id]?.contains(currentTag) == true
                     }
                 } else {
                     books
                 }
 
-                if (filteredBooks.isEmpty() && currentTag != null) {
+                if (filteredBooks.isEmpty() && books.isNotEmpty() && currentTag != null) {
                     // Tag selected but no books have it — show empty with context
                     LibraryUiState.Success(
                         books = emptyList(),
-                        bookTags = tagMap,
+                        bookTags = bookTagsMap,
                         selectedTag = currentTag,
                     )
+                } else if (filteredBooks.isEmpty()) {
+                    LibraryUiState.Empty
                 } else {
                     LibraryUiState.Success(
                         books = filteredBooks,
-                        bookTags = tagMap,
+                        bookTags = bookTagsMap,
                         selectedTag = currentTag,
                     )
                 }
             }
         }
-        .catch { e ->
-            emit(LibraryUiState.Error(e.localizedMessage ?: "Failed to load books"))
-        }
+        .catch { if (it is kotlinx.coroutines.CancellationException) throw it else emit(LibraryUiState.Error(it.localizedMessage ?: "Failed to load books")) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
@@ -148,43 +135,92 @@ class LibraryViewModel @Inject constructor(
 
     fun addTagToBook(bookId: String, tag: String) {
         viewModelScope.launch {
-            libraryRepository.addTag(bookId, tag)
+            try {
+                libraryRepository.addTag(bookId, tag)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-133)
+            } catch (e: Exception) {
+                AppLogger.e("addTagToBook: Failed to add tag '$tag' to book $bookId: ${e.message}", e)
+                _errorEvents.trySend("Failed to add tag: ${e.message}")
+            }
         }
     }
 
     fun removeTagFromBook(bookId: String, tag: String) {
         viewModelScope.launch {
-            libraryRepository.removeTag(bookId, tag)
+            try {
+                libraryRepository.removeTag(bookId, tag)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-133)
+            } catch (e: Exception) {
+                AppLogger.e("removeTagFromBook: Failed to remove tag '$tag' from book $bookId: ${e.message}", e)
+                _errorEvents.trySend("Failed to remove tag: ${e.message}")
+            }
         }
     }
 
     fun createCollection(name: String) {
         viewModelScope.launch {
-            libraryRepository.createCollection(name)
+            try {
+                libraryRepository.createCollection(name)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-133)
+            } catch (e: Exception) {
+                AppLogger.e("createCollection: Failed to create collection '$name': ${e.message}", e)
+                _errorEvents.trySend("Failed to create collection: ${e.message}")
+            }
         }
     }
 
     fun deleteCollection(id: Long) {
         viewModelScope.launch {
-            libraryRepository.deleteCollection(id)
+            try {
+                libraryRepository.deleteCollection(id)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-133)
+            } catch (e: Exception) {
+                AppLogger.e("deleteCollection: Failed to delete collection $id: ${e.message}", e)
+                _errorEvents.trySend("Failed to delete collection: ${e.message}")
+            }
         }
     }
 
     fun renameCollection(id: Long, newName: String) {
         viewModelScope.launch {
-            libraryRepository.renameCollection(id, newName)
+            try {
+                libraryRepository.renameCollection(id, newName)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-133)
+            } catch (e: Exception) {
+                AppLogger.e("renameCollection: Failed to rename collection $id to '$newName': ${e.message}", e)
+                _errorEvents.trySend("Failed to rename collection: ${e.message}")
+            }
         }
     }
 
     fun addBookToCollection(collectionId: Long, bookId: String) {
         viewModelScope.launch {
-            libraryRepository.addBookToCollection(collectionId, bookId)
+            try {
+                libraryRepository.addBookToCollection(collectionId, bookId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-135)
+            } catch (e: Exception) {
+                AppLogger.e("addBookToCollection: Failed to add book $bookId to collection $collectionId: ${e.message}", e)
+                _errorEvents.trySend("Failed to add book to collection: ${e.message}")
+            }
         }
     }
 
     fun removeBookFromCollection(collectionId: Long, bookId: String) {
         viewModelScope.launch {
-            libraryRepository.removeBookFromCollection(collectionId, bookId)
+            try {
+                libraryRepository.removeBookFromCollection(collectionId, bookId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-133)
+            } catch (e: Exception) {
+                AppLogger.e("removeBookFromCollection: Failed to remove book $bookId from collection $collectionId: ${e.message}", e)
+                _errorEvents.trySend("Failed to remove book from collection: ${e.message}")
+            }
         }
     }
 
@@ -195,25 +231,39 @@ class LibraryViewModel @Inject constructor(
                     triggerPagination(book)
                 }
                 .onFailure { e ->
-                    // Import failure is reflected through the flow;
-                    // the book simply won't appear in the library.
+                    AppLogger.e("Book import failed: ${e.message}")
+                    _errorEvents.trySend("Import failed: ${e.message}")
                 }
         }
     }
 
     fun deleteBook(id: String) {
         viewModelScope.launch {
-            bookRepository.deleteBook(id)
+            try {
+                bookRepository.deleteBook(id)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-133)
+            } catch (e: Exception) {
+                AppLogger.e("deleteBook: Failed to delete book $id: ${e.message}", e)
+                _errorEvents.trySend("Failed to delete book: ${e.message}")
+            }
         }
     }
 
     fun retryPagination(book: Book, screenWidth: Int, screenHeight: Int) {
         viewModelScope.launch {
-            paginateBookUseCase(
-                book = book,
-                screenWidth = screenWidth,
-                screenHeight = screenHeight
-            )
+            try {
+                paginateBookUseCase(
+                    book = book,
+                    screenWidth = screenWidth,
+                    screenHeight = screenHeight
+                )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-133)
+            } catch (e: Exception) {
+                AppLogger.e("retryPagination: Failed to paginate book '${book.title}': ${e.message}", e)
+                _errorEvents.trySend("Failed to paginate book: ${e.message}")
+            }
         }
     }
 
@@ -224,11 +274,18 @@ class LibraryViewModel @Inject constructor(
 
     private fun triggerPagination(book: Book) {
         viewModelScope.launch {
-            paginateBookUseCase(
-                book = book,
-                screenWidth = DEFAULT_SCREEN_WIDTH,
-                screenHeight = DEFAULT_PAGE_HEIGHT
-            )
+            try {
+                paginateBookUseCase(
+                    book = book,
+                    screenWidth = DEFAULT_SCREEN_WIDTH,
+                    screenHeight = DEFAULT_PAGE_HEIGHT
+                )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-133)
+            } catch (e: Exception) {
+                AppLogger.e("triggerPagination: Failed to paginate book '${book.title}' after import: ${e.message}", e)
+                _errorEvents.trySend("Failed to paginate book after import: ${e.message}")
+            }
         }
     }
 
@@ -258,5 +315,11 @@ class LibraryViewModel @Inject constructor(
         val safeTitle = book.title.replace(Regex("[^a-zA-Z0-9 _-]"), "").take(50).trim()
         val fileName = "${safeTitle}_annotations.${exporter.fileExtension(format)}"
         return content to fileName
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // DR-098: Close Channel to prevent resource leaks
+        _errorEvents.close()
     }
 }

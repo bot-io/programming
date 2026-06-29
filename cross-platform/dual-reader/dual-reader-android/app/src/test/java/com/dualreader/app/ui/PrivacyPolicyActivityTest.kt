@@ -10,8 +10,6 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 /**
  * Tests for the PrivacyPolicyActivity and privacy policy infrastructure.
@@ -23,16 +21,15 @@ class PrivacyPolicyActivityTest {
         get() = RuntimeEnvironment.getApplication()
 
     private fun readPrivacyPolicyHtml(): String {
-        val inputStream = context.assets.open("privacy-policy.html")
-        val reader = BufferedReader(InputStreamReader(inputStream))
-        val sb = StringBuilder()
-        var line: String? = reader.readLine()
-        while (line != null) {
-            sb.append(line)
-            line = reader.readLine()
+        return context.assets.open("privacy-policy.html").bufferedReader().use { reader ->
+            val sb = StringBuilder()
+            var line: String? = reader.readLine()
+            while (line != null) {
+                sb.append(line)
+                line = reader.readLine()
+            }
+            sb.toString()
         }
-        reader.close()
-        return sb.toString()
     }
 
     @Test

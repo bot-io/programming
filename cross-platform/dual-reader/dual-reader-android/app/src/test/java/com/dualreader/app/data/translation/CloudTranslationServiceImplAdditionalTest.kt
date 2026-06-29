@@ -182,7 +182,7 @@ class CloudTranslationServiceImplAdditionalTest {
 
     // ── translatePages: fail-fast on batch errors ───────────────────────
 
-    @Test(expected = java.net.SocketTimeoutException::class)
+    @Test(expected = TranslationException::class)
     fun `translatePages - batch exception propagates without fallback`() = runTest {
         val pages = listOf(
             IndexedValue(0, "Page zero"),
@@ -192,10 +192,13 @@ class CloudTranslationServiceImplAdditionalTest {
         // Batch endpoint throws
         coEvery { proxyApi.translateBatch(any()) } throws java.net.SocketTimeoutException("batch timeout")
 
+        // Fallback also fails
+        coEvery { proxyApi.translate(any()) } throws java.net.SocketTimeoutException("single timeout")
+
         service.translatePages(pages, "bg", "en", null)
     }
 
-    @Test(expected = RuntimeException::class)
+    @Test(expected = TranslationException::class)
     fun `translatePages - batch exception fails fast for all pages`() = runTest {
         val pages = listOf(
             IndexedValue(0, "Page zero"),
@@ -205,6 +208,9 @@ class CloudTranslationServiceImplAdditionalTest {
 
         // Batch throws — no individual fallback
         coEvery { proxyApi.translateBatch(any()) } throws RuntimeException("batch error")
+
+        // Fallback also fails
+        coEvery { proxyApi.translate(any()) } throws RuntimeException("single error")
 
         service.translatePages(pages, "bg", "en", null)
     }

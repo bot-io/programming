@@ -201,4 +201,83 @@ class ModelManagementViewModelTest {
         assertTrue(vm.uiState.value.models[0].isDownloaded)
         assertFalse(vm.uiState.value.models[1].isDownloaded)
     }
+
+    // ── DR-052: CancellationException must propagate, not set spurious errors ──
+
+    @Test
+    fun `loadModels - CancellationException propagates without setting error`() = runTest {
+        // Let the init{} loadModels call complete normally first
+        advanceUntilIdle()
+
+        coEvery { modelManager.getAvailableModels() } throws kotlinx.coroutines.CancellationException("job cancelled")
+
+        vm.loadModels()
+        advanceUntilIdle()
+
+        assertNull("Cancellation must not set error state", vm.uiState.value.error)
+    }
+
+    @Test
+    fun `downloadModel - CancellationException propagates without setting error`() = runTest {
+        advanceUntilIdle()
+
+        coEvery { modelManager.downloadModel("en") } throws kotlinx.coroutines.CancellationException("job cancelled")
+
+        vm.downloadModel("en")
+        advanceUntilIdle()
+
+        assertNull("Cancellation must not set a 'Download failed' error", vm.uiState.value.error)
+        assertNull("Finally block still clears downloadingLang", vm.uiState.value.downloadingLang)
+    }
+
+    @Test
+    fun `deleteModel - CancellationException propagates without setting error`() = runTest {
+        advanceUntilIdle()
+
+        coEvery { modelManager.deleteModel("en") } throws kotlinx.coroutines.CancellationException("job cancelled")
+
+        vm.deleteModel("en")
+        advanceUntilIdle()
+
+        assertNull("Cancellation must not set a 'Delete failed' error", vm.uiState.value.error)
+    }
+
+    // ── DR-071: ViewModel cancellation on clear ─────────────────────────────
+
+    @Test
+    fun `viewModelScope coroutines respect CancellationException`() = runTest {
+        // This test verifies that coroutines launched in viewModelScope
+        // properly handle CancellationException (which is thrown when
+        // viewModelScope is cancelled during ViewModel.onCleared()).
+
+        advanceUntilIdle()
+        coEvery { modelManager.getAvailableModels() } returns emptyList()
+
+        // Simulate cancellation during download
+        coEvery { modelManager.downloadModel("en") } throws kotlinx.coroutines.CancellationException("scope cancelled")
+
+        vm.downloadModel("en")
+        advanceUntilIdle()
+
+        // Verify that CancellationException is handled correctly:
+        // 1. Error state is NOT set (it's rethrown in catch)
+        assertNull("CancellationException must not set error", vm.uiState.value.error)
+        // 2. downloadingLang is cleared (finally block executes)
+        assertNull("downloadingLang should be cleared", vm.uiState.value.downloadingLang)
+    }
+
+    @Test
+    fun `delete coroutine cancellation handles CancellationException`() = runTest {
+        advanceUntilIdle()
+        coEvery { modelManager.getAvailableModels() } returns emptyList()
+
+        // Simulate cancellation during delete
+        coEvery { modelManager.deleteModel("en") } throws kotlinx.coroutines.CancellationException("scope cancelled")
+
+        vm.deleteModel("en")
+        advanceUntilIdle()
+
+        // Verify that CancellationException is handled correctly
+        assertNull("CancellationException must not set error", vm.uiState.value.error)
+    }
 }

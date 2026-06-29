@@ -21,6 +21,8 @@ interface LibraryRepository {
 
     suspend fun getTagsForBook(bookId: String): List<String>
 
+    suspend fun getAllBookTags(): Map<String, List<String>>  // Bulk load for library (DR-061)
+
     suspend fun addTag(bookId: String, tag: String)
 
     suspend fun removeTag(bookId: String, tag: String)

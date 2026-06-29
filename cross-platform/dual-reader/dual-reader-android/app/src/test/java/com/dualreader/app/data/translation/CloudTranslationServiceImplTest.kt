@@ -415,6 +415,30 @@ class CloudTranslationServiceImplTest {
         coVerify(exactly = 0) { proxyApi.translate(any()) }
     }
 
+    // ── DR-052: CancellationException must propagate, not be wrapped ──────────
+
+    @Test
+    fun `translate - CancellationException from proxy propagates without TranslationException wrapping`() = runTest {
+        coEvery { proxyApi.translate(any()) } throws
+            kotlinx.coroutines.CancellationException("job cancelled")
+
+        var caught: Throwable? = null
+        try {
+            service.translate("Hello", "bg", "en", null)
+        } catch (e: Throwable) {
+            caught = e
+        }
+
+        assertTrue(
+            "Expected CancellationException to propagate, got: $caught",
+            caught is kotlinx.coroutines.CancellationException,
+        )
+        assertFalse(
+            "CancellationException must not be wrapped in TranslationException",
+            caught is TranslationException,
+        )
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private fun successResponse(

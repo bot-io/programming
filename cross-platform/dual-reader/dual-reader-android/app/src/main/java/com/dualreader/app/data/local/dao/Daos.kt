@@ -105,6 +105,9 @@ interface BookTagDao {
 
     @Query("SELECT bookId FROM book_tags WHERE tag = :tag")
     suspend fun getBookIdsByTag(tag: String): List<String>
+
+    @Query("SELECT * FROM book_tags ORDER BY bookId, tag COLLATE NOCASE ASC")
+    suspend fun getAllBookTagsSync(): List<BookTagEntity>
 }
 
 // ── Collections ──────────────────────────────────────────────────────────────

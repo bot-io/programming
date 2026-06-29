@@ -114,9 +114,11 @@ class TranslatePageUseCase @Inject constructor(
                 if (!forceRetranslate) {
                     val cached = cacheRepository.get(page.text, sourceLanguage, targetLanguage)
                     if (cached != null) {
-                        results[page.index] = cached
-                        onPageTranslated(page.index, cached)
-                        lastTranslation = cached
+                        // DR-092: Strip markers from cached results too (old cache entries may have them)
+                        val cleanCached = ParagraphAligner.stripMarkers(cached)
+                        results[page.index] = cleanCached
+                        onPageTranslated(page.index, cleanCached)
+                        lastTranslation = cleanCached
                         i++
                         continue
                     }
@@ -136,9 +138,11 @@ class TranslatePageUseCase @Inject constructor(
                 // Process results — use a lookup map for O(1) page text access
                 val pageByTextIndex = pages.associateBy { it.index }
                 for ((pageIndex, translation) in batchResult.translations) {
-                    results[pageIndex] = translation
-                    onPageTranslated(pageIndex, translation)
-                    lastTranslation = translation
+                    // DR-092: Strip any residual markers from batch endpoint results too
+                    val cleanTranslation = ParagraphAligner.stripMarkers(translation)
+                    results[pageIndex] = cleanTranslation
+                    onPageTranslated(pageIndex, cleanTranslation)
+                    lastTranslation = cleanTranslation
 
                     // Cache each result (O(1) lookup instead of pages.find)
                     val pageText = pageByTextIndex[pageIndex]?.text ?: continue
@@ -296,18 +300,27 @@ class TranslatePageUseCase @Inject constructor(
         } else {
             // Markers stripped — proportional alignment on the returned text
             AppLogger.i("[DR-013] Markers not preserved, falling back to proportional alignment")
+            // DR-092: Strip residual markers before alignment so they don't leak into results
+            val cleanedTranslated = ParagraphAligner.stripMarkers(translated)
             val origJoined = batch.joinToString("\n\n") { it.text }
-            val aligned = ParagraphAligner.align(origJoined, translated)
+            val aligned = ParagraphAligner.align(origJoined, cleanedTranslated)
             batch.mapIndexed { i, page ->
                 page.index to (aligned.getOrNull(i)?.second ?: "")
             }.filter { it.second.isNotBlank() }.toMap()
         }
 
+        // DR-092: Safety net — strip any residual markers from ALL results before returning.
+        // Belt-and-suspenders: even if extractByMarkers or align missed an edge case,
+        // this guarantees no ⟦N⟧ artifacts reach the user.
+        val sanitizedResults = results.mapValues { (_, text) ->
+            ParagraphAligner.stripMarkers(text)
+        }.filterValues { it.isNotBlank() }
+
         // If no usable results (e.g., translate returned empty/unparseable text),
         // fall back to the batch endpoint
-        if (results.isEmpty()) return null
+        if (sanitizedResults.isEmpty()) return null
 
-        return BatchTranslationResult(results, translationService.providerName)
+        return BatchTranslationResult(sanitizedResults, translationService.providerName)
     }
 
     /**

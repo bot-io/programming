@@ -3,6 +3,7 @@ package com.dualreader.app.data.translation
 import com.dualreader.app.domain.services.TranslationException
 import com.dualreader.app.domain.services.TranslationService
 import com.dualreader.app.domain.usecases.SerializedBookContext
+import com.dualreader.app.util.AppLogger
 import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
@@ -49,6 +50,8 @@ class MlKitTranslationServiceImpl @Inject constructor() : TranslationService {
                 // Download model if needed (with timeout)
                 try {
                     translator.downloadModelIfNeeded().await()
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e // Propagate cancellation (DR-053)
                 } catch (e: Exception) {
                     // May already be downloaded, or download failed — try translating anyway
                     android.util.Log.w("MlKit", "Model download issue: ${e.message}")
@@ -62,13 +65,21 @@ class MlKitTranslationServiceImpl @Inject constructor() : TranslationService {
             } catch (e: NullPointerException) {
                 // ML Kit internals can NPE if ProGuard stripped something or model didn't load
                 throw TranslationException("ML Kit internal error (model may not be downloaded)")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Propagate cancellation (DR-053)
             } catch (e: Exception) {
                 throw TranslationException("ML Kit failed: ${e.message}")
             } finally {
-                try { translator.close() } catch (_: Exception) {}
+                try {
+                    translator.close()
+                } catch (e: Exception) {
+                    AppLogger.w("Failed to close ML Kit translator: ${e.message}")
+                }
             }
         } catch (e: TranslationException) {
             throw e
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Propagate cancellation — don't wrap (DR-053)
         } catch (e: Exception) {
             throw TranslationException("ML Kit setup failed: ${e.message}", e)
         }
@@ -79,6 +90,7 @@ class MlKitTranslationServiceImpl @Inject constructor() : TranslationService {
         targetLanguage: String,
         sourceLanguage: String?,
     ): List<String> = withContext(Dispatchers.IO) {
+        if (texts.isEmpty()) return@withContext emptyList()
         val src = sourceLanguage ?: detectLanguage(texts.firstOrNull() ?: "")
         texts.map { translate(it, targetLanguage, src) }
     }
@@ -92,7 +104,11 @@ class MlKitTranslationServiceImpl @Inject constructor() : TranslationService {
             }
             langCode
         } finally {
-            try { detector.close() } catch (_: Exception) {}
+            try {
+                detector.close()
+            } catch (e: Exception) {
+                AppLogger.w("Failed to close ML Kit language detector: ${e.message}")
+            }
         }
     }
 

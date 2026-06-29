@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,6 +30,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -230,6 +232,9 @@ fun ReaderScreen(
     onTtsPause: () -> Unit = {},
     onTtsSetRate: (Float) -> Unit = {},
     onUpdateCurrentPage: (Int) -> Unit = {},
+    // DR-063: Navigation slider with snap marks
+    positionHistory: List<Int> = emptyList(),
+    onJumpToPosition: (Int) -> Unit = {},
     // Word translation
     wordTranslation: ReaderViewModel.WordTranslationState? = null,
     onTranslateWord: (String, Boolean) -> Unit = { _, _ -> },
@@ -291,6 +296,8 @@ fun ReaderScreen(
                 onTtsPause = onTtsPause,
                 onTtsSetRate = onTtsSetRate,
                 onUpdateCurrentPage = onUpdateCurrentPage,
+                positionHistory = positionHistory,
+                onJumpToPosition = onJumpToPosition,
                 wordTranslation = wordTranslation,
                 onTranslateWord = onTranslateWord,
                 onDismissWordTranslation = onDismissWordTranslation,
@@ -336,6 +343,9 @@ private fun ReaderContent(
     onTtsPause: () -> Unit = {},
     onTtsSetRate: (Float) -> Unit = {},
     onUpdateCurrentPage: (Int) -> Unit = {},
+    // DR-063: Navigation slider with snap marks
+    positionHistory: List<Int> = emptyList(),
+    onJumpToPosition: (Int) -> Unit = {},
     // Word translation
     wordTranslation: ReaderViewModel.WordTranslationState? = null,
     onTranslateWord: (String, Boolean) -> Unit = { _, _ -> },
@@ -376,7 +386,7 @@ private fun ReaderContent(
                 }
                 is ReaderViewModel.TranslationEvent.OfflineFallback -> {
                     snackbarHostState.showSnackbar(
-                        message = "Cloud unavailable - translated ${event.pagesTranslated} paragraphs offline",
+                        message = "Translated ${event.pagesTranslated} paragraphs (improving in background…)",
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -387,6 +397,13 @@ private fun ReaderContent(
                             duration = SnackbarDuration.Short,
                         )
                     }
+                }
+                is ReaderViewModel.TranslationEvent.PersistenceError -> {
+                    // DR-106: Notify user when persistence fails after retries
+                    snackbarHostState.showSnackbar(
+                        message = "Warning: ${event.failedPages} translation(s) could not be saved. Please try re-translating.",
+                        duration = SnackbarDuration.Long,
+                    )
                 }
             }
         }
@@ -421,8 +438,12 @@ private fun ReaderContent(
             }
     }
 
-    // Bars visible when immersive mode is off; derived from persisted settings (DR-027).
-    val barsVisible = !settings.isImmersiveMode
+    // DR-027: Fullscreen / menu toggle using purely local state.
+    // Avoids flicker from async DataStore round-trip when toggling immersive mode.
+    // Local state drives barsVisible immediately; onToggleImmersive persists in background.
+    var isFullscreen by remember { mutableStateOf(settings.isImmersiveMode) }
+    var isMenuVisible by remember { mutableStateOf(!settings.isImmersiveMode) }
+    val barsVisible = !isFullscreen || isMenuVisible
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var showBookmarkList by remember { mutableStateOf(false) }
     var showExportFormatPicker by remember { mutableStateOf(false) }
@@ -456,10 +477,23 @@ private fun ReaderContent(
         // ── Paragraph List (scrollable) ────────────────────────────
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(isFullscreen) {
+                    if (isFullscreen) {
+                        detectTapGestures(
+                            onTap = { isMenuVisible = !isMenuVisible },
+                        )
+                    }
+                },
             contentPadding = PaddingValues(
                 top = if (barsVisible) 56.dp else 0.dp,
-                bottom = if (ttsState.isSpeaking || ttsState.error != null) 88.dp else 8.dp,
+                bottom = if (barsVisible) {
+                    // Room for navigation slider
+                    if (ttsState.isSpeaking || ttsState.error != null) 120.dp else 56.dp
+                } else {
+                    if (ttsState.isSpeaking || ttsState.error != null) 88.dp else 8.dp
+                },
             ),
         ) {
             items(
@@ -476,6 +510,7 @@ private fun ReaderContent(
                     isTranslating = page.index in paragraphsTranslating,
                     hasTranslation = page.hasTranslation(settings.targetLanguage),
                     colors = colors,
+                    displayMode = settings.displayMode,
                     onSpeak = { onTtsPlayParagraph(page.index) },
                     onTranslateWord = onTranslateWord,
                     onTranslate = { onTranslateParagraph(page.index) },
@@ -574,7 +609,11 @@ private fun ReaderContent(
                             IconButton(onClick = onSettingsClick) {
                                 Icon(Icons.Default.Settings, "Settings")
                             }
-                            IconButton(onClick = onToggleImmersive) {
+                            IconButton(onClick = {
+                                isFullscreen = !isFullscreen
+                                isMenuVisible = !isFullscreen
+                                onToggleImmersive()
+                            }) {
                                 Icon(
                                     if (barsVisible) Icons.Default.Fullscreen else Icons.Default.FullscreenExit,
                                     if (barsVisible) "Fullscreen" else "Exit fullscreen",
@@ -682,6 +721,27 @@ private fun ReaderContent(
             }
         }
 
+        // ── Navigation Slider (DR-063) ─────────────────────────────
+        // Bottom slider for fast book navigation with snap-to-recent-positions.
+        AnimatedVisibility(
+            visible = barsVisible && pages.size > 1,
+            enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
+            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            NavigationSlider(
+                currentIndex = listState.firstVisibleItemIndex,
+                totalPages = pages.size,
+                snapPoints = positionHistory,
+                accentColor = colors.accent,
+                textColor = colors.text,
+                onPositionSelected = { idx ->
+                    scope.launch { listState.scrollToItem(idx) }
+                    onJumpToPosition(idx)
+                },
+            )
+        }
+
         // ── Snackbar Host ──────────────────────────────────────────
         SnackbarHost(
             hostState = snackbarHostState,
@@ -757,6 +817,7 @@ private fun ParagraphCard(
     isTranslating: Boolean,
     hasTranslation: Boolean,
     colors: ReaderColors,
+    displayMode: DisplayMode = DisplayMode.SPLIT,
     onSpeak: () -> Unit,
     onTranslateWord: (String, Boolean) -> Unit,
     onTranslate: () -> Unit,
@@ -814,25 +875,25 @@ private fun ParagraphCard(
 
         // Translation box (if translation exists)
         if (translation != null) {
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = colors.divider.copy(alpha = 0.3f),
-                border = BorderStroke(1.dp, colors.divider),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(Modifier.padding(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+            when (displayMode) {
+                DisplayMode.INTERLEAVED -> {
+                    // Interleaved: translation flows right after original, minimal styling
+                    Spacer(Modifier.height(4.dp))
+                    SelectionContainer {
                         Text(
-                            text = "Translated",
-                            style = MaterialTheme.typography.labelSmall,
+                            text = translation,
+                            fontSize = (fontSize * 0.92f).sp,
+                            lineHeight = (fontSize * 0.92f * lineHeight).sp,
                             color = colors.textSecondary,
                             fontStyle = FontStyle.Italic,
-                            modifier = Modifier.pointerInput(Unit) {
-                                detectTapGestures(onLongPress = { showTranslationInfo = true })
-                            },
                         )
-                        Spacer(Modifier.weight(1f))
-                        // Re-translate button
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         TextButton(
                             onClick = onReTranslate,
                             enabled = !isTranslating,
@@ -855,15 +916,61 @@ private fun ParagraphCard(
                             )
                         }
                     }
-                    Spacer(Modifier.height(4.dp))
-                    SelectionContainer {
-                        Text(
-                            text = translation,
-                            fontSize = (fontSize * 0.92f).sp,
-                            lineHeight = (fontSize * 0.92f * lineHeight).sp,
-                            color = colors.textSecondary,
-                            fontStyle = FontStyle.Italic,
-                        )
+                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp), color = colors.divider.copy(alpha = 0.5f))
+                }
+                DisplayMode.SPLIT -> {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = colors.divider.copy(alpha = 0.3f),
+                        border = BorderStroke(1.dp, colors.divider),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Translated",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = colors.textSecondary,
+                                    fontStyle = FontStyle.Italic,
+                                    modifier = Modifier.pointerInput(Unit) {
+                                        detectTapGestures(onLongPress = { showTranslationInfo = true })
+                                    },
+                                )
+                                Spacer(Modifier.weight(1f))
+                                // Re-translate button
+                                TextButton(
+                                    onClick = onReTranslate,
+                                    enabled = !isTranslating,
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                ) {
+                                    if (isTranslating) {
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                    } else {
+                                        Text("Re-translate", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                                IconButton(
+                                    onClick = onSpeak,
+                                    modifier = Modifier.size(36.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = if (isSpeaking) Icons.Default.Stop else Icons.Default.VolumeUp,
+                                        contentDescription = "Speak translation",
+                                        tint = colors.accent,
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            SelectionContainer {
+                                Text(
+                                    text = translation,
+                                    fontSize = (fontSize * 0.92f).sp,
+                                    lineHeight = (fontSize * 0.92f * lineHeight).sp,
+                                    color = colors.textSecondary,
+                                    fontStyle = FontStyle.Italic,
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1122,6 +1229,113 @@ private fun TtsControlBar(
             // Stop
             IconButton(onClick = onStop) {
                 Icon(Icons.Default.Stop, "Stop", tint = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+// ─── Navigation Slider (DR-063) ──────────────────────────────────────────────
+// Bottom slider for fast book navigation with snap-to-recent-reading-positions.
+
+@Composable
+private fun NavigationSlider(
+    currentIndex: Int,
+    totalPages: Int,
+    snapPoints: List<Int>,
+    accentColor: Color,
+    textColor: Color,
+    onPositionSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var sliderValue by remember(currentIndex) { mutableFloatStateOf(currentIndex.toFloat()) }
+
+    val maxValue = (totalPages - 1).toFloat().coerceAtLeast(0f)
+    // Snap threshold: 3% of total pages or at least 2 pages
+    val snapThreshold = (totalPages * 0.03f).coerceAtLeast(2f)
+
+    Surface(
+        color = Color.Black.copy(alpha = 0.85f),
+        shadowElevation = 8.dp,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+        ) {
+            // Percentage and page number
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                val pct = if (totalPages > 1) ((sliderValue / maxValue) * 100).toInt() else 0
+                Text(
+                    "$pct%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = textColor,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    "${sliderValue.toInt() + 1} / $totalPages",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = textColor.copy(alpha = 0.7f),
+                )
+            }
+
+            // Slider with snap marks overlay
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Slider(
+                    value = sliderValue.coerceIn(0f, maxValue),
+                    onValueChange = { newValue ->
+                        sliderValue = newValue
+                    },
+                    onValueChangeFinished = {
+                        val targetIndex = sliderValue.toInt().coerceIn(0, totalPages - 1)
+                        // Snap to nearest snap point if within threshold
+                        val snapped = snapPoints.minByOrNull { kotlin.math.abs(it - targetIndex) }
+                        val finalIndex = if (snapped != null && kotlin.math.abs(snapped - targetIndex) <= snapThreshold) {
+                            snapped
+                        } else {
+                            targetIndex
+                        }
+                        sliderValue = finalIndex.toFloat()
+                        onPositionSelected(finalIndex)
+                    },
+                    valueRange = 0f..maxValue,
+                    colors = SliderDefaults.colors(
+                        thumbColor = accentColor,
+                        activeTrackColor = accentColor,
+                        inactiveTrackColor = accentColor.copy(alpha = 0.2f),
+                    ),
+                )
+
+                // Snap marks drawn on top of slider track — always visible even under active fill
+                if (snapPoints.isNotEmpty() && totalPages > 1) {
+                    Canvas(
+                        modifier = Modifier.matchParentSize(),
+                    ) {
+                        snapPoints.forEach { pageIndex ->
+                            val fraction = pageIndex.toFloat() / maxValue
+                            val x = size.width * fraction
+                            val y = size.height / 2f
+                            // White halo so marks pop against both active track and inactive track
+                            drawCircle(
+                                color = Color.White,
+                                radius = 6.dp.toPx(),
+                                center = Offset(x, y),
+                            )
+                            // Accent dot on top
+                            drawCircle(
+                                color = accentColor,
+                                radius = 4.dp.toPx(),
+                                center = Offset(x, y),
+                            )
+                        }
+                    }
+                }
             }
         }
     }

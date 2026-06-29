@@ -50,8 +50,17 @@ class LibraryRepositoryImpl @Inject constructor(
     override suspend fun getTagsForBook(bookId: String): List<String> =
         bookTagDao.getTagsForBook(bookId).map { it.tag }
 
+    override suspend fun getAllBookTags(): Map<String, List<String>> =
+        bookTagDao.getAllBookTagsSync()
+            .groupBy { it.bookId }
+            .mapValues { entry -> entry.value.map { it.tag } }
+
     override suspend fun addTag(bookId: String, tag: String) {
-        bookTagDao.insert(BookTagEntity(bookId = bookId, tag = tag.trim()))
+        // DR-100: Reject empty or whitespace-only tags
+        val trimmedTag = tag.trim()
+        if (trimmedTag.isNotEmpty()) {
+            bookTagDao.insert(BookTagEntity(bookId = bookId, tag = trimmedTag))
+        }
     }
 
     override suspend fun removeTag(bookId: String, tag: String) {
@@ -74,12 +83,21 @@ class LibraryRepositoryImpl @Inject constructor(
         return entity.toDomain().copy(bookIds = bookIds)
     }
 
-    override suspend fun createCollection(name: String): Long =
-        collectionDao.insert(CollectionEntity(name = name.trim()))
+    override suspend fun createCollection(name: String): Long {
+        val trimmedName = name.trim()
+        if (trimmedName.isNotEmpty()) {
+            return collectionDao.insert(CollectionEntity(name = trimmedName))
+        }
+        return -1L // Silent rejection - same pattern as addTag in DR-100
+    }
 
     override suspend fun renameCollection(id: Long, newName: String) {
+        val trimmedName = newName.trim()
+        if (trimmedName.isEmpty()) {
+            return // Silent rejection - same pattern as addTag in DR-100
+        }
         val entity = collectionDao.getById(id) ?: return
-        collectionDao.update(entity.copy(name = newName.trim()))
+        collectionDao.update(entity.copy(name = trimmedName))
     }
 
     override suspend fun deleteCollection(id: Long) {

@@ -21,8 +21,8 @@ fun BookEntity.toDomain(): Book {
         coverPath = coverPath,
         filePath = filePath,
         language = language,
-        importedAt = LocalDateTime.ofEpochSecond(importedAt / 1000, 0, ZoneOffset.UTC),
-        lastReadAt = lastReadAt?.let { LocalDateTime.ofEpochSecond(it / 1000, 0, ZoneOffset.UTC) },
+        importedAt = epochMilliToLocalDateTime(importedAt),
+        lastReadAt = lastReadAt?.let { epochMilliToLocalDateTime(it) },
         currentPage = currentPage,
         totalPages = totalPages,
         paginationStatus = Converters().fromPaginationStatus(paginationStatus),
@@ -85,7 +85,7 @@ fun BookmarkEntity.toDomain(): Bookmark = Bookmark(
     chapterIndex = chapterIndex,
     textSnippet = textSnippet,
     note = note,
-    createdAt = LocalDateTime.ofEpochSecond(createdAt / 1000, 0, ZoneOffset.UTC),
+    createdAt = epochMilliToLocalDateTime(createdAt),
 )
 
 fun Bookmark.toEntity(): BookmarkEntity = BookmarkEntity(
@@ -97,3 +97,13 @@ fun Bookmark.toEntity(): BookmarkEntity = BookmarkEntity(
     note = note,
     createdAt = createdAt.atZone(ZoneOffset.UTC).toInstant().toEpochMilli(),
 )
+
+/**
+ * Convert epoch-millis to [LocalDateTime], preserving sub-second precision.
+ *
+ * The naive `ofEpochSecond(millis / 1000, 0, UTC)` silently drops the
+ * millisecond component on every DB round-trip. This helper reconstructs
+ * the full precision via the nanosecond parameter (DR-056).
+ */
+private fun epochMilliToLocalDateTime(epochMilli: Long): LocalDateTime =
+    LocalDateTime.ofEpochSecond(epochMilli / 1000, ((epochMilli % 1000) * 1_000_000).toInt(), ZoneOffset.UTC)

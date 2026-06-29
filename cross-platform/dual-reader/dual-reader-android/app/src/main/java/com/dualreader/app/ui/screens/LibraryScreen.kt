@@ -55,15 +55,19 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -106,12 +110,25 @@ fun LibraryScreen(
     onDeleteCollection: ((Long) -> Unit)? = null,
     onAddBookToCollection: ((Long, String) -> Unit)? = null,
     onRemoveBookFromCollection: ((Long, String) -> Unit)? = null,
+    errorEvents: kotlinx.coroutines.flow.Flow<String>? = null,
     modifier: Modifier = Modifier,
 ) {
     var showSortMenu by remember { mutableStateOf(false) }
     var showAddTagDialog by remember { mutableStateOf<String?>(null) }
     var showAddToCollectionDialog by remember { mutableStateOf<String?>(null) }
     var showCreateCollectionDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    // Collect error events for snackbar display
+    LaunchedEffect(Unit) {
+        errorEvents?.collect { errorMsg ->
+            snackbarHostState.showSnackbar(
+                message = errorMsg,
+                duration = androidx.compose.material3.SnackbarDuration.Long,
+            )
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -188,6 +205,9 @@ fun LibraryScreen(
                     )
                 }
             }
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
         },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {

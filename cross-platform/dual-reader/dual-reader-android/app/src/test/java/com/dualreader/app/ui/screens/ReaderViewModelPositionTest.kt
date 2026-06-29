@@ -126,6 +126,7 @@ class ReaderViewModelPositionTest {
             translationCacheRepository = cacheRepo,
             ttsService = ttsService,
             translationService = translationService,
+            fallbackTranslationService = mockk(relaxed = true),
             mlKitModelManager = mlKitModelManager,
         )
     }
@@ -201,60 +202,6 @@ class ReaderViewModelPositionTest {
         }
     }
 
-    // ── goToPage ──────────────────────────────────────────────────
-
-    @Test
-    fun `goToPage persists position to repository`() = runTest(testDispatcher) {
-        val vm = createViewModel(currentPage = 0)
-        advanceUntilIdle()
-
-        vm.goToPage(7)
-        advanceUntilIdle()
-
-        coVerify {
-            bookRepo.updateBook(match { it.currentPage == 7 })
-        }
-    }
-
-    @Test
-    fun `goToPage with negative index does nothing`() = runTest(testDispatcher) {
-        val vm = createViewModel(currentPage = 0)
-        advanceUntilIdle()
-
-        vm.goToPage(-1)
-        advanceUntilIdle()
-
-        coVerify(exactly = 0) {
-            bookRepo.updateBook(match { it.currentPage == -1 })
-        }
-    }
-
-    @Test
-    fun `goToPage with out-of-bounds index does nothing`() = runTest(testDispatcher) {
-        val vm = createViewModel(currentPage = 0, totalPages = 5)
-        advanceUntilIdle()
-
-        vm.goToPage(100)
-        advanceUntilIdle()
-
-        coVerify(exactly = 0) {
-            bookRepo.updateBook(match { it.currentPage == 100 })
-        }
-    }
-
-    @Test
-    fun `goToPage sets lastReadAt timestamp`() = runTest(testDispatcher) {
-        val vm = createViewModel(currentPage = 0)
-        advanceUntilIdle()
-
-        vm.goToPage(3)
-        advanceUntilIdle()
-
-        coVerify {
-            bookRepo.updateBook(match { it.lastReadAt != null })
-        }
-    }
-
     // ── Position restoration on loadBook ──────────────────────────
 
     @Test
@@ -289,60 +236,8 @@ class ReaderViewModelPositionTest {
         assertEquals(0, state?.book?.currentPage)
     }
 
-    // ── nextPage / previousPage ───────────────────────────────────
-
-    @Test
-    fun `nextPage advances position by one`() = runTest(testDispatcher) {
-        val vm = createViewModel(currentPage = 3, totalPages = 10)
-        advanceUntilIdle()
-
-        vm.nextPage()
-        advanceUntilIdle()
-
-        coVerify {
-            bookRepo.updateBook(match { it.currentPage == 4 })
-        }
-    }
-
-    @Test
-    fun `previousPage decrements position by one`() = runTest(testDispatcher) {
-        val vm = createViewModel(currentPage = 5, totalPages = 10)
-        advanceUntilIdle()
-
-        vm.previousPage()
-        advanceUntilIdle()
-
-        coVerify {
-            bookRepo.updateBook(match { it.currentPage == 4 })
-        }
-    }
-
-    @Test
-    fun `nextPage at last page does not advance past end`() = runTest(testDispatcher) {
-        val vm = createViewModel(currentPage = 9, totalPages = 10)
-        advanceUntilIdle()
-
-        vm.nextPage()
-        advanceUntilIdle()
-
-        // currentPage should remain 9, not go to 10
-        coVerify(exactly = 0) {
-            bookRepo.updateBook(match { it.currentPage >= 10 })
-        }
-    }
-
-    @Test
-    fun `previousPage at first page does not go negative`() = runTest(testDispatcher) {
-        val vm = createViewModel(currentPage = 0, totalPages = 10)
-        advanceUntilIdle()
-
-        vm.previousPage()
-        advanceUntilIdle()
-
-        coVerify(exactly = 0) {
-            bookRepo.updateBook(match { it.currentPage < 0 })
-        }
-    }
+    // DR-057: nextPage/previousPage removed as dead code (UI uses LazyColumn scroll).
+    // Tests for those methods are removed.
 
     // ── Pagination preserves currentPage ──────────────────────────
 

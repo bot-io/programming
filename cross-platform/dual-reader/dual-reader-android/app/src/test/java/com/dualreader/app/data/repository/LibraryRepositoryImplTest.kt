@@ -148,10 +148,10 @@ class LibraryRepositoryImplTest {
     }
 
     @Test
-    fun `addTag with empty tag is still inserted but trimmed`() = runTest {
+    fun `addTag with empty whitespace-only tag is silently ignored`() = runTest {
         repository.addTag("book1", "  ")
 
-        coVerify { bookTagDao.insert(BookTagEntity("book1", "")) }
+        coVerify(exactly = 0) { bookTagDao.insert(any()) }
     }
 
     // ── Collections ───────────────────────────────────────────────────────────

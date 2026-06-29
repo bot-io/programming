@@ -1,5 +1,6 @@
 package com.dualreader.app.ui.screens
 
+import androidx.lifecycle.SavedStateHandle
 import com.dualreader.app.domain.entities.Book
 import com.dualreader.app.domain.entities.Page
 import com.dualreader.app.domain.entities.ReaderTheme
@@ -38,7 +39,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderViewModelCoverageTest {
 
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var bookRepository: BookRepository
     private lateinit var settingsRepository: SettingsRepository
@@ -101,13 +102,18 @@ class ReaderViewModelCoverageTest {
         every { settingsRepository.settings } returns flowOf(testSettings)
         every { bookmarkRepository.getBookmarksForBook(any()) } returns flowOf(emptyList())
         // TTS defaults
+        every { ttsService.isReady } returns true
+        every { ttsService.isInitFailed } returns false
         every { ttsService.isLanguageAvailable(any()) } returns true
         every { ttsService.getSpeechRate() } returns 1.0f
     }
 
+    private val testScheduler = testDispatcher.scheduler
+
     private fun createViewModel(bookId: String = "book1"): ReaderViewModel {
+        val handle = SavedStateHandle().apply { set("bookId", bookId) }
         return ReaderViewModel(
-            savedStateHandle = androidx.lifecycle.SavedStateHandle(mapOf("bookId" to bookId)),
+            savedStateHandle = handle,
             bookRepository = bookRepository,
             settingsRepository = settingsRepository,
             bookmarkRepository = bookmarkRepository,
@@ -116,14 +122,15 @@ class ReaderViewModelCoverageTest {
             translationCacheRepository = translationCacheRepository,
             ttsService = ttsService,
             translationService = translationService,
+            fallbackTranslationService = mockk(relaxed = true),
             mlKitModelManager = mockk(relaxed = true),
         )
     }
 
     @After
     fun tearDown() {
-        ReaderViewModel.testIoDispatcher = null
         Dispatchers.resetMain()
+        ReaderViewModel.testIoDispatcher = null
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -568,8 +575,9 @@ class ReaderViewModelCoverageTest {
     }
 
     @Test
-    fun `exportFileName - sanitized filename with book title`() {
+    fun `exportFileName - sanitized filename with book title`() = runTest(testDispatcher) {
         val vm = createViewModel()
+        advanceUntilIdle()  // Ensure book is loaded
         val name = vm.exportFileName(ExportFormat.MARKDOWN)
         assertTrue("Should contain book title: $name", name.contains("Book One"))
         assertTrue("Should end with .md: $name", name.endsWith(".md"))
@@ -611,5 +619,144 @@ class ReaderViewModelCoverageTest {
         advanceUntilIdle()
 
         coVerify { bookRepository.updateBook(match { it.currentPage == 2 }) }
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // DR-092: TTS retry coroutine tracking
+    // ════════════════════════════════════════════════════════════════════
+
+    @Test
+    fun `speakCurrentPage - TTS retry coroutine cancelled on ViewModel clear`() = runTest(testDispatcher) {
+        // Setup page with translation
+        val translatedPage = testPages1[0].copy(
+            translations = mapOf("bg" to "Hello world one translated")
+        )
+        coEvery { bookRepository.getPagesForBook("book1") } returns listOf(translatedPage)
+        coEvery { bookRepository.getPage("book1", 0) } returns translatedPage
+
+        // Setup TTS service to report init failed (triggering retry path)
+        every { ttsService.isReady } returns false
+        every { ttsService.isInitFailed } returns true
+        every { ttsService.reinitialize() } returns true
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Call speakCurrentPage - should trigger retry coroutine
+        vm.speakCurrentPage(0)
+        advanceUntilIdle()
+
+        // Verify error state shows "Retrying..."
+        val state = vm.ttsState.value
+        assertTrue("Should show retry message: ${state.error}", state.error?.contains("Retrying") == true)
+
+        // Simulate ViewModel clear (onCleared)
+        vm.callOnClearedForTesting()
+
+        // Advance time past the 500ms delay
+        testScheduler.advanceTimeBy(600)
+        advanceUntilIdle()
+
+        // Verify speak was NOT called after clear (no post-clear execution)
+        coVerify(exactly = 0) { ttsService.speak(any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `speakParagraph - TTS retry coroutine cancelled on ViewModel clear`() = runTest(testDispatcher) {
+        // Setup book with translated paragraph
+        val translatedPage = testPages1[0].copy(
+            translations = mapOf("bg" to "Hello world one translated")
+        )
+        coEvery { bookRepository.getPagesForBook("book1") } returns listOf(translatedPage)
+
+        // Setup TTS service to report init failed (triggering retry path)
+        every { ttsService.isReady } returns false
+        every { ttsService.isInitFailed } returns true
+        every { ttsService.reinitialize() } returns true
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Call speakParagraph - should trigger retry coroutine
+        vm.speakParagraph(0)
+        advanceUntilIdle()
+
+        // Verify error state shows "Retrying..."
+        val state = vm.ttsState.value
+        assertTrue("Should show retry message: ${state.error}", state.error?.contains("Retrying") == true)
+
+        // Simulate ViewModel clear (onCleared)
+        vm.callOnClearedForTesting()
+
+        // Advance time past the 500ms delay
+        testScheduler.advanceTimeBy(600)
+        advanceUntilIdle()
+
+        // Verify speak was NOT called after clear (no post-clear execution)
+        coVerify(exactly = 0) { ttsService.speak(any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `TTS retry - multiple rapid retries cancel previous job`() = runTest(testDispatcher) {
+        // Setup page with translation
+        val translatedPage = testPages1[0].copy(
+            translations = mapOf("bg" to "Hello world one translated")
+        )
+        coEvery { bookRepository.getPagesForBook("book1") } returns listOf(translatedPage)
+        coEvery { bookRepository.getPage("book1", any()) } returns translatedPage
+
+        // Setup TTS service to report init failed (triggering retry path)
+        every { ttsService.isReady } returns false
+        every { ttsService.isInitFailed } returns true
+        every { ttsService.reinitialize() } returns true
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Call speakCurrentPage multiple times rapidly
+        vm.speakCurrentPage(0)
+        vm.speakCurrentPage(1)
+        vm.speakCurrentPage(2)
+        advanceUntilIdle()
+
+        // Only the last retry should be pending (previous ones cancelled)
+        val state = vm.ttsState.value
+        assertTrue("Should show retry message: ${state.error}", state.error?.contains("Retrying") == true)
+
+        // Clear should cancel the last pending retry
+        vm.callOnClearedForTesting()
+        testScheduler.advanceTimeBy(600)
+        advanceUntilIdle()
+
+        // No post-clear execution
+        coVerify(exactly = 0) { ttsService.speak(any(), any(), any(), any(), any(), any()) }
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // DR-101: loadBook logging when page data is missing
+    // ════════════════════════════════════════════════════════════════════
+
+    @Test
+    fun `loadBook - logs error when both page lookups return null`() = runTest(testDispatcher) {
+        // Setup a book with valid metadata but no pages (simulating corruption)
+        val emptyPagesBook = testBook1.copy(
+            id = "empty-book",
+            currentPage = 0
+        )
+        coEvery { bookRepository.getBookById("empty-book") } returns emptyPagesBook
+        coEvery { bookRepository.getPagesForBook("empty-book") } returns emptyList()
+        coEvery { bookRepository.getPage("empty-book", any()) } returns null
+
+        val vm = createViewModel(bookId = "empty-book")
+        advanceUntilIdle()
+
+        // State should be Error when pages are missing
+        assertTrue("State should be Error when pages are missing",
+            vm.uiState.value is ReaderUiState.Error)
+
+        // Error message should indicate no pages found
+        val errorState = vm.uiState.value as ReaderUiState.Error
+        assertTrue("Error message should contain 'No pages found'",
+            errorState.message.contains("No pages found"))
     }
 }

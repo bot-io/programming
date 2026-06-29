@@ -21,6 +21,7 @@ import com.dualreader.app.domain.entities.ReadingSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,9 +29,11 @@ fun SettingsScreen(
     settings: ReadingSettings,
     cachedTranslationCount: Int,
     translationInfo: List<PageTranslationInfo>,
+    loadInfoError: String?,
     onSettingsChanged: (ReadingSettings) -> Unit,
     onClearTranslations: () -> Unit,
     onViewTranslationInfo: () -> Unit,
+    onInfoErrorShown: () -> Unit,
     onUpgradeClick: () -> Unit,
     onModelManagementClick: () -> Unit,
     onTermsClick: () -> Unit,
@@ -54,9 +57,12 @@ fun SettingsScreen(
         var localMargins by remember { mutableStateOf(settings.margins.toFloat()) }
 
         // Sync local state when external settings change (e.g., from another screen)
-        LaunchedEffect(settings.fontSize) { localFontSize = settings.fontSize }
-        LaunchedEffect(settings.lineHeight) { localLineHeight = settings.lineHeight }
-        LaunchedEffect(settings.margins) { localMargins = settings.margins.toFloat() }
+        // Use a single LaunchedEffect to avoid coroutine restart thrashing when settings update rapidly
+        LaunchedEffect(settings) {
+            if (localFontSize != settings.fontSize) localFontSize = settings.fontSize
+            if (localLineHeight != settings.lineHeight) localLineHeight = settings.lineHeight
+            if (localMargins != settings.margins.toFloat()) localMargins = settings.margins.toFloat()
+        }
 
         Column(
             Modifier
@@ -99,12 +105,13 @@ fun SettingsScreen(
                         modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                     )
                     Text("Relaxed")
-                }
-                Text(
-                    String.format("%.1fx", localLineHeight),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                    }
+                    Text(
+                        // DR-103: Use Locale.US for consistent decimal formatting across locales
+                        String.format(Locale.US, "%.1fx", localLineHeight),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
             }
 
             // ── Margins ──────────────────────────────────────────────
@@ -337,7 +344,9 @@ fun SettingsScreen(
                 if (showInfoDialog) {
                     TranslationInfoDialog(
                         translationInfo = translationInfo,
+                        loadError = loadInfoError,
                         onDismiss = { showInfoDialog = false },
+                        onErrorShown = onInfoErrorShown,
                     )
                 }
 
@@ -476,13 +485,30 @@ fun SettingsScreen(
 @Composable
 private fun TranslationInfoDialog(
     translationInfo: List<PageTranslationInfo>,
+    loadError: String?,
     onDismiss: () -> Unit,
+    onErrorShown: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Translation Details") },
         text = {
-            if (translationInfo.isEmpty()) {
+            if (loadError != null) {
+                // DR-115: Show error message when loading fails
+                Column {
+                    Text(
+                        text = "Failed to load translation details",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = loadError,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else if (translationInfo.isEmpty()) {
                 Text("No translations found. Translate some pages first.")
             } else {
                 Box(
@@ -529,7 +555,10 @@ private fun TranslationInfoDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = {
+                if (loadError != null) onErrorShown()
+                onDismiss()
+            }) { Text("Close") }
         },
     )
 }
@@ -567,6 +596,16 @@ private fun DebugPanel(
                 // ── App info ──
                 appendLine("=== Dual Reader Debug Info ===")
                 appendLine("Version: ${com.dualreader.app.BuildConfig.VERSION_NAME} (${com.dualreader.app.BuildConfig.VERSION_CODE})")
+                
+                // DR-116: Show write failures if any
+                val writeFailures = com.dualreader.app.util.AppLogger.getConsecutiveWriteFailures()
+                if (writeFailures > 0) {
+                    appendLine()
+                    appendLine("⚠️  WARNING: Log file write failures detected")
+                    appendLine("Consecutive failures: $writeFailures")
+                    appendLine("Logs may be incomplete. Check storage permissions and disk space.")
+                    appendLine("Falling back to Android Log (logcat).")
+                }
                 appendLine()
 
                 // ── Last crash log ──

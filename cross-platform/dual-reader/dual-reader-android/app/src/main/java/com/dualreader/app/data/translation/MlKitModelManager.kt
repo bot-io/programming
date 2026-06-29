@@ -40,6 +40,8 @@ class MlKitModelManager @Inject constructor(
     suspend fun getAvailableModels(): List<LanguageModelInfo> = withContext(Dispatchers.IO) {
         val downloaded = try {
             modelManager.getDownloadedModels(TranslateRemoteModel::class.java).await()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Propagate cancellation — don't return empty set (DR-052)
         } catch (e: Exception) {
             AppLogger.e("[MlKitModelManager] Failed to get downloaded models: ${e.message}")
             emptySet()
@@ -66,6 +68,8 @@ class MlKitModelManager @Inject constructor(
             modelManager.download(model, conditions).await()
             AppLogger.d("[MlKitModelManager] Downloaded model for $langCode")
             true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Propagate cancellation — don't return false (DR-052)
         } catch (e: Exception) {
             AppLogger.e("[MlKitModelManager] Failed to download $langCode: ${e.message}")
             false
@@ -80,6 +84,8 @@ class MlKitModelManager @Inject constructor(
             modelManager.deleteDownloadedModel(model).await()
             AppLogger.d("[MlKitModelManager] Deleted model for $langCode")
             true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Propagate cancellation — don't return false (DR-052)
         } catch (e: Exception) {
             AppLogger.e("[MlKitModelManager] Failed to delete $langCode: ${e.message}")
             false

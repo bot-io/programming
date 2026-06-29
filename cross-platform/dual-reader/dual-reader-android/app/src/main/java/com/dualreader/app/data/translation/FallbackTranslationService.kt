@@ -6,20 +6,26 @@ import com.dualreader.app.domain.services.TranslationService
 import com.dualreader.app.domain.usecases.SerializedBookContext
 import com.dualreader.app.util.AppLogger
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
 import kotlin.collections.IndexedValue
 
 /**
- * Tiered fallback translation service.
+ * Local-first translation service with background cloud upgrade.
  *
- * Tier 1: Cloud proxy → GLM-4.7-Flash (free, best quality for literary text)
- * Tier 2: ML Kit on-device (offline, lower quality but always available)
+ * Tier 1: ML Kit on-device (~0.5s, instant result)
+ * Tier 2: Cloud proxy background upgrade (Gemini/GLM, better quality)
+ * Tier 3: Cloud direct fallback (if ML Kit model unavailable)
  *
- * If cloud fails (timeout, rate limit, no network), automatically falls back
- * to on-device ML Kit so the user always gets a translation.
+ * User sees an instant ML Kit translation, then it gets silently upgraded
+ * to cloud quality when the background request completes.
  */
 @Singleton
 class FallbackTranslationService @Inject constructor(
@@ -27,12 +33,34 @@ class FallbackTranslationService @Inject constructor(
     @Named("mlkit") private val mlKitService: TranslationService,
 ) : TranslationService {
 
-    override val providerName: String = "Fallback (Cloud → ML Kit)"
+    override val providerName: String = "ML Kit → Cloud Upgrade"
 
     companion object {
         /** Max chars per chunk sent to the API. Keeps requests small to avoid timeouts. */
         private const val MAX_CHUNK_SIZE = 1500
+
+        /** Test override for the upgrade dispatcher. Set before creating the service. */
+        @Volatile
+        internal var testUpgradeDispatcher: CoroutineDispatcher? = null
     }
+
+    /**
+     * Background scope for cloud upgrade jobs. Uses SupervisorJob so one failed
+     * upgrade doesn't cancel others. Lives for the lifetime of this Singleton.
+     */
+    private val upgradeDispatcher: CoroutineDispatcher
+        get() = testUpgradeDispatcher ?: Dispatchers.IO
+
+    private val upgradeScope = CoroutineScope(SupervisorJob())
+
+    /**
+     * Called when a cloud upgrade completes. Set by the ViewModel to receive
+     * upgraded translations and replace ML Kit results in the UI.
+     *
+     * Parameters: (originalText, upgradedTranslation, targetLanguage)
+     */
+    @Volatile
+    var cloudUpgradeCallback: ((suspend (String, String, String) -> Unit))? = null
 
     // ── translate ──────────────────────────────────────────────────────────────
 
@@ -60,9 +88,14 @@ class FallbackTranslationService @Inject constructor(
     }
 
     /**
-     * Try cloud first, fall back to ML Kit.
-     * Always attempts cloud regardless of network state — let the HTTP call
-     * itself determine connectivity (ConnectivityManager is unreliable on some devices).
+     * Local-first strategy: ML Kit instant → cloud background upgrade.
+     *
+     * Tier 1: ML Kit (on-device, ~0.5s) — user sees result immediately
+     * Tier 2: Cloud (background upgrade — better quality, replaces ML Kit when done)
+     * Tier 3: Cloud direct fallback (if ML Kit model unavailable)
+     *
+     * If [cloudUpgradeCallback] is provided, cloud translation runs in the
+     * caller's scope and the callback fires when the upgrade completes.
      */
     private suspend fun translateSingle(
         text: String,
@@ -72,35 +105,67 @@ class FallbackTranslationService @Inject constructor(
         bookContext: SerializedBookContext? = null,
         skipCache: Boolean = false,
     ): String {
-        var cloudError: String? = null
+        // Tier 1: ML Kit on-device (instant)
+        try {
+            val result = mlKitService.translate(text, targetLanguage, sourceLanguage)
+            AppLogger.d("ML Kit translation succeeded (${result.length} chars)")
 
-        // Tier 1: Try cloud (always attempt — don't gate on ConnectivityManager)
+            // Tier 2: Background cloud upgrade (fire-and-forget, caller handles replacement)
+            // DR-141: Capture callback in local variable to avoid race condition
+            val callback = cloudUpgradeCallback
+            if (callback != null) {
+                upgradeScope.launch(upgradeDispatcher) {
+                    try {
+                        val cloudResult = cloudService.translate(
+                            text, targetLanguage, sourceLanguage, context, bookContext, skipCache
+                        )
+                        AppLogger.d("Cloud upgrade succeeded (${cloudResult.length} chars), notifying callback")
+                        callback(text, cloudResult, targetLanguage)
+                    } catch (e: CancellationException) {
+                        // scope cancelled — stop upgrade
+                    } catch (e: Exception) {
+                        AppLogger.w("Cloud upgrade failed: ${e.message} — keeping ML Kit result")
+                    }
+                }
+            }
+
+            return result
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.w("ML Kit failed: ${e.message}, trying cloud directly")
+        }
+
+        // Tier 3: Cloud direct fallback (ML Kit model unavailable)
+        var cloudError: String? = null
         try {
             val result = cloudService.translate(text, targetLanguage, sourceLanguage, context, bookContext, skipCache)
             AppLogger.d("Cloud translation succeeded (${result.length} chars)")
+            // DR-147: Invoke callback when cloud fallback succeeds (same as Tier 1)
+            val callback = cloudUpgradeCallback
+            if (callback != null) {
+                upgradeScope.launch(upgradeDispatcher) {
+                    try {
+                        callback(text, result, targetLanguage)
+                    } catch (e: CancellationException) {
+                        // scope cancelled
+                    } catch (e: Exception) {
+                        AppLogger.w("Cloud fallback callback failed: ${e.message}")
+                    }
+                }
+            }
             return result
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             cloudError = e.message ?: "Unknown error"
-            AppLogger.w("Cloud translation failed: $cloudError, falling back to ML Kit")
+            AppLogger.w("Cloud also failed: $cloudError")
         }
 
-        // Tier 2: ML Kit on-device fallback
-        try {
-            val result = mlKitService.translate(text, targetLanguage, sourceLanguage)
-            AppLogger.d("ML Kit fallback succeeded (${result.length} chars)")
-            return result
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("ML Kit also failed: ${e.message}")
-            throw TranslationException(
-                "Translation failed.\n" +
-                "Cloud: $cloudError\n" +
-                "Offline: ${e.message}"
-            )
-        }
+        throw TranslationException(
+            "Translation failed. Both ML Kit and cloud are unavailable.\n" +
+            "Cloud: $cloudError"
+        )
     }
 
     // ── translateBatch ─────────────────────────────────────────────────────────
@@ -124,16 +189,7 @@ class FallbackTranslationService @Inject constructor(
         bookContext: SerializedBookContext?,
         skipCache: Boolean,
     ): BatchTranslationResult {
-        // Try cloud batch first
-        try {
-            return cloudService.translatePages(pages, targetLanguage, sourceLanguage, context, bookContext, skipCache)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.w("Cloud batch failed: ${e.message}, falling back to ML Kit (offline)")
-        }
-
-        // Cloud batch failed — go DIRECTLY to ML Kit, skip individual cloud calls
+        // Tier 1: ML Kit for all pages (instant, on-device)
         val mlKitResults = mutableMapOf<Int, String>()
         for (page in pages) {
             try {
@@ -141,16 +197,64 @@ class FallbackTranslationService @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.e("ML Kit failed for page ${page.index}: ${e.message}")
+                AppLogger.w("ML Kit failed for page ${page.index}: ${e.message}")
             }
         }
-        if (mlKitResults.isEmpty()) {
-            throw TranslationException("Both cloud and offline translation failed. Try again later.")
+
+        if (mlKitResults.isNotEmpty()) {
+            AppLogger.i("translatePages: ML Kit instant result for ${mlKitResults.size}/${pages.size} pages")
+
+            // Tier 2: Background cloud upgrade for each page
+            // DR-141: Capture callback in local variable to avoid race condition
+            val callback = cloudUpgradeCallback
+            if (callback != null) {
+                for (page in pages) {
+                    upgradeScope.launch(upgradeDispatcher) {
+                        try {
+                            val cloudResult = cloudService.translate(
+                                page.value, targetLanguage, sourceLanguage, context, bookContext, skipCache
+                            )
+                            callback(page.value, cloudResult, targetLanguage)
+                        } catch (e: CancellationException) {
+                            // scope cancelled
+                        } catch (e: Exception) {
+                            AppLogger.w("Cloud upgrade failed for page ${page.index}: ${e.message}")
+                        }
+                    }
+                }
+            }
+
+            return BatchTranslationResult(mlKitResults.toMap(), mlKitService.providerName)
         }
-        if (mlKitResults.size < pages.size) {
-            AppLogger.w("ML Kit partial: ${mlKitResults.size}/${pages.size} pages translated")
+
+        // Tier 3: ML Kit fully unavailable — try cloud batch directly
+        AppLogger.w("ML Kit unavailable for all pages, trying cloud batch directly")
+        try {
+            val batchResult = cloudService.translatePages(pages, targetLanguage, sourceLanguage, context, bookContext, skipCache)
+            // DR-147: Invoke callback for each page when cloud batch succeeds (same as Tier 1)
+            val callback = cloudUpgradeCallback
+            if (callback != null) {
+                for (page in pages) {
+                    upgradeScope.launch(upgradeDispatcher) {
+                        try {
+                            val translation = batchResult.translations[page.index]
+                            if (translation != null) {
+                                callback(page.value, translation, targetLanguage)
+                            }
+                        } catch (e: CancellationException) {
+                            // scope cancelled
+                        } catch (e: Exception) {
+                            AppLogger.w("Cloud fallback callback failed for page ${page.index}: ${e.message}")
+                        }
+                    }
+                }
+            }
+            return batchResult
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw TranslationException("Both ML Kit and cloud translation failed: ${e.message}")
         }
-        return BatchTranslationResult(mlKitResults.toMap(), mlKitService.providerName)
     }
 
     // ── detectLanguage ─────────────────────────────────────────────────────────
@@ -160,7 +264,9 @@ class FallbackTranslationService @Inject constructor(
             return cloudService.detectLanguage(text)
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLogger.w("Cloud language detection failed: ${e.message}, falling back to ML Kit")
+        }
         return mlKitService.detectLanguage(text)
     }
 

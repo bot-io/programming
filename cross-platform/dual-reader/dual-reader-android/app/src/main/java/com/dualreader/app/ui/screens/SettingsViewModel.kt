@@ -41,55 +41,102 @@ class SettingsViewModel @Inject constructor(
     private val _translationInfo = MutableStateFlow<List<PageTranslationInfo>>(emptyList())
     val translationInfo: StateFlow<List<PageTranslationInfo>> = _translationInfo.asStateFlow()
 
+    // DR-113: Track clear translations errors to show user feedback
+    private val _clearError = MutableStateFlow<String?>(null)
+    val clearError: StateFlow<String?> = _clearError.asStateFlow()
+
+    // DR-115: Track loadTranslationInfo errors to show user feedback
+    private val _loadInfoError = MutableStateFlow<String?>(null)
+    val loadInfoError: StateFlow<String?> = _loadInfoError.asStateFlow()
+
     init {
         refreshCacheCount()
     }
 
     fun updateSettings(settings: ReadingSettings) {
         viewModelScope.launch {
-            settingsRepository.updateSettings { settings }
+            try {
+                settingsRepository.updateSettings { settings }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-128)
+            } catch (e: Exception) {
+                AppLogger.e("updateSettings: Failed to save settings: ${e.message}", e)
+            }
         }
     }
 
     fun clearAllTranslations() {
+        _clearError.value = null
         viewModelScope.launch {
-            cacheRepository.clearAll()
-            bookRepository.clearAllTranslations()
-            refreshCacheCount()
-            _translationInfo.value = emptyList()
+            try {
+                cacheRepository.clearAll()
+                bookRepository.clearAllTranslations()
+                refreshCacheCount()
+                _translationInfo.value = emptyList()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-128)
+            } catch (e: Exception) {
+                AppLogger.e("clearAllTranslations: Failed to clear translations: ${e.message}", e)
+                _clearError.value = "Failed to clear translations: ${e.message}"
+            }
         }
     }
 
+    // DR-113: Clear the error state after snackbar is shown
+    fun clearErrorShown() {
+        _clearError.value = null
+    }
+
+    // DR-115: Clear the loadInfoError state
+    fun loadInfoErrorShown() {
+        _loadInfoError.value = null
+    }
+
     fun loadTranslationInfo() {
+        _loadInfoError.value = null
         viewModelScope.launch {
-            val books = bookRepository.getAllBooks().first()
-            val allInfo = mutableListOf<PageTranslationInfo>()
-            for (book in books) {
-                val pages = bookRepository.getPagesForBook(book.id)
-                for (page in pages) {
-                    if (page.translations.isNotEmpty()) {
-                        allInfo.add(
-                            PageTranslationInfo(
-                                pageIndex = page.index,
-                                languages = page.translations.mapValues { (_, text) ->
-                                    text.take(80) + if (text.length > 80) "…" else ""
-                                },
-                                models = page.translations.keys.associateWith { lang ->
-                                    page.translationModel(lang)
-                                },
+            try {
+                val books = bookRepository.getAllBooks().first()
+                val allInfo = mutableListOf<PageTranslationInfo>()
+                for (book in books) {
+                    val pages = bookRepository.getPagesForBook(book.id)
+                    for (page in pages) {
+                        if (page.translations.isNotEmpty()) {
+                            allInfo.add(
+                                PageTranslationInfo(
+                                    pageIndex = page.index,
+                                    languages = page.translations.mapValues { (_, text) ->
+                                        text.take(80) + if (text.length > 80) "…" else ""
+                                    },
+                                    models = page.translations.keys.associateWith { lang ->
+                                        page.translationModel(lang)
+                                    },
+                                )
                             )
-                        )
+                        }
                     }
                 }
+                _translationInfo.value = allInfo
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-128)
+            } catch (e: Exception) {
+                AppLogger.e("loadTranslationInfo: Failed to load translation info: ${e.message}", e)
+                _loadInfoError.value = "Failed to load translation info: ${e.message}"
             }
-            _translationInfo.value = allInfo
         }
     }
 
     private fun refreshCacheCount() {
         viewModelScope.launch {
-            // Count translated pages from the pages table (what users see in the reader)
-            _cachedCount.value = bookRepository.getTranslatedPageCount()
+            try {
+                // Count translated pages from the pages table (what users see in the reader)
+                _cachedCount.value = bookRepository.getTranslatedPageCount()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve coroutine cancellation semantics (DR-128)
+            } catch (e: Exception) {
+                AppLogger.e("refreshCacheCount: Failed to fetch translated page count: ${e.message}", e)
+                // Keep the previous count on error - don't silently reset to 0
+            }
         }
     }
 }

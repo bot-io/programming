@@ -26,7 +26,10 @@ fun LegalScreen(
     LaunchedEffect(assetPath) {
         content = try {
             context.assets.open(assetPath).bufferedReader().use { it.readText() }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Preserve coroutine cancellation semantics (DR-136)
         } catch (e: Exception) {
+            android.util.Log.e("LegalScreen", "Failed to load legal document: $assetPath", e)
             "Could not load document."
         }
     }

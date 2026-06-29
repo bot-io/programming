@@ -7,8 +7,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.dualreader.app.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -30,34 +28,34 @@ class InstallationIdProvider @Inject constructor(
         private val KEY_INSTALLATION_ID = stringPreferencesKey("installation_id")
     }
 
+    @Volatile
     private var cachedId: String? = null
 
     /**
      * Get the installation ID, generating one if needed.
      * Caches the result in memory for fast repeated access.
+     *
+     * The read-or-generate logic runs inside a single [dataStore.edit] block,
+     * which DataStore serializes — so concurrent first-access callers can
+     * never both observe a missing key and generate different UUIDs.
      */
     suspend fun getInstallationId(): String {
         cachedId?.let { return it }
 
-        // Try to read from DataStore
-        val existing = dataStore.data.map { prefs ->
-            prefs[KEY_INSTALLATION_ID]
-        }.first()
-
-        if (existing != null) {
-            cachedId = existing
-            AppLogger.i("$TAG: Loaded existing installation ID: ${existing.take(8)}...")
-            return existing
+        // Atomically read-or-create within a single DataStore edit transaction.
+        // DataStore serializes all edit calls, so concurrent callers can never
+        // both observe a missing key and generate different UUIDs (DR-055).
+        val result = dataStore.edit { prefs ->
+            if (prefs[KEY_INSTALLATION_ID] == null) {
+                prefs[KEY_INSTALLATION_ID] = UUID.randomUUID().toString()
+                AppLogger.i("$TAG: Generated new installation ID")
+            }
         }
-
-        // Generate new ID
-        val newId = UUID.randomUUID().toString()
-        dataStore.edit { prefs ->
-            prefs[KEY_INSTALLATION_ID] = newId
-        }
-        cachedId = newId
-        AppLogger.i("$TAG: Generated new installation ID: ${newId.take(8)}...")
-        return newId
+        val id = result[KEY_INSTALLATION_ID]
+            ?: throw IllegalStateException("Installation ID key missing from DataStore after edit transaction")
+        cachedId = id
+        AppLogger.i("$TAG: Installation ID: ${id.take(8)}...")
+        return id
     }
 
     /**

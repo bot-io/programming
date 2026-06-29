@@ -166,4 +166,25 @@ class PaginateBookUseCaseTest {
 
         coVerify { bookRepo.deletePagesForBook(any()) }
     }
+
+    // ── DR-052: CancellationException must propagate without marking book FAILED ──
+
+    @Test
+    fun `cancellation propagates without marking book as FAILED`() = runTest {
+        coEvery { epubParser.extractParagraphs(any()) } throws
+            kotlinx.coroutines.CancellationException("cancelled")
+
+        val result = useCase(makeBook())
+
+        // runCatching wraps the CancellationException in Result.failure
+        assertTrue("Expected failure", result.isFailure)
+        assertTrue(
+            "Expected CancellationException, got: ${result.exceptionOrNull()}",
+            result.exceptionOrNull() is kotlinx.coroutines.CancellationException,
+        )
+        // Book must NOT be marked as FAILED on cancellation — it stays IN_PROGRESS
+        coVerify(exactly = 0) {
+            bookRepo.updateBook(match { it.paginationStatus == PaginationStatus.FAILED })
+        }
+    }
 }

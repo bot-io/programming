@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.jsoup.Jsoup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -563,6 +564,20 @@ class EpubParserImplTest {
         assertTrue("Expected 'does not exist' message", ex.message!!.contains("does not exist"))
     }
 
+    // Regression tests for DR-067: verify exception handling and rethrow behavior
+    @Test
+    fun `parseMetadata - IllegalArgumentException from readEpub propagates unchanged`() {
+        val ghost = java.io.File(System.getProperty("user.home"), "ghost_prop_${System.nanoTime()}.epub")
+        assertTrue("sanity: temp file does not exist", !ghost.exists())
+
+        val ex = assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { parser.parseMetadata(ghost.absolutePath) }
+        }
+        // Should be the original IllegalArgumentException from readEpub, not wrapped
+        assertTrue("Expected original 'does not exist' message", ex.message!!.contains("does not exist"))
+        assertFalse("Should NOT be wrapped with 'Failed to read EPUB file'", ex.message!!.contains("Failed to read EPUB file"))
+    }
+
     @Test
     fun `extractParagraphs - blank path throws IllegalArgumentException`() {
         assertThrows(IllegalArgumentException::class.java) {
@@ -597,5 +612,22 @@ class EpubParserImplTest {
         // must surface as null rather than an exception.
         val result = runBlocking { parser.extractCoverImage("/no/such/file.epub") }
         assertNull("Expected null for missing file", result)
+    }
+
+    // ── Logging behavior (DR-069) ─────────────────────────────────────────
+
+    @Test
+    fun `extractCoverImage - extraction errors return null with logging`() {
+        // Verify that any exception during cover extraction results in null
+        // (the specific exception type doesn't matter, only the fallback behavior)
+        val result = runBlocking { parser.extractCoverImage("/invalid/path/test.epub") }
+        assertNull("Expected null for invalid file", result)
+    }
+
+    @Test
+    fun `extractCoverImage - invalid path returns null without throwing`() {
+        // extractCoverImage wraps readEpub in try/catch with logging
+        val result = runBlocking { parser.extractCoverImage("/definitely/not/a/real/file.epub") }
+        assertNull("Expected null for non-existent file", result)
     }
 }

@@ -2,10 +2,13 @@ package com.dualreader.app.data.translation
 
 import com.dualreader.app.domain.services.TranslationException
 import com.dualreader.app.domain.services.TranslationService
+import com.dualreader.app.domain.services.BatchTranslationResult
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.junit4.MockKRule
+import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -14,15 +17,15 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * Tests for FallbackTranslationService — the tiered fallback chain.
+ * Tests for FallbackTranslationService — local-first architecture.
  *
- * Covers all failure paths through the Cloud → ML Kit fallback:
- * - Cloud succeeds (Gemini primary, GLM fallback — both go through "cloud")
- * - Cloud fails → ML Kit fallback
- * - Both fail → combined error message
- * - Context passing through fallback chain
- * - Chunking for long texts
- * - Batch operations
+ * DR-142: Updated to reflect local-first strategy (ML Kit instant → cloud background upgrade).
+ * Previous cloud-first tests have been adapted to test the new three-tier architecture:
+ * - Tier 1: ML Kit on-device (instant)
+ * - Tier 2: Cloud background upgrade (async, callback-driven)
+ * - Tier 3: Cloud direct fallback (ML Kit unavailable)
+ *
+ * These tests focus on edge cases and parameter passing not covered by LocalFirstTranslationTest.
  */
 class FallbackTranslationServiceTest {
 
@@ -45,17 +48,21 @@ class FallbackTranslationServiceTest {
         )
     }
 
-    // ── Cloud succeeds (Gemini or GLM — doesn't matter, both go through cloud) ─
+    // ── Tier 3: Cloud direct fallback (ML Kit unavailable) ─────────────────────
 
     @Test
-    fun `cloud succeeds - returns cloud result`() = runTest {
+    fun `ML Kit unavailable - falls back to cloud direct`() = runTest {
+        coEvery { mlKitService.translate("hello", "bg", null) } throws
+            TranslationException("ML Kit model not downloaded")
         coEvery { cloudService.translate("hello", "bg", null, null) } returns "здравей"
 
         assertEquals("здравей", fallbackService.translate("hello", "bg"))
     }
 
     @Test
-    fun `cloud succeeds with context - passes context through`() = runTest {
+    fun `cloud direct fallback - passes source language through`() = runTest {
+        coEvery { mlKitService.translate(any(), any(), any()) } throws
+            TranslationException("ML Kit error")
         coEvery { cloudService.translate("text", "bg", "en", match { it != null && it.contains("context") }) } returns "текст"
 
         val result = fallbackService.translate("text", "bg", "en", "context info")
@@ -63,105 +70,66 @@ class FallbackTranslationServiceTest {
         coVerify { cloudService.translate("text", "bg", "en", match { it != null }) }
     }
 
-    @Test
-    fun `cloud succeeds with source language - passes through`() = runTest {
-        coEvery { cloudService.translate("text", "bg", "en", null) } returns "текст"
-
-        fallbackService.translate("text", "bg", "en")
-        coVerify { cloudService.translate("text", "bg", "en", null) }
-    }
-
     // ── skipCache propagation (DR-047 regression) ──────────────────────────────
+    // Note: Background upgrade (Tier 2) can't be tested in unit tests because:
+    // 1. cloudUpgradeCallback is null in unit tests (set by ViewModel)
+    // 2. Background upgrade runs in GlobalScope and can't be verified with coVerify
+    // We only test Tier 3 (direct fallback) skipCache propagation here.
 
     @Test
-    fun `skipCache true is forwarded to cloud - enables re-translate cache bypass`() = runTest {
-        // Re-translate path: skipCache=true must reach the Worker so D1 is bypassed.
-        coEvery {
-            cloudService.translate(any(), any(), any(), any(), any(), eq(true))
-        } returns "retranslated"
+    fun `skipCache true in cloud direct fallback (Tier 3) when ML Kit fails`() = runTest {
+        // ML Kit fails
+        coEvery { mlKitService.translate(any(), any(), any()) } throws
+            TranslationException("ML Kit error")
+
+        // Cloud direct receives skipCache=true
+        coEvery { cloudService.translate(any(), any(), any(), any(), any(), eq(true)) } returns "cloud-result"
 
         val result = fallbackService.translate("text", "bg", "en", null, null, skipCache = true)
 
-        assertEquals("retranslated", result)
-        coVerify { cloudService.translate("text", "bg", "en", null, null, true) }
+        assertEquals("cloud-result", result)
+        coVerify { cloudService.translate(any(), any(), any(), any(), any(), eq(true)) }
     }
 
     @Test
-    fun `skipCache false by default - cloud called without cache bypass`() = runTest {
-        coEvery {
-            cloudService.translate(any(), any(), any(), any(), any(), eq(false))
-        } returns "normal"
+    fun `skipCache false in cloud direct fallback (Tier 3) when ML Kit fails`() = runTest {
+        // ML Kit fails
+        coEvery { mlKitService.translate(any(), any(), any()) } throws
+            TranslationException("ML Kit error")
 
-        val result = fallbackService.translate("text", "bg", "en")
+        // Cloud direct receives skipCache=false
+        coEvery { cloudService.translate(any(), any(), any(), any(), any(), eq(false)) } returns "cloud-result"
 
-        assertEquals("normal", result)
-        coVerify { cloudService.translate("text", "bg", "en", null, null, false) }
-    }
+        val result = fallbackService.translate("text", "bg", "en", skipCache = false)
 
-    // ── Cloud fails → ML Kit fallback ─────────────────────────────────────────
-
-    @Test
-    fun `cloud fails - falls back to ML Kit`() = runTest {
-        coEvery { cloudService.translate("hello", "bg", null, null) } throws TranslationException("Network error")
-        coEvery { mlKitService.translate("hello", "bg", null) } returns "здравей"
-
-        assertEquals("здравей", fallbackService.translate("hello", "bg"))
-    }
-
-    @Test
-    fun `cloud times out - falls back to ML Kit`() = runTest {
-        coEvery { cloudService.translate(any(), any(), any(), any()) } throws TranslationException("Translation timed out")
-        coEvery { mlKitService.translate("hello", "bg", null) } returns "здравей"
-
-        assertEquals("здравей", fallbackService.translate("hello", "bg"))
-    }
-
-    @Test
-    fun `cloud rate limited - falls back to ML Kit`() = runTest {
-        coEvery { cloudService.translate(any(), any(), any(), any()) } throws TranslationException("Rate limited")
-        coEvery { mlKitService.translate("hello", "bg", null) } returns "здравей"
-
-        assertEquals("здравей", fallbackService.translate("hello", "bg"))
-    }
-
-    @Test
-    fun `cloud 502 bad gateway - falls back to ML Kit`() = runTest {
-        coEvery { cloudService.translate(any(), any(), any(), any()) } throws TranslationException("Translation proxy error 502")
-        coEvery { mlKitService.translate("hello", "bg", null) } returns "здравей"
-
-        assertEquals("здравей", fallbackService.translate("hello", "bg"))
-    }
-
-    @Test
-    fun `ML Kit fallback does NOT receive context`() = runTest {
-        // ML Kit doesn't support context — it should be called without it
-        coEvery { cloudService.translate(any(), any(), any(), any()) } throws TranslationException("fail")
-        coEvery { mlKitService.translate("hello", "bg", null) } returns "здравей"
-
-        fallbackService.translate("hello", "bg", null, "some context")
-        coVerify { mlKitService.translate("hello", "bg", null) }
+        assertEquals("cloud-result", result)
+        coVerify { cloudService.translate(any(), any(), any(), any(), any(), eq(false)) }
     }
 
     // ── Both fail ──────────────────────────────────────────────────────────────
 
     @Test
-    fun `both fail - throws with both error messages`() = runTest {
-        coEvery { cloudService.translate(any(), any(), any(), any()) } throws TranslationException("Timeout 45s")
-        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit model not downloaded")
+    fun `ML Kit and cloud both fail - throws with both error messages`() = runTest {
+        coEvery { mlKitService.translate(any(), any(), any()) } throws
+            TranslationException("ML Kit model not downloaded")
+        coEvery { cloudService.translate(any(), any(), any(), any()) } throws
+            TranslationException("Timeout 45s")
 
         try {
             fallbackService.translate("hello", "bg")
             fail("Should have thrown")
         } catch (e: TranslationException) {
             assertTrue("Should mention cloud error", e.message!!.contains("Timeout 45s"))
-            assertTrue("Should mention ML Kit error", e.message!!.contains("ML Kit model not downloaded"))
+            assertTrue("Should mention ML Kit error", e.message!!.contains("ML Kit"))
         }
     }
 
     @Test
-    fun `cloud fails with runtime exception and ML Kit fails - throws`() = runTest {
-        coEvery { cloudService.translate(any(), any(), any(), any()) } throws RuntimeException("Unexpected crash")
-        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("Model error")
+    fun `ML Kit throws runtime exception and cloud fails - throws`() = runTest {
+        coEvery { mlKitService.translate(any(), any(), any()) } throws
+            RuntimeException("Unexpected crash")
+        coEvery { cloudService.translate(any(), any(), any(), any()) } throws
+            TranslationException("Cloud error")
 
         try {
             fallbackService.translate("hello", "bg")
@@ -217,7 +185,8 @@ class FallbackTranslationServiceTest {
     @Test
     fun `chunked text - context passed only to first chunk`() = runTest {
         val longText = "First paragraph.\n\nSecond paragraph."
-        coEvery { cloudService.translate(any(), eq("bg"), eq("en"), any()) } returns "текст"
+        coEvery { mlKitService.translate(any(), any(), any()) } returns "текст"
+        coEvery { cloudService.translate(any(), eq("bg"), eq("en"), any()) } returns "cloud-text"
 
         fallbackService.translate(longText, "bg", "en", "some context")
         // If split into 2 chunks, first gets context, second doesn't
@@ -228,9 +197,9 @@ class FallbackTranslationServiceTest {
     // ── Batch ──────────────────────────────────────────────────────────────────
 
     @Test
-    fun `batch - translates all items`() = runTest {
-        coEvery { cloudService.translate("hello", "bg", null, null) } returns "здравей"
-        coEvery { cloudService.translate("world", "bg", null, null) } returns "свят"
+    fun `batch - translates all items via ML Kit`() = runTest {
+        coEvery { mlKitService.translate("hello", "bg", null) } returns "здравей"
+        coEvery { mlKitService.translate("world", "bg", null) } returns "свят"
 
         assertEquals(listOf("здравей", "свят"), fallbackService.translateBatch(listOf("hello", "world"), "bg"))
     }
@@ -241,31 +210,32 @@ class FallbackTranslationServiceTest {
     }
 
     @Test
-    fun `batch - falls back per item`() = runTest {
-        // First item: cloud succeeds
+    fun `batch - ML Kit unavailable, falls back to cloud per item`() = runTest {
+        // ML Kit unavailable for all items
+        coEvery { mlKitService.translate(any(), any(), any()) } throws
+            TranslationException("ML Kit error")
+        // Cloud succeeds for all
         coEvery { cloudService.translate("hello", "bg", null, null) } returns "здравей"
-        // Second item: cloud fails, ML Kit succeeds
-        coEvery { cloudService.translate("fail", "bg", null, null) } throws TranslationException("error")
-        coEvery { mlKitService.translate("fail", "bg", null) } returns "неуспех"
+        coEvery { cloudService.translate("world", "bg", null, null) } returns "свят"
 
-        val result = fallbackService.translateBatch(listOf("hello", "fail"), "bg")
-        assertEquals(listOf("здравей", "неуспех"), result)
+        val result = fallbackService.translateBatch(listOf("hello", "world"), "bg")
+        assertEquals(listOf("здравей", "свят"), result)
     }
 
-    // ── Cancellation handling (DR-050 regression) ──────────────────────────────
+    // ── Cancellation handling (DR-050/DR-136 regression) ───────────────────────
     //
     // CancellationException thrown by a suspend call must propagate — NOT be
     // swallowed by the generic `catch (e: Exception)` fallback handlers. If it
-    // were swallowed, a cancelled translation would fall through to ML Kit and
-    // surface a spurious "Both cloud and offline failed" error instead of
-    // stopping cleanly (same bug class as DR-049).
+    // were swallowed, a cancelled translation would fall through to the next tier
+    // and surface a spurious "Both ML Kit and cloud failed" error instead of
+    // stopping cleanly.
 
     @Test
-    fun `cancellation from cloud translate propagates - ML Kit not consulted`() = runTest {
+    fun `cancellation from ML Kit translate propagates - cloud not consulted`() = runTest {
         coEvery {
-            cloudService.translate(any(), any(), any(), any(), any(), any())
+            mlKitService.translate(any(), any(), any())
         } throws CancellationException("job cancelled")
-        coEvery { mlKitService.translate(any(), any(), any()) } returns "ml-result"
+        coEvery { cloudService.translate(any(), any(), any(), any(), any(), any()) } returns "cloud-result"
 
         var caught: Throwable? = null
         try {
@@ -275,16 +245,18 @@ class FallbackTranslationServiceTest {
         }
 
         assertTrue("Expected CancellationException to propagate, got: $caught", caught is CancellationException)
-        // Cancellation must not fall through to the ML Kit tier
-        coVerify(exactly = 0) { mlKitService.translate(any(), any(), any()) }
+        // Cancellation must not fall through to the cloud tier
+        coVerify(exactly = 0) { cloudService.translate(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
-    fun `cancellation from cloud batch propagates - ML Kit loop skipped`() = runTest {
+    fun `cancellation from ML Kit in batch propagates - cloud batch not consulted`() = runTest {
+        coEvery {
+            mlKitService.translate(any(), any(), any())
+        } throws CancellationException("batch cancelled")
         coEvery {
             cloudService.translatePages(any(), any(), any(), any(), any(), any())
-        } throws CancellationException("batch cancelled")
-        coEvery { mlKitService.translate(any(), any(), any()) } returns "ml-result"
+        } returns mockk()
 
         var caught: Throwable? = null
         try {
@@ -294,8 +266,8 @@ class FallbackTranslationServiceTest {
         }
 
         assertTrue("Expected CancellationException to propagate, got: $caught", caught is CancellationException)
-        // Cancellation must not fall through into the per-page ML Kit loop
-        coVerify(exactly = 0) { mlKitService.translate(any(), any(), any()) }
+        // Cancellation must not fall through into the cloud batch path
+        coVerify(exactly = 0) { cloudService.translatePages(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -317,8 +289,9 @@ class FallbackTranslationServiceTest {
     // ── Metadata ───────────────────────────────────────────────────────────────
 
     @Test
-    fun `provider name includes fallback`() {
-        assertTrue(fallbackService.providerName.contains("Fallback"))
+    fun `provider name describes local-first architecture`() {
+        assertTrue(fallbackService.providerName.contains("ML Kit"))
+        assertTrue(fallbackService.providerName.contains("Cloud"))
     }
 
     @Test
@@ -327,6 +300,7 @@ class FallbackTranslationServiceTest {
     }
 
     // ── detectLanguage ─────────────────────────────────────────────────────────
+    // Note: detectLanguage uses cloud-first (unlike translate which uses ML Kit-first)
 
     @Test
     fun `detectLanguage - cloud succeeds`() = runTest {
@@ -336,7 +310,8 @@ class FallbackTranslationServiceTest {
 
     @Test
     fun `detectLanguage - cloud fails, ML Kit succeeds`() = runTest {
-        coEvery { cloudService.detectLanguage(any()) } throws TranslationException("fail")
+        coEvery { cloudService.detectLanguage(any()) } throws
+            TranslationException("Cloud error")
         coEvery { mlKitService.detectLanguage("hello") } returns "en"
         assertEquals("en", fallbackService.detectLanguage("hello"))
     }

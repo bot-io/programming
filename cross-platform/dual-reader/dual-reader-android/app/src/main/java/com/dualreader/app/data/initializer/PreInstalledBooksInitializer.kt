@@ -45,7 +45,11 @@ class PreInstalledBooksInitializer(
         File(context.filesDir, ".pre_installed_books_v3").exists()
 
     private fun markInitialized() {
-        File(context.filesDir, ".pre_installed_books_v3").createNewFile()
+        try {
+            File(context.filesDir, ".pre_installed_books_v3").createNewFile()
+        } catch (e: Exception) {
+            AppLogger.w("[PreInstalledBooks] Failed to create initialization marker file: ${e.message}")
+        }
     }
 
     suspend fun importPreInstalledBooks() {
@@ -57,6 +61,9 @@ class PreInstalledBooksInitializer(
         val booksDir = File(context.filesDir, BOOKS_DIR).apply { mkdirs() }
 
         var successCount = 0
+        val successfulBooks = mutableListOf<String>()
+        val failedBooks = mutableListOf<Pair<String, String>>()  // (filename, error)
+
         for ((filename, expectedTitle) in PRE_INSTALLED_BOOKS) {
             try {
                 val destFile = File(booksDir, filename)
@@ -71,7 +78,7 @@ class PreInstalledBooksInitializer(
                 val result = importBookUseCase(destFile.absolutePath)
                 if (result.isSuccess) {
                     val book = result.getOrThrow()
-                    AppLogger.d("[PreInstalledBooks] Imported: $expectedTitle (id=${book.id})")
+                    AppLogger.i("[PreInstalledBooks] Successfully imported: $expectedTitle (id=${book.id})")
 
                     // Paginate immediately so the book is readable
                     val paginateResult = paginateBookUseCase(
@@ -80,26 +87,42 @@ class PreInstalledBooksInitializer(
                         screenHeight = DEFAULT_PAGE_HEIGHT,
                     )
                     if (paginateResult.isSuccess) {
-                        AppLogger.d("[PreInstalledBooks] Paginated: $expectedTitle (${book.totalPages} pages)")
+                        AppLogger.i("[PreInstalledBooks] Successfully paginated: $expectedTitle (${book.totalPages} pages)")
                         successCount++
+                        successfulBooks.add(expectedTitle)
                     } else {
                         AppLogger.e("[PreInstalledBooks] Failed to paginate $expectedTitle: ${paginateResult.exceptionOrNull()?.message}")
                         // Still count as success since the book is imported — pagination can retry on open
                         successCount++
+                        successfulBooks.add(expectedTitle + " (pagination failed)")
                     }
                 } else {
-                    AppLogger.e("[PreInstalledBooks] Failed to import $expectedTitle: ${result.exceptionOrNull()?.message}")
+                    val error = result.exceptionOrNull()?.message ?: "Unknown error"
+                    AppLogger.e("[PreInstalledBooks] Failed to import $expectedTitle ($filename): $error")
+                    failedBooks.add(filename to error)
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Propagate cancellation — don't continue importing remaining books (DR-053)
             } catch (e: Exception) {
-                AppLogger.e("[PreInstalledBooks] Error importing $expectedTitle: ${e.message}", e)
+                val error = e.message ?: "Unknown error"
+                AppLogger.e("[PreInstalledBooks] Error importing $expectedTitle ($filename): $error", e)
+                failedBooks.add(filename to error)
             }
+        }
+
+        AppLogger.i("[PreInstalledBooks] Summary: $successCount/${PRE_INSTALLED_BOOKS.size} books imported")
+        if (successfulBooks.isNotEmpty()) {
+            AppLogger.i("[PreInstalledBooks] Success: ${successfulBooks.joinToString(", ")}")
+        }
+        if (failedBooks.isNotEmpty()) {
+            AppLogger.e("[PreInstalledBooks] Failures: ${failedBooks.joinToString(", ") { "(filename=$it.first, error=$it.second)" }}")
         }
 
         if (successCount > 0) {
             markInitialized()
-            AppLogger.i("[PreInstalledBooks] Import complete: $successCount/${PRE_INSTALLED_BOOKS.size} succeeded")
+            AppLogger.i("[PreInstalledBooks] Marked as initialized (partial success allowed)")
         } else {
-            AppLogger.w("[PreInstalledBooks] Import complete but 0 books succeeded; not marking as initialized (will retry on next launch)")
+            AppLogger.w("[PreInstalledBooks] 0 books succeeded; not marking as initialized (will retry on next launch)")
         }
     }
 }

@@ -15,8 +15,8 @@ android {
         applicationId = "com.dualreader.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 72
-        versionName = "1.0.72"
+        versionCode = 90
+        versionName = "1.0.90"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -86,10 +86,13 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
-// Increase test JVM heap for large test suite (35+ classes, 450+ tests)
+// Increase test JVM heap for large test suite (64+ classes, 1046+ tests)
 tasks.withType<Test>().configureEach {
-    maxHeapSize = "4g"
-    jvmArgs("-XX:MaxMetaspaceSize=1g")
+    maxHeapSize = "2g"
+    jvmArgs("-XX:MaxMetaspaceSize=512m")
+    // Fork a new JVM every 100 tests to prevent OOM from memory accumulation
+    forkEvery = 100
+    maxParallelForks = 1
 }
 
 dependencies {
@@ -168,6 +171,7 @@ dependencies {
     testImplementation(libs.truth)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.robolectric)
+    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.20")
     // Required for org.json.JSONObject in JVM unit tests (Android SDK provides stubs only)
     testImplementation("org.json:json:20240303")
 

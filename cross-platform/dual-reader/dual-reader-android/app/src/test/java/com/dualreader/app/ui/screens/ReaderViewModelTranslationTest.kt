@@ -44,6 +44,8 @@ class ReaderViewModelTranslationTest {
     private lateinit var paginateBookUseCase: PaginateBookUseCase
     private lateinit var translationCacheRepository: TranslationCacheRepository
     private lateinit var ttsService: com.dualreader.app.domain.services.TtsService
+    private lateinit var translationService: com.dualreader.app.domain.services.TranslationService
+    private lateinit var mlKitModelManager: com.dualreader.app.data.translation.MlKitModelManager
 
     private val testBook = Book(
         id = "book1", title = "Test Book", author = "Author",
@@ -72,6 +74,8 @@ class ReaderViewModelTranslationTest {
         paginateBookUseCase = mockk(relaxed = true)
         translationCacheRepository = mockk(relaxed = true)
         ttsService = mockk(relaxed = true)
+        translationService = mockk(relaxed = true)
+        mlKitModelManager = mockk(relaxed = true)
 
         coEvery { bookRepository.getBookById("book1") } returns testBook
         coEvery { bookRepository.getPagesForBook("book1") } returns testPages
@@ -91,8 +95,9 @@ class ReaderViewModelTranslationTest {
             paginateBookUseCase = paginateBookUseCase,
             translationCacheRepository = translationCacheRepository,
             ttsService = ttsService,
-            translationService = mockk(relaxed = true),
-            mlKitModelManager = mockk(relaxed = true),
+            translationService = translationService,
+            fallbackTranslationService = mockk(relaxed = true),
+            mlKitModelManager = mlKitModelManager,
         )
     }
 
@@ -606,4 +611,133 @@ class ReaderViewModelTranslationTest {
         // After the fix, only paragraph 1 should complete.
         assertEquals(listOf(1), translatedIndices)
     }
+
+    // ── DR-051: CancellationException must not surface spurious errors ────
+
+    @Test
+    fun `translateCurrentPage - cancellation does not consult ML Kit manager or set error`() =
+        runTest(testDispatcher) {
+            // Suspend the batch translate so the job is in-flight when we cancel.
+            val gate = kotlinx.coroutines.CompletableDeferred<Result<BatchTranslationResult>>()
+            coEvery {
+                translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any())
+            } coAnswers { gate.await() }
+
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            vm.translateCurrentPage()
+            assertTrue(vm.uiState.value is ReaderUiState.ReaderReady)
+
+            vm.cancelTranslation()
+            advanceUntilIdle()
+
+            // Before DR-051 the catch(e: Exception) swallowed CancellationException and
+            // called handleTranslationFailure() → mlKitModelManager.getAvailableModels().
+            coVerify(exactly = 0) { mlKitModelManager.getAvailableModels() }
+            assertNull(
+                "Cancellation must not set a translation error",
+                (vm.uiState.value as ReaderUiState.ReaderReady).translationError,
+            )
+        }
+
+    @Test
+    fun `translateAllPages - cancellation does not set a batch translation error`() =
+        runTest(testDispatcher) {
+            val gate = kotlinx.coroutines.CompletableDeferred<Result<BatchTranslationResult>>()
+            coEvery {
+                translatePageUseCase.translateBatchWithContext(any(), any(), any(), any(), any(), any())
+            } coAnswers { gate.await() }
+
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            vm.translateAllPages()
+            vm.cancelTranslation()
+            advanceUntilIdle()
+
+            assertNull(
+                "Cancellation must not set a translation error",
+                (vm.uiState.value as ReaderUiState.ReaderReady).translationError,
+            )
+        }
+
+    @Test
+    fun `translateWord - rapid second lookup cancels the first without a spurious error`() =
+        runTest(testDispatcher) {
+            // Keep the translation suspended forever so the cancelled job's catch is observable.
+            val gate = kotlinx.coroutines.CompletableDeferred<String>()
+            coEvery { translationService.translate(any(), any(), any()) } coAnswers { gate.await() }
+
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            vm.translateWord("hello", isFromOriginal = true)
+            vm.translateWord("world", isFromOriginal = true) // cancels "hello"
+            advanceUntilIdle()
+
+            assertNull("Rapid word lookup must not surface a spurious error", vm.wordTranslation.value?.error)
+        }
+
+    @Test
+    fun `loadBook - switching books does not emit a phantom Error state`() =
+        runTest(testDispatcher) {
+            val book2 = testBook.copy(id = "book2", title = "Second Book")
+            coEvery { bookRepository.getBookById("book2") } returns book2
+            // book2 has no cached pages → triggers auto-pagination which we suspend.
+            coEvery { bookRepository.getPagesForBook("book2") } returns emptyList()
+
+            // Suspend pagination only for book2 so book1 loads normally and book2 stays in-flight.
+            val paginateGate = kotlinx.coroutines.CompletableDeferred<Unit>()
+            coEvery { paginateBookUseCase(any(), any(), any()) } coAnswers {
+                if (firstArg<Book>().id == "book2") {
+                    paginateGate.await() // suspend book2's auto-pagination indefinitely
+                }
+                Result.success(Unit)
+            }
+
+            val vm = createViewModel("book1")
+            advanceUntilIdle()
+            assertTrue(vm.uiState.value is ReaderUiState.ReaderReady)
+
+            vm.loadBook("book2") // cancels book1's load
+            advanceUntilIdle()
+
+            // book2 is still suspended on the gate, so nothing overwrites book1's catch result.
+            // Before DR-051 the swallowed CancellationException emitted a phantom Error here.
+            assertFalse(
+                "Book switch must never leave a phantom Error state: ${vm.uiState.value}",
+                vm.uiState.value is ReaderUiState.Error,
+            )
+        }
+
+    // ── DR-053: CancellationException during handleTranslationFailure ───
+
+    @Test
+    fun `translateCurrentPage - cancellation during handleTranslationFailure does not set spurious error`() =
+        runTest(testDispatcher) {
+            // Make the batch translation fail so we enter handleTranslationFailure
+            stubTranslate(Result.failure(RuntimeException("Cloud translation failed")))
+
+            // Suspend getAvailableModels so we can cancel mid-call
+            val gate = kotlinx.coroutines.CompletableDeferred<List<com.dualreader.app.data.translation.LanguageModelInfo>>()
+            coEvery { mlKitModelManager.getAvailableModels() } coAnswers { gate.await() }
+
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            vm.translateCurrentPage()
+            advanceUntilIdle() // batch fails → enters handleTranslationFailure → suspends on getAvailableModels
+
+            // Cancel while suspended in handleTranslationFailure's getAvailableModels call
+            vm.cancelTranslation()
+            advanceUntilIdle()
+
+            // Before DR-053: CancellationException from getAvailableModels was swallowed
+            // by catch(e: Exception), and handleTranslationFailure set a spurious error.
+            assertNull(
+                "Cancellation during handleTranslationFailure must not set a translation error",
+                (vm.uiState.value as ReaderUiState.ReaderReady).translationError,
+            )
+        }
 }

@@ -90,7 +90,8 @@ object ParagraphAligner {
         for (i in matches.indices) {
             val contentStart = matches[i].range.last + 1
             val contentEnd = if (i + 1 < matches.size) matches[i + 1].range.first else translatedText.length
-            val content = translatedText.substring(contentStart, contentEnd).trim()
+            // DR-092: Strip any residual markers the LLM may have duplicated inside content
+            val content = stripMarkers(translatedText.substring(contentStart, contentEnd)).trim()
             segments.add(content)
         }
 

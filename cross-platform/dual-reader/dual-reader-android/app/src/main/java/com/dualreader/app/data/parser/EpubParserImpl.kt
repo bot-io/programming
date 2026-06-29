@@ -4,6 +4,7 @@ import com.dualreader.app.domain.entities.BookChapter
 import com.dualreader.app.domain.services.EpubParserService
 import com.dualreader.app.domain.services.ExtractedParagraph
 import com.dualreader.app.domain.services.ParsedEpub
+import com.dualreader.app.util.AppLogger
 import io.documentnode.epub4j.domain.Book as EpubBook
 import io.documentnode.epub4j.epub.EpubReader
 import kotlinx.coroutines.Dispatchers
@@ -18,28 +19,44 @@ class EpubParserImpl @Inject constructor() : EpubParserService {
 
     override suspend fun parseMetadata(filePath: String): ParsedEpub =
         withContext(Dispatchers.IO) {
-            val epubBook = readEpub(filePath)
-            val metadata = epubBook.metadata
+            val epubBook = try {
+                readEpub(filePath)
+            } catch (e: IllegalArgumentException) {
+                throw e
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Failed to read EPUB file: $filePath", e)
+            }
 
-            val title = metadata.titles.firstOrNull() ?: "Unknown"
-            val author = metadata.authors.joinToString(", ") { it.toString() }.ifBlank { "Unknown" }
-            val language = metadata.language
-            val publisher = metadata.publishers.firstOrNull()
-            val description = metadata.descriptions.firstOrNull()
+            try {
+                val metadata = epubBook.metadata
 
-            val coverImageBytes = try { epubBook.coverImage?.data } catch (_: Exception) { null }
+                val title = metadata.titles.firstOrNull() ?: "Unknown"
+                val author = metadata.authors.joinToString(", ") { it.toString() }.ifBlank { "Unknown" }
+                val language = metadata.language
+                val publisher = metadata.publishers.firstOrNull()
+                val description = metadata.descriptions.firstOrNull()
 
-            val chapters = buildChapterList(epubBook)
+                val coverImageBytes = try {
+                    epubBook.coverImage?.data
+                } catch (e: Exception) {
+                    AppLogger.w("Failed to extract cover image from EPUB: $filePath. Error: ${e.message}")
+                    null
+                }
 
-            ParsedEpub(
-                title = title,
-                author = author,
-                language = language,
-                publisher = publisher,
-                description = description,
-                chapters = chapters,
-                coverImageBytes = coverImageBytes,
-            )
+                val chapters = buildChapterList(epubBook)
+
+                ParsedEpub(
+                    title = title,
+                    author = author,
+                    language = language,
+                    publisher = publisher,
+                    description = description,
+                    chapters = chapters,
+                    coverImageBytes = coverImageBytes,
+                )
+            } catch (e: Exception) {
+                throw e
+            }
         }
 
     override suspend fun extractChapterText(filePath: String, chapterIndex: Int): String =
@@ -54,7 +71,12 @@ class EpubParserImpl @Inject constructor() : EpubParserService {
 
     override suspend fun extractCoverImage(filePath: String): ByteArray? =
         withContext(Dispatchers.IO) {
-            try { readEpub(filePath).coverImage?.data } catch (_: Exception) { null }
+            try {
+                readEpub(filePath).coverImage?.data
+            } catch (e: Exception) {
+                AppLogger.w("Failed to extract cover image from EPUB: $filePath. Error: ${e.message}")
+                null
+            }
         }
 
     override suspend fun extractFullText(filePath: String): String =
@@ -117,7 +139,12 @@ class EpubParserImpl @Inject constructor() : EpubParserService {
                             }
                         }
                     }
-                } catch (_: Exception) { }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    // Propagate cancellation immediately - don't swallow it (DR-108)
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("Failed to process chapter ${spineIndex + 1} in EPUB: $filePath. Error: ${e.message}")
+                }
             }
 
             paragraphs

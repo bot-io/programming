@@ -29,10 +29,11 @@ class ConvertersTest {
 
     @Test
     fun `fromTimestamp converts epoch millis to LocalDateTime`() {
-        val epochMillis = 1_700_000_000_000L // ~Nov 2023
+        // 123 ms non-zero to verify sub-second precision (DR-056)
+        val epochMillis = 1_700_000_000_123L
         val result = converters.fromTimestamp(epochMillis)
         assertEquals(
-            LocalDateTime.ofEpochSecond(epochMillis / 1000, 0, ZoneOffset.UTC),
+            LocalDateTime.of(2023, 11, 14, 22, 13, 20, 123_000_000),
             result,
         )
     }
@@ -52,6 +53,14 @@ class ConvertersTest {
     @Test
     fun `timestamp round trip preserves value`() {
         val original = LocalDateTime.of(2024, 1, 1, 0, 0, 0)
+        val restored = converters.fromTimestamp(converters.toTimestamp(original))
+        assertEquals(original, restored)
+    }
+
+    @Test
+    fun `timestamp round trip preserves millisecond precision`() {
+        // DR-056: sub-second millis was silently dropped on round-trip.
+        val original = LocalDateTime.of(2024, 6, 15, 10, 30, 45, 789_000_000)
         val restored = converters.fromTimestamp(converters.toTimestamp(original))
         assertEquals(original, restored)
     }

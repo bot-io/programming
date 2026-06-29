@@ -30,7 +30,7 @@ import org.junit.Test
  * Covers DR-041 acceptance criteria:
  *  1. End-to-end translate through the real fallback chain
  *  2. skipCache flag propagation
- *  3. Fallback chain (cloud → ML Kit)
+ *  3. Fallback chain (ML Kit → cloud)
  *  4. Batch translation error recovery
  *
  * NOTE on MockK + Kotlin default params: calls that use defaulted trailing args (e.g. the
@@ -65,6 +65,9 @@ class TranslationPipelineIntegrationTest {
         // Relaxed mock returns "" (not null) for String? — force explicit cache misses.
         coEvery { cacheRepository.get(any(), any(), any()) } returns null
         coEvery { cacheRepository.put(any(), any(), any(), any(), any()) } returns Unit
+        // DR-147: @RelaxedMockK returns empty string for ML Kit by default, which is treated as failure
+        // Tests that need ML Kit to succeed will override this in their body with explicit coEvery
+        // Tests that need ML Kit to throw will override this with explicit coEvery throws
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -73,6 +76,8 @@ class TranslationPipelineIntegrationTest {
 
     @Test
     fun `e2e - cache miss translates through cloud via fallback and caches result`() = runTest {
+        // DR-147: ML Kit throws to fall through to cloud (Tier 3)
+        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit unavailable")
         coEvery { cloudService.translate(any(), any(), any(), any()) } returns "Здравей"
 
         val result = useCase("hello", targetLanguage = "bg", sourceLanguage = "en")
@@ -81,7 +86,6 @@ class TranslationPipelineIntegrationTest {
         assertEquals("Здравей", result.getOrThrow())
         coVerify(exactly = 1) { cloudService.translate("hello", "bg", "en", any()) }
         coVerify(exactly = 1) { cacheRepository.put("hello", "en", "bg", "Здравей") }
-        coVerify(exactly = 0) { mlKitService.translate(any(), any(), any()) }
     }
 
     @Test
@@ -99,6 +103,8 @@ class TranslationPipelineIntegrationTest {
 
     @Test
     fun `e2e - batch with multiple pages translates through cloud batch endpoint`() = runTest {
+        // DR-147: ML Kit throws to fall through to cloud (Tier 3)
+        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit unavailable")
         val pages = listOf(
             PageToTranslate(index = 0, text = "First page"),
             PageToTranslate(index = 1, text = "Second page"),
@@ -120,6 +126,8 @@ class TranslationPipelineIntegrationTest {
 
     @Test
     fun `e2e - book context is serialized and propagated through fallback to cloud`() = runTest {
+        // DR-147: ML Kit throws to fall through to cloud (Tier 3)
+        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit unavailable")
         coEvery { cloudService.translate(any(), any(), any(), any()) } returns "translated"
         val ctx = BookContext(
             title = "The Old Man and the Sea",
@@ -146,6 +154,8 @@ class TranslationPipelineIntegrationTest {
 
     @Test
     fun `skipCache - forceRetranslate bypasses cache read end-to-end`() = runTest {
+        // DR-147: ML Kit throws to fall through to cloud (Tier 3)
+        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit unavailable")
         coEvery { cloudService.translate(any(), any(), any(), any(), any(), eq(true)) } returns "Fresh translation"
 
         val result = useCase("hello", targetLanguage = "bg", sourceLanguage = "en", forceRetranslate = true)
@@ -162,6 +172,8 @@ class TranslationPipelineIntegrationTest {
 
     @Test
     fun `skipCache - batch forceRetranslate propagates skipCache=true to cloud endpoint`() = runTest {
+        // DR-147: ML Kit throws to fall through to cloud (Tier 3)
+        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit unavailable")
         val pages = listOf(
             PageToTranslate(index = 0, text = "P0"),
             PageToTranslate(index = 1, text = "P1"),
@@ -180,6 +192,8 @@ class TranslationPipelineIntegrationTest {
 
     @Test
     fun `skipCache - normal batch passes skipCache=false to cloud endpoint`() = runTest {
+        // DR-147: ML Kit throws to fall through to cloud (Tier 3)
+        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit unavailable")
         val pages = listOf(
             PageToTranslate(index = 0, text = "P0"),
             PageToTranslate(index = 1, text = "P1"),
@@ -193,40 +207,45 @@ class TranslationPipelineIntegrationTest {
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    //  CRITERION 3: Fallback chain (cloud → ML Kit)
+    // ════════════════════════════════════════════════════════════════════════
+    //  CRITERION 3: Fallback chain (ML Kit → cloud)
     // ════════════════════════════════════════════════════════════════════════
 
     @Test
-    fun `fallback - cloud failure transparently falls back to ML Kit through use case`() = runTest {
-        coEvery { cloudService.translate(any(), any(), any(), any()) } throws TranslationException("cloud down")
-        coEvery { mlKitService.translate(any(), any(), any()) } returns "Здравей (offline)"
+    fun `fallback - ML Kit failure falls back to cloud through use case`() = runTest {
+        // ML Kit fails (Tier 1), cloud succeeds (Tier 3)
+        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit unavailable")
+        coEvery { cloudService.translate(any(), any(), any(), any()) } returns "Здравей (cloud)"
 
         val result = useCase("hello", targetLanguage = "bg", sourceLanguage = "en")
 
         assertTrue(result.isSuccess)
-        assertEquals("Здравей (offline)", result.getOrThrow())
-        coVerify(exactly = 1) { cloudService.translate("hello", "bg", "en", any()) }
+        assertEquals("Здравей (cloud)", result.getOrThrow())
         coVerify(exactly = 1) { mlKitService.translate("hello", "bg", "en") }
-        coVerify(exactly = 1) { cacheRepository.put("hello", "en", "bg", "Здравей (offline)") }
+        coVerify(exactly = 1) { cloudService.translate("hello", "bg", "en", any()) }
+        coVerify(exactly = 1) { cacheRepository.put("hello", "en", "bg", "Здравей (cloud)") }
     }
 
     @Test
-    fun `fallback - cloud and ML Kit both fail returns Result failure`() = runTest {
+    fun `fallback - ML Kit and cloud both fail returns Result failure`() = runTest {
+        // ML Kit fails (Tier 1), cloud also fails (Tier 3)
+        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit unavailable")
         coEvery { cloudService.translate(any(), any(), any(), any()) } throws TranslationException("cloud timeout")
-        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("model not downloaded")
 
         val result = useCase("hello", targetLanguage = "bg", sourceLanguage = "en")
 
         assertTrue(result.isFailure)
         val ex = result.exceptionOrNull()
         assertNotNull(ex)
-        assertTrue(ex!!.message!!.contains("cloud timeout"))
-        assertTrue(ex.message!!.contains("model not downloaded"))
+        assertTrue(ex!!.message!!.contains("Translation failed"))
+        assertTrue(ex.message!!.contains("cloud timeout"))
         coVerify(exactly = 0) { cacheRepository.put(any(), any(), any(), any()) }
     }
 
     @Test
     fun `fallback - batch cloud returns partial results, gaps remain unfilled`() = runTest {
+        // DR-147: ML Kit throws to fall through to cloud (Tier 3)
+        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit unavailable")
         val pages = listOf(
             PageToTranslate(index = 0, text = "P0"),
             PageToTranslate(index = 1, text = "P1"),
@@ -243,7 +262,6 @@ class TranslationPipelineIntegrationTest {
         assertEquals("T0", translations[0])
         assertEquals("T2", translations[2])
         assertEquals(2, translations.size)
-        coVerify(exactly = 0) { mlKitService.translate(any(), any(), any()) }
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -292,6 +310,8 @@ class TranslationPipelineIntegrationTest {
 
     @Test
     fun `recovery - partial batch delivers onPageTranslated callback for returned pages`() = runTest {
+        // DR-147: ML Kit throws to fall through to cloud (Tier 3)
+        coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit unavailable")
         val pages = listOf(
             PageToTranslate(index = 0, text = "P0"),
             PageToTranslate(index = 1, text = "P1"),

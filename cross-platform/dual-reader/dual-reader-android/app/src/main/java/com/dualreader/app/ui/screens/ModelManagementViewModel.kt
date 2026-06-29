@@ -37,6 +37,8 @@ class ModelManagementViewModel @Inject constructor(
             try {
                 val models = modelManager.getAvailableModels()
                 _uiState.value = _uiState.value.copy(models = models, isLoading = false)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // VM cleared — don't show spurious error (DR-052)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
             }
@@ -49,6 +51,8 @@ class ModelManagementViewModel @Inject constructor(
             try {
                 modelManager.downloadModel(langCode)
                 loadModels()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // VM cleared — don't show spurious error (DR-052)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = "Download failed: ${e.message}")
             } finally {
@@ -62,6 +66,8 @@ class ModelManagementViewModel @Inject constructor(
             try {
                 modelManager.deleteModel(langCode)
                 loadModels()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // VM cleared — don't show spurious error (DR-052)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = "Delete failed: ${e.message}")
             }

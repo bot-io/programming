@@ -7,6 +7,7 @@ import com.dualreader.app.domain.entities.ReaderTheme
 import com.dualreader.app.domain.entities.ReadingSettings
 import com.dualreader.app.domain.entities.TranslationProvider
 import com.dualreader.app.domain.repositories.SettingsRepository
+import com.dualreader.app.util.AppLogger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -64,6 +65,7 @@ class SettingsRepositoryImpl @Inject constructor(
 
     // ── Onboarding ──────────────────────────────────────────────────
     override val isOnboardingCompleted: Flow<Boolean> = dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { it[Keys.ONBOARDING_COMPLETED] ?: false }
 
     override suspend fun setOnboardingCompleted() {
@@ -72,6 +74,7 @@ class SettingsRepositoryImpl @Inject constructor(
 
     // ── Target Language ─────────────────────────────────────────────
     override val targetLanguage: Flow<String> = dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { it[Keys.TARGET_LANGUAGE] ?: "es" }
 
     override suspend fun setTargetLanguage(lang: String) {
@@ -84,7 +87,13 @@ class SettingsRepositoryImpl @Inject constructor(
         fontFamily = this[Keys.FONT_FAMILY] ?: "Default",
         lineHeight = this[Keys.LINE_HEIGHT] ?: 1.5f,
         margins = this[Keys.MARGINS] ?: 16,
-        theme = try { ReaderTheme.valueOf(this[Keys.THEME] ?: "DARK") } catch (_: Exception) { ReaderTheme.DARK },
+        theme = try {
+            ReaderTheme.valueOf(this[Keys.THEME] ?: "DARK")
+        } catch (e: Exception) {
+            val themeValue = this[Keys.THEME]
+            AppLogger.w("Failed to parse theme: '$themeValue', using DARK. Error: ${e.message}")
+            ReaderTheme.DARK
+        },
         targetLanguage = this[Keys.TARGET_LANGUAGE] ?: "es",
         translationProvider = try {
             val name = this[Keys.TRANSLATION_PROVIDER] ?: "GEMINI_FLASH"
@@ -94,11 +103,21 @@ class SettingsRepositoryImpl @Inject constructor(
                 "LLM_FREE" -> TranslationProvider.LLM_FREE
                 else -> TranslationProvider.valueOf(name)
             }
-        } catch (_: Exception) { TranslationProvider.GEMINI_FLASH },
+        } catch (e: Exception) {
+            val providerValue = this[Keys.TRANSLATION_PROVIDER]
+            AppLogger.w("Failed to parse translationProvider: '$providerValue', using GEMINI_FLASH. Error: ${e.message}")
+            TranslationProvider.GEMINI_FLASH
+        },
         brightness = this[Keys.BRIGHTNESS] ?: -1f,
         isImmersiveMode = this[Keys.IMMERSIVE_MODE] ?: false,
         screenWakeTimeoutMinutes = this[Keys.SCREEN_WAKE_TIMEOUT] ?: 30,
         sentenceCounterEnabled = this[Keys.SENTENCE_COUNTER] ?: false,
-        displayMode = try { DisplayMode.valueOf(this[Keys.DISPLAY_MODE] ?: "SPLIT") } catch (_: Exception) { DisplayMode.SPLIT },
+        displayMode = try {
+            DisplayMode.valueOf(this[Keys.DISPLAY_MODE] ?: "SPLIT")
+        } catch (e: Exception) {
+            val displayModeValue = this[Keys.DISPLAY_MODE]
+            AppLogger.w("Failed to parse displayMode: '$displayModeValue', using SPLIT. Error: ${e.message}")
+            DisplayMode.SPLIT
+        },
     )
 }

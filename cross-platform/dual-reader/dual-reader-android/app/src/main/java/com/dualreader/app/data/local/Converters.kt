@@ -14,7 +14,12 @@ class Converters {
 
     @TypeConverter
     fun fromTimestamp(value: Long?): LocalDateTime? =
-        value?.let { LocalDateTime.ofEpochSecond(it / 1000, 0, ZoneOffset.UTC) }
+        value?.let {
+            // Preserve sub-second precision: epoch-millis → seconds + nanos.
+            // The previous `0` for nanos silently dropped milliseconds on every
+            // DB round-trip (DR-056).
+            LocalDateTime.ofEpochSecond(it / 1000, ((it % 1000) * 1_000_000).toInt(), ZoneOffset.UTC)
+        }
 
     @TypeConverter
     fun toTimestamp(date: LocalDateTime?): Long? =
@@ -55,14 +60,24 @@ class Converters {
 
     @TypeConverter
     fun fromPaginationStatus(value: String): PaginationStatus =
-        try { PaginationStatus.valueOf(value) } catch (_: Exception) { PaginationStatus.NOT_STARTED }
+        try {
+            PaginationStatus.valueOf(value)
+        } catch (e: Exception) {
+            AppLogger.w("Failed to parse PaginationStatus: '$value', using NOT_STARTED. Error: ${e.message}")
+            PaginationStatus.NOT_STARTED
+        }
 
     @TypeConverter
     fun toPaginationStatus(status: PaginationStatus): String = status.name
 
     @TypeConverter
     fun fromBookFormat(value: String): BookFormat =
-        try { BookFormat.valueOf(value) } catch (_: Exception) { BookFormat.EPUB }
+        try {
+            BookFormat.valueOf(value)
+        } catch (e: Exception) {
+            AppLogger.w("Failed to parse BookFormat: '$value', using EPUB. Error: ${e.message}")
+            BookFormat.EPUB
+        }
 
     @TypeConverter
     fun toBookFormat(format: BookFormat): String = format.name

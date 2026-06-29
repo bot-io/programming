@@ -47,6 +47,14 @@ class CloudTranslationServiceImpl @Inject constructor(
         skipCache: Boolean,
     ): String = withContext(Dispatchers.IO) {
         val installationId = installationIdProvider.getInstallationId()
+        
+        // Log book context for debugging translation quality issues
+        if (bookContext != null) {
+            AppLogger.i("translate: bookContext provided - title='${bookContext.title}', author='${bookContext.author}', openingText=${bookContext.openingText.take(50)}...")
+        } else {
+            AppLogger.w("translate: bookContext is null - translation quality may suffer")
+        }
+        
         val request = ProxyTranslateRequest(
             text = text,
             sourceLang = sourceLanguage,
@@ -101,7 +109,79 @@ class CloudTranslationServiceImpl @Inject constructor(
         if (pages.isEmpty()) return@withContext BatchTranslationResult(emptyMap())
         val installationId = installationIdProvider.getInstallationId()
 
+        // Log book context for debugging translation quality issues
+        if (bookContext != null) {
+            AppLogger.i("translatePages: bookContext provided - title='${bookContext.title}', author='${bookContext.author}', openingText=${bookContext.openingText.take(50)}...")
+        } else {
+            AppLogger.w("translatePages: bookContext is null - translation quality may suffer")
+        }
+
         AppLogger.i("translatePages: sending ${pages.size} pages to batch endpoint")
+
+        // ── Try batch endpoint first (1 API call for all pages) ──
+        try {
+            val batchResult = callBatchEndpoint(
+                pages, targetLanguage, sourceLanguage, installationId, bookContext, skipCache
+            )
+            if (batchResult != null) {
+                AppLogger.i("translatePages: batch success, got ${batchResult.translations.size}/${pages.size} translations")
+                return@withContext batchResult
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Preserve coroutine cancellation semantics (DR-139)
+        } catch (e: Exception) {
+            AppLogger.w("translatePages: batch endpoint failed (${e.message}), falling back to single-page translation...")
+        }
+
+        // ── Fallback: translate pages individually ──
+        // If batch fails (503, 502, network error, parse failure), try each page
+        // one-by-one through the single /translate endpoint. Return partial results
+        // so the user gets whatever succeeded instead of nothing.
+        val singleResults = mutableMapOf<Int, String>()
+        var singleModel: String? = null
+        for ((i, page) in pages.withIndex()) {
+            try {
+                if (i > 0) delay(BATCH_DELAY_MS)
+                val translated = translate(
+                    text = page.value,
+                    targetLanguage = targetLanguage,
+                    sourceLanguage = sourceLanguage,
+                    context = context,
+                    bookContext = bookContext,
+                    skipCache = skipCache,
+                )
+                if (translated.isNotBlank()) {
+                    singleResults[page.index] = translated.trim()
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Propagate cancellation — don't return partial results (DR-112)
+            } catch (e: Exception) {
+                AppLogger.w("translatePages: single-page fallback failed for page ${page.index}: ${e.message}")
+                // Continue — return partial results
+            }
+        }
+
+        if (singleResults.isEmpty()) {
+            throw TranslationException("All translation methods failed (batch + single-page fallback)")
+        }
+
+        AppLogger.i("translatePages: single-page fallback got ${singleResults.size}/${pages.size} translations")
+        BatchTranslationResult(singleResults, singleModel ?: "fallback")
+    }
+
+    /**
+     * Call the batch endpoint and return a [BatchTranslationResult] on success,
+     * or null if the response is unusable (caller decides fallback).
+     * Throws on network-level failures so the caller can catch and fall back.
+     */
+    private suspend fun callBatchEndpoint(
+        pages: List<IndexedValue<String>>,
+        targetLanguage: String,
+        sourceLanguage: String?,
+        installationId: String,
+        bookContext: SerializedBookContext?,
+        skipCache: Boolean,
+    ): BatchTranslationResult? {
         val batchPages = pages.map { (index, text) ->
             BatchPage(index = index, text = text)
         }
@@ -118,7 +198,7 @@ class CloudTranslationServiceImpl @Inject constructor(
 
         val response = proxyApi.translateBatch(request)
         val batchModel: String? = response.body()?.model?.takeIf { it.isNotBlank() }
-        AppLogger.i("translatePages: response code=${response.code()} model=${batchModel ?: "n/a"}")
+        AppLogger.i("callBatchEndpoint: response code=${response.code()} model=${batchModel ?: "n/a"}")
 
         if (!response.isSuccessful) {
             val errorBody = response.errorBody()?.string()?.take(300) ?: "no body"
@@ -148,8 +228,7 @@ class CloudTranslationServiceImpl @Inject constructor(
             throw TranslationException("Batch endpoint returned no valid translations")
         }
 
-        AppLogger.i("translatePages: got ${results.size}/${pages.size} translations")
-        BatchTranslationResult(results, modelUsed)
+        return BatchTranslationResult(results, modelUsed)
     }
 
     // ── detectLanguage ─────────────────────────────────────────────────────────
@@ -159,7 +238,7 @@ class CloudTranslationServiceImpl @Inject constructor(
 
         // Ask the proxy to translate with auto-detect — then we infer language.
         // For simplicity, we use the same proxy endpoint with a special target.
-        val installationId = installationIdProvider.getInstallationIdSync()
+        val installationId = installationIdProvider.getInstallationId()
         val request = ProxyTranslateRequest(
             text = "Detect the language of this text, reply with ISO 639-1 code only:\n$text",
             sourceLang = "auto",
@@ -202,6 +281,8 @@ class CloudTranslationServiceImpl @Inject constructor(
         repeat(3) { attempt ->
             val response = try {
                 proxyApi.translate(request)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Propagate cancellation — don't mask as network error (DR-052)
             } catch (e: Exception) {
                 AppLogger.e("callProxy: network error: ${e.message}", e)
                 throw TranslationException("Network error calling translation proxy", e)
@@ -232,7 +313,7 @@ class CloudTranslationServiceImpl @Inject constructor(
 
             // Non-429 error — don't retry
             val errorBody = response.errorBody()?.string()?.take(300) ?: "no body"
-            AppLogger.e("callProxy: error $${response.code()}: $errorBody")
+            AppLogger.e("callProxy: error ${response.code()}: $errorBody")
             throw TranslationException("Translation proxy error ${response.code()}: $errorBody")
         }
 
@@ -245,6 +326,7 @@ class CloudTranslationServiceImpl @Inject constructor(
             val regex = """"retry_after_ms"\s*:\s*(\d+)""".toRegex()
             regex.find(errorBody)?.groupValues?.get(1)?.toLongOrNull() ?: 3000L
         } catch (_: Exception) {
+            AppLogger.w("Failed to parse retry_after_ms from 429 response, using default 3000ms")
             3000L
         }
     }

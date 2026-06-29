@@ -35,21 +35,21 @@ fun OnboardingScreen(
 ) {
     val pages = listOf(
         OnboardingPage(
-            icon = Icons.Filled.MenuBook,
+            icon = Icons.Default.MenuBook,
             title = "Import Your Books",
             description = "Open any EPUB file in a foreign language. " +
                 "Dual Reader turns it into a bilingual reading experience — " +
                 "your own library, your own books.",
         ),
         OnboardingPage(
-            icon = Icons.Filled.Translate,
+            icon = Icons.Default.Translate,
             title = "AI Translation",
             description = "Tap to translate any page using high-quality AI " +
                 "(Gemini 3.5 Flash). Translations are cached for offline re-reading. " +
                 "No internet? No problem.",
         ),
         OnboardingPage(
-            icon = Icons.Filled.Language,
+            icon = Icons.Default.Language,
             title = "Learn by Reading",
             description = "Read the original and translation side by side. " +
                 "Switch between languages instantly. Learn naturally through context, " +

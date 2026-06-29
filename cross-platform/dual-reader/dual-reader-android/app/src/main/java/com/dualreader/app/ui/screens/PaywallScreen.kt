@@ -61,7 +61,7 @@ fun PaywallScreen(
 
             // Header
             Icon(
-                Icons.Filled.Star,
+                Icons.Default.Star,
                 contentDescription = null,
                 modifier = Modifier.size(56.dp),
                 tint = MaterialTheme.colorScheme.primary
@@ -309,7 +309,7 @@ private fun PlanCard(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            Icons.Filled.Check,
+                            Icons.Default.Check,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.onPrimaryContainer,

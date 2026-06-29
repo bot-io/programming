@@ -28,6 +28,8 @@ class TtsServiceImpl @Inject constructor(
 
     private var tts: TextToSpeech? = null
     private var initialized = AtomicBoolean(false)
+    private var initFailed = AtomicBoolean(false)
+    private var initInProgress = AtomicBoolean(false)
 
     private val _isSpeaking = AtomicBoolean(false)
     override val isSpeaking: Boolean get() = _isSpeaking.get()
@@ -35,31 +37,76 @@ class TtsServiceImpl @Inject constructor(
     private val _currentParagraphIndex = AtomicInteger(-1)
     override val currentParagraphIndex: Int get() = _currentParagraphIndex.get()
 
+    @Volatile
     private var speechRate: Float = 1.0f
 
     // Callbacks for current playback session
+    // @Volatile ensures visibility across threads (main thread sets, TTS callback thread reads)
+    @Volatile
     private var onParagraphStarted: ((Int) -> Unit)? = null
+    @Volatile
     private var onCompletedCallback: (() -> Unit)? = null
+    @Volatile
     private var onErrorCallback: ((String) -> Unit)? = null
 
-    // Queue state
+    // Queue state (written by main thread, read by TTS callback thread)
+    @Volatile
     private var currentParagraphs: List<String> = emptyList()
+    @Volatile
     private var currentStartIndex: Int = 0
 
     override val isReady: Boolean
         get() = initialized.get() && tts != null
 
+    override val isInitFailed: Boolean
+        get() = initFailed.get() && !initialized.get() && !initInProgress.get()
+
     init {
         tts = TextToSpeech(context, this)
     }
 
+    override fun reinitialize(): Boolean {
+        if (isReady) {
+            AppLogger.i("TtsServiceImpl: Already ready, no reinit needed")
+            return false
+        }
+        if (initInProgress.get()) {
+            AppLogger.i("TtsServiceImpl: Init already in progress")
+            return false
+        }
+
+        AppLogger.i("TtsServiceImpl: Attempting reinitialization")
+        initInProgress.set(true)
+
+        // Shutdown existing instance if any
+        // DR-112: Handle CancellationException separately for defensive consistency
+        try {
+            tts?.shutdown()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // DR-112: Re-throw cancellation immediately (though unlikely in non-coroutine function)
+            throw e
+        } catch (e: Exception) {
+            AppLogger.w("TtsServiceImpl: Failed to shutdown previous TTS instance: ${e.message}")
+        }
+        tts = null
+        initFailed.set(false)
+        initialized.set(false)
+
+        // Create new instance
+        tts = TextToSpeech(context, this)
+        return true
+    }
+
     override fun onInit(status: Int) {
+        initInProgress.set(false)
         if (status == TextToSpeech.SUCCESS) {
             initialized.set(true)
+            initFailed.set(false)
             AppLogger.i("TtsServiceImpl: TTS engine initialized successfully")
         } else {
             initialized.set(false)
-            AppLogger.e("TtsServiceImpl: TTS engine init failed (status=$status)")
+            initFailed.set(true)
+            AppLogger.e("TtsServiceImpl: TTS engine init failed (status=$status). Call reinitialize() to retry.")
         }
     }
 
@@ -163,7 +210,15 @@ class TtsServiceImpl @Inject constructor(
     }
 
     private fun speakParagraph(index: Int) {
-        if (index < 0 || index >= currentParagraphs.size) return
+        if (index < 0 || index >= currentParagraphs.size) {
+            // DR-058: Reached the end (possibly by skipping blank paragraphs).
+            // Must signal completion — otherwise the UI thinks TTS is still active.
+            _isSpeaking.set(false)
+            _currentParagraphIndex.set(-1)
+            onCompletedCallback?.invoke()
+            clearCallbacks()
+            return
+        }
         val text = currentParagraphs[index]
         if (text.isBlank()) {
             // Skip empty paragraphs
@@ -181,10 +236,13 @@ class TtsServiceImpl @Inject constructor(
     }
 
     override fun stop() {
+        // DR-059: Clear callbacks BEFORE calling tts?.stop() to prevent stale
+        // onError callbacks (triggered asynchronously by stop) from leaking
+        // into the next playback session. Mirrors the pause() fix.
+        clearCallbacks()
         tts?.stop()
         _isSpeaking.set(false)
         _currentParagraphIndex.set(-1)
-        clearCallbacks()
     }
 
     override fun pause() {
@@ -210,6 +268,8 @@ class TtsServiceImpl @Inject constructor(
         tts?.shutdown()
         tts = null
         initialized.set(false)
+        initFailed.set(false)
+        initInProgress.set(false)
     }
 
     private fun clearCallbacks() {

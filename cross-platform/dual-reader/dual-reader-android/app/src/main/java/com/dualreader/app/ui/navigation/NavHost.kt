@@ -9,14 +9,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +30,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.dualreader.app.util.AppLogger
 import kotlinx.coroutines.launch
 import com.dualreader.app.ui.screens.*
 import java.io.File
@@ -41,16 +39,36 @@ import java.util.UUID
 private const val TAG = "NavHost"
 
 private fun copyEpubToInternalStorage(context: Context, uri: Uri): String? {
+    val epubsDir = File(context.filesDir, "epubs").apply { mkdirs() }
+    val fileName = "${UUID.randomUUID()}.epub"
+    val destFile = File(epubsDir, fileName)
+    
     return try {
-        val epubsDir = File(context.filesDir, "epubs").apply { mkdirs() }
-        val fileName = "${UUID.randomUUID()}.epub"
-        val destFile = File(epubsDir, fileName)
         context.contentResolver.openInputStream(uri)?.use { input ->
             destFile.outputStream().use { output -> input.copyTo(output) }
         } ?: return null
         Log.d(TAG, "EPUB copied to ${destFile.absolutePath}")
         destFile.absolutePath
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        // Clean up partially copied file on cancellation
+        // DR-111: Wrap delete() in try-catch to ensure CancellationException is always propagated
+        if (destFile.exists()) {
+            try {
+                destFile.delete()
+            } catch (deleteError: Exception) {
+                Log.e(TAG, "Failed to delete partially copied file during cancellation: ${destFile.absolutePath}", deleteError)
+            }
+        }
+        throw e
     } catch (e: Exception) {
+        // Clean up partially copied file on other errors
+        if (destFile.exists()) {
+            try {
+                destFile.delete()
+            } catch (deleteError: Exception) {
+                Log.e(TAG, "Failed to delete partially copied file: ${destFile.absolutePath}", deleteError)
+            }
+        }
         Log.e(TAG, "Error copying EPUB from URI: $uri", e)
         null
     }
@@ -96,9 +114,14 @@ fun DualReaderNavHost(
             val crashReport = remember {
                 val file = File(context.filesDir, "last_crash.txt")
                 if (file.exists()) {
-                    val text = file.readText()
-                    file.delete()
-                    text
+                    try {
+                        val text = file.readText()
+                        file.delete()
+                        text
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to read or delete crash report: ${e.message}", e)
+                        null
+                    }
                 } else null
             }
             var crashReportVisible by remember { mutableStateOf(crashReport != null) }
@@ -125,7 +148,9 @@ fun DualReaderNavHost(
                                 context.contentResolver.openOutputStream(u)?.use { os ->
                                     os.write(content.toByteArray(Charsets.UTF_8))
                                 }
-                            } catch (_: Exception) { }
+                            } catch (e: Exception) {
+                                AppLogger.e("Failed to export bookmarks from library: ${e.message}", e)
+                            }
                         }
                         pendingLibraryExport = null
                     }
@@ -170,6 +195,7 @@ fun DualReaderNavHost(
                     onRemoveBookFromCollection = { collectionId, bookId ->
                         viewModel.removeBookFromCollection(collectionId, bookId)
                     },
+                    errorEvents = viewModel.errorEvents,
                 )
 
             // Crash report dialog (non-blocking, dismissible)
@@ -228,7 +254,9 @@ fun DualReaderNavHost(
                             context.contentResolver.openOutputStream(u)?.use { os ->
                                 os.write(content.toByteArray(Charsets.UTF_8))
                             }
-                        } catch (_: Exception) { }
+                        } catch (e: Exception) {
+                            AppLogger.e("Failed to export bookmarks from reader: ${e.message}", e)
+                        }
                     }
                     pendingExportContent = null
                 }
@@ -259,6 +287,8 @@ fun DualReaderNavHost(
                 onTtsPause = { viewModel.pauseTts() },
                 onTtsSetRate = { rate -> viewModel.setTtsSpeechRate(rate) },
                 onUpdateCurrentPage = { idx -> viewModel.updateCurrentPage(idx) },
+                positionHistory = viewModel.positionHistory.collectAsState().value,
+                onJumpToPosition = { idx -> viewModel.jumpToPosition(idx) },
                 wordTranslation = viewModel.wordTranslation.collectAsState().value,
                 onTranslateWord = { word, isOrig -> viewModel.translateWord(word, isOrig) },
                 onDismissWordTranslation = { viewModel.dismissWordTranslation() },
@@ -277,19 +307,47 @@ fun DualReaderNavHost(
             val settings by viewModel.settings.collectAsState()
             val cachedCount by viewModel.cachedCount.collectAsState()
             val translationInfo by viewModel.translationInfo.collectAsState()
+            val clearError by viewModel.clearError.collectAsState()
+            // DR-115: Collect loadInfoError to show errors when loading translation info
+            val loadInfoError by viewModel.loadInfoError.collectAsState()
 
-            SettingsScreen(
-                settings = settings,
-                cachedTranslationCount = cachedCount,
-                translationInfo = translationInfo,
-                onSettingsChanged = { viewModel.updateSettings(it) },
-                onClearTranslations = { viewModel.clearAllTranslations() },
-                onViewTranslationInfo = { viewModel.loadTranslationInfo() },
-                onUpgradeClick = { navController.navigate("paywall") },
-                onModelManagementClick = { navController.navigate("models") },
-                onTermsClick = { navController.navigate("terms") },
-                onBack = { navController.popBackStack() },
-            )
+            // DR-113: Show snackbar when clear fails
+            val scope = rememberCoroutineScope()
+            val snackbarHostState = remember { SnackbarHostState() }
+
+            LaunchedEffect(clearError) {
+                clearError?.let { error ->
+                    val result = snackbarHostState.showSnackbar(
+                        message = error,
+                        duration = SnackbarDuration.Long,
+                        actionLabel = "Dismiss"
+                    )
+                    if (result == SnackbarResult.ActionPerformed || result == SnackbarResult.Dismissed) {
+                        viewModel.clearErrorShown()
+                    }
+                }
+            }
+
+            Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) }
+            ) { padding ->
+                Box(modifier = Modifier.padding(padding)) {
+                    SettingsScreen(
+                        settings = settings,
+                        cachedTranslationCount = cachedCount,
+                        translationInfo = translationInfo,
+                        loadInfoError = loadInfoError,
+                        onSettingsChanged = { viewModel.updateSettings(it) },
+                        onClearTranslations = { viewModel.clearAllTranslations() },
+                        onViewTranslationInfo = { viewModel.loadTranslationInfo() },
+                        onInfoErrorShown = { viewModel.loadInfoErrorShown() },
+                        onUpgradeClick = { navController.navigate("paywall") },
+                        onModelManagementClick = { navController.navigate("models") },
+                        onTermsClick = { navController.navigate("terms") },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+            }
         }
 
         composable("models") {

@@ -48,6 +48,8 @@ class PaginateBookUseCase @Inject constructor(
                     throw IllegalStateException("No paragraphs found in book: ${book.filePath}")
                 }
 
+                AppLogger.i("PaginateBookUseCase: Starting pagination for '${book.title}' (${extractedParagraphs.size} paragraphs)")
+
                 // Load existing pages to preserve translations across re-extraction
                 val existingPages = bookRepository.getPagesForBook(book.id)
                 val existingByContent = existingPages
@@ -106,7 +108,11 @@ class PaginateBookUseCase @Inject constructor(
                         paginationProgress = 1f,
                     )
                 )
+                AppLogger.i("PaginateBookUseCase: Pagination completed for '${book.title}' (${pageEntities.size} paragraphs)")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Propagate cancellation — don't mark book as FAILED (DR-052)
             } catch (e: Exception) {
+                AppLogger.e("PaginateBookUseCase: Pagination failed for '${book.title}': ${e.message}")
                 bookRepository.updateBook(
                     book.copy(
                         paginationStatus = PaginationStatus.FAILED,

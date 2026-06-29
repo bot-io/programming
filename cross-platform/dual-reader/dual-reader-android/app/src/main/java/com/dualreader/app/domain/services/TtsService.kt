@@ -10,6 +10,9 @@ interface TtsService {
     /** Whether the TTS engine is initialized and ready. */
     val isReady: Boolean
 
+    /** Whether TTS initialization has failed and needs retry. */
+    val isInitFailed: Boolean
+
     /** Whether TTS is currently speaking. */
     val isSpeaking: Boolean
 
@@ -18,6 +21,12 @@ interface TtsService {
 
     /** Whether a TTS engine is available for the given language code. */
     fun isLanguageAvailable(langCode: String): Boolean
+
+    /**
+     * Attempt to reinitialize the TTS engine if it previously failed.
+     * Returns true if reinit was triggered, false if engine is already ready.
+     */
+    fun reinitialize(): Boolean
 
     /**
      * Speak a list of paragraphs sequentially.

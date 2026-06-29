@@ -7,6 +7,7 @@ import com.dualreader.app.domain.model.ProductInfo
 import com.dualreader.app.domain.model.ProductIds
 import com.dualreader.app.domain.model.PurchaseResult
 import com.dualreader.app.domain.repository.BillingRepository
+import com.dualreader.app.util.AppLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -56,7 +57,13 @@ class PaywallViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            billingRepository.refreshPurchases()
+            try {
+                billingRepository.refreshPurchases()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // Preserve cancellation semantics
+            } catch (e: Exception) {
+                com.dualreader.app.util.AppLogger.e("PaywallViewModel: Failed to refresh purchases on init: ${e.message}", e)
+            }
         }
     }
 
@@ -66,7 +73,17 @@ class PaywallViewModel @Inject constructor(
             _purchaseMessage.value = null
             _purchaseSuccess.value = false
 
-            val result = billingRepository.launchPurchaseFlow(productId)
+            val result = try {
+                billingRepository.launchPurchaseFlow(productId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                _isLoading.value = false // Reset loading state before rethrowing (DR-154)
+                throw e // Preserve cancellation semantics (DR-121 pattern)
+            } catch (e: Exception) {
+                _isLoading.value = false
+                _purchaseMessage.value = "Purchase failed: ${e.message}"
+                AppLogger.e("PaywallViewModel: purchase failed: ${e.message}", e)
+                return@launch
+            }
 
             _isLoading.value = false
             when (result) {
@@ -90,7 +107,17 @@ class PaywallViewModel @Inject constructor(
     fun restorePurchases() {
         viewModelScope.launch {
             _isLoading.value = true
-            val tier = billingRepository.restorePurchases()
+            val tier = try {
+                billingRepository.restorePurchases()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                _isLoading.value = false // Reset loading state before rethrowing (DR-154)
+                throw e // Preserve cancellation semantics (DR-121 pattern)
+            } catch (e: Exception) {
+                _isLoading.value = false
+                _purchaseMessage.value = "Restore failed: ${e.message}"
+                AppLogger.e("PaywallViewModel: restorePurchases failed: ${e.message}", e)
+                return@launch
+            }
             _isLoading.value = false
             if (tier.isPaid) {
                 _purchaseSuccess.value = true

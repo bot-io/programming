@@ -13,6 +13,13 @@ class TranslationCacheRepositoryImpl @Inject constructor(
 ) : TranslationCacheRepository {
 
     override suspend fun get(text: String, sourceLang: String?, targetLang: String): String? {
+        // Validate inputs
+        require(text.isNotBlank()) { "Source text must not be blank" }
+        require(targetLang.isNotBlank()) { "Target language must not be blank" }
+        if (sourceLang != null) {
+            require(sourceLang.isNotBlank()) { "Source language must not be blank" }
+        }
+
         val hash = sha256(text)
         val src = sourceLang ?: "auto"
         val entry = dao.get(hash, src, targetLang) ?: return null
@@ -20,6 +27,13 @@ class TranslationCacheRepositoryImpl @Inject constructor(
     }
 
     override suspend fun put(text: String, sourceLang: String?, targetLang: String, translatedText: String, model: String) {
+        // Validate inputs
+        require(text.isNotBlank()) { "Source text must not be blank" }
+        require(targetLang.isNotBlank()) { "Target language must not be blank" }
+        if (sourceLang != null) {
+            require(sourceLang.isNotBlank()) { "Source language must not be blank" }
+        }
+
         val hash = sha256(text)
         val src = sourceLang ?: "auto"
         val now = System.currentTimeMillis()
@@ -56,6 +70,7 @@ class TranslationCacheRepositoryImpl @Inject constructor(
     override suspend fun count(): Int = dao.count()
 
     override suspend fun deleteForTexts(texts: List<String>) {
+        require(texts.all { it.isNotBlank() }) { "All texts in delete list must not be blank" }
         for (text in texts) {
             dao.deleteByHash(sha256(text))
         }
@@ -63,6 +78,7 @@ class TranslationCacheRepositoryImpl @Inject constructor(
 
     companion object {
         fun sha256(text: String): String {
+            require(text.isNotBlank()) { "Text must not be blank" }
             val md = MessageDigest.getInstance("SHA-256")
             val digest = md.digest(text.toByteArray(Charsets.UTF_8))
             return digest.joinToString("") { "%02x".format(it) }

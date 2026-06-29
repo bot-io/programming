@@ -2,7 +2,6 @@ package com.dualreader.app
 
 import android.app.Application
 import android.util.Log
-import com.dualreader.app.data.pagination.PaginationServiceImpl
 import com.dualreader.app.util.AppLogger
 import dagger.hilt.android.HiltAndroidApp
 import java.io.File
@@ -34,7 +33,10 @@ class DualReaderApp : Application() {
                 val file = File(filesDir, "last_crash.txt")
                 file.writeText(report)
                 Log.e("DualReader", report)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                // Crash handler failed to write report — log via Android Log as fallback
+                Log.e("DualReader", "Failed to write crash report: ${e.message}", e)
+            }
             defaultHandler?.uncaughtException(thread, throwable)
         }
 
@@ -44,7 +46,5 @@ class DualReaderApp : Application() {
         AppLogger.init(this)
         AppLogger.i("DualReader ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) starting")
         AppLogger.i("Device density: ${resources.displayMetrics.density}")
-
-        PaginationServiceImpl.displayDensity = resources.displayMetrics.density
     }
 }

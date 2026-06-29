@@ -19,6 +19,8 @@ import com.dualreader.app.domain.usecases.PaginateBookUseCase
 import com.dualreader.app.ui.navigation.DualReaderNavHost
 import com.dualreader.app.ui.theme.DualReaderTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -31,20 +33,22 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var importBookUseCase: ImportBookUseCase
     @Inject lateinit var paginateBookUseCase: PaginateBookUseCase
 
+    // DR-137: Use StateFlow instead of mutable var to avoid race condition
+    // Null means still loading, true/false is the actual onboarding decision
+    private val _showOnboarding = MutableStateFlow<Boolean?>(null)
+    private val showOnboarding: StateFlow<Boolean?> = _showOnboarding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install splash screen before super.onCreate — required by SplashScreen compat lib
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Read onboarding state synchronously before showing content
-        var showOnboarding = false
-        var contentReady = false
-        splashScreen.setKeepOnScreenCondition { !contentReady }
+        // DR-137: Keep splash screen on while onboarding state is loading (null)
+        splashScreen.setKeepOnScreenCondition { showOnboarding.value == null }
 
         // Check onboarding + init billing in background
         lifecycleScope.launch {
-            showOnboarding = !settingsRepository.isOnboardingCompleted.first()
-            contentReady = true
+            _showOnboarding.value = !settingsRepository.isOnboardingCompleted.first()
 
             // Import pre-installed books on first launch (non-blocking)
             val booksInitializer = PreInstalledBooksInitializer(
@@ -65,13 +69,15 @@ class MainActivity : ComponentActivity() {
                 initial = com.dualreader.app.domain.entities.ReadingSettings()
             )
 
-            // Snapshot the onboarding decision at compose time
-            val startOnboarding = remember { showOnboarding }
+            // DR-137: Collect StateFlow safely - null means loading, default to false (library)
+            val startOnboarding by showOnboarding.collectAsState(initial = null)
+            // NavHost requires non-nullable Boolean - use false as default when loading
+            val startDestination = if (startOnboarding == true) "onboarding" else "library"
 
             DualReaderTheme(theme = settings.theme) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     DualReaderNavHost(
-                        startOnboarding = startOnboarding,
+                        startOnboarding = startDestination == "onboarding",
                         onOnboardingComplete = {
                             lifecycleScope.launch {
                                 settingsRepository.setOnboardingCompleted()

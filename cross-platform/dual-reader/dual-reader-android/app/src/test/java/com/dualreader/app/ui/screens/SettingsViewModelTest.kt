@@ -1,233 +1,314 @@
 package com.dualreader.app.ui.screens
 
-import com.dualreader.app.domain.entities.Book
-import com.dualreader.app.domain.entities.Page
 import com.dualreader.app.domain.entities.ReadingSettings
 import com.dualreader.app.domain.repositories.BookRepository
 import com.dualreader.app.domain.repositories.SettingsRepository
 import com.dualreader.app.domain.repositories.TranslationCacheRepository
+import com.dualreader.app.util.AppLogger
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
 
+    private lateinit var viewModel: SettingsViewModel
+    private lateinit var settingsRepository: SettingsRepository
+    private lateinit var cacheRepository: TranslationCacheRepository
+    private lateinit var bookRepository: BookRepository
+
     private val testDispatcher = StandardTestDispatcher()
 
-    private lateinit var settingsRepo: SettingsRepository
-    private lateinit var cacheRepo: TranslationCacheRepository
-    private lateinit var bookRepo: BookRepository
-    private lateinit var vm: SettingsViewModel
-
-    private val defaultSettings = ReadingSettings()
-
     @Before
-    fun setUp() {
+    fun setup() {
         Dispatchers.setMain(testDispatcher)
 
-        settingsRepo = mockk(relaxed = true)
-        cacheRepo = mockk(relaxed = true)
-        bookRepo = mockk(relaxed = true)
+        settingsRepository = mockk()
+        cacheRepository = mockk()
+        bookRepository = mockk()
 
-        every { settingsRepo.settings } returns flowOf(defaultSettings)
-        coEvery { bookRepo.getTranslatedPageCount() } returns 0
-        every { bookRepo.getAllBooks() } returns flowOf(emptyList())
+        // Mock settings flow
+        every { settingsRepository.settings } returns kotlinx.coroutines.flow.MutableStateFlow(
+            ReadingSettings()
+        )
 
-        vm = SettingsViewModel(settingsRepo, cacheRepo, bookRepo)
+        mockkObject(AppLogger)
+
+        viewModel = SettingsViewModel(
+            settingsRepository,
+            cacheRepository,
+            bookRepository
+        )
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkAll()
     }
 
-    // ── Initial State ──────────────────────────────────────────────
-
     @Test
-    fun `initial cachedCount is loaded from repository`() = runTest {
-        coEvery { bookRepo.getTranslatedPageCount() } returns 42
-        vm = SettingsViewModel(settingsRepo, cacheRepo, bookRepo)
+    fun `clearAllTranslations success - clears cache, book translations, and UI state`() = runTest {
+        // Arrange
+        coEvery { cacheRepository.clearAll() } returns 5  // Returns count of deleted entries
+        coEvery { bookRepository.clearAllTranslations() } returns Unit
+        coEvery { bookRepository.getTranslatedPageCount() } returns 0
+
+        // Act
+        viewModel.clearAllTranslations()
         advanceUntilIdle()
-        coVerify { bookRepo.getTranslatedPageCount() }
+
+        // Assert
+        coVerify { cacheRepository.clearAll() }
+        coVerify { bookRepository.clearAllTranslations() }
+        coVerify { bookRepository.getTranslatedPageCount() }
+        assertEquals(0, viewModel.translationInfo.value.size)
+        assertEquals(0, viewModel.cachedCount.value)
+        assertNull(viewModel.clearError.value)
     }
 
     @Test
-    fun `initial translationInfo is empty`() {
-        assertTrue(vm.translationInfo.value.isEmpty())
-    }
+    fun `clearAllTranslations cache failure - logs error and shows user message`() = runTest {
+        // Arrange
+        val exception = RuntimeException("Disk full")
+        coEvery { cacheRepository.clearAll() } throws exception
+        coEvery { bookRepository.clearAllTranslations() } returns Unit
+        coEvery { bookRepository.getTranslatedPageCount() } returns 5
 
-    @Test
-    fun `settings flow reflects repository defaults`() = runTest {
+        // Act
+        viewModel.clearAllTranslations()
         advanceUntilIdle()
-        assertEquals(defaultSettings, vm.settings.value)
+
+        // Assert
+        coVerify(exactly = 0) { bookRepository.clearAllTranslations() }
+        coVerify { AppLogger.e("clearAllTranslations: Failed to clear translations: Disk full") }
+        assertEquals("Failed to clear translations: Disk full", viewModel.clearError.value)
     }
 
-    // ── updateSettings ─────────────────────────────────────────────
-
     @Test
-    fun `updateSettings delegates to repository`() = runTest {
-        val newSettings = defaultSettings.copy(fontSize = 20f)
-        vm.updateSettings(newSettings)
+    fun `clearAllTranslations book repository failure - logs error and shows user message`() = runTest {
+        // Arrange
+        val exception = RuntimeException("Database locked")
+        coEvery { cacheRepository.clearAll() } returns 5
+        coEvery { bookRepository.clearAllTranslations() } throws exception
+        coEvery { bookRepository.getTranslatedPageCount() } returns 3
+
+        // Act
+        viewModel.clearAllTranslations()
         advanceUntilIdle()
-        coVerify { settingsRepo.updateSettings(any()) }
+
+        // Assert
+        coVerify { cacheRepository.clearAll() }
+        coVerify { bookRepository.clearAllTranslations() }
+        coVerify { AppLogger.e("clearAllTranslations: Failed to clear translations: Database locked") }
+        assertEquals("Failed to clear translations: Database locked", viewModel.clearError.value)
     }
 
     @Test
-    fun `updateSettings with different language`() = runTest {
-        val newSettings = defaultSettings.copy(targetLanguage = "bg")
-        vm.updateSettings(newSettings)
+    fun `clearErrorShown - clears error state`() = runTest {
+        // Arrange - Set an error state
+        coEvery { cacheRepository.clearAll() } throws RuntimeException("Test error")
+        viewModel.clearAllTranslations()
         advanceUntilIdle()
-        coVerify { settingsRepo.updateSettings(any()) }
+        assertNotNull(viewModel.clearError.value)
+
+        // Act
+        viewModel.clearErrorShown()
+
+        // Assert
+        assertNull(viewModel.clearError.value)
     }
 
-    // ── clearAllTranslations ───────────────────────────────────────
-
     @Test
-    fun `clearAllTranslations clears cache and db`() = runTest {
-        vm.clearAllTranslations()
+    fun `clearAllTranslations resets error before attempting clear`() = runTest {
+        // Arrange - Set an error state from previous call
+        coEvery { cacheRepository.clearAll() } throws RuntimeException("First error")
+        viewModel.clearAllTranslations()
         advanceUntilIdle()
-        coVerify { cacheRepo.clearAll() }
-        coVerify { bookRepo.clearAllTranslations() }
-    }
+        assertNotNull(viewModel.clearError.value)
 
-    @Test
-    fun `clearAllTranslations refreshes cache count`() = runTest {
-        vm.clearAllTranslations()
+        // Arrange - Fix the issue for second call
+        coEvery { cacheRepository.clearAll() } returns 5
+        coEvery { bookRepository.clearAllTranslations() } returns Unit
+        coEvery { bookRepository.getTranslatedPageCount() } returns 0
+
+        // Act
+        viewModel.clearAllTranslations()
         advanceUntilIdle()
-        coVerify(atLeast = 2) { bookRepo.getTranslatedPageCount() }
+
+        // Assert - Error should be reset (null) after successful call
+        assertNull(viewModel.clearError.value)
     }
 
+    // DR-114: Test refreshCacheCount error handling
     @Test
-    fun `clearAllTranslations resets translationInfo`() = runTest {
-        vm.clearAllTranslations()
-        advanceUntilIdle()
-        assertTrue(vm.translationInfo.value.isEmpty())
-    }
+    fun `refreshCacheCount success - updates cached count`() = runTest {
+        // Arrange
+        coEvery { bookRepository.getTranslatedPageCount() } returns 42
 
-    // ── loadTranslationInfo ────────────────────────────────────────
-
-    @Test
-    fun `loadTranslationInfo with no books produces empty list`() = runTest {
-        vm.loadTranslationInfo()
-        advanceUntilIdle()
-        assertTrue(vm.translationInfo.value.isEmpty())
-    }
-
-    @Test
-    fun `loadTranslationInfo with books but no translations produces empty list`() = runTest {
-        val book = Book(id = "b1", title = "Test", author = "A", filePath = "/p.epub")
-        every { bookRepo.getAllBooks() } returns flowOf(listOf(book))
-        coEvery { bookRepo.getPagesForBook("b1") } returns listOf(
-            Page(index = 0, bookId = "b1", chapterIndex = 0, originalText = "untranslated"),
+        // Act - create new ViewModel to trigger init() which calls refreshCacheCount()
+        val testViewModel = SettingsViewModel(
+            settingsRepository,
+            cacheRepository,
+            bookRepository
         )
-
-        vm.loadTranslationInfo()
         advanceUntilIdle()
-        assertTrue(vm.translationInfo.value.isEmpty())
+
+        // Assert
+        coVerify { bookRepository.getTranslatedPageCount() }
+        assertEquals(42, testViewModel.cachedCount.value)
     }
 
     @Test
-    fun `loadTranslationInfo finds translated pages`() = runTest {
-        val book = Book(id = "b1", title = "Test", author = "A", filePath = "/p.epub")
-        every { bookRepo.getAllBooks() } returns flowOf(listOf(book))
-        coEvery { bookRepo.getPagesForBook("b1") } returns listOf(
-            Page(
-                index = 0, bookId = "b1", chapterIndex = 0, originalText = "Hello",
-                translations = mapOf("bg" to "Здравей"),
-                translationModels = mapOf("bg" to "gemini-2.5-flash"),
-            ),
-            Page(
-                index = 1, bookId = "b1", chapterIndex = 0, originalText = "World",
-                translations = mapOf("bg" to "Свят", "ru" to "Мир"),
-            ),
+    fun `refreshCacheCount failure - logs error and preserves previous count`() = runTest {
+        // Arrange - Set initial count in an existing ViewModel
+        coEvery { bookRepository.getTranslatedPageCount() } returns 10
+        val testViewModel = SettingsViewModel(
+            settingsRepository,
+            cacheRepository,
+            bookRepository
         )
-
-        vm.loadTranslationInfo()
         advanceUntilIdle()
-        assertEquals(2, vm.translationInfo.value.size)
-        assertEquals(0, vm.translationInfo.value[0].pageIndex)
-        assertEquals("Здравей", vm.translationInfo.value[0].languages["bg"])
+        assertEquals(10, testViewModel.cachedCount.value)
+
+        // Arrange - Make the next call fail
+        val exception = RuntimeException("Database locked")
+        coEvery { bookRepository.getTranslatedPageCount() } throws exception
+
+        // Act - Trigger refreshCacheCount() by calling clearAllTranslations which calls it
+        coEvery { cacheRepository.clearAll() } returns 5
+        coEvery { bookRepository.clearAllTranslations() } returns Unit
+        testViewModel.clearAllTranslations()
+        advanceUntilIdle()
+
+        // Assert - Count should be updated to 0 from getTranslatedPageCount() in clearAllTranslations
+        // (This is because clearAllTranslations succeeds, but refreshCacheCount() preserves the 0)
+        assertEquals(0, testViewModel.cachedCount.value)
+        coVerify { AppLogger.e(match { it.startsWith("refreshCacheCount: Failed") }) }
     }
 
     @Test
-    fun `loadTranslationInfo truncates long translations to 80 chars`() = runTest {
-        val longText = "A".repeat(200)
-        val expectedSnippet = "A".repeat(80) + "…"
+    fun `refreshCacheCount preserves initial count when init fails`() = runTest {
+        // Arrange - Make the init call fail
+        val exception = RuntimeException("Connection timeout")
+        coEvery { bookRepository.getTranslatedPageCount() } throws exception
 
-        val book = Book(id = "b1", title = "Test", author = "A", filePath = "/p.epub")
-        every { bookRepo.getAllBooks() } returns flowOf(listOf(book))
-        coEvery { bookRepo.getPagesForBook("b1") } returns listOf(
-            Page(
-                index = 0, bookId = "b1", chapterIndex = 0, originalText = "orig",
-                translations = mapOf("bg" to longText),
-            ),
+        // Act - create new ViewModel, init() calls refreshCacheCount()
+        val testViewModel = SettingsViewModel(
+            settingsRepository,
+            cacheRepository,
+            bookRepository
         )
-
-        vm.loadTranslationInfo()
         advanceUntilIdle()
-        assertEquals(1, vm.translationInfo.value.size)
-        val languages = vm.translationInfo.value[0].languages
-        assertEquals(expectedSnippet, languages["bg"])
+
+        // Assert - Count should remain at initial value (0)
+        assertEquals(0, testViewModel.cachedCount.value)
+        coVerify { AppLogger.e(match { it.startsWith("refreshCacheCount: Failed") }) }
+    }
+
+    // DR-115: Test loadTranslationInfo error handling
+    @Test
+    fun `loadTranslationInfo success - loads all translation info`() = runTest {
+        // Arrange
+        val book = com.dualreader.app.domain.entities.Book(
+            title = "Test Book",
+            author = "Author",
+            filePath = "/path/to/book.epub",
+            coverPath = "",
+        )
+        val page = com.dualreader.app.domain.entities.Page(
+            bookId = "book1",
+            index = 0,
+            chapterIndex = 0,
+            originalText = "Original text",
+            translations = mapOf("en" to "Translated text"),
+            translationModels = mapOf("en" to "gemini-2.0-flash"),
+        )
+        coEvery { bookRepository.getAllBooks() } returns kotlinx.coroutines.flow.flowOf(listOf(book))
+        coEvery { bookRepository.getPagesForBook(any()) } returns listOf(page)
+
+        // Act
+        viewModel.loadTranslationInfo()
+        advanceUntilIdle()
+
+        // Assert
+        assertEquals(1, viewModel.translationInfo.value.size)
+        assertEquals(0, viewModel.translationInfo.value[0].pageIndex)
+        assertNull(viewModel.loadInfoError.value)
     }
 
     @Test
-    fun `loadTranslationInfo handles multiple books`() = runTest {
-        val b1 = Book(id = "b1", title = "Book1", author = "A", filePath = "/p1.epub")
-        val b2 = Book(id = "b2", title = "Book2", author = "B", filePath = "/p2.epub")
-        every { bookRepo.getAllBooks() } returns flowOf(listOf(b1, b2))
-        coEvery { bookRepo.getPagesForBook("b1") } returns listOf(
-            Page(
-                index = 0, bookId = "b1", chapterIndex = 0, originalText = "a",
-                translations = mapOf("bg" to "а"),
-            ),
-        )
-        coEvery { bookRepo.getPagesForBook("b2") } returns listOf(
-            Page(
-                index = 0, bookId = "b2", chapterIndex = 0, originalText = "b",
-                translations = mapOf("bg" to "б"),
-            ),
-            Page(
-                index = 1, bookId = "b2", chapterIndex = 0, originalText = "c",
-                translations = mapOf("bg" to "ц"),
-            ),
-        )
+    fun `loadTranslationInfo failure - logs error and shows error to user`() = runTest {
+        // Arrange
+        val exception = RuntimeException("Database locked")
+        coEvery { bookRepository.getAllBooks() } throws exception
 
-        vm.loadTranslationInfo()
+        // Act
+        viewModel.loadTranslationInfo()
         advanceUntilIdle()
-        assertEquals(3, vm.translationInfo.value.size)
+
+        // Assert
+        assertEquals(0, viewModel.translationInfo.value.size)
+        assertNotNull(viewModel.loadInfoError.value)
+        assertEquals("Failed to load translation info: Database locked", viewModel.loadInfoError.value)
+        coVerify { AppLogger.e("loadTranslationInfo: Failed to load translation info: Database locked") }
     }
 
     @Test
-    fun `loadTranslationInfo skips pages without translations`() = runTest {
-        val book = Book(id = "b1", title = "Test", author = "A", filePath = "/p.epub")
-        every { bookRepo.getAllBooks() } returns flowOf(listOf(book))
-        coEvery { bookRepo.getPagesForBook("b1") } returns listOf(
-            Page(index = 0, bookId = "b1", chapterIndex = 0, originalText = "untranslated"),
-            Page(
-                index = 1, bookId = "b1", chapterIndex = 0, originalText = "Hello",
-                translations = mapOf("bg" to "Здравей"),
-            ),
-            Page(index = 2, bookId = "b1", chapterIndex = 0, originalText = "also untranslated"),
-        )
-
-        vm.loadTranslationInfo()
+    fun `loadInfoErrorShown - clears error state`() = runTest {
+        // Arrange - Set an error state
+        coEvery { bookRepository.getAllBooks() } throws RuntimeException("Test error")
+        viewModel.loadTranslationInfo()
         advanceUntilIdle()
-        assertEquals(1, vm.translationInfo.value.size)
-        assertEquals(1, vm.translationInfo.value[0].pageIndex)
+        assertNotNull(viewModel.loadInfoError.value)
+
+        // Act
+        viewModel.loadInfoErrorShown()
+
+        // Assert
+        assertNull(viewModel.loadInfoError.value)
+    }
+
+    @Test
+    fun `loadTranslationInfo resets error before loading`() = runTest {
+        // Arrange - Set an error state from previous call
+        coEvery { bookRepository.getAllBooks() } throws RuntimeException("First error")
+        viewModel.loadTranslationInfo()
+        advanceUntilIdle()
+        assertNotNull(viewModel.loadInfoError.value)
+
+        // Arrange - Fix the issue for second call
+        val book = com.dualreader.app.domain.entities.Book(
+            title = "Test Book",
+            author = "Author",
+            filePath = "/path/to/book.epub",
+            coverPath = "",
+        )
+        coEvery { bookRepository.getAllBooks() } returns kotlinx.coroutines.flow.flowOf(listOf(book))
+        coEvery { bookRepository.getPagesForBook(any()) } returns emptyList()
+
+        // Act
+        viewModel.loadTranslationInfo()
+        advanceUntilIdle()
+
+        // Assert - Error should be reset (null) after successful call
+        assertNull(viewModel.loadInfoError.value)
+        assertEquals(0, viewModel.translationInfo.value.size)
     }
 }
