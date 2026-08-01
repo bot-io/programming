@@ -31,6 +31,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.dualreader.app.util.AppLogger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import com.dualreader.app.ui.screens.*
 import java.io.File
@@ -148,6 +149,8 @@ fun DualReaderNavHost(
                                 context.contentResolver.openOutputStream(u)?.use { os ->
                                     os.write(content.toByteArray(Charsets.UTF_8))
                                 }
+                            } catch (e: CancellationException) {
+                                throw e // Preserve coroutine cancellation semantics (DR-204)
                             } catch (e: Exception) {
                                 AppLogger.e("Failed to export bookmarks from library: ${e.message}", e)
                             }
@@ -254,6 +257,8 @@ fun DualReaderNavHost(
                             context.contentResolver.openOutputStream(u)?.use { os ->
                                 os.write(content.toByteArray(Charsets.UTF_8))
                             }
+                        } catch (e: CancellationException) {
+                            throw e // Preserve coroutine cancellation semantics (DR-204)
                         } catch (e: Exception) {
                             AppLogger.e("Failed to export bookmarks from reader: ${e.message}", e)
                         }

@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.CancellationException
 import java.time.LocalDateTime
 import java.util.UUID
 import javax.inject.Inject
@@ -112,6 +113,7 @@ class ReaderViewModel @Inject constructor(
     private var loadJob: Job? = null
     private var loadOuterJob: Job? = null
     private var ttsRetryJob: Job? = null // DR-092: Track TTS retry coroutine
+    private var persistJob: Job? = null // DR-181: Track persistence coroutine to prevent post-clear DB writes
 
     // ── Translation events (one-time UI events for Snackbar) ──────────────
     sealed class TranslationEvent {
@@ -189,15 +191,22 @@ class ReaderViewModel @Inject constructor(
         // Register cloud upgrade callback: when background cloud translation
         // completes, find the matching page by original text and replace the
         // ML Kit translation with the higher-quality cloud version.
-        fallbackTranslationService.cloudUpgradeCallback = { originalText, cloudTranslation, targetLang ->
+        fallbackTranslationService.cloudUpgradeCallback = originalText@{ originalText, cloudTranslation, targetLang ->
             val pages = _pages.value
-            val pageToUpdate = pages.find { page ->
-                page.originalText.trim() == originalText.trim() ||
-                page.originalText.contains(originalText.take(100))
+            val bookId = currentBookId
+            val pageToUpdate = _pages.value.find {
+                it.bookId == bookId &&
+                it.originalText.trim() == originalText.trim() &&
+                it.originalText.contains(originalText.take(100))
             }
-            if (pageToUpdate != null) {
-                AppLogger.i("Cloud upgrade: replacing ML Kit translation for page ${pageToUpdate.index}")
-                applyTranslation(pageToUpdate.index, targetLang, cloudTranslation, "cloud-upgrade")
+            if (pageToUpdate != null && bookId != null) {
+                // Double-check bookId after finding page to catch concurrent loadBook
+                val currentPage = _pages.value.getOrNull(pageToUpdate.index)
+                val pageOriginalText = currentPage?.originalText?.trim()
+                if (pageOriginalText != null && pageOriginalText == originalText.trim()) {
+                    AppLogger.i("Cloud upgrade: replacing ML Kit translation for page ${pageToUpdate.index}")
+                    applyTranslation(pageToUpdate.index, targetLang, cloudTranslation, "cloud-upgrade")
+                }
             }
         }
     }
@@ -730,7 +739,9 @@ class ReaderViewModel @Inject constructor(
         val bookId = _book.value?.id
         if (bookId != null) {
             val converters = com.dualreader.app.data.local.Converters()
-            viewModelScope.launch(ioDispatcher) {
+            // DR-181: Cancel previous persist job to prevent duplicate DB writes
+            persistJob?.cancel()
+            persistJob = viewModelScope.launch(ioDispatcher) {
                 // DR-106: Retry failed persistence operations with exponential backoff
                 val failedPages = mutableMapOf<Int, Page>()
                 for (page in updatedPagesList) {
@@ -772,34 +783,6 @@ class ReaderViewModel @Inject constructor(
                     _translationEvents.trySend(TranslationEvent.PersistenceError(failedPages.size))
                 }
             }
-        }
-    }
-
-    /**
-     * Persist translated pages to the repository. Uses targeted UPDATE for
-     * pages that have translations, which is more reliable than full REPLACE.
-     */
-    private fun persistPages() {
-        val pagesToSave = _pages.value
-        val bookId = _book.value?.id ?: return
-        val converters = com.dualreader.app.data.local.Converters()
-        viewModelScope.launch(ioDispatcher) {
-            var saved = 0
-            for (page in pagesToSave) {
-                if (page.translations.isNotEmpty()) {
-                    runCatching {
-                        bookRepository.updatePageTranslation(
-                            bookId = bookId,
-                            pageIndex = page.index,
-                            translationsJson = converters.toTranslationsJson(page.translations),
-                            modelsJson = converters.toTranslationsJson(page.translationModels),
-                        )
-                    }
-                        .onSuccess { saved++ }
-                        .onFailure { AppLogger.e("persistPages: failed page ${page.index}: ${it.message}") }
-                }
-            }
-            AppLogger.i("persistPages: saved translations for $saved/${pagesToSave.count { it.translations.isNotEmpty() }} pages")
         }
     }
 
@@ -1309,19 +1292,28 @@ class ReaderViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // DR-092: Cancel TTS retry coroutine to prevent post-clear execution
+        // DR-180: Cancel all tracked jobs to prevent post-clear execution
+        translationJob?.cancel()
+        loadJob?.cancel()
+        loadOuterJob?.cancel()
         ttsRetryJob?.cancel()
+        persistJob?.cancel() // DR-185: Cancel persistence job to prevent post-clear DB writes
+        wordJob?.cancel() // DR-193: Cancel word translation job to prevent post-clear UI updates
         // DR-098: Close Channel to prevent resource leaks
         _translationEvents.close()
         // DR-141: Clear cloud upgrade callback to prevent memory leaks and post-clear updates
         fallbackTranslationService.cloudUpgradeCallback = null
         try {
             ttsService.stop()
+        } catch (e: CancellationException) {
+            throw e // Preserve coroutine cancellation semantics (DR-202)
         } catch (e: Exception) {
             AppLogger.w("Failed to stop TTS service: ${e.message}")
         }
         try {
             ttsService.release()
+        } catch (e: CancellationException) {
+            throw e // Preserve coroutine cancellation semantics (DR-202)
         } catch (e: Exception) {
             AppLogger.w("Failed to release TTS service: ${e.message}")
         }

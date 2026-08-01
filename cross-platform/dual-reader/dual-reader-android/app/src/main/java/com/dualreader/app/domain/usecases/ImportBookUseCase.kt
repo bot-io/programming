@@ -26,7 +26,7 @@ class ImportBookUseCase @Inject constructor(
     private val epubParser: EpubParserService,
 ) {
     suspend operator fun invoke(filePath: String): Result<Book> {
-        return runCatching {
+        val result = runCatching {
             // Parse EPUB metadata
             val parsed = epubParser.parseMetadata(filePath)
 
@@ -52,5 +52,14 @@ class ImportBookUseCase @Inject constructor(
             bookRepository.insertBook(book)
             book
         }
+
+        // DR-170: Preserve cancellation semantics - don't wrap CancellationException in Result.failure
+        result.exceptionOrNull()?.let { e ->
+            if (e is kotlinx.coroutines.CancellationException) {
+                throw e
+            }
+        }
+
+        return result
     }
 }

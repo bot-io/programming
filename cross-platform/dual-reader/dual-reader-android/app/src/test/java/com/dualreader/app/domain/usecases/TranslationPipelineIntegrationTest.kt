@@ -243,8 +243,9 @@ class TranslationPipelineIntegrationTest {
     }
 
     @Test
-    fun `fallback - batch cloud returns partial results, gaps remain unfilled`() = runTest {
+    fun `fallback - batch cloud returns partial results, throws exception`() = runTest {
         // DR-147: ML Kit throws to fall through to cloud (Tier 3)
+        // DR-054: Cloud partial success is a failure - throw instead of silent data loss
         coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit unavailable")
         val pages = listOf(
             PageToTranslate(index = 0, text = "P0"),
@@ -256,12 +257,11 @@ class TranslationPipelineIntegrationTest {
 
         val result = useCase.translateBatchWithContext(pages, targetLanguage = "bg", sourceLanguage = "en")
 
-        assertTrue(result.isSuccess)
-        val translations = result.getOrThrow().translations
-        // Fail-fast design: partial cloud results returned as-is (no ML Kit gap fill)
-        assertEquals("T0", translations[0])
-        assertEquals("T2", translations[2])
-        assertEquals(2, translations.size)
+        // DR-054: Cloud must return all requested pages or throw
+        assertTrue(result.isFailure)
+        val ex = result.exceptionOrNull()
+        assertNotNull(ex)
+        assertTrue(ex!!.message!!.contains("missing"))
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -309,8 +309,9 @@ class TranslationPipelineIntegrationTest {
     }
 
     @Test
-    fun `recovery - partial batch delivers onPageTranslated callback for returned pages`() = runTest {
+    fun `recovery - batch cloud returns partial results, callback not invoked for missing pages`() = runTest {
         // DR-147: ML Kit throws to fall through to cloud (Tier 3)
+        // DR-054: Cloud partial success is a failure - throw before callbacks
         coEvery { mlKitService.translate(any(), any(), any()) } throws TranslationException("ML Kit unavailable")
         val pages = listOf(
             PageToTranslate(index = 0, text = "P0"),
@@ -326,11 +327,9 @@ class TranslationPipelineIntegrationTest {
             onPageTranslated = { idx, text -> callbacks.add(idx to text) },
         )
 
-        assertTrue(result.isSuccess)
-        // Fail-fast: only cloud-returned pages get callbacks (2 of 3)
-        assertEquals(2, callbacks.size)
-        assertTrue(callbacks.contains(0 to "T0"))
-        assertTrue(callbacks.contains(2 to "T2"))
+        // DR-054: Cloud partial results cause failure - no callbacks invoked
+        assertTrue(result.isFailure)
+        assertEquals(0, callbacks.size)
     }
 
     @Test

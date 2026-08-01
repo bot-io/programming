@@ -191,7 +191,7 @@ class LocalFirstTranslationTest {
     }
 
     @Test
-    fun `translatePages returns partial ML Kit results when some pages fail`() = runTest {
+    fun `translatePages throws when some pages fail after cloud fallback`() = runTest {
         val pages = listOf(
             IndexedValue(0, "Page zero"),
             IndexedValue(1, "Page one"),
@@ -200,10 +200,17 @@ class LocalFirstTranslationTest {
         coEvery { mlKitService.translate("Page zero", any(), any()) } returns "mlkit-0"
         coEvery { mlKitService.translate("Page one", any(), any()) } throws TranslationException("ML Kit failed")
 
-        val result: BatchTranslationResult = service.translatePages(pages, "bg", "en", null, null, false)
+        // Cloud also fails (partial ML Kit success scenario)
+        coEvery { cloudService.translatePages(any(), any(), any(), any(), any(), any()) } throws
+            TranslationException("Cloud failed")
 
-        assertEquals(1, result.translations.size)
-        assertEquals("mlkit-0", result.translations[0])
+        try {
+            service.translatePages(pages, "bg", "en", null, null, false)
+            fail("Should have thrown TranslationException")
+        } catch (e: TranslationException) {
+            assertTrue("Should mention cloud failure", e.message!!.contains("Cloud fallback"))
+            assertTrue("Should mention success count", e.message!!.contains("1/2"))
+        }
     }
 
     @Test

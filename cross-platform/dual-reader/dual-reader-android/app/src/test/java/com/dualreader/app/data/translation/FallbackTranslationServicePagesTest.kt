@@ -95,9 +95,13 @@ class FallbackTranslationServiceTranslatePagesTest {
     }
 
     // ── Cloud batch partial success → ML Kit fills gaps ───────────────────
+    //
+    // DR-054: Cloud partial success is a failure condition - throw instead of
+    // returning incomplete results (silent data loss bug). Tests updated to expect
+    // the correct behavior: cloud must return all requested pages or throw.
 
     @Test
-    fun `translatePages - cloud returns partial results, gaps remain unfilled`() = runTest {
+    fun `translatePages - cloud returns partial results, throws exception`() = runTest {
         val pages = listOf(
             IndexedValue(0, "Page 0"),
             IndexedValue(1, "Page 1"),
@@ -108,21 +112,23 @@ class FallbackTranslationServiceTranslatePagesTest {
             mlKitService.translate(any(), any(), any(), any())
         } throws TranslationException("ML Kit unavailable")
 
-        // Cloud returns only page 0 and 2, missing page 1
+        // Cloud returns only page 0 and 2, missing page 1 - should throw
         coEvery {
             cloudService.translatePages(any(), "bg", "en", any())
         } returns BatchTranslationResult(mapOf(0 to "Стр. 0", 2 to "Стр. 2"), "gemini-2.5-flash")
 
-        val result = fallbackService.translatePages(pages, "bg", "en", null)
-
-        // Fail-fast design: partial cloud results are returned as-is (no ML Kit gap fill)
-        assertEquals("Стр. 0", result.translations[0])
-        assertEquals("Стр. 2", result.translations[2])
-        assertNull(result.translations[1])
+        try {
+            fallbackService.translatePages(pages, "bg", "en", null)
+            fail("Should have thrown TranslationException for incomplete cloud results")
+        } catch (e: TranslationException) {
+            assertTrue("Should mention missing pages", e.message!!.contains("missing"))
+            assertTrue("Should mention missing index 1", e.message!!.contains("1"))
+            assertTrue("Should mention cloud incomplete", e.message!!.contains("Cloud returned incomplete"))
+        }
     }
 
     @Test
-    fun `translatePages - cloud returns only one of three pages, gaps remain`() = runTest {
+    fun `translatePages - cloud returns only one of three pages, throws exception`() = runTest {
         val pages = listOf(
             IndexedValue(0, "A"),
             IndexedValue(1, "B"),
@@ -133,16 +139,17 @@ class FallbackTranslationServiceTranslatePagesTest {
             mlKitService.translate(any(), any(), any(), any())
         } throws TranslationException("ML Kit unavailable")
 
+        // Cloud returns only page 1 - should throw
         coEvery {
             cloudService.translatePages(any(), "bg", "en", any())
         } returns BatchTranslationResult(mapOf(1 to "Б"), "glm-4.7-flash")
 
-        val result = fallbackService.translatePages(pages, "bg", "en", null)
-
-        // Fail-fast: only the returned page is present
-        assertEquals("Б", result.translations[1])
-        assertNull(result.translations[0])
-        assertNull(result.translations[2])
+        try {
+            fallbackService.translatePages(pages, "bg", "en", null)
+            fail("Should have thrown TranslationException for incomplete cloud results")
+        } catch (e: TranslationException) {
+            assertTrue("Should mention missing pages", e.message!!.contains("missing"))
+        }
     }
 
     // ── Cloud batch throws → individual fallback through full chain ────────

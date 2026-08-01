@@ -5,6 +5,7 @@ import com.dualreader.app.domain.repositories.TranslationCacheRepository
 import com.dualreader.app.domain.services.BatchTranslationResult
 import com.dualreader.app.domain.services.TranslationService
 import com.dualreader.app.util.AppLogger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import javax.inject.Inject
@@ -56,7 +57,7 @@ class TranslatePageUseCase @Inject constructor(
         forceRetranslate: Boolean = false,
         bookContext: BookContext? = null,
     ): Result<String> {
-        return runCatching {
+        val result = runCatching {
             // Check cache first (unless forced retranslate)
             if (!forceRetranslate) {
                 val cached = cacheRepository.get(text, sourceLanguage, targetLanguage)
@@ -80,6 +81,10 @@ class TranslatePageUseCase @Inject constructor(
 
             translated
         }
+
+        // DR-173: Rethrow CancellationException to preserve structured concurrency
+        result.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+        return result
     }
 
     /**
@@ -332,13 +337,17 @@ class TranslatePageUseCase @Inject constructor(
         targetLanguage: String,
         sourceLanguage: String? = null,
     ): Result<List<String>> {
-        return runCatching {
+        val result = runCatching {
             translationService.translateBatch(
                 texts = texts,
                 targetLanguage = targetLanguage,
                 sourceLanguage = sourceLanguage,
             )
         }
+
+        // DR-173: Rethrow CancellationException to preserve structured concurrency
+        result.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+        return result
     }
 
     /**

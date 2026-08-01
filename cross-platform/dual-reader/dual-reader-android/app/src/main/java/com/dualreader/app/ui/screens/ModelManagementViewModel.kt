@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.dualreader.app.data.translation.LanguageModelInfo
 import com.dualreader.app.data.translation.MlKitModelManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,17 +28,23 @@ class ModelManagementViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ModelManagementUiState(isLoading = true))
     val uiState: StateFlow<ModelManagementUiState> = _uiState.asStateFlow()
 
+    // DR-198: Track loadModels() job to prevent concurrent loads and race conditions
+    private var loadModelsJob: Job? = null
+
     init {
         loadModels()
     }
 
     fun loadModels() {
-        viewModelScope.launch {
+        // DR-198: Cancel any pending loadModels() job to prevent concurrent loads
+        loadModelsJob?.cancel()
+        loadModelsJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val models = modelManager.getAvailableModels()
                 _uiState.value = _uiState.value.copy(models = models, isLoading = false)
             } catch (e: kotlinx.coroutines.CancellationException) {
+                _uiState.value = _uiState.value.copy(isLoading = false) // Reset loading state before rethrowing (DR-191)
                 throw e // VM cleared — don't show spurious error (DR-052)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)

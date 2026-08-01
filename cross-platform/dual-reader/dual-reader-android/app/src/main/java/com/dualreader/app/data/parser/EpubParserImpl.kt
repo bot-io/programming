@@ -73,6 +73,9 @@ class EpubParserImpl @Inject constructor() : EpubParserService {
         withContext(Dispatchers.IO) {
             try {
                 readEpub(filePath).coverImage?.data
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // DR-192: Propagate cancellation - don't swallow it
+                throw e
             } catch (e: Exception) {
                 AppLogger.w("Failed to extract cover image from EPUB: $filePath. Error: ${e.message}")
                 null

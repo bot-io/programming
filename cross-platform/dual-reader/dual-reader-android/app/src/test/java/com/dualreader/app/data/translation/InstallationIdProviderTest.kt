@@ -18,8 +18,7 @@ import io.mockk.mockk
  * In-memory fake DataStore — no file I/O, works on Windows.
  */
 class FakeDataStore(
-    initial: Preferences = mutablePreferencesOf(),
-    private val returnNullKey: String? = null
+    initial: Preferences = mutablePreferencesOf()
 ) : DataStore<Preferences> {
     private val _data = MutableStateFlow(initial)
     override val data = _data

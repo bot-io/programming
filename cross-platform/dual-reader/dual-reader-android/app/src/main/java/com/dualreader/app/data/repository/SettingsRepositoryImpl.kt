@@ -8,6 +8,7 @@ import com.dualreader.app.domain.entities.ReadingSettings
 import com.dualreader.app.domain.entities.TranslationProvider
 import com.dualreader.app.domain.repositories.SettingsRepository
 import com.dualreader.app.util.AppLogger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -89,6 +90,8 @@ class SettingsRepositoryImpl @Inject constructor(
         margins = this[Keys.MARGINS] ?: 16,
         theme = try {
             ReaderTheme.valueOf(this[Keys.THEME] ?: "DARK")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Preserve coroutine cancellation semantics (DR-196)
         } catch (e: Exception) {
             val themeValue = this[Keys.THEME]
             AppLogger.w("Failed to parse theme: '$themeValue', using DARK. Error: ${e.message}")
@@ -103,6 +106,8 @@ class SettingsRepositoryImpl @Inject constructor(
                 "LLM_FREE" -> TranslationProvider.LLM_FREE
                 else -> TranslationProvider.valueOf(name)
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Preserve coroutine cancellation semantics (DR-196)
         } catch (e: Exception) {
             val providerValue = this[Keys.TRANSLATION_PROVIDER]
             AppLogger.w("Failed to parse translationProvider: '$providerValue', using GEMINI_FLASH. Error: ${e.message}")
@@ -114,6 +119,8 @@ class SettingsRepositoryImpl @Inject constructor(
         sentenceCounterEnabled = this[Keys.SENTENCE_COUNTER] ?: false,
         displayMode = try {
             DisplayMode.valueOf(this[Keys.DISPLAY_MODE] ?: "SPLIT")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Preserve coroutine cancellation semantics (DR-196)
         } catch (e: Exception) {
             val displayModeValue = this[Keys.DISPLAY_MODE]
             AppLogger.w("Failed to parse displayMode: '$displayModeValue', using SPLIT. Error: ${e.message}")

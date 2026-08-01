@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -172,14 +173,20 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
                         billingResult: BillingResult,
                         result: QueryProductDetailsResult,
                     ) {
-                        if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                            cont.resume(result.productDetailsList)
-                        } else {
-                            cont.resume(emptyList())
+                        if (cont.isActive) {
+                            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                                cont.resume(result.productDetailsList)
+                            } else {
+                                cont.resume(emptyList())
+                            }
                         }
                     }
                 }
             )
+            cont.invokeOnCancellation {
+                // BillingClient callbacks still fire after cancellation
+                // Guarded by isActive check in callback
+            }
         }
     }
 
@@ -267,14 +274,20 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
                         billingResult: BillingResult,
                         result: QueryProductDetailsResult,
                     ) {
-                        if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                            cont.resume(result.productDetailsList)
-                        } else {
-                            cont.resume(emptyList())
+                        if (cont.isActive) {
+                            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                                cont.resume(result.productDetailsList)
+                            } else {
+                                cont.resume(emptyList())
+                            }
                         }
                     }
                 }
             )
+            cont.invokeOnCancellation {
+                // BillingClient callbacks still fire after cancellation
+                // Guarded by isActive check in callback
+            }
         }
         val productDetails = detailsList.firstOrNull()
             ?: return PurchaseResult.Error("Could not load product details")
@@ -320,7 +333,13 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
                 .build()
             val purchases = suspendCancellableCoroutine { cont ->
                 client.queryPurchasesAsync(params) { _, purchasesList ->
-                    cont.resume(purchasesList)
+                    if (cont.isActive) {
+                        cont.resume(purchasesList)
+                    }
+                }
+                cont.invokeOnCancellation {
+                    // BillingClient callbacks still fire after cancellation
+                    // Guarded by isActive check in callback
                 }
             }
             allPurchases.addAll(purchases)
@@ -396,5 +415,21 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
                 purchaseDeferred = null
             }
         }
+    }
+
+    /**
+     * Cleanup method to cancel background coroutines and release BillingClient.
+     * Call this when the repository is no longer needed (e.g., on app termination).
+     *
+     * This prevents:
+     * - Memory leaks from coroutines keeping references to BillingClient
+     * - Post-cleanup coroutine execution attempting to use disconnected BillingClient
+     *
+     * DR-197
+     */
+    override fun cleanup() {
+        scope.cancel()
+        billingClient?.endConnection()
+        billingClient = null
     }
 }

@@ -9,6 +9,7 @@ import com.dualreader.app.domain.services.ExtractedParagraph
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -168,20 +169,23 @@ class PaginateBookUseCaseTest {
     }
 
     // ── DR-052: CancellationException must propagate without marking book FAILED ──
+    // ── DR-174: CancellationException must be rethrown (not wrapped in Result.failure()) ──
 
     @Test
     fun `cancellation propagates without marking book as FAILED`() = runTest {
         coEvery { epubParser.extractParagraphs(any()) } throws
-            kotlinx.coroutines.CancellationException("cancelled")
+            CancellationException("cancelled")
 
-        val result = useCase(makeBook())
+        // DR-174: CancellationException is rethrown, not wrapped in Result.failure()
+        var caughtCancellation = false
+        try {
+            useCase(makeBook())
+        } catch (e: CancellationException) {
+            caughtCancellation = true
+        }
 
-        // runCatching wraps the CancellationException in Result.failure
-        assertTrue("Expected failure", result.isFailure)
-        assertTrue(
-            "Expected CancellationException, got: ${result.exceptionOrNull()}",
-            result.exceptionOrNull() is kotlinx.coroutines.CancellationException,
-        )
+        assertTrue("CancellationException should be rethrown", caughtCancellation)
+
         // Book must NOT be marked as FAILED on cancellation — it stays IN_PROGRESS
         coVerify(exactly = 0) {
             bookRepo.updateBook(match { it.paginationStatus == PaginationStatus.FAILED })

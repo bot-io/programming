@@ -167,6 +167,13 @@ class ImportBookUseCaseTest {
         assertTrue(result.isFailure)
     }
 
+    @Test(expected = kotlinx.coroutines.CancellationException::class)
+    fun `invoke throws CancellationException when coroutine is cancelled`() = runTest {
+        coEvery { epubParser.parseMetadata(any()) } throws kotlinx.coroutines.CancellationException("Cancelled")
+
+        useCase("book.epub")
+    }
+
     // ── Chapters ──────────────────────────────────────────────────
 
     @Test

@@ -23,13 +23,23 @@ class DebugImportReceiver : BroadcastReceiver() {
 
         Log.d(TAG, "Copying EPUB from: $srcPath")
 
+        val srcFile = File(srcPath)
+        if (!srcFile.exists()) {
+            Log.e(TAG, "Source file does not exist: $srcPath")
+            return
+        }
+        if (!srcFile.canRead()) {
+            Log.e(TAG, "Source file is not readable: $srcPath")
+            return
+        }
+
         val pendingResult = goAsync()
         try {
             // Copy to app's internal epubs directory
             val epubsDir = File(context.filesDir, "epubs").apply { mkdirs() }
             val destFile = File(epubsDir, "debug_import_${System.currentTimeMillis()}.epub")
 
-            File(srcPath).inputStream().use { input ->
+            srcFile.inputStream().use { input ->
                 destFile.outputStream().use { output ->
                     input.copyTo(output)
                 }

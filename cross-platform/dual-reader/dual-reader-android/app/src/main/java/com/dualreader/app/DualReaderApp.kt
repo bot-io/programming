@@ -2,12 +2,24 @@ package com.dualreader.app
 
 import android.app.Application
 import android.util.Log
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ProcessLifecycleOwner
+import com.dualreader.app.data.translation.FallbackTranslationService
 import com.dualreader.app.util.AppLogger
 import dagger.hilt.android.HiltAndroidApp
 import java.io.File
+import javax.inject.Inject
 
 @HiltAndroidApp
 class DualReaderApp : Application() {
+
+    @Inject
+    lateinit var fallbackTranslationService: FallbackTranslationService
+
+    @Inject
+    lateinit var billingRepository: com.dualreader.app.domain.repository.BillingRepository
+
     override fun onCreate() {
         // Install crash handler FIRST, before anything else
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
@@ -46,5 +58,15 @@ class DualReaderApp : Application() {
         AppLogger.init(this)
         AppLogger.i("DualReader ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) starting")
         AppLogger.i("Device density: ${resources.displayMetrics.density}")
+
+        // DR-194: Listen for app going to background to cleanup translation service
+        ProcessLifecycleOwner.get().lifecycle.addObserver(LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                // App is in background - cancel background cloud upgrades
+                fallbackTranslationService.cleanup()
+                // DR-197: Cancel billing repository coroutines and disconnect BillingClient
+                billingRepository.cleanup()
+                AppLogger.d("Translation and billing services cleaned up on app background")
+        }})
     }
 }

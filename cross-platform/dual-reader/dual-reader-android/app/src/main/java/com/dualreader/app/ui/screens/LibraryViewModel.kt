@@ -296,7 +296,14 @@ class LibraryViewModel @Inject constructor(
         format: ExportFormat,
     ): Pair<String, String>? {
         val book = bookRepository.getBookById(bookId) ?: return null
-        val bookmarks = bookmarkRepository.getBookmarksForBook(bookId).first()
+        val bookmarks = try {
+            bookmarkRepository.getBookmarksForBook(bookId).first()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Preserve cancellation semantics (DR-176)
+        } catch (e: Exception) {
+            AppLogger.e("formatBookmarksForExport: Failed to load bookmarks for book $bookId: ${e.message}", e)
+            return null
+        }
         if (bookmarks.isEmpty()) return null
 
         val exportable = bookmarks.map { bm ->

@@ -35,4 +35,7 @@ interface BillingRepository {
 
     /** Restore previous purchases (called from settings). */
     suspend fun restorePurchases(): EntitlementTier
+
+    /** Cleanup method to cancel background coroutines and release BillingClient. DR-197 */
+    fun cleanup()
 }

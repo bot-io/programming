@@ -7,6 +7,7 @@ import com.dualreader.app.domain.repositories.BookRepository
 import com.dualreader.app.domain.services.EpubParserService
 import com.dualreader.app.util.AppLogger
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 
 /**
  * Extract paragraphs from an EPUB and store them as Page entities (one paragraph per Page).
@@ -31,7 +32,7 @@ class PaginateBookUseCase @Inject constructor(
         lineHeight: Float = 1.5f, // Ignored
         margins: Int = 16, // Ignored
     ): Result<Unit> {
-        return runCatching {
+        val result = runCatching {
             // Mark as in-progress
             bookRepository.updateBook(
                 book.copy(
@@ -109,7 +110,7 @@ class PaginateBookUseCase @Inject constructor(
                     )
                 )
                 AppLogger.i("PaginateBookUseCase: Pagination completed for '${book.title}' (${pageEntities.size} paragraphs)")
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e // Propagate cancellation — don't mark book as FAILED (DR-052)
             } catch (e: Exception) {
                 AppLogger.e("PaginateBookUseCase: Pagination failed for '${book.title}': ${e.message}")
@@ -122,5 +123,10 @@ class PaginateBookUseCase @Inject constructor(
                 throw e
             }
         }
+
+        // DR-174: Preserve cancellation semantics — rethrow CancellationException if wrapped by runCatching
+        result.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+
+        return result
     }
 }

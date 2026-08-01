@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -201,8 +202,10 @@ class FallbackTranslationService @Inject constructor(
             }
         }
 
-        if (mlKitResults.isNotEmpty()) {
-            AppLogger.i("translatePages: ML Kit instant result for ${mlKitResults.size}/${pages.size} pages")
+        // DR-054: Check if all pages succeeded
+        if (mlKitResults.size == pages.size) {
+            // All pages translated by ML Kit
+            AppLogger.i("translatePages: ML Kit succeeded for all ${pages.size} pages")
 
             // Tier 2: Background cloud upgrade for each page
             // DR-141: Capture callback in local variable to avoid race condition
@@ -227,17 +230,34 @@ class FallbackTranslationService @Inject constructor(
             return BatchTranslationResult(mlKitResults.toMap(), mlKitService.providerName)
         }
 
-        // Tier 3: ML Kit fully unavailable — try cloud batch directly
-        AppLogger.w("ML Kit unavailable for all pages, trying cloud batch directly")
+        // DR-054: ML Kit failed for some or all pages — try cloud batch
+        val failedPages = pages.filter { it.index !in mlKitResults }
+        if (mlKitResults.isEmpty()) {
+            AppLogger.w("ML Kit unavailable for all pages, trying cloud batch directly")
+        } else {
+            AppLogger.i("translatePages: ML Kit succeeded for ${mlKitResults.size}/${pages.size} pages, trying cloud for the rest")
+        }
+
         try {
-            val batchResult = cloudService.translatePages(pages, targetLanguage, sourceLanguage, context, bookContext, skipCache)
-            // DR-147: Invoke callback for each page when cloud batch succeeds (same as Tier 1)
+            val cloudResult = cloudService.translatePages(failedPages, targetLanguage, sourceLanguage, context, bookContext, skipCache)
+            
+            // Combine results
+            val allResults = mlKitResults.toMutableMap()
+            allResults.putAll(cloudResult.translations)
+            
+            if (allResults.size < pages.size) {
+                // Still missing some translations - cloud succeeded but didn't return all expected pages
+                val missingIndices = pages.map { it.index }.filter { it !in allResults }
+                throw TranslationException("Cloud returned incomplete results: missing ${missingIndices.size} pages (indices $missingIndices)")
+            }
+
+            // DR-147: Invoke callback for each page when cloud succeeds (same as Tier 1)
             val callback = cloudUpgradeCallback
             if (callback != null) {
-                for (page in pages) {
+                for (page in failedPages) {
                     upgradeScope.launch(upgradeDispatcher) {
                         try {
-                            val translation = batchResult.translations[page.index]
+                            val translation = cloudResult.translations[page.index]
                             if (translation != null) {
                                 callback(page.value, translation, targetLanguage)
                             }
@@ -248,12 +268,40 @@ class FallbackTranslationService @Inject constructor(
                         }
                     }
                 }
+                
+                // Also trigger callback for ML Kit-translated pages (for upgrade)
+                for (page in pages) {
+                    if (page.index in mlKitResults) {
+                        upgradeScope.launch(upgradeDispatcher) {
+                            try {
+                                val cloudResult = cloudService.translate(
+                                    page.value, targetLanguage, sourceLanguage, context, bookContext, skipCache
+                                )
+                                callback(page.value, cloudResult, targetLanguage)
+                            } catch (e: CancellationException) {
+                                // scope cancelled
+                            } catch (e: Exception) {
+                                AppLogger.w("Cloud upgrade failed for page ${page.index}: ${e.message}")
+                            }
+                        }
+                    }
+                }
             }
-            return batchResult
+
+            return BatchTranslationResult(allResults, cloudResult.model)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            throw TranslationException("Both ML Kit and cloud translation failed: ${e.message}")
+            // DR-054: When cloud fails, throw even if we have partial ML Kit results
+            // Returning partial results causes silent data loss for the missing pages
+            if (mlKitResults.isEmpty()) {
+                throw TranslationException("Both ML Kit and cloud translation failed: ${e.message}")
+            } else {
+                // Throw even with partial results - caller should handle the failure
+                val successCount = mlKitResults.size
+                val totalCount = pages.size
+                throw TranslationException("Cloud fallback failed after ML Kit success for $successCount/$totalCount pages: ${e.message}")
+            }
         }
     }
 
@@ -275,6 +323,20 @@ class FallbackTranslationService @Inject constructor(
     override suspend fun isAvailable(): Boolean = true
 
     // ── Internal ───────────────────────────────────────────────────────────────
+
+    /**
+     * Cleanup method to cancel all background upgrade coroutines and clear callbacks.
+     * Call this when the service is no longer needed (e.g., on app termination).
+     *
+     * This prevents:
+     * - Memory leaks from coroutines keeping references to callbacks
+     * - Post-cleanup callbacks attempting to update UI after screens are destroyed
+     * - Unnecessary network requests after user exits reader
+     */
+    fun cleanup() {
+        upgradeScope.cancel()
+        cloudUpgradeCallback = null
+    }
 
     /**
      * Split text into chunks at paragraph boundaries, each ≤ [MAX_CHUNK_SIZE] chars.

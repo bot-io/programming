@@ -6,6 +6,7 @@ import java.io.File
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
 
 /**
  * Application-wide logger that writes to both logcat AND a file.
@@ -80,6 +81,8 @@ object AppLogger {
             file.appendText(line)
             // DR-116: Reset failure counter on successful write
             consecutiveWriteFailures = 0
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Preserve coroutine cancellation semantics (DR-195)
         } catch (e: Exception) {
             // DR-116: Track consecutive write failures
             consecutiveWriteFailures++
@@ -95,6 +98,8 @@ object AppLogger {
         return try {
             if (!file.exists()) return "(no log file)"
             file.readLines().takeLast(maxLines).joinToString("\n")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Preserve coroutine cancellation semantics (DR-195)
         } catch (e: Exception) {
             "(error reading log: ${e.message})"
         }
@@ -108,6 +113,8 @@ object AppLogger {
             file.writeText("")
             // DR-125: Reset failure counter on successful clear
             consecutiveWriteFailures = 0
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Preserve coroutine cancellation semantics (DR-195)
         } catch (e: Exception) {
             // DR-125: Track clear failures and increment counter
             consecutiveWriteFailures++
