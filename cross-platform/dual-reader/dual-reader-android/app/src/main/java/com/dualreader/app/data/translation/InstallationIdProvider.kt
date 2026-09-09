@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.dualreader.app.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,6 +33,9 @@ class InstallationIdProvider @Inject constructor(
     @Volatile
     private var cachedId: String? = null
 
+    // Mutex to ensure atomic check-and-set on cachedId (DR-206)
+    private val cacheLock = Mutex()
+
     /**
      * Get the installation ID, generating one if needed.
      * Caches the result in memory for fast repeated access.
@@ -40,22 +45,30 @@ class InstallationIdProvider @Inject constructor(
      * never both observe a missing key and generate different UUIDs.
      */
     suspend fun getInstallationId(): String {
+        // Fast path: return cached ID if available (volatile read)
         cachedId?.let { return it }
 
-        // Atomically read-or-create within a single DataStore edit transaction.
-        // DataStore serializes all edit calls, so concurrent callers can never
-        // both observe a missing key and generate different UUIDs (DR-055).
-        val result = dataStore.edit { prefs ->
-            if (prefs[KEY_INSTALLATION_ID] == null) {
-                prefs[KEY_INSTALLATION_ID] = UUID.randomUUID().toString()
-                AppLogger.i("$TAG: Generated new installation ID")
+        // Slow path: atomic check-and-set to prevent concurrent coroutines from
+        // racing on the cache initialization (DR-206).
+        return cacheLock.withLock {
+            // Double-check under lock - another coroutine may have initialized it
+            cachedId?.let { return it }
+
+            // Atomically read-or-create within a single DataStore edit transaction.
+            // DataStore serializes all edit calls, so concurrent callers can never
+            // both observe a missing key and generate different UUIDs (DR-055).
+            val result = dataStore.edit { prefs ->
+                if (prefs[KEY_INSTALLATION_ID] == null) {
+                    prefs[KEY_INSTALLATION_ID] = UUID.randomUUID().toString()
+                    AppLogger.i("$TAG: Generated new installation ID")
+                }
             }
+            val id = result[KEY_INSTALLATION_ID]
+                ?: throw IllegalStateException("Installation ID key missing from DataStore after edit transaction")
+            cachedId = id
+            AppLogger.i("$TAG: Installation ID: ${id.take(8)}...")
+            id
         }
-        val id = result[KEY_INSTALLATION_ID]
-            ?: throw IllegalStateException("Installation ID key missing from DataStore after edit transaction")
-        cachedId = id
-        AppLogger.i("$TAG: Installation ID: ${id.take(8)}...")
-        return id
     }
 
     /**

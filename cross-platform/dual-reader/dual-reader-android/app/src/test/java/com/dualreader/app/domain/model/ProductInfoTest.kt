@@ -42,12 +42,7 @@ class ProductInfoTest {
         assertEquals("$10.00", copy.price)
     }
 
-    // ── Product IDs ────────────────────────────────────────────────
-
-    @Test
-    fun `PRO_UNLOCK is pro_unlock`() {
-        assertEquals("pro_unlock", ProductIds.PRO_UNLOCK)
-    }
+    // ── Product IDs (DR-248: PRO_UNLOCK removed) ───────────────────
 
     @Test
     fun `PREMIUM_MONTHLY is premium_monthly`() {
@@ -60,13 +55,12 @@ class ProductInfoTest {
     }
 
     @Test
-    fun `ALL contains exactly 3 products`() {
-        assertEquals(3, ProductIds.ALL.size)
+    fun `ALL contains exactly 2 products`() {
+        assertEquals(2, ProductIds.ALL.size)
     }
 
     @Test
-    fun `ALL contains all products`() {
-        assertTrue(ProductIds.ALL.contains(ProductIds.PRO_UNLOCK))
+    fun `ALL contains monthly and yearly only`() {
         assertTrue(ProductIds.ALL.contains(ProductIds.PREMIUM_MONTHLY))
         assertTrue(ProductIds.ALL.contains(ProductIds.PREMIUM_YEARLY))
     }
@@ -83,24 +77,11 @@ class ProductInfoTest {
     }
 
     @Test
-    fun `ONE_TIME contains only PRO_UNLOCK`() {
-        assertEquals(1, ProductIds.ONE_TIME.size)
-        assertEquals(ProductIds.PRO_UNLOCK, ProductIds.ONE_TIME[0])
-    }
-
-    @Test
-    fun `PRO_UNLOCK is not in SUBSCRIPTIONS`() {
-        assertFalse(ProductIds.SUBSCRIPTIONS.contains(ProductIds.PRO_UNLOCK))
+    fun `ONE_TIME is empty (DR-248)`() {
+        assertEquals(0, ProductIds.ONE_TIME.size)
     }
 
     // ── Product field semantics ────────────────────────────────────
-
-    @Test
-    fun `one-time product has empty pricePeriod`() {
-        val product = makeProduct(id = ProductIds.PRO_UNLOCK, period = "", isSub = false)
-        assertEquals("", product.pricePeriod)
-        assertFalse(product.isSubscription)
-    }
 
     @Test
     fun `monthly subscription has per-month period`() {

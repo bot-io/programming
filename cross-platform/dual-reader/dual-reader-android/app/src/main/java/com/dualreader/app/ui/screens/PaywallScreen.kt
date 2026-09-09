@@ -90,15 +90,15 @@ fun PaywallScreen(
                     subtitle = "Unlimited AI translation • Priority model",
                     features = listOf(
                         "Unlimited page translations",
-                        "Gemini 3.5 Flash (thinking) priority",
+                        "Gemini 2.5 Flash priority model",
                         "Unlimited books in library",
                         "Translation history & export",
                         "Cloud sync (coming soon)",
                     ),
                     price = state.yearlyProduct?.price ?: state.monthlyProduct?.price ?: "",
                     pricePeriod = state.yearlyProduct?.pricePeriod ?: state.monthlyProduct?.pricePeriod ?: "",
-                    badge = if (state.yearlyProduct != null) "Best Value" else null,
-                    buttonText = if (state.entitlement == EntitlementTier.PREMIUM) "Active ✓" else "Subscribe",
+                    badge = if (state.yearlyProduct != null) "7-day free trial" else null,
+                    buttonText = if (state.entitlement == EntitlementTier.PREMIUM) "Active ✓" else "Start free trial",
                     enabled = state.entitlement != EntitlementTier.PREMIUM,
                     featured = true,
                     isLoading = state.isLoading,
@@ -126,29 +126,30 @@ fun PaywallScreen(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // ── Pro one-time ────────────────────────────────────────────
-            if (state.proProduct != null) {
-                val pro = state.proProduct!!
-                PlanCard(
-                    title = "Pro",
-                    subtitle = "One-time purchase • No subscription",
-                    features = listOf(
-                        "50 pages/day AI translation",
-                        "Unlimited books in library",
-                        "Offline translation cache",
-                        "All reading themes & features",
-                    ),
-                    price = pro.price,
-                    pricePeriod = "one-time",
-                    badge = null,
-                    buttonText = if (state.entitlement == EntitlementTier.PRO) "Owned ✓" else "Buy Now",
-                    enabled = state.entitlement == EntitlementTier.FREE,
-                    featured = false,
-                    isLoading = state.isLoading,
-                    onClick = { viewModel.purchase(ProductIds.PRO_UNLOCK) },
+            // ── Free tier info ──────────────────────────────────────────
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                 )
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        text = "Free",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "10 AI pages/day • 1 book • Unlimited offline (ML Kit)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             Spacer(Modifier.height(20.dp))

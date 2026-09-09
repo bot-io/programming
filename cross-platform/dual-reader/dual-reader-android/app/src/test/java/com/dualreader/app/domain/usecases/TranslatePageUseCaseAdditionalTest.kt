@@ -132,12 +132,10 @@ class TranslatePageUseCaseAdditionalTest {
 
         // Batch call for first 2 pages (total 24000 chars, under 30000)
         coEvery {
-            translationService.translatePages(any(), any(), any(), any())
+            translationService.translatePages(any(), any(), any(), any(), any(), any())
         } returns BatchTranslationResult(mapOf(0 to "T0", 1 to "T1"), "test")
-        // translate (DR-013 marker batch + single page):
-        // First call (marker batch) throws → falls back to translatePages
-        // Second call (single page) returns "T2"
-        coEvery { translationService.translate(any(), any(), any(), any()) } throws RuntimeException("marker failed") andThen "T2"
+        // Third page becomes a single-page batch → individual translate() call
+        coEvery { translationService.translate(any(), any(), any(), any(), any(), any()) } returns "T2"
         coEvery { cacheRepository.put(any(), any(), any(), any()) } just Runs
 
         val result = useCase.translateBatchWithContext(pages, "bg", "en")

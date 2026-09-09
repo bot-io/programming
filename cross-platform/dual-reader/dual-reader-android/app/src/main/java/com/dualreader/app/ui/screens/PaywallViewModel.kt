@@ -21,7 +21,6 @@ import javax.inject.Inject
 data class PaywallUiState(
     val isLoading: Boolean = false,
     val entitlement: EntitlementTier = EntitlementTier.FREE,
-    val proProduct: ProductInfo? = null,
     val monthlyProduct: ProductInfo? = null,
     val yearlyProduct: ProductInfo? = null,
     val purchaseMessage: String? = null,
@@ -47,7 +46,6 @@ class PaywallViewModel @Inject constructor(
         PaywallUiState(
             isLoading = loading,
             entitlement = entitlement,
-            proProduct = products.firstOrNull { it.productId == ProductIds.PRO_UNLOCK },
             monthlyProduct = products.firstOrNull { it.productId == ProductIds.PREMIUM_MONTHLY },
             yearlyProduct = products.firstOrNull { it.productId == ProductIds.PREMIUM_YEARLY },
             purchaseMessage = message,

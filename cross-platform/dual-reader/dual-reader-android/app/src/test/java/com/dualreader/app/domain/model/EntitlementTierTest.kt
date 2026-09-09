@@ -15,11 +15,6 @@ class EntitlementTierTest {
     }
 
     @Test
-    fun `PRO has 50 daily translations`() {
-        assertEquals(50, EntitlementTier.PRO.dailyTranslationLimit)
-    }
-
-    @Test
     fun `PREMIUM has unlimited daily translations`() {
         assertEquals(Int.MAX_VALUE, EntitlementTier.PREMIUM.dailyTranslationLimit)
     }
@@ -29,11 +24,6 @@ class EntitlementTierTest {
     @Test
     fun `FREE can have 1 library book`() {
         assertEquals(1, EntitlementTier.FREE.maxLibraryBooks)
-    }
-
-    @Test
-    fun `PRO has unlimited library books`() {
-        assertEquals(Int.MAX_VALUE, EntitlementTier.PRO.maxLibraryBooks)
     }
 
     @Test
@@ -49,13 +39,30 @@ class EntitlementTierTest {
     }
 
     @Test
-    fun `PRO is paid`() {
-        assertTrue(EntitlementTier.PRO.isPaid)
+    fun `PREMIUM is paid`() {
+        assertTrue(EntitlementTier.PREMIUM.isPaid)
+    }
+
+    // ── DR-248: New properties ─────────────────────────────────────
+
+    @Test
+    fun `FREE does not have priority model`() {
+        assertFalse(EntitlementTier.FREE.hasPriorityModel)
     }
 
     @Test
-    fun `PREMIUM is paid`() {
-        assertTrue(EntitlementTier.PREMIUM.isPaid)
+    fun `PREMIUM has priority model`() {
+        assertTrue(EntitlementTier.PREMIUM.hasPriorityModel)
+    }
+
+    @Test
+    fun `FREE does not have history and export`() {
+        assertFalse(EntitlementTier.FREE.hasHistoryAndExport)
+    }
+
+    @Test
+    fun `PREMIUM has history and export`() {
+        assertTrue(EntitlementTier.PREMIUM.hasHistoryAndExport)
     }
 
     // ── fromName ───────────────────────────────────────────────────
@@ -63,11 +70,6 @@ class EntitlementTierTest {
     @Test
     fun `fromName FREE returns FREE`() {
         assertEquals(EntitlementTier.FREE, EntitlementTier.fromName("FREE"))
-    }
-
-    @Test
-    fun `fromName PRO returns PRO`() {
-        assertEquals(EntitlementTier.PRO, EntitlementTier.fromName("PRO"))
     }
 
     @Test
@@ -95,20 +97,21 @@ class EntitlementTierTest {
         assertEquals(EntitlementTier.FREE, EntitlementTier.fromName(""))
     }
 
+    // DR-248: PRO tier removed — fromName("PRO") now returns FREE for backward compat
+    @Test
+    fun `fromName PRO returns FREE (DR-248 backward compat)`() {
+        assertEquals(EntitlementTier.FREE, EntitlementTier.fromName("PRO"))
+    }
+
     // ── Progression ────────────────────────────────────────────────
 
     @Test
-    fun `FREE limit less than PRO limit`() {
-        assertTrue(EntitlementTier.FREE.dailyTranslationLimit < EntitlementTier.PRO.dailyTranslationLimit)
+    fun `FREE limit less than PREMIUM limit`() {
+        assertTrue(EntitlementTier.FREE.dailyTranslationLimit < EntitlementTier.PREMIUM.dailyTranslationLimit)
     }
 
     @Test
-    fun `PRO limit less than PREMIUM limit`() {
-        assertTrue(EntitlementTier.PRO.dailyTranslationLimit < EntitlementTier.PREMIUM.dailyTranslationLimit)
-    }
-
-    @Test
-    fun `enum has exactly 3 tiers`() {
-        assertEquals(3, EntitlementTier.entries.size)
+    fun `enum has exactly 2 tiers`() {
+        assertEquals(2, EntitlementTier.entries.size)
     }
 }

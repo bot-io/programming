@@ -179,9 +179,10 @@ class LocalFirstTranslationTest {
         }
 
         coEvery { mlKitService.translate(any(), any(), any()) } returns "mlkit"
-        coEvery { cloudService.translate(any(), any(), any(), any(), any(), any()) } returnsMany listOf(
-            "cloud-0", "cloud-1"
-        )
+        // DR-263: upgrade is now ONE array-based batch call, not N individual calls
+        coEvery {
+            cloudService.translatePages(any(), any(), any(), any(), any(), any())
+        } returns BatchTranslationResult(mapOf(0 to "cloud-0", 1 to "cloud-1"), "cloud")
 
         service.translatePages(pages, "bg", "en", null, null, false)
         advanceUntilIdle()

@@ -253,34 +253,34 @@ class TranslationCacheRepositoryImplTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun `deleteForTexts throws IllegalArgumentException for empty text in list`() = runTest {
-        repo.deleteForTexts(listOf("hello", "", "world"))
+        repo.deleteForTexts(listOf("hello", "", "world"), "en")
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun `deleteForTexts throws IllegalArgumentException for whitespace-only text in list`() = runTest {
-        repo.deleteForTexts(listOf("hello", "   ", "world"))
+        repo.deleteForTexts(listOf("hello", "   ", "world"), "en")
     }
 
     @Test
-    fun `deleteForTexts deletes each text by hash`() = runTest {
+    fun `deleteForTexts deletes each text by hash with source language`() = runTest {
         val texts = listOf("hello", "world", "test")
-        repo.deleteForTexts(texts)
+        repo.deleteForTexts(texts, "en")
 
         for (text in texts) {
             val hash = TranslationCacheRepositoryImpl.sha256(text)
-            coVerify { dao.deleteByHash(hash) }
+            coVerify { dao.deleteByHash(hash, "en") }
         }
     }
 
     @Test
     fun `deleteForTexts with empty list does nothing`() = runTest {
-        repo.deleteForTexts(emptyList())
-        coVerify(exactly = 0) { dao.deleteByHash(any()) }
+        repo.deleteForTexts(emptyList(), "en")
+        coVerify(exactly = 0) { dao.deleteByHash(any(), any()) }
     }
 
     @Test
     fun `deleteForTexts with single text deletes one entry`() = runTest {
-        repo.deleteForTexts(listOf("only one"))
-        coVerify(exactly = 1) { dao.deleteByHash(any()) }
+        repo.deleteForTexts(listOf("only one"), "en")
+        coVerify(exactly = 1) { dao.deleteByHash(any(), any()) }
     }
 }

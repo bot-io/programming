@@ -9,6 +9,7 @@ import com.dualreader.app.domain.services.TranslationService
 import com.dualreader.app.domain.usecases.PaginateBookUseCase
 import com.dualreader.app.domain.usecases.TranslatePageUseCase
 import com.dualreader.app.data.translation.MlKitModelManager
+import androidx.lifecycle.SavedStateHandle
 import io.mockk.mockk
 import org.junit.Test
 
@@ -55,7 +56,7 @@ class ReaderViewModelPersistenceTest {
     fun testViewModelCanBeCreatedWithAllDependencies() {
         // DR-106: Verify the ViewModel can be constructed with the new event type
         val viewModel = ReaderViewModel(
-            savedStateHandle = mockk(relaxed = true),
+            savedStateHandle = SavedStateHandle(), // relaxed mock breaks get<String>("bookId") — real handle required
             bookRepository = bookRepository,
             settingsRepository = settingsRepository,
             bookmarkRepository = bookmarkRepository,

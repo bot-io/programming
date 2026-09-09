@@ -48,8 +48,10 @@ class BookmarkExporter {
     // ─── Plain Text ─────────────────────────────────────────────────────────
 
     private fun exportPlainText(bookmarks: List<ExportableBookmark>): String {
+        if (bookmarks.isEmpty()) return "No annotations to export."
+
         val sb = StringBuilder()
-        val book = bookmarks.first()
+        val book = bookmarks.firstOrNull() ?: return "No annotations to export."
         sb.appendLine("Book: ${book.bookTitle}")
         sb.appendLine("Author: ${book.bookAuthor}")
         sb.appendLine("Exported: ${formatTimestamp(LocalDateTime.now())}")
@@ -75,8 +77,10 @@ class BookmarkExporter {
     // ─── Markdown ───────────────────────────────────────────────────────────
 
     private fun exportMarkdown(bookmarks: List<ExportableBookmark>): String {
+        if (bookmarks.isEmpty()) return "# No annotations to export"
+
         val sb = StringBuilder()
-        val book = bookmarks.first()
+        val book = bookmarks.firstOrNull() ?: return "# No annotations to export"
 
         sb.appendLine("# Annotations: ${book.bookTitle}")
         if (book.bookAuthor.isNotBlank()) {
@@ -110,8 +114,12 @@ class BookmarkExporter {
     // ─── JSON ───────────────────────────────────────────────────────────────
 
     private fun exportJson(bookmarks: List<ExportableBookmark>): String {
+        if (bookmarks.isEmpty()) {
+            return """{"annotations":[],"totalAnnotations":0}"""
+        }
+
         val root = JSONObject()
-        val book = bookmarks.first()
+        val book = bookmarks.firstOrNull() ?: return """{"annotations":[],"totalAnnotations":0}"""
 
         root.put("bookTitle", book.bookTitle)
         root.put("bookAuthor", book.bookAuthor)

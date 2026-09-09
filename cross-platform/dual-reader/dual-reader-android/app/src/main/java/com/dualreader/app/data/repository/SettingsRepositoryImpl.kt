@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.*
 import com.dualreader.app.domain.entities.DisplayMode
 import com.dualreader.app.domain.entities.ReaderTheme
 import com.dualreader.app.domain.entities.ReadingSettings
+import com.dualreader.app.domain.entities.TranslationPosition
 import com.dualreader.app.domain.entities.TranslationProvider
 import com.dualreader.app.domain.repositories.SettingsRepository
 import com.dualreader.app.util.AppLogger
@@ -35,6 +36,9 @@ class SettingsRepositoryImpl @Inject constructor(
         val SCREEN_WAKE_TIMEOUT = intPreferencesKey("screen_wake_timeout")
         val SENTENCE_COUNTER = booleanPreferencesKey("sentence_counter")
         val DISPLAY_MODE = stringPreferencesKey("display_mode")
+        val TRANSLATION_POSITION = stringPreferencesKey("translation_position")
+        val TTS_READ_ORIGINAL = booleanPreferencesKey("tts_read_original")
+        val TTS_SPEECH_RATE = floatPreferencesKey("tts_speech_rate")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
@@ -58,7 +62,10 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[Keys.SCREEN_WAKE_TIMEOUT] = updated.screenWakeTimeoutMinutes
             prefs[Keys.SENTENCE_COUNTER] = updated.sentenceCounterEnabled
             prefs[Keys.DISPLAY_MODE] = updated.displayMode.name
-        }
+            prefs[Keys.TRANSLATION_POSITION] = updated.translationPosition.name
+            prefs[Keys.TTS_READ_ORIGINAL] = updated.ttsReadOriginal
+            prefs[Keys.TTS_SPEECH_RATE] = updated.ttsSpeechRate
+            }
     }
 
     override suspend fun getSettings(): ReadingSettings =
@@ -126,5 +133,15 @@ class SettingsRepositoryImpl @Inject constructor(
             AppLogger.w("Failed to parse displayMode: '$displayModeValue', using SPLIT. Error: ${e.message}")
             DisplayMode.SPLIT
         },
+        translationPosition = try {
+            TranslationPosition.valueOf(this[Keys.TRANSLATION_POSITION] ?: "TRANSLATION_ABOVE")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Preserve coroutine cancellation semantics
+        } catch (e: Exception) {
+            AppLogger.w("Failed to parse translationPosition, using TRANSLATION_ABOVE. Error: ${e.message}")
+            TranslationPosition.TRANSLATION_ABOVE
+        },
+        ttsReadOriginal = this[Keys.TTS_READ_ORIGINAL] ?: false,
+        ttsSpeechRate = this[Keys.TTS_SPEECH_RATE] ?: 1.0f,
     )
 }

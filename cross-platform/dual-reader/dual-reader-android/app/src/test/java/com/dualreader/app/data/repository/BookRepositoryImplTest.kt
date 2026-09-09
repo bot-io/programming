@@ -137,11 +137,13 @@ class BookRepositoryImplTest {
         val pages = listOf(
             PageEntity(bookId = "b1", pageIndex = 0, chapterIndex = 0, originalText = "text1"),
         )
+        val book = BookEntity(id = "b1", title = "Test", author = "Test", filePath = "test.epub", language = "en")
+        coEvery { bookDao.getById("b1") } returns book
         coEvery { pageDao.getPagesForBook("b1") } returns pages
 
         repo.deleteBook("b1")
 
-        coVerify { translationCacheRepo.deleteForTexts(listOf("text1")) }
+        coVerify { translationCacheRepo.deleteForTexts(listOf("text1"), "en") }
     }
 
     @Test
@@ -150,15 +152,18 @@ class BookRepositoryImplTest {
 
         repo.deleteBook("b1")
 
-        coVerify(exactly = 0) { translationCacheRepo.deleteForTexts(any()) }
+        coVerify(exactly = 0) { translationCacheRepo.deleteForTexts(any(), any()) }
     }
 
     @Test
     fun `deleteBook swallows cache cleanup errors`() = runTest {
-        coEvery { pageDao.getPagesForBook("b1") } returns listOf(
+        val pages = listOf(
             PageEntity(bookId = "b1", pageIndex = 0, chapterIndex = 0, originalText = "text"),
         )
-        coEvery { translationCacheRepo.deleteForTexts(any()) } throws RuntimeException("cache error")
+        val book = BookEntity(id = "b1", title = "Test", author = "Test", filePath = "test.epub", language = "en")
+        coEvery { bookDao.getById("b1") } returns book
+        coEvery { pageDao.getPagesForBook("b1") } returns pages
+        coEvery { translationCacheRepo.deleteForTexts(any(), any()) } throws RuntimeException("cache error")
 
         // Should not throw
         repo.deleteBook("b1")
@@ -431,12 +436,14 @@ class BookRepositoryImplTest {
     // ── DR-110: CancellationException propagation ───────────────────
 
     @Test
-    fun `deleteBook propagates CancellationException from cache cleanup`() = runTest {
+    fun `deleteBook propagates CancellationException during cache cleanup`() = runTest {
         val pages = listOf(
             PageEntity(bookId = "b1", pageIndex = 0, chapterIndex = 0, originalText = "text1"),
         )
+        val book = BookEntity(id = "b1", title = "Test", author = "Test", filePath = "test.epub", language = "en")
+        coEvery { bookDao.getById("b1") } returns book
         coEvery { pageDao.getPagesForBook("b1") } returns pages
-        coEvery { translationCacheRepo.deleteForTexts(any()) } throws kotlinx.coroutines.CancellationException()
+        coEvery { translationCacheRepo.deleteForTexts(any(), any()) } throws kotlinx.coroutines.CancellationException()
 
         // Should propagate CancellationException
         try {
@@ -457,8 +464,10 @@ class BookRepositoryImplTest {
         val pages = listOf(
             PageEntity(bookId = "b1", pageIndex = 0, chapterIndex = 0, originalText = "text1"),
         )
+        val book = BookEntity(id = "b1", title = "Test", author = "Test", filePath = "test.epub", language = "en")
+        coEvery { bookDao.getById("b1") } returns book
         coEvery { pageDao.getPagesForBook("b1") } returns pages
-        coEvery { translationCacheRepo.deleteForTexts(any()) } throws RuntimeException("Cache cleanup failed")
+        coEvery { translationCacheRepo.deleteForTexts(any(), any()) } throws RuntimeException("Cache cleanup failed")
 
         // Should NOT throw, exception should be caught and logged
         repo.deleteBook("b1")

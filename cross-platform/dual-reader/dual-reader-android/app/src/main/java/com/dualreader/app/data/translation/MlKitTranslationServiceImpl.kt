@@ -22,7 +22,7 @@ import javax.inject.Inject
  */
 class MlKitTranslationServiceImpl @Inject constructor() : TranslationService {
 
-    override val providerName: String = "ML Kit (On-device)"
+    override val providerName: String = "Local"
 
     override suspend fun translate(
         text: String,

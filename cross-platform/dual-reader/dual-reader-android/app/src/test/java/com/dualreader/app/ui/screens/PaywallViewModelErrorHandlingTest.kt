@@ -49,12 +49,12 @@ class PaywallViewModelErrorHandlingTest {
 
     @Test
     fun `purchase success - completes successfully and shows success message`() = runTest {
-        coEvery { billingRepository.launchPurchaseFlow("pro_unlock") } returns PurchaseResult.Success
+        coEvery { billingRepository.launchPurchaseFlow("premium_yearly") } returns PurchaseResult.Success
 
         backgroundScope.launch { viewModel.uiState.collect {} }
         advanceUntilIdle()
 
-        viewModel.purchase("pro_unlock")
+        viewModel.purchase("premium_yearly")
         advanceUntilIdle()
 
         assertFalse(viewModel.uiState.value.isLoading)
@@ -64,12 +64,12 @@ class PaywallViewModelErrorHandlingTest {
 
     @Test
     fun `purchase failure - logs error, resets loading state, and shows error to user`() = runTest {
-        coEvery { billingRepository.launchPurchaseFlow("pro_unlock") } throws RuntimeException("Billing API error")
+        coEvery { billingRepository.launchPurchaseFlow("premium_yearly") } throws RuntimeException("Billing API error")
 
         backgroundScope.launch { viewModel.uiState.collect {} }
         advanceUntilIdle()
 
-        viewModel.purchase("pro_unlock")
+        viewModel.purchase("premium_yearly")
         advanceUntilIdle()
 
         assertFalse(viewModel.uiState.value.isLoading)
@@ -79,14 +79,14 @@ class PaywallViewModelErrorHandlingTest {
 
     @Test
     fun `purchase CancellationException is re-thrown to preserve cancellation semantics`() = runTest {
-        coEvery { billingRepository.launchPurchaseFlow("pro_unlock") } throws kotlinx.coroutines.CancellationException("User cancelled")
+        coEvery { billingRepository.launchPurchaseFlow("premium_yearly") } throws kotlinx.coroutines.CancellationException("User cancelled")
 
         backgroundScope.launch { viewModel.uiState.collect {} }
         advanceUntilIdle()
 
         // Act & Assert - CancellationException should propagate
         try {
-            viewModel.purchase("pro_unlock")
+            viewModel.purchase("premium_yearly")
             advanceUntilIdle()
         } catch (e: kotlinx.coroutines.CancellationException) {
             // Expected - cancellation should propagate
@@ -99,7 +99,7 @@ class PaywallViewModelErrorHandlingTest {
 
     @Test
     fun `restorePurchases success - completes successfully for paid user`() = runTest {
-        coEvery { billingRepository.restorePurchases() } returns EntitlementTier.PRO
+        coEvery { billingRepository.restorePurchases() } returns EntitlementTier.PREMIUM
 
         backgroundScope.launch { viewModel.uiState.collect {} }
         advanceUntilIdle()

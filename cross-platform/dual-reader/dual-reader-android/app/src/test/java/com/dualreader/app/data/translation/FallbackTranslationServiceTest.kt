@@ -290,8 +290,13 @@ class FallbackTranslationServiceTest {
 
     @Test
     fun `provider name describes local-first architecture`() {
-        assertTrue(fallbackService.providerName.contains("ML Kit"))
-        assertTrue(fallbackService.providerName.contains("Cloud"))
+        // DR-262: providerName is dynamic (lastSyncModel) — "Local" after ML Kit,
+        // "Cloud" after cloud sync. Fresh service defaults to "Local".
+        val fresh = FallbackTranslationService(
+            cloudService = cloudService,
+            mlKitService = mlKitService,
+        )
+        assertEquals("Local", fresh.providerName)
     }
 
     @Test

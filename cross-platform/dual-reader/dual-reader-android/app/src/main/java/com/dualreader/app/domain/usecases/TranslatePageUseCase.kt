@@ -203,19 +203,16 @@ class TranslatePageUseCase @Inject constructor(
     /**
      * Translate a batch of pages.
      *
-     * For multi-page batches (DR-013), we use a **marker-based** approach:
-     * all paragraphs are joined with numbered markers (`⟦N⟧`) and sent as a
-     * SINGLE translation request. This gives the LLM full cross-paragraph
-     * context, producing higher-quality, more coherent translations.
-     * The markers are then parsed from the output to split the result back
-     * into individual paragraph translations.
+     * DR-263: Uses the **array-based** batch endpoint ([translatePages]) which
+     * sends pages as a JSON array and receives index-keyed translations back.
+     * This preserves exact 1:1 segment alignment for BOTH ML Kit and cloud —
+     * no markers, no stitching, no proportional fallback needed.
      *
-     * If the LLM strips the markers, we fall back to [ParagraphAligner]align
-     * (proportional alignment on `\n\n` boundaries) using the same translated
-     * text — no extra network call.
+     * Previous marker-based approach (DR-013) was fragile: the LLM/ML Kit
+     * could strip or merge markers, causing translation segments to mismatch
+     * their originals. The array endpoint eliminates this class of bugs.
      *
-     * Only if the marker-based call itself throws (network/rate-limit error)
-     * do we fall back to the batch endpoint ([translatePages]).
+     * For single-page batches, an individual call is used (with context).
      */
     private suspend fun translateBatch(
         batch: List<PageToTranslate>,
@@ -242,90 +239,14 @@ class TranslatePageUseCase @Inject constructor(
             return BatchTranslationResult(mapOf(page.index to result), translationService.providerName)
         }
 
-        // Multiple pages — try marker-based batch (full paragraph context, DR-013)
-        try {
-            val markerResult = translateBatchWithMarkers(
-                batch, targetLanguage, sourceLanguage,
-                previousTranslation, serializedBookContext, forceRetranslate,
-            )
-            if (markerResult != null) return markerResult
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            // Marker call failed (network/rate-limit) — fall through to batch endpoint
-        }
-
-        // Fallback: batch endpoint (fail fast, no individual fallback)
+        // Multiple pages — use array-based batch endpoint (DR-263)
         val indexedPages = batch.map { IndexedValue(it.index, it.text) }
         val context = buildContext(null, previousTranslation)
 
-        return translationService.translatePages(indexedPages, targetLanguage, sourceLanguage, context, serializedBookContext, forceRetranslate)
-    }
-
-    /**
-     * Marker-based batch translation (DR-013).
-     *
-     * Joins all paragraphs with numbered markers into one text, sends a single
-     * translation request (full context for the LLM), then splits the result
-     * by markers back into individual paragraph translations.
-     *
-     * @return [BatchTranslationResult] on success, or `null` if the marker-based
-     *         call fails with a non-cancellation exception (caller falls back to
-     *         the batch endpoint).
-     */
-    private suspend fun translateBatchWithMarkers(
-        batch: List<PageToTranslate>,
-        targetLanguage: String,
-        sourceLanguage: String?,
-        previousTranslation: String?,
-        serializedBookContext: SerializedBookContext?,
-        forceRetranslate: Boolean,
-    ): BatchTranslationResult? {
-        val markedText = ParagraphAligner.injectMarkers(batch.map { it.text })
-        val context = buildContext(null, previousTranslation)
-
-        val translated = translationService.translate(
-            text = markedText,
-            targetLanguage = targetLanguage,
-            sourceLanguage = sourceLanguage,
-            context = context,
-            bookContext = serializedBookContext,
-            skipCache = forceRetranslate,
+        return translationService.translatePages(
+            indexedPages, targetLanguage, sourceLanguage,
+            context, serializedBookContext, forceRetranslate,
         )
-
-        // If the translate call returned blank/empty text, fall back to batch endpoint
-        if (translated.isBlank()) return null
-
-        // Try to split by markers first (exact paragraph alignment)
-        val split = ParagraphAligner.extractByMarkers(translated, batch.size)
-
-        val results: Map<Int, String> = if (split != null && split.size == batch.size) {
-            // Markers preserved — exact 1:1 alignment
-            batch.mapIndexed { i, page -> page.index to split[i] }.toMap()
-        } else {
-            // Markers stripped — proportional alignment on the returned text
-            AppLogger.i("[DR-013] Markers not preserved, falling back to proportional alignment")
-            // DR-092: Strip residual markers before alignment so they don't leak into results
-            val cleanedTranslated = ParagraphAligner.stripMarkers(translated)
-            val origJoined = batch.joinToString("\n\n") { it.text }
-            val aligned = ParagraphAligner.align(origJoined, cleanedTranslated)
-            batch.mapIndexed { i, page ->
-                page.index to (aligned.getOrNull(i)?.second ?: "")
-            }.filter { it.second.isNotBlank() }.toMap()
-        }
-
-        // DR-092: Safety net — strip any residual markers from ALL results before returning.
-        // Belt-and-suspenders: even if extractByMarkers or align missed an edge case,
-        // this guarantees no ⟦N⟧ artifacts reach the user.
-        val sanitizedResults = results.mapValues { (_, text) ->
-            ParagraphAligner.stripMarkers(text)
-        }.filterValues { it.isNotBlank() }
-
-        // If no usable results (e.g., translate returned empty/unparseable text),
-        // fall back to the batch endpoint
-        if (sanitizedResults.isEmpty()) return null
-
-        return BatchTranslationResult(sanitizedResults, translationService.providerName)
     }
 
     /**

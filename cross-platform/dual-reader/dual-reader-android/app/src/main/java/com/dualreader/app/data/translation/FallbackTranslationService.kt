@@ -34,7 +34,17 @@ class FallbackTranslationService @Inject constructor(
     @Named("mlkit") private val mlKitService: TranslationService,
 ) : TranslationService {
 
-    override val providerName: String = "ML Kit → Cloud Upgrade"
+    /**
+     * DR-262: Dynamic provider name — reflects what actually produced the
+     * most recent synchronous result. After ML Kit → "Local", after cloud →
+     * the cloud service's provider name (e.g. "Cloud").
+     *
+     * This fixes re-translate: the old static "Local" caused grade protection
+     * to block cloud results from replacing existing translations.
+     */
+    override val providerName: String get() = lastSyncModel
+
+    private var lastSyncModel: String = "Local"
 
     companion object {
         /** Max chars per chunk sent to the API. Keeps requests small to avoid timeouts. */
@@ -62,6 +72,20 @@ class FallbackTranslationService @Inject constructor(
      */
     @Volatile
     var cloudUpgradeCallback: ((suspend (String, String, String) -> Unit))? = null
+
+    /**
+     * Called when a cloud upgrade STARTS for a given original text.
+     * Lets the UI show a spinner while the upgrade is in flight.
+     */
+    @Volatile
+    var cloudUpgradeStartedCallback: ((String) -> Unit)? = null
+
+    /**
+     * Called when a cloud upgrade FAILS for a given original text.
+     * Lets the UI stop the spinner and keep the ML Kit result.
+     */
+    @Volatile
+    var cloudUpgradeFailedCallback: ((String) -> Unit)? = null
 
     // ── translate ──────────────────────────────────────────────────────────────
 
@@ -106,50 +130,64 @@ class FallbackTranslationService @Inject constructor(
         bookContext: SerializedBookContext? = null,
         skipCache: Boolean = false,
     ): String {
-        // Tier 1: ML Kit on-device (instant)
-        try {
-            val result = mlKitService.translate(text, targetLanguage, sourceLanguage)
-            AppLogger.d("ML Kit translation succeeded (${result.length} chars)")
+        // DR-253: When re-translating (skipCache=true), skip ML Kit and go straight to cloud
+        // so the user actually gets a fresh, higher-quality translation instead of the same
+        // cached ML Kit result.
+        if (!skipCache) {
+            // Tier 1: ML Kit on-device (instant)
+            try {
+                val result = mlKitService.translate(text, targetLanguage, sourceLanguage)
+                AppLogger.d("ML Kit translation succeeded (${result.length} chars)")
+                lastSyncModel = "Local" // DR-262
 
-            // Tier 2: Background cloud upgrade (fire-and-forget, caller handles replacement)
-            // DR-141: Capture callback in local variable to avoid race condition
-            val callback = cloudUpgradeCallback
-            if (callback != null) {
-                upgradeScope.launch(upgradeDispatcher) {
-                    try {
-                        val cloudResult = cloudService.translate(
-                            text, targetLanguage, sourceLanguage, context, bookContext, skipCache
-                        )
-                        AppLogger.d("Cloud upgrade succeeded (${cloudResult.length} chars), notifying callback")
-                        callback(text, cloudResult, targetLanguage)
-                    } catch (e: CancellationException) {
-                        // scope cancelled — stop upgrade
-                    } catch (e: Exception) {
-                        AppLogger.w("Cloud upgrade failed: ${e.message} — keeping ML Kit result")
+                // DR-262: Background cloud upgrade (fire-and-forget, caller handles replacement)
+                // DR-141: Capture callbacks in local variables to avoid race condition
+                val callback = cloudUpgradeCallback
+                val startedCallback = cloudUpgradeStartedCallback
+                val failedCallback = cloudUpgradeFailedCallback
+                if (callback != null) {
+                    upgradeScope.launch(upgradeDispatcher) {
+                        startedCallback?.invoke(text)
+                        try {
+                            val cloudResult = cloudService.translate(
+                                text, targetLanguage, sourceLanguage, context, bookContext, skipCache
+                            )
+                            AppLogger.d("Cloud upgrade succeeded (${cloudResult.length} chars), notifying callback")
+                            callback(text, cloudResult, targetLanguage)
+                        } catch (e: CancellationException) {
+                            failedCallback?.invoke(text)
+                            // scope cancelled — stop upgrade
+                        } catch (e: Exception) {
+                            failedCallback?.invoke(text)
+                            AppLogger.w("Cloud upgrade failed: ${e.message} — keeping ML Kit result")
+                        }
                     }
                 }
-            }
 
-            return result
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.w("ML Kit failed: ${e.message}, trying cloud directly")
+                return result
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("ML Kit failed: ${e.message}, trying cloud directly")
+            }
         }
 
-        // Tier 3: Cloud direct fallback (ML Kit model unavailable)
+        // Tier 3: Cloud direct fallback (ML Kit model unavailable OR re-translate)
         var cloudError: String? = null
         try {
             val result = cloudService.translate(text, targetLanguage, sourceLanguage, context, bookContext, skipCache)
             AppLogger.d("Cloud translation succeeded (${result.length} chars)")
-            // DR-147: Invoke callback when cloud fallback succeeds (same as Tier 1)
+            lastSyncModel = cloudService.providerName // DR-262: report actual cloud model
+
+            // DR-147: Invoke callback when cloud fallback succeeds (same as Tier 1).
+            // This was accidentally dropped in the v1.0.98-101 rewrites — restored.
             val callback = cloudUpgradeCallback
             if (callback != null) {
                 upgradeScope.launch(upgradeDispatcher) {
                     try {
                         callback(text, result, targetLanguage)
                     } catch (e: CancellationException) {
-                        // scope cancelled
+                        // scope cancelled — stop
                     } catch (e: Exception) {
                         AppLogger.w("Cloud fallback callback failed: ${e.message}")
                     }
@@ -190,6 +228,12 @@ class FallbackTranslationService @Inject constructor(
         bookContext: SerializedBookContext?,
         skipCache: Boolean,
     ): BatchTranslationResult {
+        // DR-253: When re-translating (skipCache=true), go straight to cloud, skip ML Kit
+        if (skipCache) {
+            lastSyncModel = cloudService.providerName // DR-262
+            return cloudService.translatePages(pages, targetLanguage, sourceLanguage, context, bookContext, skipCache)
+        }
+
         // Tier 1: ML Kit for all pages (instant, on-device)
         val mlKitResults = mutableMapOf<Int, String>()
         for (page in pages) {
@@ -206,25 +250,19 @@ class FallbackTranslationService @Inject constructor(
         if (mlKitResults.size == pages.size) {
             // All pages translated by ML Kit
             AppLogger.i("translatePages: ML Kit succeeded for all ${pages.size} pages")
+            lastSyncModel = "Local" // DR-262
 
-            // Tier 2: Background cloud upgrade for each page
-            // DR-141: Capture callback in local variable to avoid race condition
-            val callback = cloudUpgradeCallback
-            if (callback != null) {
-                for (page in pages) {
-                    upgradeScope.launch(upgradeDispatcher) {
-                        try {
-                            val cloudResult = cloudService.translate(
-                                page.value, targetLanguage, sourceLanguage, context, bookContext, skipCache
-                            )
-                            callback(page.value, cloudResult, targetLanguage)
-                        } catch (e: CancellationException) {
-                            // scope cancelled
-                        } catch (e: Exception) {
-                            AppLogger.w("Cloud upgrade failed for page ${page.index}: ${e.message}")
-                        }
-                    }
-                }
+            // Tier 2: Background cloud upgrade using array-based batch endpoint
+            // DR-263: translatePages sends a JSON array, receives index-keyed results —
+            // exact 1:1 alignment, no markers or stitching.
+            if (cloudUpgradeCallback != null) {
+                triggerCloudUpgradeForPages(
+                    pages = pages,
+                    targetLanguage = targetLanguage,
+                    sourceLanguage = sourceLanguage,
+                    context = context,
+                    bookContext = bookContext,
+                )
             }
 
             return BatchTranslationResult(mlKitResults.toMap(), mlKitService.providerName)
@@ -240,49 +278,30 @@ class FallbackTranslationService @Inject constructor(
 
         try {
             val cloudResult = cloudService.translatePages(failedPages, targetLanguage, sourceLanguage, context, bookContext, skipCache)
-            
+
             // Combine results
             val allResults = mlKitResults.toMutableMap()
             allResults.putAll(cloudResult.translations)
-            
+
             if (allResults.size < pages.size) {
-                // Still missing some translations - cloud succeeded but didn't return all expected pages
                 val missingIndices = pages.map { it.index }.filter { it !in allResults }
                 throw TranslationException("Cloud returned incomplete results: missing ${missingIndices.size} pages (indices $missingIndices)")
             }
 
-            // DR-147: Invoke callback for each page when cloud succeeds (same as Tier 1)
+            // DR-147: Invoke callback for cloud-translated pages (Tier 3 fallback).
+            // Restored — was accidentally dropped in the v1.0.98-101 rewrites.
             val callback = cloudUpgradeCallback
             if (callback != null) {
-                for (page in failedPages) {
-                    upgradeScope.launch(upgradeDispatcher) {
+                val pageByIndex = pages.associateBy { it.index }
+                upgradeScope.launch(upgradeDispatcher) {
+                    for ((pageIndex, translation) in cloudResult.translations) {
+                        val originalText = pageByIndex[pageIndex]?.value ?: continue
                         try {
-                            val translation = cloudResult.translations[page.index]
-                            if (translation != null) {
-                                callback(page.value, translation, targetLanguage)
-                            }
+                            callback(originalText, translation, targetLanguage)
                         } catch (e: CancellationException) {
-                            // scope cancelled
+                            return@launch
                         } catch (e: Exception) {
-                            AppLogger.w("Cloud fallback callback failed for page ${page.index}: ${e.message}")
-                        }
-                    }
-                }
-                
-                // Also trigger callback for ML Kit-translated pages (for upgrade)
-                for (page in pages) {
-                    if (page.index in mlKitResults) {
-                        upgradeScope.launch(upgradeDispatcher) {
-                            try {
-                                val cloudResult = cloudService.translate(
-                                    page.value, targetLanguage, sourceLanguage, context, bookContext, skipCache
-                                )
-                                callback(page.value, cloudResult, targetLanguage)
-                            } catch (e: CancellationException) {
-                                // scope cancelled
-                            } catch (e: Exception) {
-                                AppLogger.w("Cloud upgrade failed for page ${page.index}: ${e.message}")
-                            }
+                            AppLogger.w("Cloud fallback callback failed for page $pageIndex: ${e.message}")
                         }
                     }
                 }
@@ -292,12 +311,9 @@ class FallbackTranslationService @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // DR-054: When cloud fails, throw even if we have partial ML Kit results
-            // Returning partial results causes silent data loss for the missing pages
             if (mlKitResults.isEmpty()) {
                 throw TranslationException("Both ML Kit and cloud translation failed: ${e.message}")
             } else {
-                // Throw even with partial results - caller should handle the failure
                 val successCount = mlKitResults.size
                 val totalCount = pages.size
                 throw TranslationException("Cloud fallback failed after ML Kit success for $successCount/$totalCount pages: ${e.message}")
@@ -324,18 +340,82 @@ class FallbackTranslationService @Inject constructor(
 
     // ── Internal ───────────────────────────────────────────────────────────────
 
-    /**
-     * Cleanup method to cancel all background upgrade coroutines and clear callbacks.
-     * Call this when the service is no longer needed (e.g., on app termination).
-     *
-     * This prevents:
-     * - Memory leaks from coroutines keeping references to callbacks
-     * - Post-cleanup callbacks attempting to update UI after screens are destroyed
-     * - Unnecessary network requests after user exits reader
-     */
     fun cleanup() {
         upgradeScope.cancel()
         cloudUpgradeCallback = null
+        cloudUpgradeStartedCallback = null
+        cloudUpgradeFailedCallback = null
+    }
+
+    /**
+     * DR-263: Explicitly trigger background cloud upgrades for a list of pages.
+     *
+     * Uses the **array-based** batch endpoint ([cloudService.translatePages])
+     * which sends pages as a JSON array and receives index-keyed translations.
+     * This preserves exact 1:1 segment alignment without markers or stitching.
+     *
+     * Previous marker-based approach was fragile: the LLM could strip or merge
+     * markers, causing segments to mismatch. The array endpoint eliminates this.
+     *
+     * Grade protection is handled by the cloudUpgradeCallback in the ViewModel.
+     */
+    fun triggerCloudUpgradeForPages(
+        pages: List<IndexedValue<String>>,
+        targetLanguage: String,
+        sourceLanguage: String?,
+        context: String? = null,
+        bookContext: SerializedBookContext? = null,
+    ) {
+        val callback = cloudUpgradeCallback
+        val startedCallback = cloudUpgradeStartedCallback
+        val failedCallback = cloudUpgradeFailedCallback
+        if (callback == null) {
+            AppLogger.w("triggerCloudUpgradeForPages: no callback registered, skipping")
+            return
+        }
+
+        if (pages.isEmpty()) return
+
+        upgradeScope.launch(upgradeDispatcher) {
+            // Notify start for all pages
+            for (page in pages) {
+                startedCallback?.invoke(page.value)
+            }
+
+            try {
+                // DR-263: Use array-based batch endpoint — no markers, no stitching.
+                // The server receives a JSON array of {index, text} and returns
+                // a JSON array of {index, translatedText}. Exact 1:1 alignment.
+                val cloudResult = cloudService.translatePages(
+                    pages, targetLanguage, sourceLanguage, context, bookContext, false
+                )
+
+                // Build original-text → translated-text map for callbacks
+                val pageByIndex = pages.associateBy { it.index }
+                for ((pageIndex, translation) in cloudResult.translations) {
+                    val originalText = pageByIndex[pageIndex]?.value
+                    if (originalText != null && translation.isNotBlank()) {
+                        callback(originalText, translation, targetLanguage)
+                    }
+                }
+
+                // Handle pages that didn't get a result
+                val missingIndices = pages.map { it.index } - cloudResult.translations.keys
+                for (missingIndex in missingIndices) {
+                    val originalText = pageByIndex[missingIndex]?.value
+                    if (originalText != null) {
+                        failedCallback?.invoke(originalText)
+                    }
+                }
+
+                AppLogger.i("triggerCloudUpgradeForPages: ${cloudResult.translations.size}/${pages.size} pages succeeded")
+            } catch (e: CancellationException) {
+                for (page in pages) failedCallback?.invoke(page.value)
+            } catch (e: Exception) {
+                AppLogger.w("triggerCloudUpgradeForPages failed: ${e.message}")
+                for (page in pages) failedCallback?.invoke(page.value)
+            }
+        }
     }
 
     /**

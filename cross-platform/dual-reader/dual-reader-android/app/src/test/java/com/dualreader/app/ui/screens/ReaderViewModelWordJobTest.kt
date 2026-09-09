@@ -108,7 +108,12 @@ class ReaderViewModelWordJobTest {
 
     @Test
     fun `translateWord starts translation and sets loading state`() = runTest(testDispatcher) {
-        // Arrange
+        // Arrange — suspend the translation so the loading state is observable
+        // (with an unconfined dispatcher + relaxed mock, a completing stub makes
+        //  isLoading=false by assert time; loading=true is the state under test)
+        coEvery { translationService.translate(any(), any(), any()) } coAnswers {
+            kotlinx.coroutines.awaitCancellation()
+        }
         val vm = createViewModel()
         advanceUntilIdle()
 

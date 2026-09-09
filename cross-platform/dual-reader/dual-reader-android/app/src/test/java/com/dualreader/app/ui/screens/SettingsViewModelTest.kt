@@ -97,7 +97,7 @@ class SettingsViewModelTest {
 
         // Assert
         coVerify(exactly = 0) { bookRepository.clearAllTranslations() }
-        coVerify { AppLogger.e("clearAllTranslations: Failed to clear translations: Disk full") }
+        coVerify { AppLogger.e("clearAllTranslations: Failed to clear translations: Disk full", exception) }
         assertEquals("Failed to clear translations: Disk full", viewModel.clearError.value)
     }
 
@@ -116,7 +116,7 @@ class SettingsViewModelTest {
         // Assert
         coVerify { cacheRepository.clearAll() }
         coVerify { bookRepository.clearAllTranslations() }
-        coVerify { AppLogger.e("clearAllTranslations: Failed to clear translations: Database locked") }
+        coVerify { AppLogger.e("clearAllTranslations: Failed to clear translations: Database locked", exception) }
         assertEquals("Failed to clear translations: Database locked", viewModel.clearError.value)
     }
 
@@ -197,10 +197,10 @@ class SettingsViewModelTest {
         testViewModel.clearAllTranslations()
         advanceUntilIdle()
 
-        // Assert - Count should be updated to 0 from getTranslatedPageCount() in clearAllTranslations
-        // (This is because clearAllTranslations succeeds, but refreshCacheCount() preserves the 0)
-        assertEquals(0, testViewModel.cachedCount.value)
-        coVerify { AppLogger.e(match { it.startsWith("refreshCacheCount: Failed") }) }
+        // Assert - Count should remain at the last successfully fetched value (10):
+        // refreshCacheCount() catches the exception and preserves the previous count
+        assertEquals(10, testViewModel.cachedCount.value)
+        coVerify { AppLogger.e(match { it.startsWith("refreshCacheCount: Failed") }, exception) }
     }
 
     @Test
@@ -219,7 +219,7 @@ class SettingsViewModelTest {
 
         // Assert - Count should remain at initial value (0)
         assertEquals(0, testViewModel.cachedCount.value)
-        coVerify { AppLogger.e(match { it.startsWith("refreshCacheCount: Failed") }) }
+        coVerify { AppLogger.e(match { it.startsWith("refreshCacheCount: Failed") }, exception) }
     }
 
     // DR-115: Test loadTranslationInfo error handling
@@ -267,7 +267,7 @@ class SettingsViewModelTest {
         assertEquals(0, viewModel.translationInfo.value.size)
         assertNotNull(viewModel.loadInfoError.value)
         assertEquals("Failed to load translation info: Database locked", viewModel.loadInfoError.value)
-        coVerify { AppLogger.e("loadTranslationInfo: Failed to load translation info: Database locked") }
+        coVerify { AppLogger.e("loadTranslationInfo: Failed to load translation info: Database locked", exception) }
     }
 
     @Test

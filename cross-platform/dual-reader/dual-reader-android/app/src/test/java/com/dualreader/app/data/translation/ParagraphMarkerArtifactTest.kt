@@ -1,238 +1,118 @@
 package com.dualreader.app.data.translation
 
-import org.junit.Test
 import org.junit.Assert.*
+import org.junit.Test
 
 /**
- * DR-092: Regression tests for ⟦N⟧ marker artifacts leaking into translated text.
+ * DR-263: Marker artifacts must never reach the reader UI.
  *
- * Root cause: When batch-translating multiple pages, [ParagraphAligner.injectMarkers]
- * prepends `⟦N⟧` markers to each paragraph for LLM context. After translation,
- * [ParagraphAligner.extractByMarkers] should split them out. But several paths
- * could leak markers into the final text:
+ * History: marker-based stitching (v1 `⟦N⟧`, v2 `@@N@@`) was removed because
+ * both ML Kit and cloud LLMs strip/merge inline markers — reported twice as
+ * "translation boxes don't match original segments". The array-based
+ * `translatePages` endpoint replaced stitching entirely.
  *
- * 1. Fallback alignment path: markers not stripped before [align]
- * 2. extractByMarkers segments: residual markers not stripped from content
- * 3. Cached results: old cache entries may contain markers
- * 4. Batch endpoint results: markers in translatePages output
- *
- * Fix: stripMarkers() applied at every result checkpoint.
+ * This suite locks in the defensive layer: even if a marker somehow survives
+ * into a cached translation (old pre-DR-263 cache entries), [ParagraphAligner.stripMarkers]
+ * removes every artifact before display.
  */
 class ParagraphMarkerArtifactTest {
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // stripMarkers — basic behavior
-    // ═══════════════════════════════════════════════════════════════════════════
+    // ── No marker artifacts in final displayed text ────────────────────────────
 
     @Test
-    fun `stripMarkers - removes single marker at start`() {
-        val input = "\u27E61\u27E7 Hello world"
-        val result = ParagraphAligner.stripMarkers(input)
-        assertEquals("Hello world", result)
-    }
-
-    @Test
-    fun `stripMarkers - removes multiple markers`() {
-        val input = "\u27E61\u27E7 First paragraph\n\n\u27E62\u27E7 Second paragraph"
-        val result = ParagraphAligner.stripMarkers(input)
-        assertEquals("First paragraph\n\nSecond paragraph", result)
-    }
-
-    @Test
-    fun `stripMarkers - removes marker from middle of text`() {
-        val input = "Some text \u27E63\u27E7 more text"
-        val result = ParagraphAligner.stripMarkers(input)
-        assertEquals("Some text more text", result)
-    }
-
-    @Test
-    fun `stripMarkers - preserves text without markers`() {
-        val input = "Clean translated text without any markers"
-        val result = ParagraphAligner.stripMarkers(input)
-        assertEquals("Clean translated text without any markers", result)
-    }
-
-    @Test
-    fun `stripMarkers - handles double-digit markers`() {
-        val input = "\u27E614\u27E7 Hello"
-        val result = ParagraphAligner.stripMarkers(input)
-        assertEquals("Hello", result)
-    }
-
-    @Test
-    fun `stripMarkers - handles empty string`() {
-        assertEquals("", ParagraphAligner.stripMarkers(""))
-    }
-
-    @Test
-    fun `stripMarkers - handles string with only markers`() {
-        val input = "\u27E61\u27E7 \u27E62\u27E7"
-        val result = ParagraphAligner.stripMarkers(input)
-        assertEquals("", result)
-    }
-
-    @Test
-    fun `stripMarkers - does NOT remove regular square brackets`() {
-        val input = "[1] Regular bracket text"
-        val result = ParagraphAligner.stripMarkers(input)
-        assertEquals("[1] Regular bracket text", result)
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // extractByMarkers — no residual markers in segments
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    fun `extractByMarkers - segments do not contain markers`() {
-        val input = "\u27E61\u27E7 First\n\n\u27E62\u27E7 Second\n\n\u27E63\u27E7 Third"
-        val result = ParagraphAligner.extractByMarkers(input, 3)
-        assertNotNull(result)
-        assertEquals(3, result!!.size)
-        result.forEach { segment ->
-            assertFalse(
-                "Segment '$segment' should not contain markers",
-                ParagraphAligner.hasMarkers(segment)
-            )
+    fun `cleaned text never contains v2 markers`() {
+        val dirty = listOf(
+            "@@1@@ Primero.",
+            "Texto @@2@@ intermedio.",
+            "@@10@@ Último con número grande.",
+        )
+        for (d in dirty) {
+            val clean = ParagraphAligner.stripMarkers(d)
+            assertFalse("Should not contain @@: '$clean'", clean.contains("@@"))
+            assertTrue("Should not be blank: '$clean'", clean.isNotBlank())
         }
     }
 
     @Test
-    fun `extractByMarkers - strips duplicated markers inside content`() {
-        // LLM sometimes duplicates markers: ⟦1⟧ ⟦1⟧ Hello
-        val input = "\u27E61\u27E7 \u27E61\u27E7 Hello\n\n\u27E62\u27E7 World"
-        val result = ParagraphAligner.extractByMarkers(input, 2)
-        assertNotNull(result)
-        assertEquals("Hello", result!![0])
-        assertEquals("World", result[1])
-    }
-
-    @Test
-    fun `extractByMarkers - strips markers from last segment with trailing marker`() {
-        val input = "\u27E61\u27E7 Hello\n\n\u27E62\u27E7 World \u27E63\u27E7"
-        val result = ParagraphAligner.extractByMarkers(input, 2)
-        assertNotNull(result)
-        assertEquals("Hello", result!![0])
-        assertEquals("World", result[1])
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // align — markers stripped before proportional alignment
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    fun `align - translated text with markers is cleaned in aligned pairs`() {
-        val original = "Paragraph one\n\nParagraph two\n\nParagraph three"
-        val translated = "\u27E61\u27E7 Parrafo uno\n\n\u27E62\u27E7 Parrafo dos\n\n\u27E63\u27E7 Parrafo tres"
-        // Strip markers first (as TranslatePageUseCase now does)
-        val cleaned = ParagraphAligner.stripMarkers(translated)
-        val aligned = ParagraphAligner.align(original, cleaned)
-
-        assertEquals(3, aligned.size)
-        aligned.forEach { (_, translatedPara) ->
-            assertFalse(
-                "Aligned segment should not contain markers: '$translatedPara'",
-                ParagraphAligner.hasMarkers(translatedPara)
-            )
+    fun `cleaned text never contains legacy brackets`() {
+        val dirty = listOf(
+            "\u27E61\u27E7 Primero.",
+            "Texto \u27E62\u27E7 intermedio.",
+            "\u27E612\u27E7 Número grande.",
+        )
+        for (d in dirty) {
+            val clean = ParagraphAligner.stripMarkers(d)
+            assertFalse("Should not contain ⟦: '$clean'", clean.contains("\u27E6"))
+            assertFalse("Should not contain ⟧: '$clean'", clean.contains("\u27E7"))
+            assertTrue("Should not be blank: '$clean'", clean.isNotBlank())
         }
     }
 
     @Test
-    fun `align - proportional fallback with markers produces clean output`() {
-        // Original has 5 paragraphs, translated has 3 (proportional alignment)
-        val original = (1..5).joinToString("\n\n") { "Para $it" }
-        val translated = "\u27E61\u27E7 One two\n\n\u27E62\u27E7 Three four\n\n\u27E63\u27E7 Five"
-        val cleaned = ParagraphAligner.stripMarkers(translated)
-        val aligned = ParagraphAligner.align(original, cleaned)
-
-        assertEquals(5, aligned.size)
-        aligned.forEach { (_, translatedPara) ->
-            assertFalse(
-                "Proportionally aligned segment should not contain markers: '$translatedPara'",
-                ParagraphAligner.hasMarkers(translatedPara)
-            )
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // inject + extract round-trip — no markers survive
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    fun `inject then extract round-trip - no markers in final output`() {
-        val paragraphs = listOf("Hello world", "Goodbye world", "Third paragraph")
-        val marked = ParagraphAligner.injectMarkers(paragraphs)
-        // Simulate LLM preserving markers perfectly
-        val extracted = ParagraphAligner.extractByMarkers(marked, 3)
-
-        assertNotNull(extracted)
-        assertEquals(3, extracted!!.size)
-        // Content should match originals (without markers)
-        assertEquals("Hello world", extracted[0])
-        assertEquals("Goodbye world", extracted[1])
-        assertEquals("Third paragraph", extracted[2])
+    fun `cleaned text never contains marker numbers`() {
+        // Stripping must remove the ENTIRE marker including the digits —
+        // a stray "1" left behind changes the meaning of the sentence.
+        val clean = ParagraphAligner.stripMarkers("@@1@@ Primero.")
+        assertEquals("Primero.", clean)
+        assertFalse(clean.startsWith("1"))
     }
 
     @Test
-    fun `inject then extract round-trip - LLM translates content but keeps markers`() {
-        val paragraphs = listOf("Hello", "World")
-        val marked = ParagraphAligner.injectMarkers(paragraphs)
-        // LLM translates: ⟦1⟧ Hola\n\n⟦2⟧ Mundo
-        val translated = marked
-            .replace("Hello", "Hola")
-            .replace("World", "Mundo")
-        val extracted = ParagraphAligner.extractByMarkers(translated, 2)
-
-        assertNotNull(extracted)
-        assertEquals("Hola", extracted!![0])
-        assertEquals("Mundo", extracted[1])
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Edge cases
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    fun `hasMarkers - detects markers in text`() {
-        assertTrue(ParagraphAligner.hasMarkers("\u27E61\u27E7 text"))
-        assertTrue(ParagraphAligner.hasMarkers("text \u27E699\u27E7 more"))
+    fun `marker in the middle is stripped cleanly`() {
+        assertEquals("Hola mundo.", ParagraphAligner.stripMarkers("Hola @@3@@ mundo."))
     }
 
     @Test
-    fun `hasMarkers - returns false for clean text`() {
-        assertFalse(ParagraphAligner.hasMarkers("Clean text"))
-        assertFalse(ParagraphAligner.hasMarkers("[1] Regular brackets"))
+    fun `repeated markers are all stripped`() {
+        val clean = ParagraphAligner.stripMarkers("@@1@@ A @@1@@ B @@1@@ C")
+        assertEquals("A B C", clean)
     }
 
     @Test
-    fun `stripMarkers - idempotent`() {
-        val input = "\u27E61\u27E7 Hello"
-        val once = ParagraphAligner.stripMarkers(input)
+    fun `markers with newlines are stripped cleanly`() {
+        assertEquals("Uno\nDos", ParagraphAligner.stripMarkers("@@1@@ Uno\n@@2@@ Dos"))
+    }
+
+    // ── Real-world bug scenarios ───────────────────────────────────────────────
+
+    @Test
+    fun `user-reported dialogue fragments cache cleanup`() {
+        // From the user's bug report (v1.0.101):
+        // original: “Smarty! You think you’re some, now, don’t you?
+        // next:     Oh, what a hat!
+        // A pre-DR-263 cache entry might hold the merged, marker-tagged text
+        val cachedDirty = "@@1@@ \u2014\u00A1Listillo! Te crees la gran cosa ahora, \u00BFno? \u00A1Vaya sombrero!"
+        val clean = ParagraphAligner.stripMarkers(cachedDirty)
+        assertFalse(clean.contains("@@"))
+        assertTrue(clean.startsWith("\u2014\u00A1Listillo"))
+    }
+
+    @Test
+    fun `stripMarkers is idempotent`() {
+        val once = ParagraphAligner.stripMarkers("@@1@@ Hola @@2@@ mundo")
         val twice = ParagraphAligner.stripMarkers(once)
         assertEquals(once, twice)
     }
 
+    // ── hasMarkers gating ──────────────────────────────────────────────────────
+
     @Test
-    fun `full pipeline - inject, translate with partial marker loss, strip, align produces clean output`() {
-        // Simulate: LLM keeps markers on some paragraphs but not all
-        val originals = listOf("One", "Two", "Three", "Four")
-        // LLM output: markers preserved on 1 and 3, lost on 2 and 4
-        val llmOutput = "\u27E61\u27E7 Uno\n\nDos\n\n\u27E63\u27E7 Tres\n\nCuatro"
+    fun `hasMarkers detects markers that need stripping`() {
+        assertTrue(ParagraphAligner.hasMarkers("@@1@@ Text"))
+        assertTrue(ParagraphAligner.hasMarkers("Text @@99@@ more"))
+    }
 
-        // extractByMarkers should return null (only 2 markers, expected 4)
-        val extracted = ParagraphAligner.extractByMarkers(llmOutput, 4)
-        assertNull(extracted) // Should trigger fallback
-
-        // Fallback: strip markers then align
-        val cleaned = ParagraphAligner.stripMarkers(llmOutput)
-        assertFalse("Cleaned text should have no markers", ParagraphAligner.hasMarkers(cleaned))
-
-        val origJoined = originals.joinToString("\n\n")
-        val aligned = ParagraphAligner.align(origJoined, cleaned)
-        aligned.forEach { (_, text) ->
-            assertFalse(
-                "No markers should survive the full pipeline: '$text'",
-                ParagraphAligner.hasMarkers(text)
-            )
+    @Test
+    fun `hasMarkers ignores normal prose`() {
+        val prose = listOf(
+            "Hello world.",
+            "Email me at a@b.com",
+            "100% done @ noon",
+            "\u201CSmarty! You think you\u2019re some, now, don\u2019t you?",
+            "Oh, what a hat!",
+        )
+        for (p in prose) {
+            assertFalse("'$p' should not be flagged", ParagraphAligner.hasMarkers(p))
         }
     }
 }

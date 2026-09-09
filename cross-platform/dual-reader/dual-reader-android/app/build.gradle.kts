@@ -15,8 +15,8 @@ android {
         applicationId = "com.dualreader.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 90
-        versionName = "1.0.90"
+        versionCode = 103
+        versionName = "1.0.103"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -88,10 +88,8 @@ ksp {
 
 // Increase test JVM heap for large test suite (64+ classes, 1046+ tests)
 tasks.withType<Test>().configureEach {
-    maxHeapSize = "2g"
-    jvmArgs("-XX:MaxMetaspaceSize=512m")
-    // Fork a new JVM every 100 tests to prevent OOM from memory accumulation
-    forkEvery = 100
+    maxHeapSize = "4g"
+    jvmArgs("-XX:MaxMetaspaceSize=2g", "-XX:+UseG1GC")
     maxParallelForks = 1
 }
 
@@ -112,6 +110,7 @@ dependencies {
     // Lifecycle
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.lifecycle.process)
 
     // Navigation
     implementation(libs.navigation.compose)

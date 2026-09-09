@@ -364,10 +364,10 @@ class BillingRepositoryImpl @Inject constructor() : BillingRepository, Purchases
                 acknowledgePurchase(purchase)
             }
         }
+        // DR-248: PRO tier removed. Only PREMIUM subscriptions grant entitlement.
         val newTier = when {
             ProductIds.PREMIUM_MONTHLY in activeProductIds ||
             ProductIds.PREMIUM_YEARLY in activeProductIds -> EntitlementTier.PREMIUM
-            ProductIds.PRO_UNLOCK in activeProductIds -> EntitlementTier.PRO
             else -> EntitlementTier.FREE
         }
         if (newTier != _entitlement.value) {

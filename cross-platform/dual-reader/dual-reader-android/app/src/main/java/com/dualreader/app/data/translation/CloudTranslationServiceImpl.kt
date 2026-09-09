@@ -28,7 +28,7 @@ class CloudTranslationServiceImpl @Inject constructor(
     private val installationIdProvider: InstallationIdProvider,
 ) : TranslationService {
 
-    override val providerName: String = "Gemini 3.5 Flash / GLM-4.7-Flash (cloud)"
+    override val providerName: String = "Cloud"
 
     companion object {
         private const val TAG = "CloudTranslation"

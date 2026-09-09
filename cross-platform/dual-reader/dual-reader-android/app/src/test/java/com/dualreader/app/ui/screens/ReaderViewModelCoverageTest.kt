@@ -648,7 +648,7 @@ class ReaderViewModelCoverageTest {
 
         // Verify error state shows "Retrying..."
         val state = vm.ttsState.value
-        assertTrue("Should show retry message: ${state.error}", state.error?.contains("Retrying") == true)
+        assertTrue("Should show TTS failure message: ${state.error}", state.error?.contains("TTS engine failed to initialize") == true)
 
         // Simulate ViewModel clear (onCleared)
         vm.callOnClearedForTesting()
@@ -683,7 +683,7 @@ class ReaderViewModelCoverageTest {
 
         // Verify error state shows "Retrying..."
         val state = vm.ttsState.value
-        assertTrue("Should show retry message: ${state.error}", state.error?.contains("Retrying") == true)
+        assertTrue("Should show TTS failure message: ${state.error}", state.error?.contains("TTS engine failed to initialize") == true)
 
         // Simulate ViewModel clear (onCleared)
         vm.callOnClearedForTesting()
@@ -721,7 +721,7 @@ class ReaderViewModelCoverageTest {
 
         // Only the last retry should be pending (previous ones cancelled)
         val state = vm.ttsState.value
-        assertTrue("Should show retry message: ${state.error}", state.error?.contains("Retrying") == true)
+        assertTrue("Should show TTS failure message: ${state.error}", state.error?.contains("TTS engine failed to initialize") == true)
 
         // Clear should cancel the last pending retry
         vm.callOnClearedForTesting()
@@ -730,6 +730,73 @@ class ReaderViewModelCoverageTest {
 
         // No post-clear execution
         coVerify(exactly = 0) { ttsService.speak(any(), any(), any(), any(), any(), any()) }
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // DR-264: Bounded TTS retry — no infinite retry loop
+    // ════════════════════════════════════════════════════════════════════
+
+    @Test
+    fun `DR-264 - TTS retry capped at 3 attempts when engine fails permanently`() = runTest(testDispatcher) {
+        // Setup page with translation
+        val translatedPage = testPages1[0].copy(
+            translations = mapOf("bg" to "Hello world one translated")
+        )
+        coEvery { bookRepository.getPagesForBook("book1") } returns listOf(translatedPage)
+        coEvery { bookRepository.getPage("book1", any()) } returns translatedPage
+
+        // TTS permanently broken: init failed, reinitialize always "succeeds" but never ready
+        every { ttsService.isReady } returns false
+        every { ttsService.isInitFailed } returns true
+        every { ttsService.reinitialize() } returns true
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.speakCurrentPage(0)
+        // Advance far beyond 3 retry attempts (each retry waits 500ms)
+        testScheduler.advanceTimeBy(10_000)
+        advanceUntilIdle()
+
+        // Exactly 3 reinitialize() calls (cap), then permanent error state
+        coVerify(exactly = 3) { ttsService.reinitialize() }
+        val state = vm.ttsState.value
+        assertTrue(
+            "Should show permanent failure after cap: ${state.error}",
+            state.error?.contains("TTS unavailable") == true
+        )
+        assertFalse("Should not be speaking", state.isSpeaking)
+    }
+
+    @Test
+    fun `DR-264 - stopTts resets retry counter allowing fresh attempts`() = runTest(testDispatcher) {
+        // Setup page with translation
+        val translatedPage = testPages1[0].copy(
+            translations = mapOf("bg" to "Hello world one translated")
+        )
+        coEvery { bookRepository.getPagesForBook("book1") } returns listOf(translatedPage)
+        coEvery { bookRepository.getPage("book1", any()) } returns translatedPage
+
+        // TTS permanently broken
+        every { ttsService.isReady } returns false
+        every { ttsService.isInitFailed } returns true
+        every { ttsService.reinitialize() } returns true
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Exhaust the retry cap
+        vm.speakCurrentPage(0)
+        testScheduler.advanceTimeBy(10_000)
+        advanceUntilIdle()
+        coVerify(exactly = 3) { ttsService.reinitialize() }
+
+        // User stops TTS (reset) then tries again — counter reset allows 3 more attempts
+        vm.stopTts()
+        vm.speakCurrentPage(0)
+        testScheduler.advanceTimeBy(10_000)
+        advanceUntilIdle()
+        coVerify(exactly = 6) { ttsService.reinitialize() }
     }
 
     // ════════════════════════════════════════════════════════════════════

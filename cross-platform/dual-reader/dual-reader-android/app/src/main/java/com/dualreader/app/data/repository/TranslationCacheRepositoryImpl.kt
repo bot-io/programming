@@ -69,10 +69,11 @@ class TranslationCacheRepositoryImpl @Inject constructor(
 
     override suspend fun count(): Int = dao.count()
 
-    override suspend fun deleteForTexts(texts: List<String>) {
+    override suspend fun deleteForTexts(texts: List<String>, sourceLang: String?) {
         require(texts.all { it.isNotBlank() }) { "All texts in delete list must not be blank" }
+        val src = sourceLang ?: "auto"
         for (text in texts) {
-            dao.deleteByHash(sha256(text))
+            dao.deleteByHash(sha256(text), src)
         }
     }
 

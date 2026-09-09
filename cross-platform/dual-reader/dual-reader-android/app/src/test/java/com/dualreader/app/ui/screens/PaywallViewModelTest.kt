@@ -21,7 +21,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -38,25 +37,14 @@ class PaywallViewModelTest {
     private val entitlementFlow = MutableStateFlow(EntitlementTier.FREE)
     private val productsFlow = MutableStateFlow<List<ProductInfo>>(emptyList())
 
-    private val proProduct = ProductInfo(
-        productId = ProductIds.PRO_UNLOCK,
-        title = "Pro Unlock",
-        description = "Unlock everything",
-        price = "$12.99",
-        pricePeriod = "",
-        isSubscription = false,
-        rawPriceAmountMicros = 12_990_000,
-        rawCurrency = "USD",
-    )
-
     private val monthlyProduct = ProductInfo(
         productId = ProductIds.PREMIUM_MONTHLY,
         title = "Premium Monthly",
         description = "Monthly subscription",
-        price = "$2.99",
+        price = "$5.99",
         pricePeriod = "/month",
         isSubscription = true,
-        rawPriceAmountMicros = 2_990_000,
+        rawPriceAmountMicros = 5_990_000,
         rawCurrency = "USD",
     )
 
@@ -64,10 +52,10 @@ class PaywallViewModelTest {
         productId = ProductIds.PREMIUM_YEARLY,
         title = "Premium Yearly",
         description = "Annual subscription",
-        price = "$19.99",
+        price = "$39.99",
         pricePeriod = "/year",
         isSubscription = true,
-        rawPriceAmountMicros = 19_990_000,
+        rawPriceAmountMicros = 39_990_000,
         rawCurrency = "USD",
     )
 
@@ -113,14 +101,13 @@ class PaywallViewModelTest {
     // ── Product Mapping ────────────────────────────────────────────
 
     @Test
-    fun `products flow maps to proProduct, monthlyProduct, yearlyProduct`() = runTest {
+    fun `products flow maps to monthlyProduct and yearlyProduct`() = runTest {
         backgroundScope.launch { vm.uiState.collect {} }
         advanceUntilIdle()
 
-        productsFlow.value = listOf(proProduct, monthlyProduct, yearlyProduct)
+        productsFlow.value = listOf(monthlyProduct, yearlyProduct)
         advanceUntilIdle()
 
-        assertEquals(proProduct, vm.uiState.value.proProduct)
         assertEquals(monthlyProduct, vm.uiState.value.monthlyProduct)
         assertEquals(yearlyProduct, vm.uiState.value.yearlyProduct)
     }
@@ -130,11 +117,10 @@ class PaywallViewModelTest {
         backgroundScope.launch { vm.uiState.collect {} }
         advanceUntilIdle()
 
-        productsFlow.value = listOf(proProduct)
+        productsFlow.value = listOf(monthlyProduct)
         advanceUntilIdle()
 
-        assertNotNull(vm.uiState.value.proProduct)
-        assertNull(vm.uiState.value.monthlyProduct)
+        assertEquals(monthlyProduct, vm.uiState.value.monthlyProduct)
         assertNull(vm.uiState.value.yearlyProduct)
     }
 
@@ -142,10 +128,6 @@ class PaywallViewModelTest {
     fun `entitlement updates reflect in uiState`() = runTest {
         backgroundScope.launch { vm.uiState.collect {} }
         advanceUntilIdle()
-
-        entitlementFlow.value = EntitlementTier.PRO
-        advanceUntilIdle()
-        assertEquals(EntitlementTier.PRO, vm.uiState.value.entitlement)
 
         entitlementFlow.value = EntitlementTier.PREMIUM
         advanceUntilIdle()
@@ -159,9 +141,9 @@ class PaywallViewModelTest {
         backgroundScope.launch { vm.uiState.collect {} }
         advanceUntilIdle()
 
-        coEvery { billingRepo.launchPurchaseFlow(ProductIds.PRO_UNLOCK) } returns PurchaseResult.Success
+        coEvery { billingRepo.launchPurchaseFlow(ProductIds.PREMIUM_YEARLY) } returns PurchaseResult.Success
 
-        vm.purchase(ProductIds.PRO_UNLOCK)
+        vm.purchase(ProductIds.PREMIUM_YEARLY)
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.purchaseSuccess)
@@ -204,7 +186,7 @@ class PaywallViewModelTest {
 
         coEvery { billingRepo.launchPurchaseFlow(any()) } returns PurchaseResult.Pending
 
-        vm.purchase(ProductIds.PRO_UNLOCK)
+        vm.purchase(ProductIds.PREMIUM_MONTHLY)
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.purchaseMessage?.contains("pending") == true)
@@ -218,7 +200,7 @@ class PaywallViewModelTest {
 
         coEvery { billingRepo.launchPurchaseFlow(any()) } returns PurchaseResult.Success
 
-        vm.purchase(ProductIds.PRO_UNLOCK)
+        vm.purchase(ProductIds.PREMIUM_YEARLY)
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.isLoading)
@@ -227,11 +209,11 @@ class PaywallViewModelTest {
     // ── restorePurchases ───────────────────────────────────────────
 
     @Test
-    fun `restorePurchases with previous paid tier sets success`() = runTest {
+    fun `restorePurchases with PREMIUM tier sets success`() = runTest {
         backgroundScope.launch { vm.uiState.collect {} }
         advanceUntilIdle()
 
-        coEvery { billingRepo.restorePurchases() } returns EntitlementTier.PRO
+        coEvery { billingRepo.restorePurchases() } returns EntitlementTier.PREMIUM
 
         vm.restorePurchases()
         advanceUntilIdle()
@@ -254,19 +236,6 @@ class PaywallViewModelTest {
         assertFalse(vm.uiState.value.purchaseSuccess)
     }
 
-    @Test
-    fun `restorePurchases with PREMIUM tier sets success`() = runTest {
-        backgroundScope.launch { vm.uiState.collect {} }
-        advanceUntilIdle()
-
-        coEvery { billingRepo.restorePurchases() } returns EntitlementTier.PREMIUM
-
-        vm.restorePurchases()
-        advanceUntilIdle()
-
-        assertTrue(vm.uiState.value.purchaseSuccess)
-    }
-
     // ── clearMessage ───────────────────────────────────────────────
 
     @Test
@@ -275,9 +244,9 @@ class PaywallViewModelTest {
         advanceUntilIdle()
 
         coEvery { billingRepo.launchPurchaseFlow(any()) } returns PurchaseResult.Error("err")
-        vm.purchase(ProductIds.PRO_UNLOCK)
+        vm.purchase(ProductIds.PREMIUM_MONTHLY)
         advanceUntilIdle()
-        assertNotNull(vm.uiState.value.purchaseMessage)
+        org.junit.Assert.assertNotNull(vm.uiState.value.purchaseMessage)
 
         vm.clearMessage()
         advanceUntilIdle()

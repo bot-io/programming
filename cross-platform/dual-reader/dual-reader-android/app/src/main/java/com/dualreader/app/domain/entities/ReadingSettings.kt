@@ -19,6 +19,12 @@ data class ReadingSettings(
     val screenWakeTimeoutMinutes: Int = 30,
     val sentenceCounterEnabled: Boolean = false,
     val displayMode: DisplayMode = DisplayMode.SPLIT,
+    // DR-243: Whether translation appears above or below the original text
+    val translationPosition: TranslationPosition = TranslationPosition.TRANSLATION_ABOVE,
+    // DR-244: When enabled, TTS also reads the original text after each translation
+    val ttsReadOriginal: Boolean = false,
+    // DR-245: TTS speech rate (0.5 = slow, 1.0 = normal, 2.0 = fast)
+    val ttsSpeechRate: Float = 1.0f,
 )
 
 enum class ReaderTheme {
@@ -56,4 +62,15 @@ enum class TranslationProvider(
 enum class DisplayMode {
     SPLIT,
     INTERLEAVED,
+}
+
+/**
+ * DR-243: Where the translation appears relative to the original text.
+ *
+ * - TRANSLATION_ABOVE: Translation shown above the original (default — aids language learning)
+ * - TRANSLATION_BELOW: Translation shown below the original (traditional reading flow)
+ */
+enum class TranslationPosition {
+    TRANSLATION_ABOVE,
+    TRANSLATION_BELOW,
 }

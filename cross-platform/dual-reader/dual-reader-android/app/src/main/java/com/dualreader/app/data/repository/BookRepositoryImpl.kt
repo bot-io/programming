@@ -42,19 +42,24 @@ class BookRepositoryImpl @Inject constructor(
         bookDao.update(book.toEntity())
 
     override suspend fun deleteBook(id: String) {
-        // Cascade: get page texts first (for cache cleanup), then delete everything
+        // Cascade: get book first to get source language for cache cleanup
+        val book = bookDao.getById(id)
+        val sourceLang = book?.language
+        
+        // Get page texts before deleting (for cache cleanup)
         val pages = pageDao.getPagesForBook(id)
         val pageTexts = pages.map { it.originalText }
 
+        // Delete cascade: pages, bookmarks, tags, book
         pageDao.deletePagesForBook(id)
         bookmarkDao.deleteBookmarksForBook(id)
         bookTagDao.deleteTagsForBook(id)
         bookDao.deleteById(id)
 
-        // Clear translation cache for this book's pages
-        if (pageTexts.isNotEmpty()) {
+        // Clear translation cache for this book's pages (DR-203: Use source language for composite key)
+        if (pageTexts.isNotEmpty() && sourceLang != null) {
             try {
-                translationCacheRepository.deleteForTexts(pageTexts)
+                translationCacheRepository.deleteForTexts(pageTexts, sourceLang)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e // Propagate cancellation - don't swallow it (DR-110)
             } catch (e: Exception) {

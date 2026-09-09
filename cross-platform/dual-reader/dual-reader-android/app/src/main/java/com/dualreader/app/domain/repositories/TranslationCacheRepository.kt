@@ -34,6 +34,8 @@ interface TranslationCacheRepository {
     /**
      * Delete cache entries matching a list of source texts.
      * Used when a book is deleted to clean up its translations.
+     * @param texts List of source texts to delete from cache
+     * @param sourceLang Source language of the book (required for composite key)
      */
-    suspend fun deleteForTexts(texts: List<String>)
+    suspend fun deleteForTexts(texts: List<String>, sourceLang: String?)
 }

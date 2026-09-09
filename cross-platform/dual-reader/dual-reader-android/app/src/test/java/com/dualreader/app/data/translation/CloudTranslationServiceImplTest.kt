@@ -236,8 +236,10 @@ class CloudTranslationServiceImplTest {
 
     @Test
     fun `providerName includes Gemini and GLM`() {
-        assertTrue(service.providerName.contains("Gemini"))
-        assertTrue(service.providerName.contains("GLM"))
+        // DR-262: providerName is now dynamic — "Cloud" for the proxy.
+        // Model detail (Gemini/GLM) comes from the response body per request,
+        // surfaced via BatchTranslationResult.model / lastSyncModel.
+        assertEquals("Cloud", service.providerName)
     }
 
     // ── Model tracking ───────────────────────────────────────────────────────

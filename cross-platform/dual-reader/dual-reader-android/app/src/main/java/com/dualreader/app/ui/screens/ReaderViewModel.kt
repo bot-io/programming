@@ -37,6 +37,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.time.LocalDateTime
 import java.util.UUID
 import javax.inject.Inject
@@ -109,11 +111,19 @@ class ReaderViewModel @Inject constructor(
     private val _translationError = MutableStateFlow<String?>(null)
     private val _paragraphsTranslating = MutableStateFlow<Set<Int>>(emptySet())
     val paragraphsTranslating: StateFlow<Set<Int>> = _paragraphsTranslating.asStateFlow()
+
+    // DR-259: Cloud upgrade tracking — pages whose ML Kit translation is being
+    // upgraded to cloud quality in the background. UI shows a spinner for these.
+    private val _paragraphsUpgrading = MutableStateFlow<Set<Int>>(emptySet())
+    val paragraphsUpgrading: StateFlow<Set<Int>> = _paragraphsUpgrading.asStateFlow()
+
     private var translationJob: Job? = null
     private var loadJob: Job? = null
     private var loadOuterJob: Job? = null
     private var ttsRetryJob: Job? = null // DR-092: Track TTS retry coroutine
     private var persistJob: Job? = null // DR-181: Track persistence coroutine to prevent post-clear DB writes
+    private var ttsRetryCount = 0 // DR-264: Bounded TTS retry (max 3 attempts)
+    private val ttsRetryCountMax = 3
 
     // ── Translation events (one-time UI events for Snackbar) ──────────────
     sealed class TranslationEvent {
@@ -188,6 +198,32 @@ class ReaderViewModel @Inject constructor(
     init {
         currentBookId?.let { loadBook(it) }
 
+        // DR-259: Cloud upgrade started — mark page as upgrading so UI shows spinner
+        fallbackTranslationService.cloudUpgradeStartedCallback = { originalText ->
+            val bookId = currentBookId
+            val pageToUpdate = _pages.value.find {
+                it.bookId == bookId &&
+                it.originalText.trim() == originalText.trim() &&
+                it.originalText.contains(originalText.take(100))
+            }
+            if (pageToUpdate != null) {
+                _paragraphsUpgrading.update { it + pageToUpdate.index }
+            }
+        }
+
+        // DR-259: Cloud upgrade failed — remove from upgrading set, keep ML Kit result
+        fallbackTranslationService.cloudUpgradeFailedCallback = { originalText ->
+            val bookId = currentBookId
+            val pageToUpdate = _pages.value.find {
+                it.bookId == bookId &&
+                it.originalText.trim() == originalText.trim() &&
+                it.originalText.contains(originalText.take(100))
+            }
+            if (pageToUpdate != null) {
+                _paragraphsUpgrading.update { it - pageToUpdate.index }
+            }
+        }
+
         // Register cloud upgrade callback: when background cloud translation
         // completes, find the matching page by original text and replace the
         // ML Kit translation with the higher-quality cloud version.
@@ -204,11 +240,98 @@ class ReaderViewModel @Inject constructor(
                 val currentPage = _pages.value.getOrNull(pageToUpdate.index)
                 val pageOriginalText = currentPage?.originalText?.trim()
                 if (pageOriginalText != null && pageOriginalText == originalText.trim()) {
-                    AppLogger.i("Cloud upgrade: replacing ML Kit translation for page ${pageToUpdate.index}")
-                    applyTranslation(pageToUpdate.index, targetLang, cloudTranslation, "cloud-upgrade")
+                    // DR-260: Grade protection — never downgrade a translation.
+                    // Cloud upgrade always replaces ML Kit (higher grade), but check
+                    // if existing translation is already cloud-grade.
+                    val existingModel = currentPage.translationModels[targetLang]
+                    if (existingModel != null && isCloudGrade(existingModel)) {
+                        AppLogger.i("Cloud upgrade: page ${pageToUpdate.index} already has cloud-grade translation ($existingModel), skipping")
+                    } else {
+                        AppLogger.i("Cloud upgrade: replacing ML Kit translation for page ${pageToUpdate.index}")
+                        applyTranslation(pageToUpdate.index, targetLang, cloudTranslation, "cloud-upgrade")
+                    }
                 }
             }
+            // DR-259: Remove from upgrading set regardless of outcome
+            _paragraphsUpgrading.update { it - (pageToUpdate?.index ?: -1) }
         }
+    }
+
+    /**
+     * DR-260: Returns true if the model string represents a cloud-grade translation
+     * (Cloud or Cloud Pro). Used to prevent downgrading to Local (ML Kit).
+     */
+    private fun isCloudGrade(model: String?): Boolean {
+        if (model.isNullOrBlank()) return false
+        val lower = model.lowercase()
+        return lower.contains("cloud") ||
+               lower.contains("gemini") ||
+               lower.contains("glm") ||
+               lower.contains("premium")
+    }
+
+    /**
+     * DR-260: Translation grade hierarchy for downgrade protection.
+     * 3 = Cloud Pro (Gemini), 2 = Cloud (GLM/standard), 1 = Local (ML Kit), 0 = unknown
+     */
+    private fun translationGrade(model: String?): Int {
+        if (model.isNullOrBlank()) return 0
+        val lower = model.lowercase()
+        return when {
+            lower.contains("gemini") || lower.contains("premium") -> 3
+            lower.contains("cloud") || lower.contains("glm") -> 2
+            lower.contains("mlkit") || lower.contains("ml kit") || lower.contains("on-device") || lower.contains("local") -> 1
+            else -> 0
+        }
+    }
+
+    /** DR-262: Returns true if the model string represents a Local (ML Kit) translation. */
+    private fun isLocalGrade(model: String?): Boolean {
+        return translationGrade(model) == 1
+    }
+
+    /**
+     * DR-262: Trigger background cloud upgrades for a batch of ML Kit translations.
+     *
+     * The marker-based batch path sends one big translate(markedText) call which
+     * can't fire per-page cloud upgrades (the callback receives the marked blob,
+     * not individual page text). So we explicitly trigger per-page upgrades here
+     * after the batch ML Kit result is applied.
+     *
+     * Also marks all pages as "upgrading" so the UI shows spinners.
+     */
+    private fun triggerCloudUpgradeIfNeeded(
+        pages: List<PageToTranslate>,
+        batchResultModel: String,
+        targetLang: String,
+    ) {
+        if (isCloudGrade(batchResultModel)) {
+            AppLogger.i("triggerCloudUpgradeIfNeeded: batch result is already cloud-grade ($batchResultModel), skipping")
+            return
+        }
+
+        AppLogger.i("triggerCloudUpgradeIfNeeded: batch result is Local ($batchResultModel), triggering cloud upgrade for ${pages.size} pages")
+
+        // Mark all pages as upgrading so UI shows spinners
+        val upgradingIndices = pages.map { it.index }.toSet()
+        _paragraphsUpgrading.update { it + upgradingIndices }
+
+        val serializedBookCtx = _bookContext?.let { ctx ->
+            com.dualreader.app.domain.usecases.SerializedBookContext(
+                title = ctx.title,
+                author = ctx.author,
+                openingText = ctx.openingText,
+            )
+        }
+
+        fallbackTranslationService.triggerCloudUpgradeForPages(
+            pages = pages.map { page ->
+                kotlin.collections.IndexedValue(page.index, page.text)
+            },
+            targetLanguage = targetLang,
+            sourceLanguage = _book.value?.language,
+            bookContext = serializedBookCtx,
+        )
     }
 
     /**
@@ -445,8 +568,15 @@ class ReaderViewModel @Inject constructor(
                         _translationError.value = null
                         hasAutoRetried = false
 
+                        // DR-262: Trigger per-page cloud upgrades for ML Kit batch results.
+                        triggerCloudUpgradeIfNeeded(
+                            pages = pageTranslations,
+                            batchResultModel = batchResult.model,
+                            targetLang = targetLang,
+                        )
+
                         // Notify UI: offline fallback was used
-                        if (batchResult.model.contains("ML Kit", ignoreCase = true)) {
+                        if (isLocalGrade(batchResult.model)) {
                             _translationEvents.trySend(TranslationEvent.OfflineFallback(batchResult.translations.size))
                         } else {
                             _translationEvents.trySend(TranslationEvent.Success(batchResult.translations.size))
@@ -679,6 +809,13 @@ class ReaderViewModel @Inject constructor(
                         applyTranslationsBatch(batchResult.translations, targetLang, batchResult.model)
                         _isTranslating.value = false
                         _translationError.value = null
+
+                        // DR-262: Trigger per-page cloud upgrades for ML Kit batch results.
+                        triggerCloudUpgradeIfNeeded(
+                            pages = pagesToTranslate,
+                            batchResultModel = batchResult.model,
+                            targetLang = targetLang,
+                        )
                     },
                     onFailure = { error ->
                         AppLogger.e("translateAllPages failed: ${error.message}", error)
@@ -724,6 +861,17 @@ class ReaderViewModel @Inject constructor(
         for ((pageIndex, translation) in translations) {
             val pos = pageIndexMap[pageIndex]
             if (pos != null) {
+                // DR-260: Grade protection — never downgrade an existing translation.
+                // Grade hierarchy: Cloud Pro (Gemini) > Cloud (GLM/standard) > Local (ML Kit)
+                val existingModel = updatedPages[pos].translationModels[lang]
+                if (existingModel != null && model != null) {
+                    val existingGrade = translationGrade(existingModel)
+                    val newGrade = translationGrade(model)
+                    if (newGrade < existingGrade) {
+                        AppLogger.i("applyTranslationsBatch: skipping page $pageIndex — new model '$model' (grade $newGrade) < existing '$existingModel' (grade $existingGrade)")
+                        continue
+                    }
+                }
                 val updated = updatedPages[pos].withTranslation(lang, translation, model, System.currentTimeMillis())
                 updatedPages[pos] = updated
                 updatedPagesList.add(updated)
@@ -1086,8 +1234,203 @@ class ReaderViewModel @Inject constructor(
     /** Cached paragraphs for the current page's translated text. */
     private var ttsParagraphs: List<String> = emptyList()
 
+    // DR-244: Continuous reading job — cancels when user stops or starts a new session
+    private var continuousTtsJob: kotlinx.coroutines.Job? = null
+
     /**
-     * Speak translated paragraphs from the current page.
+     * DR-244: Start continuous TTS read-through from the current page forward.
+     *
+     * - Reads each page's translation in the target language
+     * - If [ReadingSettings.ttsReadOriginal] is enabled, after each page's translation:
+     *   wait 1 second, then read the original text in the book's source language
+     * - Progresses through the entire book automatically
+     */
+    fun startContinuousReading() {
+        val state = _uiState.value as? ReaderUiState.ReaderReady ?: return
+        val targetLang = state.settings.targetLanguage
+        val sourceLang = _book.value?.language
+        val readOriginal = state.settings.ttsReadOriginal
+        val currentPageIndex = state.currentPage.index
+
+        // Cancel any ongoing continuous reading
+        continuousTtsJob?.cancel()
+
+        // Validate TTS readiness
+        if (!ttsService.isReady) {
+            if (ttsService.isInitFailed) {
+                // DR-264: Bounded retry — stop after 3 attempts instead of looping forever
+                if (ttsRetryCount >= ttsRetryCountMax) {
+                    _ttsState.value = _ttsState.value.copy(
+                        error = "TTS engine failed to initialize. TTS unavailable - retry from settings.",
+                        isSpeaking = false,
+                    )
+                    return
+                }
+                ttsRetryCount++
+                val reinitTriggered = ttsService.reinitialize()
+                if (reinitTriggered) {
+                    _ttsState.value = _ttsState.value.copy(
+                        error = "TTS engine failed to initialize. Retrying..."
+                    )
+                    ttsRetryJob?.cancel()
+                    ttsRetryJob = viewModelScope.launch {
+                        try {
+                            kotlinx.coroutines.delay(500)
+                            startContinuousReading()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("TTS retry failed for continuous reading: ${e.message}")
+                            _ttsState.value = _ttsState.value.copy(
+                                error = "TTS retry failed. Please try again.",
+                                isSpeaking = false
+                            )
+                        }
+                    }
+                } else {
+                    _ttsState.value = _ttsState.value.copy(
+                        error = "TTS engine not ready. Initialization is in progress."
+                    )
+                }
+            } else {
+                _ttsState.value = _ttsState.value.copy(
+                    error = "TTS engine not ready. Wait a moment and try again."
+                )
+            }
+            return
+        }
+
+        // Check target language availability
+        if (!ttsService.isLanguageAvailable(targetLang)) {
+            _ttsState.value = _ttsState.value.copy(
+                error = "No TTS voice for target language. Install a TTS engine from Settings.",
+                isLanguageAvailable = false,
+            )
+            return
+        }
+
+        // Check source language availability if we need to read original
+        if (readOriginal && sourceLang != null && !ttsService.isLanguageAvailable(sourceLang)) {
+            _ttsState.value = _ttsState.value.copy(
+                error = "No TTS voice for the book's source language ($sourceLang).",
+                isLanguageAvailable = false,
+            )
+            return
+        }
+
+        _ttsState.value = _ttsState.value.copy(
+            isSpeaking = true,
+            currentParagraph = currentPageIndex,
+            error = null,
+            isLanguageAvailable = true,
+            speechRate = state.settings.ttsSpeechRate,
+        )
+
+        // DR-245: Apply speech rate from settings
+        ttsService.setSpeechRate(state.settings.ttsSpeechRate)
+
+        continuousTtsJob = viewModelScope.launch {
+            try {
+                var pageIdx = currentPageIndex
+                while (pageIdx < state.pages.size) {
+                    // Re-read state to get latest translations (user may translate during playback)
+                    val currentState = _uiState.value as? ReaderUiState.ReaderReady
+                    if (currentState == null) break
+                    val page = currentState.pages.getOrNull(pageIdx)
+                    if (page == null) break
+
+                    val translation = page.translations[targetLang]
+                    if (translation.isNullOrBlank()) {
+                        // Skip pages without translation
+                        pageIdx++
+                        continue
+                    }
+
+                    // Highlight current paragraph
+                    _ttsState.value = _ttsState.value.copy(currentParagraph = pageIdx, isSpeaking = true)
+
+                    // Read the translation
+                    val translationParagraphs = translation.split("\n\n").filter { it.isNotBlank() }
+                    if (translationParagraphs.isNotEmpty()) {
+                        speakAndAwait(
+                            paragraphs = translationParagraphs,
+                            langCode = targetLang,
+                            onParagraphStarted = { idx ->
+                                _ttsState.value = _ttsState.value.copy(currentParagraph = pageIdx, isSpeaking = true)
+                            }
+                        )
+                    }
+
+                    // Check for cancellation between segments
+                    ensureActive()
+
+                    // DR-244: If readOriginal enabled, read original text immediately (no delay)
+                    if (readOriginal && !page.originalText.isNullOrBlank()) {
+                        ensureActive()
+
+                        val originalLang = sourceLang ?: "en"
+                        val originalParagraphs = page.originalText.split("\n\n").filter { it.isNotBlank() }
+                        if (originalParagraphs.isNotEmpty()) {
+                            speakAndAwait(
+                                paragraphs = originalParagraphs,
+                                langCode = originalLang,
+                                onParagraphStarted = { idx ->
+                                    _ttsState.value = _ttsState.value.copy(currentParagraph = pageIdx, isSpeaking = true)
+                                }
+                            )
+                        }
+                    }
+
+                    pageIdx++
+                }
+
+                // All done
+                _ttsState.value = _ttsState.value.copy(isSpeaking = false, currentParagraph = -1)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Normal — user stopped or started new session
+                _ttsState.value = _ttsState.value.copy(isSpeaking = false, currentParagraph = -1)
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Continuous TTS error: ${e.message}")
+                _ttsState.value = _ttsState.value.copy(isSpeaking = false, currentParagraph = -1, error = "TTS playback error: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Helper: Speak paragraphs via TTS and suspend until completion.
+     * Wraps the callback-based speak() in a CompletableDeferred.
+     */
+    private suspend fun speakAndAwait(
+        paragraphs: List<String>,
+        langCode: String,
+        onParagraphStarted: (index: Int) -> Unit,
+    ) {
+        return kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+            ttsService.speak(
+                paragraphs = paragraphs,
+                langCode = langCode,
+                startIndex = 0,
+                onParagraphStarted = onParagraphStarted,
+                onCompleted = {
+                    if (cont.isActive) cont.resumeWith(kotlin.Result.success(Unit))
+                },
+                onError = { msg ->
+                    AppLogger.e("TTS speakAndAwait error: $msg")
+                    if (cont.isActive) cont.resumeWith(kotlin.Result.success(Unit))
+                    // Treat error as completion to let the loop continue
+                },
+            )
+
+            cont.invokeOnCancellation {
+                // Called when the coroutine is cancelled — stop TTS
+                ttsService.stop()
+            }
+        }
+    }
+
+    /**
+     * DR-244: Speak translated paragraphs from the current page.
      * Splits the translated text by double newline to get paragraphs.
      */
     fun speakCurrentPage(paragraphIndex: Int = 0) {
@@ -1103,6 +1446,15 @@ class ReaderViewModel @Inject constructor(
         if (!ttsService.isReady) {
             if (ttsService.isInitFailed) {
                 // TTS init failed - try reinitialize
+                // DR-264: Bounded retry — stop after 3 attempts instead of looping forever
+                if (ttsRetryCount >= ttsRetryCountMax) {
+                    _ttsState.value = _ttsState.value.copy(
+                        error = "TTS engine failed to initialize. TTS unavailable - retry from settings.",
+                        isSpeaking = false,
+                    )
+                    return
+                }
+                ttsRetryCount++
                 val reinitTriggered = ttsService.reinitialize()
                 if (reinitTriggered) {
                     _ttsState.value = _ttsState.value.copy(
@@ -1197,6 +1549,15 @@ class ReaderViewModel @Inject constructor(
         if (!ttsService.isReady) {
             if (ttsService.isInitFailed) {
                 // TTS init failed - try reinitialize
+                // DR-264: Bounded retry — stop after 3 attempts instead of looping forever
+                if (ttsRetryCount >= ttsRetryCountMax) {
+                    _ttsState.value = _ttsState.value.copy(
+                        error = "TTS engine failed to initialize. TTS unavailable - retry from settings.",
+                        isSpeaking = false,
+                    )
+                    return
+                }
+                ttsRetryCount++
                 val reinitTriggered = ttsService.reinitialize()
                 if (reinitTriggered) {
                     _ttsState.value = _ttsState.value.copy(
@@ -1267,13 +1628,19 @@ class ReaderViewModel @Inject constructor(
 
     /** Stop TTS playback. */
     fun stopTts() {
+        continuousTtsJob?.cancel()
+        continuousTtsJob = null
         ttsService.stop()
+        ttsRetryCount = 0 // DR-264: manual stop resets bounded retry
         _ttsState.value = _ttsState.value.copy(isSpeaking = false, currentParagraph = -1)
     }
 
     /** Pause TTS playback. */
     fun pauseTts() {
+        continuousTtsJob?.cancel()
+        continuousTtsJob = null
         ttsService.pause()
+        ttsRetryCount = 0 // DR-264: manual pause resets bounded retry
         _ttsState.value = _ttsState.value.copy(isSpeaking = false)
     }
 
@@ -1299,10 +1666,14 @@ class ReaderViewModel @Inject constructor(
         ttsRetryJob?.cancel()
         persistJob?.cancel() // DR-185: Cancel persistence job to prevent post-clear DB writes
         wordJob?.cancel() // DR-193: Cancel word translation job to prevent post-clear UI updates
+        continuousTtsJob?.cancel() // DR-244: Cancel continuous reading
         // DR-098: Close Channel to prevent resource leaks
         _translationEvents.close()
         // DR-141: Clear cloud upgrade callback to prevent memory leaks and post-clear updates
+        // DR-259: Also clear started/failed callbacks
         fallbackTranslationService.cloudUpgradeCallback = null
+        fallbackTranslationService.cloudUpgradeStartedCallback = null
+        fallbackTranslationService.cloudUpgradeFailedCallback = null
         try {
             ttsService.stop()
         } catch (e: CancellationException) {

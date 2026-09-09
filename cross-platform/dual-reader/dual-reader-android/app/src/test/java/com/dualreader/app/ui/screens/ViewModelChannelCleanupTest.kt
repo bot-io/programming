@@ -6,9 +6,11 @@ import com.dualreader.app.domain.repositories.BookmarkRepository
 import com.dualreader.app.domain.repositories.LibraryRepository
 import com.dualreader.app.domain.usecases.ImportBookUseCase
 import com.dualreader.app.domain.usecases.PaginateBookUseCase
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -37,6 +39,9 @@ class ViewModelChannelCleanupTest {
     @Before
     fun setup() {
         Dispatchers.setMain(Dispatchers.Unconfined)
+        // LibraryViewModel eagerly collects tags + collections in init (stateIn) — must be stubbed
+        every { libraryRepository.getAllTags() } returns flowOf(emptyList())
+        every { libraryRepository.getAllCollections() } returns flowOf(emptyList())
     }
 
     @After

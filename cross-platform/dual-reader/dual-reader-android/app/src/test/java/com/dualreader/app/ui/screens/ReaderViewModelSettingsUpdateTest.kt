@@ -15,6 +15,7 @@ import com.dualreader.app.domain.usecases.PaginateBookUseCase
 import com.dualreader.app.domain.usecases.TranslatePageUseCase
 import androidx.lifecycle.SavedStateHandle
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +72,10 @@ class ReaderViewModelSettingsUpdateTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
+        // Route ReaderViewModel's ioDispatcher to the test scheduler — without this,
+        // init's settings collect runs on real Dispatchers.IO and _settings stays
+        // null in virtual time, making updateSettings/toggleImmersiveMode bail early.
+        ReaderViewModel.testIoDispatcher = testDispatcher
         bookRepo = mockk(relaxed = true)
         settingsRepo = mockk(relaxed = true)
         bookmarkRepo = mockk(relaxed = true)
@@ -84,6 +89,7 @@ class ReaderViewModelSettingsUpdateTest {
 
         // Default settings
         coEvery { settingsRepo.getSettings() } returns ReadingSettings()
+        every { settingsRepo.settings } returns flowOf(ReadingSettings()) // toggleImmersiveMode reads _settings (DR-146)
         coEvery { settingsRepo.updateSettings(any()) } returns Unit
         coEvery { bookmarkRepo.getBookmarksForBook(any()) } returns flowOf(emptyList())
     }

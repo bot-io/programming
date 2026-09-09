@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import com.dualreader.app.data.parser.SentenceSplitter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
@@ -52,6 +53,7 @@ import com.dualreader.app.domain.entities.DisplayMode
 import com.dualreader.app.domain.entities.Page
 import com.dualreader.app.domain.entities.ReaderTheme
 import com.dualreader.app.domain.entities.ReadingSettings
+import com.dualreader.app.domain.entities.TranslationPosition
 import com.dualreader.app.data.translation.ParagraphAligner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -150,61 +152,14 @@ fun highlightText(
     }
 }
 
-// ─── Sentence splitting ──────────────────────────────────────────────────────
-
-/** Regex matching a potential sentence boundary: punctuation + optional quotes + whitespace. */
-private val boundaryRegex = Regex("""([.!?…]["'"»'')\]]{0,3})(\s+)""")
-
-/** Known abbreviations whose trailing dot is NOT a sentence boundary. */
-private val ABBREVIATIONS = setOf(
-    "dr", "mr", "mrs", "ms", "prof", "st", "jr", "sr", "vs", "no",
-    "gen", "sgt", "lt", "col", "capt", "pvt", "rep", "sen", "rev",
-    "hon", "pres", "gov", "inc", "ltd", "corp", "co", "etc", "ed",
-    "al", "vol", "min", "max", "fig", "approx", "apt", "dept", "est",
-)
-
-/**
- * Check whether the punctuation at [punctPos] in [text] follows an abbreviation or initial.
- * Walks backwards from the punctuation, skipping any quotes, then collects the preceding
- * word and checks it against [ABBREVIATIONS] or the single-uppercase-letter pattern.
- */
-private fun isAbbreviationBoundary(text: String, punctPos: Int): Boolean {
-    if (punctPos <= 0) return false
-    var i = punctPos - 1
-    // Skip trailing quotes/brackets before the punctuation
-    while (i >= 0 && text[i] in "\"'»\u201C\u201D\u2018\u2019)]}\u00AB") i--
-    val wordEnd = i + 1
-    // Collect the preceding word (letters only)
-    while (i >= 0 && text[i].isLetter()) i--
-    val word = text.substring(i + 1, wordEnd)
-    if (word.isEmpty()) return false
-    // Single uppercase Latin or Cyrillic letter = initial (A., И.)
-    if (word.length == 1 && (word[0] in 'A'..'Z' || word[0] in '\u0410'..'\u042F')) return true
-    return word.lowercase() in ABBREVIATIONS
-}
-
 /**
  * Split text into sentences, correctly handling abbreviations (Dr., Mr., etc.)
  * and single-letter initials (A., И.).
  *
- * Uses a two-phase approach: first finds all potential boundaries, then filters
- * out those following abbreviations.
+ * Delegates to the shared SentenceSplitter utility.
  */
 internal fun splitSentences(text: String): List<String> {
-    if (text.isBlank()) return emptyList()
-    val result = mutableListOf<String>()
-    var last = 0
-    for (m in boundaryRegex.findAll(text)) {
-        val punctPos = m.range.first
-        if (isAbbreviationBoundary(text, punctPos)) continue
-        val boundary = m.range.last + 1
-        val sentence = text.substring(last, boundary).trim()
-        if (sentence.isNotEmpty()) result.add(sentence)
-        last = boundary
-    }
-    val tail = text.substring(last).trim()
-    if (tail.isNotEmpty()) result.add(tail)
-    return if (result.isEmpty() && text.isNotBlank()) listOf(text.trim()) else result
+    return SentenceSplitter.splitSentences(text)
 }
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
@@ -243,6 +198,7 @@ fun ReaderScreen(
     onTranslateParagraph: (Int) -> Unit = {},
     onReTranslateParagraph: (Int) -> Unit = {},
     paragraphsTranslating: Set<Int> = emptySet(),
+    paragraphsUpgrading: Set<Int> = emptySet(),
     // Translation events (snackbar)
     translationEvents: kotlinx.coroutines.flow.Flow<ReaderViewModel.TranslationEvent>? = null,
     onRetryTranslation: () -> Unit = {},
@@ -304,6 +260,7 @@ fun ReaderScreen(
                 onTranslateParagraph = onTranslateParagraph,
                 onReTranslateParagraph = onReTranslateParagraph,
                 paragraphsTranslating = paragraphsTranslating,
+                paragraphsUpgrading = paragraphsUpgrading,
                 translationEvents = translationEvents,
                 onRetryTranslation = onRetryTranslation,
                 onDownloadModel = onDownloadModel,
@@ -354,6 +311,7 @@ private fun ReaderContent(
     onTranslateParagraph: (Int) -> Unit = {},
     onReTranslateParagraph: (Int) -> Unit = {},
     paragraphsTranslating: Set<Int> = emptySet(),
+    paragraphsUpgrading: Set<Int> = emptySet(),
     // Translation events (snackbar)
     translationEvents: kotlinx.coroutines.flow.Flow<ReaderViewModel.TranslationEvent>? = null,
     onRetryTranslation: () -> Unit = {},
@@ -421,6 +379,21 @@ private fun ReaderContent(
                 listState.scrollToItem(targetIndex)
             }
             hasRestoredPosition = true
+        }
+    }
+
+    // DR-246: Auto-scroll to the paragraph being read aloud, centered on screen.
+    LaunchedEffect(ttsState.currentParagraph, ttsState.isSpeaking) {
+        if (ttsState.isSpeaking && ttsState.currentParagraph >= 0) {
+            val pageIndex = pages.indexOfFirst { it.index == ttsState.currentParagraph }
+            if (pageIndex >= 0) {
+                // Center the item: scroll so it appears ~1/3 from the top.
+                // scrollOffset is pixels from item start; negative pushes item
+                // down into the viewport (space above it).
+                val viewportHeight = listState.layoutInfo.viewportSize.height
+                val centerOffset = if (viewportHeight > 0) -(viewportHeight / 3) else -200
+                listState.animateScrollToItem(pageIndex, scrollOffset = centerOffset)
+            }
         }
     }
 
@@ -508,9 +481,11 @@ private fun ReaderContent(
                     chapterIndex = page.chapterIndex,
                     isSpeaking = ttsState.isSpeaking && ttsState.currentParagraph == page.index,
                     isTranslating = page.index in paragraphsTranslating,
+                    isUpgrading = page.index in paragraphsUpgrading,
                     hasTranslation = page.hasTranslation(settings.targetLanguage),
                     colors = colors,
                     displayMode = settings.displayMode,
+                    translationPosition = settings.translationPosition,
                     onSpeak = { onTtsPlayParagraph(page.index) },
                     onTranslateWord = onTranslateWord,
                     onTranslate = { onTranslateParagraph(page.index) },
@@ -815,9 +790,11 @@ private fun ParagraphCard(
     chapterIndex: Int,
     isSpeaking: Boolean,
     isTranslating: Boolean,
+    isUpgrading: Boolean = false,
     hasTranslation: Boolean,
     colors: ReaderColors,
     displayMode: DisplayMode = DisplayMode.SPLIT,
+    translationPosition: TranslationPosition = TranslationPosition.TRANSLATION_ABOVE,
     onSpeak: () -> Unit,
     onTranslateWord: (String, Boolean) -> Unit,
     onTranslate: () -> Unit,
@@ -839,16 +816,17 @@ private fun ParagraphCard(
                 text = {
                     Column {
                         Text(
-                            text = "Model: ${translationModel ?: "Unknown"}",
+                            text = "Method: ${modelToBadgeLabel(translationModel)}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "Translated: ${
+                            text = "Date: ${
                                 translationTimestamp?.let { dateFormat.format(java.util.Date(it)) }
-                                    ?: "Unknown"
+                                    ?: dateFormat.format(java.util.Date())
                             }",
                             style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 },
@@ -860,40 +838,251 @@ private fun ParagraphCard(
             )
         }
 
-        // Original text
-        SelectionContainer {
-            Text(
-                text = originalText,
-                fontSize = fontSize.sp,
-                lineHeight = (fontSize * lineHeight).sp,
-                color = colors.text,
-                fontFamily = FontFamily.Serif,
-            )
+        // ── Translate button — always at top, above the text it belongs to ──
+        if (translation == null && !hasTranslation) {
+            if (isTranslating) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp),
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Translating…", style = MaterialTheme.typography.labelSmall, color = colors.textSecondary)
+                }
+            } else {
+                TextButton(onClick = onTranslate) {
+                    Text("Translate")
+                }
+            }
         }
 
-        Spacer(Modifier.height(8.dp))
+        // DR-243: Translation above original → render translation block first, then original.
+        // TRANSLATION_ABOVE (default): translation on top, original on bottom — aids language learning.
+        // TRANSLATION_BELOW: original on top, translation on bottom (traditional flow).
+        if (translation != null && translationPosition == TranslationPosition.TRANSLATION_ABOVE) {
+            TranslationBlock(
+                translation = translation,
+                fontSize = fontSize,
+                lineHeight = lineHeight,
+                colors = colors,
+                displayMode = displayMode,
+                isTranslating = isTranslating,
+                isSpeaking = isSpeaking,
+                isUpgrading = isUpgrading,
+                onSpeak = onSpeak,
+                onReTranslate = onReTranslate,
+                onShowTranslationInfo = { showTranslationInfo = true },
+                translationModel = translationModel,
+            )
+            Spacer(Modifier.height(8.dp))
+            // Original text
+            SelectionContainer {
+                Text(
+                    text = originalText,
+                    fontSize = fontSize.sp,
+                    lineHeight = (fontSize * lineHeight).sp,
+                    color = colors.text,
+                    fontFamily = FontFamily.Serif,
+                )
+            }
+        } else {
+            // Original text
+            SelectionContainer {
+                Text(
+                    text = originalText,
+                    fontSize = fontSize.sp,
+                    lineHeight = (fontSize * lineHeight).sp,
+                    color = colors.text,
+                    fontFamily = FontFamily.Serif,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            // Translation box (if translation exists)
+            if (translation != null) {
+                TranslationBlock(
+                    translation = translation,
+                    fontSize = fontSize,
+                    lineHeight = lineHeight,
+                    colors = colors,
+                    displayMode = displayMode,
+                    isTranslating = isTranslating,
+                    isSpeaking = isSpeaking,
+                    isUpgrading = isUpgrading,
+                    onSpeak = onSpeak,
+                    onReTranslate = onReTranslate,
+                    onShowTranslationInfo = { showTranslationInfo = true },
+                    translationModel = translationModel,
+                )
+            }
+        }
 
-        // Translation box (if translation exists)
-        if (translation != null) {
-            when (displayMode) {
-                DisplayMode.INTERLEAVED -> {
-                    // Interleaved: translation flows right after original, minimal styling
-                    Spacer(Modifier.height(4.dp))
-                    SelectionContainer {
-                        Text(
-                            text = translation,
-                            fontSize = (fontSize * 0.92f).sp,
-                            lineHeight = (fontSize * 0.92f * lineHeight).sp,
-                            color = colors.textSecondary,
-                            fontStyle = FontStyle.Italic,
-                        )
+        HorizontalDivider(color = colors.divider.copy(alpha = 0.2f))
+    }
+}
+
+// ─── Translation Method Badge (DR-253) ───────────────────────────────────────
+
+/**
+ * Maps internal model strings to user-facing badge labels.
+ *
+ * Simple labels: "Local" / "Cloud" / "Cloud Pro"
+ * - Gemini models → "Cloud Pro"
+ * - GLM / other cloud → "Cloud"
+ * - ML Kit / Local → "Local"
+ * - unknown/fallback → "Cloud" (safe default)
+ */
+private fun modelToBadgeLabel(model: String?): String {
+    if (model.isNullOrBlank()) return "Cloud"
+    val lower = model.lowercase()
+    return when {
+        lower.contains("gemini") || lower.contains("premium") -> "Cloud Pro"
+        lower.contains("mlkit") || lower.contains("ml kit") || lower.contains("on-device") || lower.contains("local") -> "Local"
+        lower.contains("cloud") || lower.contains("glm") -> "Cloud"
+        else -> "Cloud"
+    }
+}
+
+/**
+ * Small badge showing the translation method used for this paragraph.
+ * No arrow symbols — just a word label + icon (DR-253).
+ */
+@Composable
+private fun TranslationMethodBadge(
+    model: String?,
+    colors: ReaderColors,
+    modifier: Modifier = Modifier,
+) {
+    val label = modelToBadgeLabel(model)
+    val isLocal = label == "Local"
+    val isCloudPro = label == "Cloud Pro"
+    val icon = when {
+        isLocal -> Icons.Default.CloudOff
+        isCloudPro -> Icons.Default.AutoAwesome
+        else -> Icons.Default.Cloud
+    }
+    val tint = when {
+        isLocal -> colors.textSecondary
+        isCloudPro -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.tertiary
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        modifier = modifier,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(12.dp),
+            tint = tint,
+        )
+        Text(
+            text = "Translated: $label",
+            style = MaterialTheme.typography.labelSmall,
+            color = tint,
+        )
+    }
+}
+
+// ─── Translation Block (DR-243) ──────────────────────────────────────────────
+
+/**
+ * Renders the translation text with action buttons (re-translate, speak).
+ * Extracted from ParagraphCard so it can be placed above OR below the original.
+ */
+@Composable
+private fun TranslationBlock(
+    translation: String,
+    fontSize: Float,
+    lineHeight: Float,
+    colors: ReaderColors,
+    displayMode: DisplayMode,
+    isTranslating: Boolean,
+    isSpeaking: Boolean,
+    isUpgrading: Boolean = false,
+    onSpeak: () -> Unit,
+    onReTranslate: () -> Unit,
+    onShowTranslationInfo: () -> Unit,
+    translationModel: String? = null,
+) {
+    when (displayMode) {
+        DisplayMode.INTERLEAVED -> {
+            // Interleaved: translation flows right after original, minimal styling
+            Spacer(Modifier.height(4.dp))
+            // DR-253: Badge in interleaved mode too
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TranslationMethodBadge(
+                    model = translationModel,
+                    colors = colors,
+                )
+                if (isUpgrading) {
+                    Spacer(Modifier.width(6.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                }
+            }
+            Spacer(Modifier.height(2.dp))
+            SelectionContainer {
+                Text(
+                    text = translation,
+                    fontSize = (fontSize * 0.92f).sp,
+                    lineHeight = (fontSize * 0.92f * lineHeight).sp,
+                    color = colors.textSecondary,
+                    fontStyle = FontStyle.Italic,
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                TextButton(
+                    onClick = onReTranslate,
+                    enabled = !isTranslating,
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                ) {
+                    if (isTranslating) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Re-translate", style = MaterialTheme.typography.labelSmall)
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.End,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
+                }
+                IconButton(
+                    onClick = onSpeak,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = if (isSpeaking) Icons.Default.Stop else Icons.Default.VolumeUp,
+                        contentDescription = "Speak translation",
+                        tint = colors.accent,
+                    )
+                }
+            }
+            HorizontalDivider(modifier = Modifier.padding(top = 12.dp), color = colors.divider.copy(alpha = 0.5f))
+        }
+        DisplayMode.SPLIT -> {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = colors.divider.copy(alpha = 0.3f),
+                border = BorderStroke(1.dp, colors.divider),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // DR-253: Translation method badge — clear plain-language label
+                        TranslationMethodBadge(
+                            model = translationModel,
+                            colors = colors,
+                            modifier = Modifier.pointerInput(Unit) {
+                                detectTapGestures(onLongPress = { onShowTranslationInfo() })
+                            },
+                        )
+                        if (isUpgrading) {
+                            Spacer(Modifier.width(6.dp))
+                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        // Re-translate button
                         TextButton(
                             onClick = onReTranslate,
                             enabled = !isTranslating,
@@ -916,85 +1105,19 @@ private fun ParagraphCard(
                             )
                         }
                     }
-                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp), color = colors.divider.copy(alpha = 0.5f))
-                }
-                DisplayMode.SPLIT -> {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = colors.divider.copy(alpha = 0.3f),
-                        border = BorderStroke(1.dp, colors.divider),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(Modifier.padding(12.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Translated",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = colors.textSecondary,
-                                    fontStyle = FontStyle.Italic,
-                                    modifier = Modifier.pointerInput(Unit) {
-                                        detectTapGestures(onLongPress = { showTranslationInfo = true })
-                                    },
-                                )
-                                Spacer(Modifier.weight(1f))
-                                // Re-translate button
-                                TextButton(
-                                    onClick = onReTranslate,
-                                    enabled = !isTranslating,
-                                    contentPadding = PaddingValues(horizontal = 8.dp),
-                                ) {
-                                    if (isTranslating) {
-                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                                    } else {
-                                        Text("Re-translate", style = MaterialTheme.typography.labelSmall)
-                                    }
-                                }
-                                IconButton(
-                                    onClick = onSpeak,
-                                    modifier = Modifier.size(36.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = if (isSpeaking) Icons.Default.Stop else Icons.Default.VolumeUp,
-                                        contentDescription = "Speak translation",
-                                        tint = colors.accent,
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.height(4.dp))
-                            SelectionContainer {
-                                Text(
-                                    text = translation,
-                                    fontSize = (fontSize * 0.92f).sp,
-                                    lineHeight = (fontSize * 0.92f * lineHeight).sp,
-                                    color = colors.textSecondary,
-                                    fontStyle = FontStyle.Italic,
-                                )
-                            }
-                        }
+                    Spacer(Modifier.height(4.dp))
+                    SelectionContainer {
+                        Text(
+                            text = translation,
+                            fontSize = (fontSize * 0.92f).sp,
+                            lineHeight = (fontSize * 0.92f * lineHeight).sp,
+                            color = colors.textSecondary,
+                            fontStyle = FontStyle.Italic,
+                        )
                     }
                 }
             }
         }
-
-        // Translate button (if no translation yet) or loading indicator
-        if (translation == null && !hasTranslation) {
-            if (isTranslating) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp),
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Translating…", style = MaterialTheme.typography.labelSmall, color = colors.textSecondary)
-                }
-            } else {
-                TextButton(onClick = onTranslate) {
-                    Text("Translate")
-                }
-            }
-        }
-
-        HorizontalDivider(color = colors.divider.copy(alpha = 0.2f))
     }
 }
 

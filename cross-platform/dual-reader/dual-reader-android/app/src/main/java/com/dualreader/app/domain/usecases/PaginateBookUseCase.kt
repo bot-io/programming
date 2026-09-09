@@ -53,16 +53,29 @@ class PaginateBookUseCase @Inject constructor(
 
                 // Load existing pages to preserve translations across re-extraction
                 val existingPages = bookRepository.getPagesForBook(book.id)
-                val existingByContent = existingPages
-                    .filter { it.translations.isNotEmpty() }
-                    .associateBy { it.originalText }
+                // DR-207: Track all existing pages with translations, grouped by original text.
+                // Use a map where the key is originalText and the value is a list of pages.
+                // This allows multiple pages with identical text to preserve their individual translations.
+                val existingByContent: MutableMap<String, MutableList<Page>> = mutableMapOf()
+                for (page in existingPages) {
+                    if (page.translations.isNotEmpty()) {
+                        existingByContent.getOrPut(page.originalText) { mutableListOf() }.add(page)
+                    }
+                }
                 val existingByIndex = existingPages.associateBy { it.index }
 
-                AppLogger.i("PaginateBookUseCase: ${extractedParagraphs.size} paragraphs extracted, ${existingPages.size} existing pages, ${existingByContent.size} with translations")
+                AppLogger.i("PaginateBookUseCase: ${extractedParagraphs.size} paragraphs extracted, ${existingPages.size} existing pages, ${existingByContent.size} unique texts with translations")
 
                 // Create one Page per paragraph, carrying over translations by content match
                 val pageEntities = extractedParagraphs.mapIndexed { index, para ->
-                    val existing = existingByContent[para.text]
+                    // DR-207: Find and consume the first matching page from the list, removing it
+                    // so subsequent duplicates don't reuse the same translation
+                    val pagesWithMatchingText = existingByContent[para.text]
+                    val existing = if (pagesWithMatchingText != null && pagesWithMatchingText.isNotEmpty()) {
+                        pagesWithMatchingText.removeFirst()
+                    } else {
+                        null
+                    }
                     if (existing != null) {
                         existing.copy(index = index, chapterIndex = para.chapterIndex)
                     } else {

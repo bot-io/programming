@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.dualreader.app.domain.entities.DisplayMode
 import com.dualreader.app.domain.entities.ReaderTheme
 import com.dualreader.app.domain.entities.ReadingSettings
+import com.dualreader.app.domain.entities.TranslationPosition
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -295,6 +296,111 @@ fun SettingsScreen(
                             "Each paragraph is followed by its translation — best for language learning"
                         else
                             "Original and translation in separate panels",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    // DR-243: Translation position (above/below original)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Translation Position",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        FilterChip(
+                            selected = settings.translationPosition == TranslationPosition.TRANSLATION_ABOVE,
+                            onClick = {
+                                onSettingsChanged(settings.copy(translationPosition = TranslationPosition.TRANSLATION_ABOVE))
+                            },
+                            label = { Text("Above original") },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        FilterChip(
+                            selected = settings.translationPosition == TranslationPosition.TRANSLATION_BELOW,
+                            onClick = {
+                                onSettingsChanged(settings.copy(translationPosition = TranslationPosition.TRANSLATION_BELOW))
+                            },
+                            label = { Text("Below original") },
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (settings.translationPosition == TranslationPosition.TRANSLATION_ABOVE)
+                            "Translation appears above the original — aids language learning"
+                        else
+                            "Original appears first, translation below",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            // ── Read Aloud (DR-244) ─────────────────────────────
+            SettingsSection("Read Aloud") {
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Also read original text",
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                "Alternates between translation and original",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = settings.ttsReadOriginal,
+                            onCheckedChange = { enabled ->
+                                onSettingsChanged(settings.copy(ttsReadOriginal = enabled))
+                            },
+                        )
+                    }
+
+                    // DR-245: Speech rate slider
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "Reading Speed",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "%.1fx".format(settings.ttsSpeechRate),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.width(48.dp),
+                        )
+                        Slider(
+                            value = settings.ttsSpeechRate,
+                            onValueChange = { rate ->
+                                onSettingsChanged(settings.copy(ttsSpeechRate = rate))
+                            },
+                            valueRange = 0.5f..2.0f,
+                            steps = 14, // 0.1 increments: 0.5, 0.6, ... 2.0
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    Text(
+                        when {
+                            settings.ttsSpeechRate < 0.8f -> "Slow"
+                            settings.ttsSpeechRate <= 1.2f -> "Normal"
+                            settings.ttsSpeechRate <= 1.5f -> "Fast"
+                            else -> "Very fast"
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

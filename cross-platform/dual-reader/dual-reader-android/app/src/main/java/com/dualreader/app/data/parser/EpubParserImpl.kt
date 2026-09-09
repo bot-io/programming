@@ -177,25 +177,8 @@ class EpubParserImpl @Inject constructor() : EpubParserService {
             val trimmed = text.trim()
             if (trimmed.isEmpty()) return emptyList()
 
-            // Find all sentence boundaries
-            val boundaryRegex = Regex("""[.!?…]["'"»'')\]]{0,3}\s+""")
-            val sentences = mutableListOf<String>()
-            var last = 0
-
-            for (m in boundaryRegex.findAll(trimmed)) {
-                // Check if this is a real sentence end or an abbreviation
-                val punctPos = m.range.first
-                if (isAbbreviation(trimmed, punctPos)) continue
-
-                val boundary = m.range.last + 1
-                val sentence = trimmed.substring(last, boundary).trim()
-                if (sentence.isNotEmpty()) sentences.add(sentence)
-                last = boundary
-            }
-
-            // Add the tail (last sentence without trailing space)
-            val tail = trimmed.substring(last).trim()
-            if (tail.isNotEmpty()) sentences.add(tail)
+            // Use the shared SentenceSplitter for basic splitting
+            val sentences = SentenceSplitter.splitSentences(trimmed).toMutableList()
 
             if (sentences.size <= 1) return listOf(trimmed)
 
@@ -227,33 +210,6 @@ class EpubParserImpl @Inject constructor() : EpubParserService {
             }
 
             return merged.ifEmpty { listOf(trimmed) }
-        }
-
-        /** Known abbreviations whose trailing dot is NOT a sentence boundary. */
-        private val ABBREVIATIONS = setOf(
-            "dr", "mr", "mrs", "ms", "prof", "st", "jr", "sr", "vs", "no",
-            "gen", "sgt", "lt", "col", "capt", "pvt", "rep", "sen", "rev",
-            "hon", "pres", "gov", "inc", "ltd", "corp", "co", "etc", "ed",
-            "al", "vol", "min", "max", "fig", "approx", "apt", "dept", "est",
-        )
-
-        /**
-         * Check whether the punctuation at [punctPos] in [text] follows an
-         * abbreviation or single-letter initial.
-         */
-        private fun isAbbreviation(text: String, punctPos: Int): Boolean {
-            if (punctPos <= 0) return false
-            var i = punctPos - 1
-            // Skip trailing quotes/brackets before the punctuation
-            while (i >= 0 && text[i] in "\"'»\u201C\u201D\u2018\u2019)]}\u00AB") i--
-            val wordEnd = i + 1
-            // Collect the preceding word (letters only)
-            while (i >= 0 && text[i].isLetter()) i--
-            val word = text.substring(i + 1, wordEnd)
-            if (word.isEmpty()) return false
-            // Single uppercase Latin or Cyrillic letter = initial (A., И.)
-            if (word.length == 1 && (word[0] in 'A'..'Z' || word[0] in '\u0410'..'\u042F')) return true
-            return word.lowercase() in ABBREVIATIONS
         }
     }
 

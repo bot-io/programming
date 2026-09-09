@@ -84,4 +84,8 @@ class ModelManagementViewModel @Inject constructor(
     fun updateSearchQuery(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
     }
+
+    override fun onCleared() {
+        loadModelsJob?.cancel()
+    }
 }

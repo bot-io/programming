@@ -286,7 +286,7 @@ fun DualReaderNavHost(
                     safLauncher.launch(fileName)
                 },
                 ttsState = ttsState,
-                onTtsPlay = { viewModel.speakCurrentPage() },
+                onTtsPlay = { viewModel.startContinuousReading() },
                 onTtsPlayParagraph = { idx -> viewModel.speakParagraph(idx) },
                 onTtsStop = { viewModel.stopTts() },
                 onTtsPause = { viewModel.pauseTts() },
@@ -300,6 +300,7 @@ fun DualReaderNavHost(
                 onTranslateParagraph = { idx -> viewModel.translateParagraph(idx) },
                 onReTranslateParagraph = { idx -> viewModel.reTranslateParagraph(idx) },
                 paragraphsTranslating = viewModel.paragraphsTranslating.collectAsState().value,
+                paragraphsUpgrading = viewModel.paragraphsUpgrading.collectAsState().value,
                 translationEvents = viewModel.translationEvents,
                 onRetryTranslation = { viewModel.translateCurrentPage() },
                 onDownloadModel = { viewModel.downloadModelForCurrentLang() },
