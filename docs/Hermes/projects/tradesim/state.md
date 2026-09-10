@@ -1,9 +1,11 @@
 # tradesim — State
 
-## Status: v0.1.0 — MVP complete, e2e verified live
+## Status: v0.2.0 — Algorithmic Trend Line System shipped
 
-- **Commits:** 6 on `main` (5c48956 scaffold → 5df4785 e2e verify)
-- **Tests:** 45/45 green (26 core + 19 app), tsc clean both packages, production build clean (21 KB JS gzip ~8 KB)
+- **Remote:** github.com/bot-io/tradesim (private), branch `main` @ 67f9043
+- **Commits:** 9 (scaffold → yahoo → broker → geometry → renderer → replay+UI → e2e → core trendlines → app trends UI)
+- **Tests:** 80/80 green (61 core incl. 27 trendline + 19 app), tsc clean, vite build OK
+- **Trend system:** ray model, swing detection (k-bar), non-intersection validation, fan chaining (B→A hand-off), invalidation engine (close-through), S/R clustering, top-down M→W→D→4H→1H orchestrator, bounce/breakout strategies, trailing SL along ray. UI: 📊 Trends button, trend/S-R panel, live invalidation refresh during replay.
 - **Live verification (2026-09-09):** AAPL 1d/1y loaded in browser (251 bars), market buy 10 @ 306.1 filled next-bar-open, SL 295 → realized -113.2, equity 9887; second trade SL 290 → -163.2; session restore across reload works.
 
 ## Architecture

@@ -1,5 +1,12 @@
 # tradesim — Worklog
 
+## 2026-09-10 — Algorithmic Trend Line System (session 2)
+- Pushed repo to github.com/bot-io/tradesim (private; created via ~/.github-token, gh PAT lacks repo-create scope).
+- TDD core (27 tests): `trendlines.ts` (ray model `rayPrice/slopeOf`, `swingLows/swingHighs` k-bar, `validateAnchors` non-intersection, `buildUpFan/buildDownFan` with B→A chaining + wick-adjust refinement, `invalidateLines` close-through engine, `srLevels` clustering, `analyzeTrends` M→W→D→4H→1H), `aggregate.ts` (UTC bucketing for 4H), `strategies.ts` (`evalBounce`, `evalBreakout` with S/R TPs, `trailAlongLine` ratchet).
+- App: `fetchTrendSeries` (M/W/D/4H/1H plan, 4H via 60m aggregation), renderer ray/S-R overlay (invalidated = faded + ✕), Trends button + panel, `refreshTrendStatus` on step/play.
+- Live-verified on AAPL: fan hand-offs M.B=W.A etc., top S/R 315.2 (12 touches), 1H ray invalidated ✕ during 60m replay (close-through), canvas pixels confirm blue/orange/purple overlays.
+- Vision quota (GLM-5V-Turbo) unavailable today — pixel-probe + DOM assertions used instead.
+
 ## 2026-09-09 — MVP built end-to-end (session 1)
 - Scaffolded npm-workspaces monorepo (critterium pattern): `@tradesim/core` pure TS + `@tradesim/app` Vite.
 - Live-captured Yahoo AAPL fixture (21 bars) → parser TDD: 8 tests green; any-null bar dropped (constant rule).
