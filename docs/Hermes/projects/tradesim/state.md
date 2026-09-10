@@ -1,12 +1,12 @@
 # tradesim — State
 
-## Status: v0.2.1 — trend lines wrap price
+## Status: v0.2.2 — per-timeframe wrap (user model)
 
-- **Remote:** github.com/bot-io/tradesim (private), branch `main` @ e77fca7
-- **Commits:** 10
-- **Tests:** 82/82 green (62 core + 20 app), tsc clean, vite build OK
-- **Trend system v2 (user feedback 2026-09-10):** rays never crossed at creation (full-ray non-intersection: lows/highs checked through B AND beyond); up-fans chain (A_new = B_previous, each steeper); every TF contributes its own native up-fan (global low) + down-fan (global high) merged with the hand-off cascade, deduped; at regime change BOTH the down-fan from the peak and the basing up-fan from the trough wrap price; viewport y-domain extends ±25% to keep nearby rays on screen. Live AAPL: 9 up-rays + 3 down-rays across M/W/D/4H/1H (daily fan 169.2→245.7→273.8 chained).
-- **Trend system v1:** ray model, swing detection (k-bar), non-intersection validation, fan chaining (B→A hand-off), invalidation engine (close-through), S/R clustering, top-down M→W→D→4H→1H orchestrator, bounce/breakout strategies, trailing SL along ray. UI: 📊 Trends button, trend/S-R panel, live invalidation refresh during replay.
+- **Remote:** github.com/bot-io/tradesim (private), branch `main` @ c822759
+- **Commits:** 11
+- **Tests:** 82/82 green (62 core incl. 29 trendline + 20 app), tsc clean, vite build OK
+- **Trend model v3 (user directive 2026-09-10, definitive):** each timeframe (M→W→D→4H→1H) INDEPENDENTLY wraps its own price chart: up-fan = global low chained through higher lows (A_new = B_previous, each ray steeper, never crossed by any bar); down-fan = global high chained through lower highs (same rule mirrored). No inter-TF hand-off, no regime machine, no wick adjustment — removed stageTF/wickAdjust/dedupeLines/globalLowFrom/globalHighFrom. Live AAPL: 15 rays — M 3↑1↓, W 1↑2↓, D 2↑2↓, 4H 1↑1↓, 1H 1↑1↓; verified programmatically 1,718 bar-checks, ZERO crossings.
+- **Renderer:** rays anchor-A → right edge; invalidated rays faded + ✕; y-domain extends ±25% of candle range for nearby rays.
 - **Live verification (2026-09-09):** AAPL 1d/1y loaded in browser (251 bars), market buy 10 @ 306.1 filled next-bar-open, SL 295 → realized -113.2, equity 9887; second trade SL 290 → -163.2; session restore across reload works.
 
 ## Architecture

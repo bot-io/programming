@@ -1,5 +1,12 @@
 # tradesim — Worklog
 
+## 2026-09-10 — Per-timeframe wrap rewrite (session 4, user directive)
+- User: start from Monthly, connect lowest points so price never crosses the extended line, keep adding up-rays as price rises; repeat for lower TFs down to 1H; same for downtrend lines; lines wrap the price chart. Previous v2 screenshot judged WORSE than v1.
+- Diagnosis: v2's hand-off cascade + TF-native fans + regime machinery produced redundant/odd rays and the viewport clamp squashed candles.
+- Rewrite: analyzeTrends = per-TF independent wrap (buildUpFan from global low + buildDownFan from global high); deleted stageTF/wickAdjust/dedupeLines/globalLowFrom/globalHighFrom (~70 lines gone).
+- Live AAPL: 15 rays, all TFs wrapped both sides; programmatic never-cross check 1,718 bar-checks ZERO crossings (nocross test run ad-hoc, then removed — network-dependent).
+- Pushed c822759.
+
 ## 2026-09-10 — Wrap fix (session 3, user feedback)
 - User: rays should "wrap" the chart; uptrend lines not visible.
 - Root causes: (1) validateAnchors only checked bars in (A,B] — rays could be created already-crossed; (2) buildUpFan returned a single ray (no chaining); (3) stageTF discarded up lines at regime flip; (4) hand-off cascade died at D (wick-adj origin had no confirmed swing after 7 bars) leaving D/4H/1H empty; (5) M/W up-rays sat far below the visible y-domain.
