@@ -1,5 +1,11 @@
 # tradesim — Worklog
 
+## 2026-09-10 — Wrap fix (session 3, user feedback)
+- User: rays should "wrap" the chart; uptrend lines not visible.
+- Root causes: (1) validateAnchors only checked bars in (A,B] — rays could be created already-crossed; (2) buildUpFan returned a single ray (no chaining); (3) stageTF discarded up lines at regime flip; (4) hand-off cascade died at D (wick-adj origin had no confirmed swing after 7 bars) leaving D/4H/1H empty; (5) M/W up-rays sat far below the visible y-domain.
+- Fixes: full-ray validation; chained up-fans; TF-native context fans (own global-low up-fan + global-high down-fan per TF, deduped) merged into the cascade; dual wrap at regime change; renderer extends y-domain with clamped ray edge values (±25%).
+- Live AAPL: 9 up + 3 down rays; blue up-ray pixels 1818 → 3336. Pushed e77fca7.
+
 ## 2026-09-10 — Algorithmic Trend Line System (session 2)
 - Pushed repo to github.com/bot-io/tradesim (private; created via ~/.github-token, gh PAT lacks repo-create scope).
 - TDD core (27 tests): `trendlines.ts` (ray model `rayPrice/slopeOf`, `swingLows/swingHighs` k-bar, `validateAnchors` non-intersection, `buildUpFan/buildDownFan` with B→A chaining + wick-adjust refinement, `invalidateLines` close-through engine, `srLevels` clustering, `analyzeTrends` M→W→D→4H→1H), `aggregate.ts` (UTC bucketing for 4H), `strategies.ts` (`evalBounce`, `evalBreakout` with S/R TPs, `trailAlongLine` ratchet).

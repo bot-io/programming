@@ -1,11 +1,12 @@
 # tradesim — State
 
-## Status: v0.2.0 — Algorithmic Trend Line System shipped
+## Status: v0.2.1 — trend lines wrap price
 
-- **Remote:** github.com/bot-io/tradesim (private), branch `main` @ 67f9043
-- **Commits:** 9 (scaffold → yahoo → broker → geometry → renderer → replay+UI → e2e → core trendlines → app trends UI)
-- **Tests:** 80/80 green (61 core incl. 27 trendline + 19 app), tsc clean, vite build OK
-- **Trend system:** ray model, swing detection (k-bar), non-intersection validation, fan chaining (B→A hand-off), invalidation engine (close-through), S/R clustering, top-down M→W→D→4H→1H orchestrator, bounce/breakout strategies, trailing SL along ray. UI: 📊 Trends button, trend/S-R panel, live invalidation refresh during replay.
+- **Remote:** github.com/bot-io/tradesim (private), branch `main` @ e77fca7
+- **Commits:** 10
+- **Tests:** 82/82 green (62 core + 20 app), tsc clean, vite build OK
+- **Trend system v2 (user feedback 2026-09-10):** rays never crossed at creation (full-ray non-intersection: lows/highs checked through B AND beyond); up-fans chain (A_new = B_previous, each steeper); every TF contributes its own native up-fan (global low) + down-fan (global high) merged with the hand-off cascade, deduped; at regime change BOTH the down-fan from the peak and the basing up-fan from the trough wrap price; viewport y-domain extends ±25% to keep nearby rays on screen. Live AAPL: 9 up-rays + 3 down-rays across M/W/D/4H/1H (daily fan 169.2→245.7→273.8 chained).
+- **Trend system v1:** ray model, swing detection (k-bar), non-intersection validation, fan chaining (B→A hand-off), invalidation engine (close-through), S/R clustering, top-down M→W→D→4H→1H orchestrator, bounce/breakout strategies, trailing SL along ray. UI: 📊 Trends button, trend/S-R panel, live invalidation refresh during replay.
 - **Live verification (2026-09-09):** AAPL 1d/1y loaded in browser (251 bars), market buy 10 @ 306.1 filled next-bar-open, SL 295 → realized -113.2, equity 9887; second trade SL 290 → -163.2; session restore across reload works.
 
 ## Architecture
