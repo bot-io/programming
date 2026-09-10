@@ -1,5 +1,13 @@
 # tradesim — Worklog
 
+## 2026-09-10 — Same-granularity display rule (session 5, user invariant restated)
+- User: "A trend line should touch the price chart on at least 2 points and the price chart should never cross it." Core math was already clean (1,718 bar-checks, zero crossings) — the violation was visual: renderer drew ALL TFs' rays on every chart. A 1H ray validated on hourly bars WILL be visually cut by daily candles between its anchors; M/W rays floated in from years off-screen touching nothing visible; invalidated (crossed) lines were drawn faded.
+- Proof: the never-cross guarantee only carries to a chart whose bars ARE the line's validation candles (equal granularity ⇒ same bars, same touches). Any cross-granularity projection breaks it.
+- Fix: new `tfmap.ts` `linesForInterval` — 1mo→M, 1wk→W, 1d→D, 60m→1H, active-only; 4H (validated on 4x-aggregated bars) has no matching chart interval → panel-only. main.ts renders via it; trend panel still lists the full inventory.
+- TDD: 4 tfmap tests RED→GREEN; full gate 86/86, tsc ×2 clean, build OK.
+- Live verify (pixel probes on exact theme colors): daily chart at replay start draws only its early up-rays (1,030 px), at replay end all 4 daily rays (1,513 up + 921 down); 60m chart draws the 1H pair (811 + 257). Rays enter as anchors scroll into the replay window (down-rays anchor 2026-07/09 → correctly absent early, present late).
+- Pushed 00c7a45.
+
 ## 2026-09-10 — Per-timeframe wrap rewrite (session 4, user directive)
 - User: start from Monthly, connect lowest points so price never crosses the extended line, keep adding up-rays as price rises; repeat for lower TFs down to 1H; same for downtrend lines; lines wrap the price chart. Previous v2 screenshot judged WORSE than v1.
 - Diagnosis: v2's hand-off cascade + TF-native fans + regime machinery produced redundant/odd rays and the viewport clamp squashed candles.
