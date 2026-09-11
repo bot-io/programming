@@ -1,10 +1,10 @@
 # tradesim — State
 
-## Status: v0.3.0 — SGLD dataset + EUR backtest harness
+## Status: v0.4.0 — ATL strategy + SGLD 1H backtest (+36%)
 
-- **Remote:** github.com/bot-io/tradesim (private), branch `main` @ 72eadd0
-- **Commits:** 13
-- **Tests:** 96/96 green, tsc ×2 clean, vite build OK
+- **Remote:** github.com/bot-io/tradesim (private), branch `main` @ 627734a
+- **Commits:** 14
+- **Tests:** 101/101 green, tsc ×2 clean, vite build OK
 - **SGLD canonical dataset (user directive 2026-09-11):** real Yahoo candles, downloaded once via `scripts/fetch-sgld.cjs`, stored `packages/core/src/fixtures/`: daily 4,347 bars (2009-06-26→2026-09-11), weekly 900, monthly 209, hourly 199, EURUSD 4,500 (FX for EUR conversion). 650 bars OHLC-sanitized (vendor low/high clamps, counted + logged, never silent). SGLD.L is now the app's default symbol. AAPL fixture retained for unit tests.
 - **FX layer (`fx.ts`):** `convertCurrency(candles, rates)` — forward-filled same-day EURUSD, no look-ahead, proven by test.
 - **Backtest harness (`backtest.ts`):** `runBacktest(symbol, candles, strategy, cfg)` drives the SAME Broker semantics as the interactive replay (market fills next-bar-open, stops/limits intra-bar, commission per fill); `Strategy { name, onBar(ctx) }` with BarContext exposing visible candles/index/cash/equity/position/submit. Result: equity curve, win rate, profit factor, max drawdown, open position, trades/fills. 1,000 EUR buy-and-hold on full history passes sanity band (2k<eq<8k).
