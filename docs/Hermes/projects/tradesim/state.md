@@ -1,13 +1,14 @@
 # tradesim — State
 
-## Status: v0.2.3 — same-granularity display rule
+## Status: v0.3.0 — SGLD dataset + EUR backtest harness
 
-- **Remote:** github.com/bot-io/tradesim (private), branch `main` @ 00c7a45
-- **Commits:** 12
-- **Tests:** 86/86 green (66 core incl. 33 trendline + 20 app), tsc clean, vite build OK
-- **Trend model v3 (user model, definitive):** each timeframe (M→W→D→4H→1H) INDEPENDENTLY wraps its own price chart: up-fan = global low chained through higher lows (A_new = B_previous, each ray steeper, never crossed by any bar); down-fan = global high chained through lower highs. No inter-TF hand-off. Live AAPL: 15 rays — M 3↑1↓, W 1↑2↓, D 2↑2↓, 4H 1↑1↓, 1H 1↑1↓; verified programmatically 1,718 bar-checks, ZERO crossings.
-- **Display rule (user invariant "a trend line must touch ≥2 points and price never crosses it" applies to what's ON the chart):** a chart may only draw lines validated at its own granularity — `tfmap.ts` `linesForInterval` maps 1mo→M, 1wk→W, 1d→D, 60m→1H, active lines only (invalidated = crossed by definition; 4H has no matching chart interval and stays panel-only). Verified live: daily chart at replay end draws exactly its 4 rays (1,513 up + 921 down px); 60m chart draws the 1H pair (811 up + 257 down px).
-- **Renderer:** rays anchor-A → right edge; y-domain extends ±25% clamp retained (own-TF rays hug candles so it rarely binds).
+- **Remote:** github.com/bot-io/tradesim (private), branch `main` @ 72eadd0
+- **Commits:** 13
+- **Tests:** 96/96 green, tsc ×2 clean, vite build OK
+- **SGLD canonical dataset (user directive 2026-09-11):** real Yahoo candles, downloaded once via `scripts/fetch-sgld.cjs`, stored `packages/core/src/fixtures/`: daily 4,347 bars (2009-06-26→2026-09-11), weekly 900, monthly 209, hourly 199, EURUSD 4,500 (FX for EUR conversion). 650 bars OHLC-sanitized (vendor low/high clamps, counted + logged, never silent). SGLD.L is now the app's default symbol. AAPL fixture retained for unit tests.
+- **FX layer (`fx.ts`):** `convertCurrency(candles, rates)` — forward-filled same-day EURUSD, no look-ahead, proven by test.
+- **Backtest harness (`backtest.ts`):** `runBacktest(symbol, candles, strategy, cfg)` drives the SAME Broker semantics as the interactive replay (market fills next-bar-open, stops/limits intra-bar, commission per fill); `Strategy { name, onBar(ctx) }` with BarContext exposing visible candles/index/cash/equity/position/submit. Result: equity curve, win rate, profit factor, max drawdown, open position, trades/fills. 1,000 EUR buy-and-hold on full history passes sanity band (2k<eq<8k).
+- **Trend model v3 + display rule (v0.2.2/0.2.3):** per-TF independent wrap (up-fan global-low→higher lows chained, down-fan mirrored), same-granularity rendering via tfmap.ts (chart draws only own-TF active lines). Live-proven 0 crossings / 1,718 checks.
 - **Live verification (2026-09-09):** AAPL 1d/1y loaded in browser (251 bars), market buy 10 @ 306.1 filled next-bar-open, SL 295 → realized -113.2, equity 9887; second trade SL 290 → -163.2; session restore across reload works.
 
 ## Architecture
