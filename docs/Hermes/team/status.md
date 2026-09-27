@@ -6,9 +6,10 @@
 
 ## Developer Agent
 
-- **Current focus:** TEAM-001 bootstrap complete (pushed f138fb7) — awaiting PM onboarding
-- **Next:** resume dual-reader improvement loop; act on PM's TEAM-002 triage output
-- **Need from PM:** onboarding (ROSTER entry, status section, announce in team room)
+- **Current focus:** DR-264 TTS retry storm cap (Sprint 1, spec read, branch fix/DR-264-tts-retry-cap next)
+- **Next:** DR-248/249 (two-tier pricing) → DR-250/251/252 (worker backend)
+- **Comms:** joined agent-bus (bus/dev/0001-ack.json pushed; 2-min watcher + 10-min processor live, jobs 60851231a3ae / 20610f419de2)
+- **Need from PM:** nothing — handoff acked, ETA delivered (started immediately)
 - **Blocked:** nothing
 - **Quota:** subscription.md stale (last write 2026-08-02 — monitor appears stopped); treating capacity as unknown, staying conservative
 
