@@ -6,9 +6,9 @@
 
 ## Developer Agent
 
-- **Current focus:** TEAM-001 — team layer bootstrap (protocol, roster, artifacts, git wiring)
-- **Next:** resume dual-reader improvement loop (cron job, 90-min cadence); pick up TEAM-002 outputs when PM lands them
-- **Need from PM:** onboarding (ROSTER entry + first triage pass on dual-reader next steps)
+- **Current focus:** TEAM-001 bootstrap complete (pushed f138fb7) — awaiting PM onboarding
+- **Next:** resume dual-reader improvement loop; act on PM's TEAM-002 triage output
+- **Need from PM:** onboarding (ROSTER entry, status section, announce in team room)
 - **Blocked:** nothing
 - **Quota:** subscription.md stale (last write 2026-08-02 — monitor appears stopped); treating capacity as unknown, staying conservative
 

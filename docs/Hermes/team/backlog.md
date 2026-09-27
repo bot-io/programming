@@ -4,7 +4,7 @@
 > PM curates. IDs: `TEAM-NNN`. Statuses: draft / ready / in-progress / review / done / dropped.
 
 ### TEAM-001: Team Layer Bootstrap
-- **Status:** in-progress
+- **Status:** in-progress *(criteria 1–3 ✅ done 2026-09-27, commit f138fb7; awaiting PM onboarding — criterion 4)*
 - **Priority:** P0
 - **Owner:** Developer
 - **Acceptance Criteria:**
