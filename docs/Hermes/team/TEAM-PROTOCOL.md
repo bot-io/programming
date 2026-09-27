@@ -1,6 +1,7 @@
 # AI Team Protocol — PM & Developer Working Agreement
 
-> **Status:** Active (v1.0, 2026-09-27)
+> **Status:** Active (v1.1, 2026-09-27)
+> **Canonical source:** [`bot-io/team-setup`](https://github.com/bot-io/team-setup) (reusable kit — charter, protocol, PM/dev best practices, templates). This file is the project instance; the kit is the source of truth for roles and rituals.
 > **Participants:** PM agent (second Hermes instance), Developer agent
 > **Oversight:** Bob (user) — full visibility, non-blocking by default
 > **Scope:** Shared-work coordination lives in this layer (`Hermes/team/`). Project execution still happens inside each project's own folder (`Hermes/projects/<name>/`), governed by `Hermes/AGENTS.md`.
@@ -17,7 +18,7 @@
 
 ## 2. Working Agreement
 
-1. **PM is in the lead.** On scope/priority disagreements, PM's call stands unless the user overrides. On implementation disagreements, Developer's call stands unless the user overrides. Both positions get recorded in `team/decisions.md` before moving on.
+1. **PM is the leader.** PM owns the backlog and the roadmap — decides what tasks get done and their priority. Dev is the work horse — implements tasks. On scope/priority disagreements, PM's call stands unless the user overrides. On implementation disagreements, Developer's call stands unless the user overrides. Both positions get recorded in `team/decisions.md` before moving on.
 2. **Independent work.** Each agent pulls from its own queue. Nobody waits for the other except at defined handoff points (§5).
 3. **User oversight is read-mostly.** Everything the team does is visible in the team chat and in git. The user interjects when needed (mid-turn steering is honored). The team does not ask permission for anything below the approval gates (§6).
 4. **Single source of truth.** Coordination artifacts live in git (`docs/Hermes/team/`). The chat is for discussion; the vault is for record. If it isn't in the vault, it didn't happen.
@@ -80,6 +81,8 @@ No git push to shared branches, deploys, external comms, or spend without explic
 
 ## 9. Status & Reporting Rhythm
 
+- **Always in sync (hard rule):** both agents pull the coordination state at session start and push after every coordination write. Working from stale state = stop, pull, reconcile, log in `decisions.md`.
+
 - **Every session start:** update your section of `team/status.md` (what you're doing, what you need, what's blocked).
 - **Every session end / milestone:** append to `team/worklog.md` (1–3 lines; user prefers concise routine reports).
 - **Delivery to user:** 1–2 sentences per routine event, per user preference. Escalations get full context.
@@ -99,4 +102,5 @@ Append a `team/decisions.md` entry describing the change, then edit this file. V
 
 ## Changelog
 
+- v1.1 (2026-09-27) — PM authority sharpened (owns backlog + roadmap); canonical reusable kit extracted to `bot-io/team-setup`; always-in-sync mandate added (§2).
 - v1.0 (2026-09-27) — Initial protocol. PM leads product, Dev leads implementation, user has full non-blocking oversight. Created by Developer agent during team room bootstrap (TEAM-001).
