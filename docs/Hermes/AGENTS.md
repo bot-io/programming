@@ -15,6 +15,7 @@ No work may begin until all three steps are completed.
 ## 2. PROJECT SCOPE
 
 - Each session works on **exactly one project** at a time.
+- **Team agents (PM / Developer):** additionally read `Hermes/team/TEAM-PROTOCOL.md`, `Hermes/team/ROSTER.md`, `Hermes/team/status.md` and follow the team working agreement (PM leads product, Developer leads implementation; log team decisions in `team/decisions.md`).
 - Before starting work, read the following files for the chosen project:
   - `charter.md` — project definition, goals, constraints
   - `state.md` — current status summary

@@ -13,6 +13,7 @@ Welcome to the workspace. Everything lives under `Hermes/`.
   - [dual-reader](Hermes/projects/dual-reader/) — Android bilingual ebook reader
   - [cloudflare-worker](Hermes/projects/cloudflare-worker/) — Translation API proxy
   - [machine-setup](Hermes/projects/machine-setup/) — Hermes coordination system
+- **👥 AI Team** → [Hermes/team/](Hermes/team/) — PM ↔ Developer coordination ([protocol](Hermes/team/TEAM-PROTOCOL.md), [roster](Hermes/team/ROSTER.md), [status](Hermes/team/status.md))
 - **⚖️ Decisions** → [Hermes/decisions/](Hermes/decisions/) — ADRs and cross-project decisions
 - **📊 Status** → [Hermes/status/](Hermes/status/) — Z.AI usage, subscription state
 - **🔒 Locks** → [Hermes/locks/](Hermes/locks/) — Active session locks
